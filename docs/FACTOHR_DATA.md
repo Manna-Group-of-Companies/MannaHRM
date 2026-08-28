@@ -3,7 +3,7 @@
 Read from the nine reports in `data/factohr/` on 22 August 2026. Counts only —
 no personal data is reproduced here, and the exports themselves are gitignored.
 
-Reproduce with `python tools/analyse_factohr.py`.
+Reproduce with `node tools/analyse_factohr.js`.
 
 ---
 

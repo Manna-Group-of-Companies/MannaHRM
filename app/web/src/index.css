@@ -1,0 +1,776 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   The design system, as component classes.
+
+   Every colour and every family in here resolves to a token in
+   tailwind.config.js rather than to a literal, so the palette has one home. The
+   classes exist because these are the shapes that repeat forty times across the
+   app — a panel, a tile, a coverage chip, a report form — and a repeated shape
+   named once is a shape that cannot drift between two screens that are meant to
+   be compared. One-off layout stays as utilities in the JSX.
+   --------------------------------------------------------------------------- */
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply m-0 bg-page text-ink font-body antialiased;
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { @apply font-display m-0; text-wrap: balance; }
+  button:focus-visible, a:focus-visible,
+  select:focus-visible, input:focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-accent;
+  }
+  code {
+    @apply font-mono text-[.85em] bg-page border border-line rounded-[3px] px-[.3em] py-[.05em];
+  }
+}
+
+@layer components {
+
+  /* ---------------- chrome: sidebar + top bar, mirroring Factor HR -------- */
+  .shell { @apply grid min-h-screen; grid-template-columns: 112px 1fr; }
+  .side  { @apply bg-nav flex flex-col gap-[.1rem] pt-2 pb-4 sticky top-0 h-screen overflow-y-auto; }
+
+  /* The wordmark, rebuilt in type rather than shipped as a file: MA orange,
+     NN charcoal, A orange, inside the oval. Scales cleanly and needs no asset.
+     Drop the real PNG in as public/logo.png and swap this for an <img>. */
+  .brand { @apply px-[.35rem] pt-4 pb-[1.15rem] text-center leading-none; }
+  .mark {
+    @apply inline-flex items-center justify-center border-[2.5px] border-nav-ink
+           rounded-full px-2 py-[.34rem] font-display font-bold text-[1.02rem] tracking-[-.02em];
+  }
+  .mark .o { @apply text-brand; }
+  .mark .c { @apply text-white; }
+  .brand small {
+    @apply block font-display font-semibold text-[.66rem] tracking-[.02em] text-nav-ink mt-[.34rem];
+  }
+
+  .nav {
+    @apply bg-transparent border-0 text-nav-ink font-body text-[.74rem] px-[.3rem] py-[.62rem]
+           cursor-pointer flex flex-col items-center gap-[.28rem] w-full border-l-[3px] border-l-transparent;
+  }
+  .nav svg { @apply w-5 h-5 stroke-current fill-none; stroke-width: 1.6; }
+  .nav:hover { @apply text-white bg-white/5; }
+  .nav[aria-current="page"] {
+    @apply text-white font-semibold border-l-brand;
+    background: rgba(238, 106, 36, .14);
+  }
+  .nav:focus-visible { @apply outline outline-2 outline-brand -outline-offset-2; }
+
+  .main   { @apply flex flex-col min-w-0; }
+  .topbar { @apply bg-char text-white px-[1.2rem] py-[.7rem] flex flex-wrap gap-y-[.7rem] gap-x-[1.2rem] items-center justify-between; }
+  .topbar .co { @apply font-display font-bold text-[1.02rem] tracking-[.01em]; }
+  .topbar select, .topbar input {
+    @apply font-body text-[.85rem] px-[.6rem] py-[.4rem] rounded-[20px] border-0 text-ink min-w-[190px];
+    background: rgba(255, 255, 255, .95);
+  }
+  .topbar .me { @apply text-[.85rem] opacity-95; }
+  .subbar  { @apply bg-nav-2 px-[1.2rem] flex flex-wrap gap-[.2rem]; }
+  .subtab  {
+    @apply bg-transparent border-0 text-nav-ink font-body text-[.79rem] tracking-[.08em] uppercase
+           px-[.95rem] py-[.72rem] cursor-pointer border-b-[3px] border-b-transparent;
+  }
+  .subtab[aria-selected="true"] { @apply bg-page text-ink font-semibold rounded-t-[5px]; }
+  .content { @apply px-[1.2rem] pt-[1.1rem] pb-10 flex flex-col gap-4; }
+
+  /* ---------------------------------------------------------- coverage --- */
+  .legend {
+    @apply flex flex-wrap gap-y-[.45rem] gap-x-[.9rem] items-center bg-card border border-line
+           rounded-md px-[.8rem] py-[.55rem] text-[.8rem] text-ink-2;
+  }
+  .cov {
+    @apply font-mono text-[.6rem] font-semibold tracking-[.09em] uppercase
+           px-[.44rem] py-[.18rem] rounded-[3px] whitespace-nowrap;
+  }
+  .cov.live { @apply bg-live-wash text-live; }
+  .cov.part { @apply bg-part-wash text-part; }
+  .cov.none { @apply bg-none-wash text-none; }
+  .cov.skip { @apply bg-skip-wash text-skip; }
+
+  /* ------------------------------------------------------------- cards --- */
+  .cols  { @apply grid gap-4 items-start; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
+  .panel { @apply bg-card border border-line rounded-md overflow-hidden; }
+  .panel > header {
+    @apply flex flex-wrap gap-y-[.4rem] gap-x-[.7rem] items-center justify-between
+           px-[.9rem] py-[.7rem] border-b border-line;
+  }
+  .panel > header h3 { @apply text-[.95rem] font-semibold flex items-center gap-2; }
+  .panel > header h3 .ico {
+    @apply w-[26px] h-[26px] rounded-[7px] bg-brand-soft text-brand-dark
+           inline-flex items-center justify-center text-[.8rem];
+  }
+  .panel .body     { @apply p-[.9rem]; }
+  .panel.dim .body { @apply opacity-[.72]; }
+
+  .tiles { @apply grid gap-[.6rem]; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .tile  { @apply border border-line rounded-md px-[.7rem] py-[.6rem] flex flex-col gap-[.15rem]; }
+  .tile .k { @apply font-mono text-[.63rem] tracking-[.09em] uppercase text-ink-3; }
+  .tile .n { @apply font-display text-[1.55rem] font-bold leading-[1.05] tabular-nums; }
+  .tile .n.good { @apply text-live; }
+  .tile .n.warn { @apply text-part; }
+  .tile .n.bad  { @apply text-none; }
+  .tile .s { @apply text-[.76rem] text-ink-2; }
+
+  .links { @apply grid grid-cols-2 gap-y-[.3rem] gap-x-[.9rem] text-[.86rem]; }
+  .links a, .links span { @apply text-accent no-underline; }
+  .links span.off { @apply text-ink-3 line-through; }
+
+  .gap  { @apply bg-none-wash rounded-[5px] px-3 py-[.6rem] text-[.85rem]; border: 1px solid #F0CFCB; color: #7C241D; }
+  .gap b  { @apply font-display; }
+  .note { @apply bg-brand-soft rounded-[5px] px-3 py-[.6rem] text-[.85rem]; border: 1px solid #F3D9C6; color: #7A3D14; }
+  .note b { @apply font-display; }
+
+  .rows  { @apply flex flex-col gap-[.45rem]; }
+  .row   { @apply grid gap-y-[.15rem] gap-x-[.7rem] items-center text-[.86rem]; grid-template-columns: 1fr auto; }
+  .row .val { @apply font-mono text-[.83rem] text-ink-2 tabular-nums; }
+  .track { @apply h-[6px] rounded overflow-hidden; grid-column: 1/-1; background: #EDE8E4; }
+  .track i { @apply block h-full bg-brand rounded; }
+
+  .scroll { @apply overflow-x-auto border border-line rounded-md bg-card; }
+  table { @apply border-collapse w-full min-w-[760px] text-[.85rem]; }
+  th, td { @apply text-left px-[.7rem] py-[.48rem] border-b border-line whitespace-nowrap; }
+  thead th {
+    @apply sticky top-0 bg-wash font-mono text-[.62rem] tracking-[.08em] uppercase text-ink-3 font-semibold z-[1];
+  }
+  tbody tr:last-child td { @apply border-b-0; }
+  tbody tr:hover { @apply bg-wash; }
+  td.mono { @apply font-mono tabular-nums; }
+  tr[data-emp] { @apply cursor-pointer; }
+  .muted { @apply text-ink-3; }
+
+  .tag {
+    @apply font-mono text-[.61rem] font-semibold tracking-[.06em] uppercase
+           px-[.38rem] py-[.14rem] rounded-[3px] bg-accent-wash text-accent;
+  }
+  .tag.warn { @apply bg-part-wash text-part; }
+
+  .empty {
+    @apply px-[.9rem] py-[1.3rem] text-center text-ink-2 text-[.88rem] bg-wash
+           border border-dashed border-line-2 rounded-md;
+  }
+  .empty b { @apply block font-display text-ink mb-[.2rem]; }
+
+  /* ------------------------------------------------- Employee Master ----- */
+  /* Factor HR's own Employee Master, card for card. Kept close to that screen
+     deliberately: it is the page HR opens most, and asking somebody whether the
+     replacement is better is only a fair question if the two look alike enough
+     to compare. */
+  .emhead { @apply flex flex-wrap gap-y-2 gap-x-[.9rem] items-center bg-card border border-line rounded-md px-[.9rem] py-[.7rem]; }
+  .emhead h2 { @apply font-display text-[1.05rem] font-bold; }
+  .emhead .n { @apply text-[.83rem] text-ink-2; }
+  .emhead .right { @apply ml-auto flex gap-[.4rem] items-center; }
+
+  .embar { @apply flex flex-wrap gap-[.45rem] items-center bg-card border border-line rounded-md px-[.7rem] py-[.55rem]; }
+  .embar select, .embar input {
+    @apply text-[.83rem] px-2 py-[.34rem] border border-line-2 rounded-[5px] bg-white text-ink;
+    font: inherit;
+  }
+  .embar .find { @apply flex items-center gap-[.4rem] min-w-0; flex: 1 1 220px; }
+  .embar .find input { @apply min-w-0; flex: 1 1 auto; }
+  /* Their search box puts the magnifier on the right, not the left. */
+  .embar .find.rev { @apply flex-row-reverse; }
+
+  .embtn {
+    @apply text-[.83rem] px-[.6rem] py-[.34rem] border border-line-2 rounded-[5px]
+           bg-white text-ink-2 cursor-pointer inline-flex items-center gap-[.35rem];
+    font: inherit;
+  }
+  .embtn:hover:not([disabled]) { @apply border-brand text-brand-dark; }
+  .embtn[aria-pressed="true"]  { @apply bg-brand-soft border-brand text-brand-dark; }
+  .embtn[disabled]             { @apply opacity-[.45] cursor-not-allowed; }
+  .embtn:focus-visible         { @apply outline outline-2 outline-offset-1 outline-brand; }
+  .embtn.pri                   { @apply bg-brand border-brand text-white font-semibold; }
+  .embtn.pri:hover:not([disabled]) { @apply bg-brand-dark border-brand-dark text-white; }
+  .embtn.pri.split             { @apply px-[.4rem] py-[.34rem]; }
+
+  .emview { @apply ml-auto flex gap-1; }
+  .emview .embtn { @apply px-[.45rem] py-[.3rem]; }
+  .emview svg { @apply w-4 h-4 stroke-current fill-none; stroke-width: 1.7; }
+
+  .sdot { @apply w-2 h-2 rounded-full inline-block bg-ink-3; flex: 0 0 8px; }
+  .sdot.on  { @apply bg-live; }
+  .sdot.off { @apply bg-none; }
+  /* Factor HR's own blue for All. Not from the Manna palette on purpose: this
+     one control is a straight copy of theirs, and on it the colour is the thing
+     being read — somebody picking a filter looks at the dot, not at the word. */
+  .sdot.all { background: #2E6BD1; }
+
+  .empdrop { @apply relative inline-flex; }
+  .empdrop .cx { @apply text-[.58rem] text-ink-3 leading-none; }
+  .emmenu {
+    @apply absolute left-0 z-20 min-w-[158px] bg-card border border-line-2 rounded-md p-1 flex flex-col;
+    top: calc(100% + .3rem);
+    box-shadow: 0 4px 14px rgba(65, 64, 66, .16);
+  }
+  .emmenu[hidden] { @apply hidden; }
+  .emmenu button {
+    @apply text-[.83rem] text-left bg-transparent border-0 rounded
+           px-[.55rem] py-[.42rem] cursor-pointer text-ink flex items-center gap-[.55rem];
+    font: inherit;
+  }
+  .emmenu button:hover { @apply bg-page; }
+  .emmenu button[aria-selected="true"] { @apply font-semibold; }
+  .emmenu button.zero { @apply text-ink-3; }
+  .emmenu button.zero .sdot { @apply opacity-[.45]; }
+  .emmenu button:focus-visible { @apply outline outline-2 -outline-offset-2 outline-brand; }
+
+  .cards { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .ecard {
+    @apply bg-card border border-line rounded-md px-[.9rem] py-[.85rem] grid gap-[.9rem] items-center cursor-pointer;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .ecard:hover { @apply border-brand; box-shadow: 0 1px 7px rgba(65, 64, 66, .07); }
+  .ecard:focus-visible { @apply outline outline-2 outline-offset-2 outline-brand; }
+  .ava {
+    @apply w-[74px] h-[74px] rounded-full bg-brand-soft text-brand-dark flex items-center
+           justify-center font-display text-[1.45rem] font-bold;
+  }
+  .ename { @apply flex items-baseline gap-2 font-semibold text-[.92rem]; }
+  .ename span { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
+  .ename .go { @apply ml-auto text-ink-3 text-base leading-none; }
+  .ecard:hover .ename .go { @apply text-brand; }
+  .estat { @apply flex items-center gap-[.35rem] text-[.78rem] text-ink-2 mt-[.2rem] mb-[.45rem]; }
+  .eline { @apply flex items-center gap-2 text-[.82rem] text-accent py-[.1rem]; }
+  .eline svg { @apply w-[14px] h-[14px] stroke-ink-3 fill-none; flex: 0 0 14px; stroke-width: 1.6; }
+  .eline span { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
+  .eline.off { @apply text-ink-3; }
+
+  /* ---- Category Type, as Factor HR draws it ----------------------------
+     Their Categories page is a plain paginated master: title bar, search,
+     table, pager. Copied close for the same reason Employee Master is — but
+     every control on it here is dead, because that one writes and this one
+     reads. */
+  .fhcat { @apply bg-card border border-line rounded-md overflow-hidden; }
+  .fhcat > header { @apply flex flex-wrap gap-2 items-center px-[.9rem] py-[.65rem] border-b border-line; }
+  .fhcat > header h3 { @apply font-display text-[.98rem] font-bold; }
+  .fhcat > header .right { @apply ml-auto flex gap-[.4rem] items-center; }
+  .fhcat .embtn.pri { @apply bg-brand border-brand text-white; }
+  .fhcat .find { @apply px-[.9rem] py-[.6rem] border-b border-line; }
+  .fhcat .find input {
+    @apply text-[.83rem] px-[.6rem] py-[.4rem] border border-line-2 rounded-[5px] bg-white;
+    font: inherit;
+    width: min(320px, 100%);
+  }
+  .fhcat table { @apply min-w-[620px]; }
+  .fhcat td.act { @apply text-right; }
+  .fhact { @apply border-0 bg-transparent px-1 py-[.15rem] text-ink-3 cursor-not-allowed; }
+  .fhact svg { @apply w-[15px] h-[15px] stroke-current fill-none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .fhview {
+    @apply text-[.8rem] px-[.7rem] py-[.3rem] border border-brand rounded-[5px]
+           bg-white text-brand-dark cursor-pointer;
+    font: inherit;
+  }
+  .fhview:hover { @apply bg-brand-soft; }
+  .fhview[aria-expanded="true"] { @apply bg-brand border-brand text-white; }
+  .fhview:focus-visible { @apply outline outline-2 outline-offset-1 outline-brand; }
+  .fhcat tr.vals > td { @apply bg-wash whitespace-normal px-[.9rem] py-3; }
+  .fhcat tr.vals .lead { @apply text-[.85rem] text-ink-2 mb-[.6rem]; }
+  .fhcat tr.vals .lead b { @apply font-display text-ink; }
+  .fhfoot { @apply flex flex-wrap gap-2 items-center px-[.9rem] py-[.6rem] border-t border-line; }
+  .fhcat .cnt { @apply text-[.8rem] text-ink-3; }
+  .fhpage { @apply ml-auto flex flex-wrap gap-[.3rem] items-center; }
+  .fhpage .embtn { @apply px-[.55rem] py-[.26rem] text-[.8rem]; }
+
+  /* SHIFT & WORK PATTERN reuses the Category Type shell — same product, same
+     kind of master, a different toolbar. */
+  .fhcat h3.caps { @apply tracking-[.04em] text-[.9rem]; }
+  .fhcat .bar3 { @apply flex flex-wrap gap-y-[.6rem] gap-x-4 items-center px-[.9rem] py-[.6rem] border-b border-line; }
+  .fhcat .lbl { @apply text-[.83rem] text-ink-2 inline-flex items-center gap-[.4rem]; }
+  .fhcat .lbl.mid, .fhcat .lbl.right { @apply ml-auto; }
+  .fhcat .bar3 select, .fhcat .bar3 input {
+    @apply text-[.83rem] px-2 py-[.3rem] border border-line-2 rounded-[5px] bg-white text-ink;
+    font: inherit;
+  }
+  .fhcat th .sort { @apply text-ink-3 font-normal text-[.75rem]; }
+  .fhcat th.num, .fhcat td.num { @apply text-right; }
+  .fhcat td.num { @apply font-mono tabular-nums; }
+  .fhcat td.num.zero, .fhcat td.num.clip { @apply text-ink-3; }
+  /* Their shift names are links. Ours are not, because there is nothing behind
+     them on this side — but a name that reads as plain text loses the fact that
+     one click over there is what answers the open question on this page. */
+  .fhname { @apply text-accent border-b border-dotted border-line-2; }
+  .fhcat tr.clip > td { @apply opacity-50; }
+
+  /* The rendered letter. Serif and generous leading on purpose — it is a
+     document somebody will print and hand over, not another panel of data. */
+  .letter {
+    @apply mt-[.7rem] bg-white border border-line rounded-[5px] px-[1.6rem] py-[1.4rem]
+           text-[.9rem] max-h-[520px] overflow-auto;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.65;
+  }
+  .letter p  { @apply m-0 mb-[.7rem]; }
+  .letter h3 { @apply text-base m-0 mb-[.7rem] text-center tracking-[.02em]; font-family: Georgia, serif; }
+  .letter table { @apply border-collapse m-0 mb-[.7rem] min-w-0 w-auto text-[.88rem]; }
+  .letter td { @apply border-0 pl-0 pr-[.9rem] py-[.1rem] whitespace-normal; }
+  .letter table[border] { @apply border border-line-2; }
+  .letter table[border] td { @apply border border-line-2 px-2 py-1; }
+  /* Unresolved merge fields are shown, never blanked. */
+  .tok { @apply bg-none-wash text-none rounded-[3px] font-mono text-[.82em] whitespace-nowrap; padding: 0 .22em; }
+
+  .tabs { @apply flex flex-wrap gap-[.4rem]; }
+  .tab {
+    @apply font-mono text-[.72rem] tracking-[.05em] uppercase px-[.68rem] py-[.34rem]
+           border border-line rounded bg-card text-ink-2 cursor-pointer inline-flex gap-[.4rem] items-center;
+  }
+  .tab[aria-selected="true"] { @apply border-brand text-accent bg-accent-wash; }
+  .tab .n { @apply font-semibold tabular-nums; }
+  .tab .n.hot { @apply text-none; }
+
+  .person { @apply bg-card border border-line rounded-md overflow-hidden mb-[.6rem]; }
+  .person .who {
+    @apply flex flex-wrap gap-y-[.3rem] gap-x-[.7rem] items-baseline px-[.85rem] py-[.55rem]
+           bg-wash border-b border-line;
+  }
+  .person .who b { @apply font-display text-[.93rem]; }
+  .person .who .code { @apply font-mono text-[.74rem] text-ink-3; }
+
+  .req {
+    @apply grid gap-y-[.35rem] gap-x-4 px-[.85rem] py-[.65rem] border-b border-line items-start;
+    grid-template-columns: minmax(150px, 190px) minmax(190px, 230px) 1fr auto;
+  }
+  .req:last-child { @apply border-b-0; }
+  .req .when b { @apply block font-display text-[.9rem]; }
+  .req .when span { @apply block text-[.77rem] text-ink-3; }
+  .req dl { @apply m-0 grid gap-y-[.12rem] gap-x-[.8rem] text-[.8rem] font-mono tabular-nums; grid-template-columns: auto auto auto; }
+  .req dl .h { @apply text-ink-3 text-[.66rem] uppercase tracking-[.06em]; }
+  .req dl .lab { @apply text-ink-3; }
+  .req .why { @apply text-[.84rem] text-ink-2; }
+  .req .why b { @apply text-ink font-semibold; }
+
+  /* ---- the approval queue, laid out as Factor HR lays it out ------------
+     Toolbar, then a card per request under a per-person heading. The card is
+     copied deliberately closely: an approver comparing the two screens should
+     not have to hunt for the same number in a different place. */
+  .qbar {
+    @apply flex flex-wrap gap-y-2 gap-x-[.6rem] items-center bg-card border border-line
+           rounded-md px-[.7rem] py-2 mt-[.6rem] mb-[.8rem];
+  }
+  .qbar select, .qbar input {
+    @apply font-body text-[.83rem] px-[.55rem] py-[.36rem] border border-line-2 rounded bg-white text-ink;
+  }
+  .qbar input[type=search] { @apply min-w-[160px]; flex: 1 1 210px; }
+  .qbar .icon {
+    @apply w-[30px] h-[30px] border border-line-2 rounded bg-white text-ink-2 cursor-pointer text-[.95rem] leading-none;
+  }
+  .qbar .icon:hover { @apply text-accent border-accent; }
+  .qbar .picked { @apply font-mono text-[.74rem] text-ink-3 ml-auto; }
+  .qbar .picked b { @apply text-accent font-mono; }
+
+  .reqhead {
+    @apply flex flex-wrap gap-y-[.2rem] gap-x-[.9rem] justify-between items-baseline
+           bg-rule border-t border-b border-line px-[.85rem] py-[.34rem] text-[.76rem];
+  }
+  .reqhead .kind { @apply font-mono text-[.68rem] tracking-[.09em] uppercase text-ink-2 font-semibold; }
+  .reqhead .meta { @apply text-accent text-[.74rem]; }
+  .reqhead .meta .muted { @apply text-ink-3; }
+
+  /* Six columns, in Factor HR's order: pick · day · planned vs attended ·
+     hours · what the correction asks for · decide. */
+  .reqx {
+    @apply grid gap-y-[.45rem] gap-x-4 px-[.85rem] py-[.7rem] items-start;
+    grid-template-columns: auto minmax(130px, 160px) minmax(175px, 205px) minmax(165px, 1fr) minmax(180px, 1.1fr) auto;
+  }
+  .reqx .day b { @apply block font-display text-[.95rem]; }
+  .reqx .day span { @apply block text-[.79rem] text-ink-2; }
+  .reqx .day .applied { @apply mt-[.3rem] text-[.75rem] text-ink-3; }
+  /* The shift sits under the Planned | Attended pair, not in a row of its own —
+     otherwise it pushes the hours and the ask down and leaves the card's top
+     right empty, which is not how Factor HR reads. */
+  .reqx .shift { @apply mt-[.4rem] text-[.76rem] text-accent whitespace-normal; }
+
+  .pa { @apply grid gap-y-[.14rem] gap-x-[.6rem] text-[.82rem] font-mono tabular-nums; grid-template-columns: auto 1fr 1fr; }
+  .pa .h { @apply text-[.66rem] tracking-[.06em] uppercase text-ink-3 font-mono; }
+  .pa .lab { @apply text-ink-3; }
+  .pa .att { @apply text-ink font-semibold; }
+  .hrs, .ask { @apply text-[.81rem] text-ink-2; }
+  .hrs b, .ask b { @apply text-ink font-semibold font-body; }
+  .hrs .link, .act .link { @apply inline-block mt-1 text-[.79rem] text-accent underline cursor-help; }
+
+  .act { @apply flex flex-col items-center gap-[.35rem]; }
+  .yn  { @apply flex gap-[.45rem]; }
+  /* Enabled on purpose: a control that reports itself disabled never fires,
+     so a screen-reader user would get silence instead of the reason. */
+  .yn button {
+    @apply w-[27px] h-[27px] rounded-full bg-white leading-none text-[.85rem] font-bold
+           inline-flex items-center justify-center cursor-pointer;
+    border-width: 1.6px; border-style: solid;
+  }
+  .yn .ok { @apply border-live text-live; }
+  .yn .no { @apply border-none text-none; }
+  .yn .ok:hover { @apply bg-live-wash; }
+  .yn .no:hover { @apply bg-none-wash; }
+
+  /* Import / Export opens a dialog in Factor HR rather than acting at once, and
+     that is worth copying: two of its three buttons are harmless and one of
+     them overwrites attendance. */
+  .modal {
+    @apply fixed inset-0 flex items-start justify-center px-4 z-50;
+    background: rgba(38, 37, 42, .45);
+    padding-top: 5vh; padding-bottom: 5vh;
+  }
+  .modal .box {
+    @apply bg-card border border-line rounded-md;
+    width: min(560px, 100%);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .24);
+  }
+  /* The log carries a table, and a table in a 560px box is one nobody reads. */
+  .modal .box.wide { width: min(900px, 100%); }
+  .modal header { @apply flex items-center justify-between gap-4 px-4 py-3 border-b border-line; }
+  .modal header h3 { @apply text-[1.02rem]; }
+  .modal .x { @apply bg-transparent border-0 text-[1.2rem] leading-none text-ink-3 cursor-pointer px-[.3rem] py-[.1rem]; }
+  .modal .x:hover { @apply text-ink; }
+  .modal .acts { @apply flex flex-wrap gap-[.7rem] px-4 pt-[1.1rem] pb-[.9rem]; }
+  .modal .why  { @apply px-4 pb-[.9rem] text-[.84rem] text-ink-2; }
+  .modal .why b { @apply text-ink; }
+  .modal .foot { @apply px-4 py-[.7rem] border-t border-line; }
+
+  .btn {
+    @apply font-body text-[.87rem] font-semibold px-[.9rem] py-2 rounded border border-transparent
+           text-white cursor-pointer inline-flex items-center gap-[.45rem];
+  }
+  .btn.go  { @apply bg-live; }
+  .btn.tpl { @apply bg-brand; }
+  .btn.imp { @apply bg-char; }
+  .btn.go:hover  { background: #19643E; }
+  .btn.tpl:hover { @apply bg-brand-dark; }
+  .btn.imp:hover { @apply bg-nav-2; }
+  .btn.ghost { @apply bg-white text-accent border-line-2; }
+  .btn.ghost:hover { @apply border-accent; }
+  .btn[disabled] { @apply opacity-[.45] cursor-not-allowed; }
+  .btn.ghost[disabled]:hover { @apply border-line-2; }
+
+  /* The Other queue is a grid, not a stack of cards — because Factor HR's is.
+     The two screens look different there because they are used differently. */
+  .gbar { @apply flex flex-wrap gap-[.45rem] mt-[.6rem] mb-[.55rem]; }
+  .gbtn {
+    @apply font-body text-[.82rem] px-[.72rem] py-[.4rem] border border-line-2 rounded
+           bg-white text-ink cursor-pointer inline-flex gap-[.42rem] items-center;
+  }
+  .gbtn:hover { @apply border-accent text-accent; }
+  .gfil { @apply flex flex-wrap gap-y-[.45rem] gap-x-[1.4rem] items-center mb-[.6rem] text-[.83rem] text-ink-2; }
+  .gfil label { @apply inline-flex gap-[.45rem] items-center; }
+  .gfil select {
+    @apply font-body text-[.83rem] px-2 py-[.32rem] border border-line-2 rounded bg-white text-ink min-w-[170px];
+  }
+  table.grid th { @apply align-top; }
+  table.grid td, table.grid th { @apply whitespace-nowrap; }
+  table.grid tr.fil th { @apply pt-0 bg-wash; }
+  table.grid tr.fil input {
+    @apply w-full min-w-[90px] font-body text-[.8rem] px-[.4rem] py-[.26rem] border border-line-2 rounded-[3px] bg-white;
+  }
+  table.grid select {
+    @apply font-body text-[.8rem] px-[.35rem] py-[.24rem] border border-line-2 rounded-[3px] bg-white;
+  }
+  table.grid td.desc { @apply whitespace-normal min-w-[260px]; }
+
+  /* The muster grid on Monthly Basic Attendance. Thirty-one day columns, so the
+     padding that suits a data table would push half the month off the screen. */
+  table.muster th.d, table.muster td.d { @apply px-[.22rem] py-[.3rem] text-center font-mono text-[.7rem]; }
+  table.muster th.d small { @apply block text-[.56rem] font-normal text-ink-3; }
+  table.muster td.d.wo  { @apply bg-skip-wash text-skip font-semibold; }
+  table.muster td.d.non { @apply text-line-2; }
+  table.muster td.pay { @apply font-mono text-right text-ink-3; }
+
+  /* The CTC / Earnings report form, laid out as Factor HR lays it out: labels
+     right-aligned in a narrow column, controls in a wide one, the buttons in a
+     row across the bottom. */
+  .repbar  { @apply flex justify-end mb-[.55rem]; }
+  .repform { @apply bg-card border border-line rounded-md px-[1.1rem] py-[.95rem]; }
+  .repset  { @apply border border-line-2 rounded-[5px] px-[.85rem] pt-[.2rem] pb-[.7rem] m-0 mb-[.85rem] max-w-[440px]; }
+  .repset legend { @apply text-[.79rem] text-ink-2 px-[.32rem]; }
+  .repgrid { @apply grid gap-y-2 gap-x-3 items-center; grid-template-columns: auto 1fr; }
+  .repgrid > label { @apply text-right text-[.86rem] text-ink-2 whitespace-nowrap; }
+  .repgrid > label.off { @apply text-ink-3; }
+  .repgrid .ctl { @apply flex flex-wrap gap-y-[.4rem] gap-x-[.7rem] items-center text-[.84rem] text-ink-2; }
+  .repform input, .repform select {
+    @apply font-body text-[.84rem] px-2 py-[.34rem] border border-line-2 rounded-[3px] bg-white text-ink;
+  }
+  .repform input:focus, .repform select:focus { @apply outline outline-2 -outline-offset-1 outline-brand; }
+  .repform input:disabled, .repform select:disabled { @apply bg-page text-ink-3 cursor-not-allowed; }
+  .repform input[type=number] { @apply w-24; }
+  .repform .wide { @apply min-w-[236px]; }
+  .repform .hint { @apply text-[.79rem] text-ink-3; }
+  .repform label.chk { @apply inline-flex gap-[.38rem] items-center text-left text-[.84rem] text-ink-2 whitespace-nowrap; }
+  .repform label.chk.off { @apply text-ink-3 cursor-not-allowed; }
+  .repform .dots {
+    @apply px-2 py-[.3rem] border border-line-2 rounded-[3px] bg-white text-ink-2 cursor-pointer font-mono leading-none;
+  }
+  .repform .dots:hover { @apply border-accent text-accent; }
+  .repacts { @apply flex flex-wrap gap-[.6rem] justify-center mt-4 pt-[.9rem] border-t border-line; }
+  .repmore { @apply mt-[.85rem] text-[.84rem] text-ink-2; }
+  .repmore summary { @apply cursor-pointer text-accent text-[.83rem]; }
+  .repmore .body { @apply pt-2 pl-4; }
+  /* Fourteen tick boxes do not fit a two-column grid. */
+  .repchecks {
+    @apply grid gap-y-[.34rem] gap-x-[.9rem] mt-[.95rem] pt-[.85rem] border-t border-line;
+    grid-template-columns: repeat(auto-fit, minmax(218px, 1fr));
+  }
+  .repradio { @apply flex gap-[2.2rem] justify-center mt-[.2rem] mb-[1.1rem] text-[.88rem] text-ink-2; }
+  .repradio label { @apply inline-flex gap-[.42rem] items-center cursor-pointer; }
+
+  table.ctc td.n, table.ctc th.n { @apply text-right font-mono tabular-nums; }
+  table.ctc tr.grp td { @apply bg-rule font-semibold; }
+  table.ctc tr.tot td { @apply bg-wash font-bold border-t-2 border-t-line-2; }
+  table.sr th.gapcol, table.sr td.gapcol { @apply text-none; background: #FDF6F5; }
+  table.sr td.gapcol { @apply font-mono text-[.78rem]; }
+  table.io tr.grp td { @apply bg-rule font-semibold; }
+  table.io td.sel { @apply text-ink-3; }
+
+  /* The Monthly Basic toolbar: a row of controls each under its own uppercase
+     micro-label, which is how Factor HR labels a report toolbar. */
+  .mbbar { @apply flex flex-wrap gap-y-[.6rem] gap-x-[.9rem] items-end mb-[.85rem]; }
+  .mbf   { @apply flex flex-col gap-[.24rem] min-w-0; }
+  .mbf > span { @apply font-mono text-[.62rem] tracking-[.08em] uppercase text-ink-3; }
+  .mbf select, .mbf input {
+    @apply text-[.84rem] px-2 py-[.34rem] border border-line-2 rounded bg-white text-ink;
+    font: inherit;
+  }
+  .mbf .grow { @apply min-w-[210px]; }
+
+  .taglist {
+    @apply flex flex-wrap gap-[.35rem] items-center border border-line-2 rounded
+           px-[.45rem] py-[.32rem] bg-white min-h-[2rem];
+  }
+  .taglist .t { @apply inline-flex items-center gap-[.4rem] text-[.8rem] px-[.45rem] py-[.16rem] rounded-[3px] bg-brand-soft text-brand-dark; }
+  .taglist .t button { @apply border-0 bg-transparent cursor-pointer leading-none p-0; color: inherit; font: inherit; }
+  .taglist .add { @apply text-[.8rem] text-accent bg-transparent border-0 cursor-pointer; font: inherit; }
+  .taglist .add:hover { @apply underline; }
+
+  .dtbar { @apply flex flex-wrap gap-y-[.45rem] gap-x-[.9rem] items-center justify-between text-[.83rem] text-ink-2; }
+  .dtbar select, .dtbar input {
+    @apply text-[.83rem] px-[.4rem] py-[.24rem] border border-line-2 rounded bg-white text-ink;
+    font: inherit;
+  }
+  .dtbar .pager { @apply flex gap-[.3rem]; }
+  .dtbar .pager button { @apply text-[.8rem] px-[.7rem] py-[.28rem] border border-line-2 rounded bg-white text-ink-2; font: inherit; }
+
+  /* IN / OUT ACTIVITY REPORT — Factor HR's newer report chrome: uppercase field
+     labels above boxed controls, a criteria tab strip beneath them, the primary
+     action on the right. Their palette is blue and ours stays Manna orange: a
+     screenshot comparison is about where a control is and what it does. */
+  .iotop { @apply flex flex-wrap gap-y-3 gap-x-4 items-end px-[.9rem] py-[.85rem]; }
+  .iof   { @apply flex flex-col gap-[.3rem] min-w-0; }
+  .iof > .lab { @apply font-mono text-[.6rem] tracking-[.1em] uppercase text-ink-3; }
+  .iof > .ctl { @apply flex items-center gap-[.35rem]; }
+  .iof input, .iof select {
+    @apply text-[.83rem] px-2 py-[.36rem] border border-line-2 rounded-[5px] bg-white text-ink;
+    font: inherit;
+  }
+  .iof input:focus, .iof select:focus { @apply outline outline-2 -outline-offset-1 outline-brand; }
+  .iof .grow { @apply min-w-[206px]; }
+  .iotop .right { @apply ml-auto flex items-end gap-[.4rem]; }
+  .iotabs { @apply flex gap-[1.35rem] px-[.9rem] border-b border-line; }
+  .iotab {
+    @apply text-[.75rem] tracking-[.08em] uppercase bg-transparent border-0
+           border-b-2 border-b-transparent px-[.1rem] py-[.55rem] text-ink-3 cursor-pointer;
+    font: inherit;
+  }
+  .iotab[aria-selected="true"] { @apply text-brand-dark border-b-brand font-semibold; }
+  .iotab:focus-visible { @apply outline outline-2 outline-offset-2 outline-brand; }
+  .iobody { @apply px-[.9rem] pt-[.95rem] pb-4; }
+  .iorow  { @apply flex flex-wrap gap-y-[.85rem] gap-x-6 items-end mb-[.95rem]; }
+  .iorow:last-child { @apply mb-0; }
+  .chipbox {
+    @apply flex flex-wrap gap-[.4rem] items-center border border-line-2 rounded-[5px] bg-white px-2 py-[.4rem] min-h-[37px];
+    width: min(620px, 100%);
+  }
+  .chip {
+    @apply inline-flex items-center gap-[.35rem] bg-page border border-line rounded-[3px]
+           pl-[.45rem] pr-[.2rem] py-[.16rem] text-[.82rem] text-ink-2;
+  }
+  .chip button { @apply bg-transparent border-0 text-ink-3 cursor-pointer text-[.9rem] leading-none px-1 py-0; }
+  .chip button:hover { @apply text-none; }
+  .iofun {
+    @apply inline-flex items-center gap-2 bg-transparent border-0 cursor-pointer
+           font-mono text-[.62rem] tracking-[.1em] uppercase text-ink-3;
+  }
+  .iofun svg { @apply w-[15px] h-[15px] stroke-current fill-none; stroke-width: 1.6; stroke-linejoin: round; }
+  .iofun:hover, .iofun[aria-expanded="true"] { @apply text-brand-dark; }
+
+  .nopend { @apply px-[.9rem] py-[1.1rem] text-ink-2 text-[.9rem] bg-wash border border-line border-t-0 rounded-b-md; }
+
+  .status { @apply font-mono text-[.72rem] inline-flex items-center gap-[.4rem]; }
+  .dot { @apply w-2 h-2 rounded-full inline-block; background: #B5B0AC; }
+  .dot.live { background: #5BD48D; }
+  .dot.bad  { background: #FF8A7E; }
+
+  /* --------------------------------------- Employees, the calendar screen -- */
+  /* Factor HR's calendar, laid out as it lays it out: toolbar, the calendar name
+     beside its default flag, a month strip with the arrows in the middle, then
+     six weeks with the week number down the gutter and the day number in the
+     corner. Their layout, this build's palette. */
+  .calwrap { @apply flex flex-col gap-2; }
+  .calbar .cico {
+    @apply inline-flex items-center justify-center w-[15px] h-[15px] rounded-full
+           text-[.62rem] leading-none text-white bg-ink-3;
+  }
+  .calbar .cico.new    { @apply bg-live; }
+  .calbar .cico.edit   { @apply bg-accent; }
+  .calbar .cico.delete { @apply bg-none; }
+  .calbar .cico.close  { @apply bg-skip; }
+  .calname { @apply gap-y-2 gap-x-[.9rem]; }
+  .calname label { @apply text-[.83rem] text-ink-2 inline-flex items-center gap-[.4rem]; }
+  .calname .n { @apply text-[.79rem] text-ink-3; }
+  .calname .calgo { @apply ml-auto text-accent; }
+  .calname input[type=month] {
+    @apply text-[.82rem] px-[.45rem] py-[.3rem] border border-line-2 rounded-[5px] bg-white text-ink;
+    font: inherit;
+  }
+  .caldef input { @apply w-[15px] h-[15px]; accent-color: #EE6A24; }
+
+  /* The month strip. Factor HR puts nothing but the arrows here — the month is
+     named in the first cell of the grid — but a strip that does not say which
+     month it is showing is a strip somebody misreads. */
+  .calstrip { @apply bg-char rounded-t-md px-[.7rem] py-[.42rem] flex items-center justify-center gap-[.9rem]; }
+  .calmonth { @apply font-display font-semibold text-[.92rem] text-white min-w-[11rem] text-center; }
+  .calnav   { @apply border-0 rounded text-white cursor-pointer text-[.8rem] leading-none px-[.6rem] py-[.34rem]; background: rgba(255,255,255,.12); }
+  .calnav:hover { @apply bg-brand; }
+
+  .calgrid {
+    @apply bg-card border border-line border-t-0 rounded-b-md overflow-hidden grid;
+    grid-template-columns: 30px repeat(7, minmax(0, 1fr));
+  }
+  .calgrid .dow {
+    @apply bg-wash border-b border-r border-line px-[.3rem] py-[.4rem] text-center
+           font-mono text-[.64rem] font-semibold tracking-[.08em] uppercase text-ink-3;
+  }
+  .calgrid .wk { @apply bg-wash border-r border-b border-line p-[.3rem] font-mono text-[.6rem] text-ink-3 tabular-nums; }
+  .calgrid .cell { @apply border-r border-b border-line min-h-[78px] px-[.35rem] py-[.28rem] flex flex-col gap-[.16rem]; }
+  /* The days either side of the month are greyed rather than blanked, as they
+     are over there: a punch on the 31st of last month is still somebody's day. */
+  .calgrid .cell.out { background: #F7F5F3; }
+  .calgrid .cell.out .num { @apply text-ink-3; }
+  .calgrid .cell.today { background: #FDF3E2; box-shadow: inset 0 0 0 1px #EE6A24; }
+  .calgrid .cell.today .num { @apply text-brand-dark font-semibold; }
+  .calgrid .num { @apply self-end font-mono text-[.7rem] text-ink-2 tabular-nums whitespace-nowrap; }
+
+  .ev { @apply text-[.72rem] leading-[1.25] rounded-[3px] px-[.3rem] py-[.08rem] overflow-hidden text-ellipsis whitespace-nowrap; }
+  .ev.hol  { @apply bg-live-wash text-live; }
+  .ev.off  { @apply bg-skip-wash text-skip; }
+  .ev.join { @apply bg-brand-soft text-brand-dark; }
+  .more { @apply bg-transparent border-0 p-0 text-[.72rem] text-accent cursor-pointer text-left; font: inherit; }
+  .more:hover { @apply underline; }
+  .callegend { @apply flex flex-wrap gap-y-[.4rem] gap-x-[.8rem] items-center text-[.8rem]; }
+  .callegend .n { @apply text-ink-3 ml-auto font-mono text-[.74rem]; }
+  .callegend .ev { @apply whitespace-nowrap; }
+
+  /* ------------------------------ Attendance, the regularization screen ---- */
+  /* Factor HR's screen as photographed: the title with a rule under it, one bar
+     of controls, and nothing at all beneath until a person is picked. */
+  .fhscreen { @apply flex flex-col gap-2 mt-[.8rem]; }
+  .fhtitle  { @apply font-display font-bold text-[.86rem] tracking-[.06em] uppercase text-ink pb-2 border-b border-line; }
+  .regbar   { @apply gap-y-[.45rem] gap-x-2; }
+  .regbar .cyc {
+    @apply inline-flex items-center gap-[.4rem] text-[.83rem] text-ink-2 border border-line-2
+           rounded-[5px] px-2 py-[.24rem] bg-white;
+  }
+  .regbar .cyc select { @apply border-0 px-[.2rem] py-[.1rem] text-[.83rem]; }
+  .regicons { @apply inline-flex gap-[.3rem] ml-auto; }
+  .regicons .ic { @apply px-[.45rem] py-[.3rem]; }
+
+  .regfind {
+    @apply bg-card border border-line-2 rounded-md p-1 flex flex-col;
+    box-shadow: 0 4px 14px rgba(65, 64, 66, .1);
+  }
+  .regfind button {
+    @apply text-[.85rem] text-left bg-transparent border-0 rounded
+           px-[.55rem] py-[.4rem] cursor-pointer text-ink flex items-center gap-[.6rem];
+    font: inherit;
+  }
+  .regfind button:hover { @apply bg-page; }
+  .regfind .mono  { @apply font-mono text-[.78rem] text-ink-2; }
+  .regfind .muted { @apply ml-auto text-[.8rem]; }
+  .regfind .none  { @apply p-2 text-[.84rem] text-ink-3; }
+
+  /* The screen with nobody chosen, which is how it opens. */
+  .regnone { @apply px-[.9rem] py-[2.1rem] text-center bg-card border border-line rounded-md; }
+  .regnone b    { @apply block font-display text-base text-ink mb-1; }
+  .regnone span { @apply text-[.85rem] text-ink-3; }
+
+  .regwho { @apply flex flex-wrap gap-y-2 gap-x-[.8rem] items-center bg-card border border-line rounded-md px-[.8rem] py-[.55rem] text-[.88rem]; }
+  .regwho .mono  { @apply font-mono text-[.8rem] text-ink-2; }
+  .regwho .muted { @apply text-[.82rem]; }
+  .regwho .n     { @apply ml-auto font-mono text-[.76rem] text-ink-3; }
+
+  /* ------------------------- Attendance, the Daily Detail report panel ----- */
+  /* Their panel: one row of labelled controls, two tabs, a date range, layout
+     chips, and the Additional Filters funnel. */
+  .ddaform { @apply gap-[.7rem]; }
+  .ddabar  { @apply flex flex-wrap gap-y-[.7rem] gap-x-[.9rem] items-end; }
+  .ddabar .fld { @apply flex flex-col gap-[.28rem] min-w-0; }
+  .ddabar .fld.grow { flex: 1 1 240px; }
+  .ddabar .fld.wide { flex: 1 1 320px; }
+  .ddabar .lab, .ddafield .lab {
+    @apply font-mono text-[.62rem] font-semibold tracking-[.09em] uppercase text-ink-3;
+  }
+  .ddabar .ctl { @apply flex gap-[.35rem] items-center min-w-0; }
+  .ddabar .ctl .find { @apply border border-line-2 rounded-[5px] px-2 py-[.1rem] bg-white; flex: 1 1 auto; }
+  .ddabar .ctl .find input { @apply border-0 px-[.1rem] py-[.28rem] min-w-0; flex: 1 1 auto; }
+  .ddabar select { @apply text-[.84rem] px-2 py-[.34rem] border border-line-2 rounded-[5px] bg-white text-ink; font: inherit; }
+  .ddabar select.wide { @apply w-full; }
+  .ddabar .ic  { @apply px-[.45rem] py-[.3rem]; }
+  .ddabar .xls { @apply px-2 py-[.26rem] text-live border-live; }
+  .ddabar .xls b { @apply font-display text-[.9rem]; }
+
+  .ddatabs { @apply flex gap-[1.2rem] border-b border-line; }
+  .ddatabs button {
+    @apply bg-transparent border-0 border-b-2 border-b-transparent cursor-pointer font-mono
+           text-[.68rem] tracking-[.09em] uppercase text-ink-3 px-[.1rem] py-2;
+  }
+  .ddatabs button[aria-selected="true"] { @apply text-brand-dark border-b-brand; }
+  .ddapane  { @apply flex flex-col gap-[.85rem] pt-[.2rem] pb-[.3rem]; }
+  .ddafield { @apply flex flex-col gap-[.3rem]; }
+  .daterange {
+    @apply inline-flex items-center gap-[.45rem] border border-line-2 rounded-[5px]
+           bg-white px-[.55rem] py-[.26rem] w-fit max-w-full flex-wrap;
+  }
+  .daterange input { @apply text-[.85rem] border-0 p-[.1rem] text-ink bg-transparent; font: inherit; }
+  .daterange .sep  { @apply text-ink-3; }
+  .ddafield .hint  { @apply text-[.79rem] text-ink-3; }
+  .ddafield .chips {
+    @apply flex flex-wrap gap-[.4rem] items-center border border-line-2 rounded-[5px]
+           bg-white px-2 py-[.4rem] min-h-[2.3rem];
+  }
+  .ddafield .chips select {
+    @apply text-[.8rem] border border-dashed border-line-2 rounded-[3px]
+           bg-transparent text-ink-3 px-[.3rem] py-[.14rem];
+    font: inherit;
+  }
+  .ddamore { @apply inline-flex items-center gap-[.45rem] bg-transparent border-0 p-0 cursor-pointer text-ink-3 w-fit; }
+  .ddamore:hover { @apply text-accent; }
+
+  .ddaout  { @apply flex flex-col gap-[.6rem] mt-[.85rem]; }
+  .ddalogo { @apply flex items-center gap-[.8rem] bg-card border border-line rounded-md px-[.9rem] py-[.6rem] text-[.82rem] text-ink-2; }
+  .ddalogo .mark { @apply border-char px-[.42rem] py-[.26rem] text-[.86rem]; }
+  .ddalogo .mark .c { @apply text-char; }
+  .ddalogo b { @apply block font-display text-ink text-[.92rem]; }
+  .ddacount { @apply font-mono text-[.76rem] text-ink-3; }
+  .ddagroup { @apply bg-card border border-line rounded-md overflow-hidden; }
+  .ddagroup > header {
+    @apply flex flex-wrap gap-y-[.4rem] gap-x-[.8rem] items-baseline px-[.8rem] py-2 border-b border-line text-[.86rem];
+  }
+  .ddagroup > header b { @apply font-display; }
+  .ddagroup > header .mono  { @apply font-mono text-[.78rem] text-ink-2; }
+  .ddagroup > header .muted { @apply text-[.8rem]; }
+  .ddagroup > header .n     { @apply ml-auto font-mono text-[.74rem] text-ink-3; }
+  .ddagroup .scroll { @apply border-0 rounded-none; }
+  .ddasection { @apply flex flex-col gap-2; }
+  .ddasection h4 { @apply font-display text-[.86rem] font-semibold text-ink-2 flex gap-[.6rem] items-baseline mt-[.35rem] mb-0; }
+  .ddasection h4 span { @apply font-mono text-[.72rem] text-ink-3; }
+}
+
+/* The two responsive breaks the original carries. Outside @layer so they are
+   never dropped along with an unused component class. */
+@media (max-width: 1100px) {
+  .reqx { grid-template-columns: auto 1fr; }
+}
+@media (max-width: 820px) {
+  .req   { grid-template-columns: 1fr; }
+  .shell { grid-template-columns: 84px 1fr; }
+}

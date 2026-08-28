@@ -68,9 +68,17 @@ payroll is not ready to move.
 
 ### 5. Shifts
 
-Shift patterns per company, with start and end times, and which people are on
-which. **Flag every shift that crosses midnight** — see
-[SCHEMA.md](SCHEMA.md) §4 for why that one is dangerous.
+Shift patterns per company, with start and end times. **Flag every shift that
+crosses midnight** — see [SCHEMA.md](SCHEMA.md) §4 for why that one is
+dangerous.
+
+**Do not ask for "which people are on which shift".** It does not exist over
+there in that form: their Manage Shift screen shows `EMPLOYEE COUNT` as 0 on
+every row and the assignment carried by the *category* instead
+([FACTOHR_SCREENS.md](FACTOHR_SCREENS.md) §20). What to ask for is **which
+category type carries the shift, and the membership of those categories** —
+ERPNext's per-person `Shift Assignment` rows are then derived from it, and the
+derivation is only as right as that membership is.
 
 ---
 

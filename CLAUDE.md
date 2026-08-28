@@ -41,8 +41,15 @@ exists — a private bench is not a preference here.
 | `manna_hr/rules.py` | Pure rules — no `frappe` import. Testable without a bench. |
 | `manna_hr/geo.py` | Distance arithmetic, ported from the sales app's `proximity.dart` |
 | `manna_hr/checkin.py` | The punch validation. The backstop. |
-| `bridge/` | The on-premise agent that reads the fingerprint machines |
+| `bridge/` | The on-premise agent that reads the fingerprint machines. Node. |
+| `app/` | The dashboard — React + Tailwind + axios in `app/web/`, served by `app/serve.js` |
+| `tools/` | One-off scripts that read the Factor HR exports. Node. |
 | `docs/` | Runbook, schema, migration, open questions |
+
+**`manna_hr/` is Python because it has to be** — it is a Frappe app, installed
+into ERPNext's own runtime by `bench get-app`, and its hooks and doctype
+controllers are called by Python. Everything outside it is JavaScript. That
+split is not a preference; it is the one place §1's rule can actually live.
 
 The repo root **is** the Frappe app root, so `bench get-app` works against it
 directly. `bridge/` and `docs/` ride along; the bench ignores them.
@@ -106,8 +113,8 @@ already marked Absent silently swallows a correction: the checkins land, the job
 runs, the day stays Absent. `_clear_generated_attendance` cancels the old row
 first. Do not remove it.
 
-**The bridge must never clear a device's log.** `pyzk` offers
-`clear_attendance()` and every tutorial calls it. The device's memory is the
+**The bridge must never clear a device's log.** `node-zklib` offers
+`clearAttendanceLog()` and every tutorial calls it. The device's memory is the
 last copy of a punch that failed to deliver.
 
 **A `device_id` that does not start with the trusted prefix is treated as a

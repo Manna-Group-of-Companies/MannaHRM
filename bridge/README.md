@@ -30,12 +30,24 @@ somebody's day's pay.
 
 ```bash
 cd bridge
-python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+npm install                                     # node-zklib and smol-toml
 
 cp config.example.toml config.toml              # then fill it in
-python -m mannabridge.main --once               # one pass, to see it work
-python -m mannabridge.main                      # the real thing
+node mannabridge/main.js --once                 # one pass, to see it work
+node mannabridge/main.js                        # the real thing
+```
+
+Needs **Node 22.5 or newer** — the queue uses `node:sqlite`, which ships with
+Node from that version. Two dependencies, both pinned: an unpinned dependency on
+a box that runs unattended for years is a change nobody chose to make, applied
+on whichever day it was rebuilt.
+
+Two diagnostics sit beside it, and both are read-only:
+
+```bash
+node probe.js                    # find machines on this subnet and describe them
+node probe.js 192.168.1.201      # one you already know
+node check-push.js 192.168.1.201 # can it push by itself, and to where?
 ```
 
 `--once` is the command to run when somebody says attendance is missing. It
@@ -61,7 +73,12 @@ found switched off in March, with a month of attendance behind it.
   will be geofenced and refused, because no fingerprint machine sends a
   coordinate.
 
-**`password`** is the device's comm key, not anyone's password. Usually 0.
+**`password`** is the device's comm key, not anyone's password. Usually 0 —
+and it has to be, on this reader: `node-zklib` has no way to send one, so a
+machine with a comm key set will refuse the socket. The field is still read and
+carried so the config does not silently mean nothing, but if a device has a key
+it must be cleared on the device or this reader replaced. The Python bridge this
+replaced could send one; that is the single capability lost in the move.
 
 ---
 

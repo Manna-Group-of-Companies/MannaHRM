@@ -6,8 +6,8 @@ rather than an import file.
 Generated 22 August 2026. Regenerate any time with:
 
 ```bash
-python tools/build_master_imports.py      # 02  (01 is already on the site)
-python tools/build_employee_import.py     # 03
+node tools/build_master_imports.js      # 02  (01 is already on the site)
+node tools/build_employee_import.js     # 03
 ```
 
 Each file depends on the ones above it. Importing out of order fails a row at a
@@ -97,7 +97,7 @@ One row, `Accountant`, already exists on the site. Re-importing it is harmless.
 | Hi-Tech Rubber Industries | 18 |
 | Manna Group Headquarters | 1 |
 
-Leavers are excluded. `python tools/build_employee_import.py --include-left`
+Leavers are excluded. `node tools/build_employee_import.js --include-left`
 adds all 344 as `Status: Left`, if you want the history for gratuity.
 
 **21 of the 160 have no biometric machine code.** They import fine, but until
@@ -127,7 +127,7 @@ as a code (`HPT-072 - AJITH S`).
 | duplicate codes | 0 |
 | no manager named | 6 — the head of each company, correctly |
 
-Reproduce or re-check with `python tools/backfill_employee_links.py`
+Reproduce or re-check with `node tools/backfill_employee_links.js`
 (dry run; add `--apply` to write).
 
 ---
@@ -154,7 +154,7 @@ Every column is something auto-attendance cannot work without:
 If the half-day and absent thresholds are the same across every shift, fill the
 first row and say so.
 
-Regenerate with `python tools/build_shift_template.py`.
+Regenerate with `node tools/build_shift_template.js`.
 
 ---
 

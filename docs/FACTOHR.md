@@ -72,6 +72,10 @@ that frozen summary, and the record cannot be deleted once salary is processed.
 **Frappe HR has no equivalent gate.** Payroll reads `Attendance` directly, live.
 That is a real control your HR team currently has and would lose.
 
+> **Read [FACTOHR_SCREENS.md](FACTOHR_SCREENS.md) §21 before costing this.** The
+> Submit Attendance List in the live tenant is empty: the gate exists and has
+> never been used. "Would lose" may be "has never had".
+
 ### Regularization
 
 Employee raises it from ESS with a date, an In or Out time, a reason from a

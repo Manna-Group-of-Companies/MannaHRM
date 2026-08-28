@@ -1,0 +1,14 @@
+{
+  "name": "manna-hr-tools",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "One-off scripts that read the Factor HR exports and build the ERPNext import files",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "exceljs": "4.4.0",
+    "jszip": "^3.10.1"
+  }
+}

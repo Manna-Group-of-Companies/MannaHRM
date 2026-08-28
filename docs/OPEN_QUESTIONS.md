@@ -127,8 +127,12 @@ Screenshots of these three Setup screens would be enough to start, per company:
 - **Setup > Manage Attendance Policy** — the real thresholds, grace periods,
   and the late/early forgiveness counts. This is the single most valuable
   screen; it is where roughly all of the build effort is.
-- **Setup > Manage Shift** — start and end times, breaks, and which cross
-  midnight.
+- **Setup > Manage Shift** — the list itself has now been seen
+  ([FACTOHR_SCREENS.md](FACTOHR_SCREENS.md) §20) and carries no timings at all.
+  What is still needed is **start and end times, breaks, and which cross
+  midnight** — plus the one click that says **which category type carries the
+  shift**, because that is how people are assigned to one and there is no
+  per-person column to export.
 - The leave master and the salary component master.
 
 Also worth knowing: **which licensed modules anybody actually uses.** The login

@@ -1,6 +1,6 @@
 # Fingerprint machines
 
-Read live with `python bridge/probe.py <ip>`. Everything here came off the
+Read live with `node bridge/probe.js <ip>`. Everything here came off the
 devices themselves, not from a datasheet.
 
 ---
@@ -21,7 +21,7 @@ devices themselves, not from a datasheet.
 | Reports IN/OUT | **Yes** |
 | Device clock | **7.5 minutes behind** the office PC |
 
-`ZLM60_TFT` is a ZKTeco platform. Identix rebadges ZK hardware, so `pyzk` talks
+`ZLM60_TFT` is a ZKTeco platform. Identix rebadges ZK hardware, so `node-zklib` talks
 to it directly and the bridge needs no special handling. **The riskiest unknown
 in the whole project is closed.**
 
@@ -115,8 +115,8 @@ The 55 employees with a device id not enrolled here are on other machines. Run
 the same command at each site:
 
 ```bash
-python bridge/probe.py               # scans the local subnet
-python bridge/probe.py 192.168.1.x   # or a known address
+node bridge/probe.js               # scans the local subnet
+node bridge/probe.js 192.168.1.x   # or a known address
 ```
 
 The client list supplied showed three empty rows above this one, which suggests

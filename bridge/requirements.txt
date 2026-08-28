@@ -1,4 +1,0 @@
-# Pinned. This runs unattended on a shelf for years; an unpinned dependency is
-# a change nobody chose to make, applied on whichever day the box was rebuilt.
-pyzk==0.9
-requests==2.32.3

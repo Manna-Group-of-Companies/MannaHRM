@@ -96,7 +96,7 @@ once per company.
 ## Checking a file landed correctly
 
 ```bash
-python tools/inspect_export.py data/factohr/
+node tools/inspect_export.js data/factohr/
 ```
 
 Prints each file's sheets, header row, column names and row count, with sample

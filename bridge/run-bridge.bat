@@ -8,10 +8,12 @@ REM
 REM This must run on a machine that stays on and can reach the device LAN.
 REM Frappe Cloud cannot reach 192.168.1.40 - only something inside your network
 REM can, which is the whole reason this program exists.
+REM
+REM Needs Node 22.5 or newer: the punch queue uses node:sqlite.
 
 setlocal
 set MANNA_API_KEY=REPLACE_ME
 set MANNA_API_SECRET=REPLACE_ME
 
 cd /d "%~dp0"
-python -m mannabridge.main >> bridge.log 2>&1
+node mannabridge\main.js >> bridge.log 2>&1

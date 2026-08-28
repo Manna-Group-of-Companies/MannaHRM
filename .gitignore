@@ -18,3 +18,9 @@ venv/
 data/**
 !data/**/
 !data/**/README.md
+
+# Node: installed packages, and the bridge's own working files.
+node_modules/
+bridge/*.sqlite3-wal
+bridge/*.sqlite3-shm
+bridge/bridge.log
