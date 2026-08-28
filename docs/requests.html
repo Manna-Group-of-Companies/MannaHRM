@@ -1,0 +1,300 @@
+<title>Manna HR Data Requests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root{
+    --ground:#F2F2EF; --surface:#fff; --surface-2:#FAFAF8;
+    --line:#DCDDD8; --line-strong:#C2C4BE;
+    --ink:#191C1E; --ink-2:#4A4F52; --ink-3:#767B7E;
+    --accent:#0E6B73; --accent-ink:#0A4E54; --accent-wash:#E4EFEF;
+    --ok:#2C6E49; --ok-wash:#E3EFE7;
+    --warn:#96650B; --warn-wash:#F6EDDA;
+    --stop:#A8332A; --stop-wash:#F7E5E3;
+    --shadow:0 1px 2px rgba(25,28,30,.05),0 4px 14px rgba(25,28,30,.05);
+    --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+    --body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+    --pad:clamp(1.1rem,3.5vw,2.4rem);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#131618; --surface:#1B1F21; --surface-2:#202426;
+      --line:#2E3336; --line-strong:#414749;
+      --ink:#E9EBEB; --ink-2:#AFB5B7; --ink-3:#838A8D;
+      --accent:#4FB3B8; --accent-ink:#7FCBCF; --accent-wash:#17383B;
+      --ok:#6FBF8E; --ok-wash:#1A3326;
+      --warn:#D9A445; --warn-wash:#382C13;
+      --stop:#E4796E; --stop-wash:#3A1E1B;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#131618; --surface:#1B1F21; --surface-2:#202426;
+    --line:#2E3336; --line-strong:#414749;
+    --ink:#E9EBEB; --ink-2:#AFB5B7; --ink-3:#838A8D;
+    --accent:#4FB3B8; --accent-ink:#7FCBCF; --accent-wash:#17383B;
+    --ok:#6FBF8E; --ok-wash:#1A3326;
+    --warn:#D9A445; --warn-wash:#382C13;
+    --stop:#E4796E; --stop-wash:#3A1E1B;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px;margin:0 auto;padding:var(--pad);display:flex;flex-direction:column;gap:clamp(1.8rem,4vw,2.9rem)}
+  h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+  .tread{height:9px;border-radius:1px;background-image:repeating-linear-gradient(115deg,var(--line-strong) 0 7px,transparent 7px 15px);opacity:.85}
+
+  header{display:flex;flex-direction:column;gap:.9rem}
+  .titleline{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.5rem 1rem}
+  h1{font-size:clamp(1.8rem,4.5vw,2.8rem);font-weight:700;letter-spacing:-.022em;line-height:1.06}
+  .standfirst{max-width:66ch;color:var(--ink-2);font-size:1.02rem}
+
+  section{display:flex;flex-direction:column;gap:1rem}
+  .sechead{display:flex;flex-direction:column;gap:.3rem}
+  .sechead h2{font-size:1.22rem;font-weight:600;letter-spacing:-.012em}
+  .sechead p{margin:0;color:var(--ink-2);max-width:70ch;font-size:.93rem}
+
+  .who{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;padding:.2rem .5rem;border-radius:3px;background:var(--accent-wash);color:var(--accent-ink);font-weight:600}
+
+  .item{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:1rem 1.15rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.55rem}
+  .item.stop{border-left:3px solid var(--stop)}
+  .item.warn{border-left:3px solid var(--warn)}
+  .item.calm{border-left:3px solid var(--accent)}
+  .item .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem .8rem;justify-content:space-between}
+  .item h3{font-size:1.03rem;font-weight:600;letter-spacing:-.008em}
+  .ref{font-family:var(--mono);font-size:.7rem;color:var(--ink-3);letter-spacing:.06em}
+  .item p{margin:0;color:var(--ink-2);font-size:.9rem}
+  .item ul{margin:.1rem 0 0;padding-left:1.1rem;color:var(--ink-2);font-size:.9rem;display:flex;flex-direction:column;gap:.22rem}
+  .item li strong{color:var(--ink);font-weight:600}
+
+  .meta{display:flex;flex-wrap:wrap;gap:.4rem .9rem;padding-top:.55rem;border-top:1px dashed var(--line);font-size:.83rem}
+  .meta span{color:var(--ink-2)}
+  .meta b{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-right:.3rem}
+
+  .why{background:var(--warn-wash);color:var(--ink);border-radius:4px;padding:.55rem .7rem;font-size:.87rem}
+  .why b{font-family:var(--display);font-weight:600}
+  .why.stop{background:var(--stop-wash)}
+  .why.calm{background:var(--accent-wash)}
+
+  .grid{display:grid;gap:.85rem}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+
+  ol.order{list-style:none;margin:0;padding:0;counter-reset:o;display:flex;flex-direction:column;gap:.5rem}
+  ol.order li{counter-increment:o;display:grid;grid-template-columns:2rem 1fr;gap:.8rem;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:.7rem .9rem}
+  ol.order li::before{content:counter(o);font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--accent)}
+  ol.order b{font-family:var(--display);font-weight:600}
+  ol.order span{color:var(--ink-2);font-size:.9rem}
+
+  code{font-family:var(--mono);font-size:.85em;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;padding:.05em .32em}
+  footer{border-top:1px solid var(--line);padding-top:1rem;color:var(--ink-3);font-size:.82rem}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="tread"></div>
+  <div class="titleline">
+    <h1>Manna HR Data Requests</h1>
+    <span class="eyebrow">22 Aug 2026</span>
+  </div>
+  <p class="standfirst">
+    Everything still needed to finish the move off Factor HR, grouped by who is
+    likely to have it. Six companies, 161 employees and the holiday calendar are
+    already loaded — what remains is mostly configuration only Manna knows.
+  </p>
+</header>
+
+<!-- ============================================================ start === -->
+<section>
+  <div class="sechead">
+    <span class="eyebrow">Start here</span>
+    <h2>Two items block everything else</h2>
+    <p>Until these land, no amount of other work moves the project forward — attendance cannot be generated at all without shifts, and the size of the custom build cannot be estimated without the policy.</p>
+  </div>
+
+  <div class="item stop">
+    <div class="top">
+      <h3>The 23 shift definitions</h3>
+      <span class="ref">A1 · <span class="who">Plant managers</span></span>
+    </div>
+    <p>Fill in <code>data/out/04-shifts-TO-FILL.xlsx</code> and send it back. Two rows are pre-filled from your own attendance reports; 21 appear in no export you have sent.</p>
+    <ul>
+      <li><strong>Start / End</strong> — decides which punches belong to the shift at all</li>
+      <li><strong>Crosses midnight?</strong> — decides which <em>day</em> the hours land on</li>
+      <li><strong>Break start / end</strong> — comes off worked hours, which decide half-day and absent</li>
+      <li><strong>Rotating?</strong> — the real question behind <code>Production24hr</code> and <code>Production22hr</code></li>
+      <li><strong>Half-day / absent thresholds</strong> — if identical everywhere, fill row 1 and say so</li>
+    </ul>
+    <div class="why stop"><b>Why it blocks:</b> Frappe HR generates attendance from punches <em>through the shift</em>. No shift, no attendance, however many punches arrive. And a night shift configured wrong reads as absent two days running — no punch-out on the first, no punch-in on the second.</div>
+  </div>
+
+  <div class="item stop">
+    <div class="top">
+      <h3>The attendance policy, as you have it configured</h3>
+      <span class="ref">A2 · <span class="who">Factor HR admin</span></span>
+    </div>
+    <p>Screenshots are fine — every step of the wizard, per company. Factor HR → <strong>Setup → Manage Attendance Policy</strong>, and <strong>Manage Shift</strong>.</p>
+    <ul>
+      <li><strong>Late / early forgiveness</strong> — Factor HR's own example is <em>"3 times in a month no leave deducted, but on the 4th his half day will be deducted"</em></li>
+      <li><strong>Deduction target</strong> — Loss of Pay, or taken from a paid leave balance</li>
+      <li><strong>Overtime</strong> — minimum, maximum, rounding, working vs non-working day, approval</li>
+      <li><strong>Session mode</strong> — are pre-break and post-break evaluated separately?</li>
+      <li><strong>Grace periods</strong> and the exact half-day / absent thresholds</li>
+    </ul>
+    <div class="why stop"><b>Why this one matters most:</b> Frappe HR has no equivalent for any of it, so each feature you actually use is custom code. This single screen decides whether that build is a week or two months — and if you don't use frequency forgiveness, a large piece of work disappears.</div>
+  </div>
+</section>
+
+<!-- ============================================================== IT === -->
+<section>
+  <div class="sechead">
+    <span class="eyebrow">IT and maintenance</span>
+    <h2>The fingerprint machines</h2>
+  </div>
+
+  <div class="grid g2">
+    <div class="item warn">
+      <div class="top"><h3>Device inventory</h3><span class="ref">B1</span></div>
+      <p>One row per machine:</p>
+      <ul>
+        <li><strong>Location</strong> — which gate, which company</li>
+        <li><strong>Make and model</strong> — must speak the ZK protocol</li>
+        <li><strong>IP address and port</strong> — usually 4370</li>
+        <li><strong>Comm key</strong> — usually 0 if never set</li>
+        <li><strong>Sends IN/OUT?</strong> — many are configured not to</li>
+      </ul>
+      <div class="why"><b>Watch for:</b> a cloud-only or proprietary-SDK device needs a different reader entirely. ZKTeco, eSSL, Realtime and most Indian clones are fine.</div>
+    </div>
+
+    <div class="item warn">
+      <div class="top"><h3>A machine to run the bridge</h3><span class="ref">B2</span></div>
+      <p>One always-on PC or Raspberry Pi <strong>per site</strong> — or VPN details, if one box can reach every site.</p>
+      <div class="why"><b>Why:</b> Frappe Cloud cannot reach a factory LAN, so the bridge has to sit inside your network. It must run whether or not anybody is logged in — one that only runs at login gets found switched off in March, with a month of attendance behind it.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== HR === -->
+<section>
+  <div class="sechead">
+    <span class="eyebrow">HR</span>
+    <h2>Leave, and where people punch</h2>
+  </div>
+
+  <div class="grid g2">
+    <div class="item calm">
+      <div class="top"><h3>Coordinates for every gate</h3><span class="ref">C1</span></div>
+      <p>Latitude and longitude to six decimals, per punching point, with a name and its company.</p>
+      <p><strong>Stand at the gate</strong>, long-press your position in Google Maps, copy the coordinates. Not from a map pin — a pin lands on the roof and people punch at the door.</p>
+      <div class="why calm"><b>Also:</b> how far from each gate a punch should still count. Default 300 m, generous on purpose — a phone against a metal shed reads badly, and refusing somebody who did turn up is the expensive mistake.</div>
+    </div>
+
+    <div class="item calm">
+      <div class="top"><h3>Leave types and entitlements</h3><span class="ref">D1–D3</span></div>
+      <p>Frappe HR installed five: Casual, Sick, Privilege, Leave Without Pay, Compensatory Off. Your reports show Casual and LWP in use — which of the rest are real?</p>
+      <ul>
+        <li><strong>Annual days</strong> per type, carry-forward, paid or unpaid</li>
+        <li><strong>Opening balances</strong> per person per type, <em>as at a stated date</em></li>
+      </ul>
+      <div class="why calm"><b>The date matters more than the number.</b> A balance with no date cannot be reconciled against anything. Nothing has an entitlement set today, so nobody has any balance at all.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================= finance === -->
+<section>
+  <div class="sechead">
+    <span class="eyebrow">Finance — only if payroll moves</span>
+    <h2>Payroll</h2>
+    <p>Nothing has been started here. If payroll stays in Factor HR for now, say so and skip this entirely.</p>
+  </div>
+
+  <div class="item calm">
+    <div class="top"><h3>Structures, statutory setup, and three months of payslips</h3><span class="ref">E1–E3</span></div>
+    <ul>
+      <li><strong>Salary structure</strong> — every earning and deduction, its formula, and who it applies to</li>
+      <li><strong>Statutory</strong> — PF, ESI, Professional Tax, TDS per company, and who is enrolled</li>
+      <li><strong>Three months of payslips</strong> — not to import, to test against</li>
+    </ul>
+    <div class="why calm"><b>The payslips are the honest test.</b> If we cannot reproduce last month's to the rupee before cutover, payroll is not ready to move.</div>
+  </div>
+</section>
+
+<!-- ======================================================= decisions === -->
+<section>
+  <div class="sechead">
+    <span class="eyebrow">Leadership</span>
+    <h2>Six decisions — answers, not files</h2>
+    <p>Each one changes what gets built. None needs any data gathering.</p>
+  </div>
+
+  <div class="grid g2">
+    <div class="item warn">
+      <div class="top"><h3>The private bench</h3><span class="ref">F1</span></div>
+      <p>Costs nothing extra — Frappe Cloud bills per site and the $25 you already pay is the requirement. It turns on Server Scripts and allows the custom rules app.</p>
+      <div class="why"><b>It was free of risk when Frappe HR was empty.</b> It isn't any more — 161 employees are on the site now. Still better before daily punches start.</div>
+    </div>
+
+    <div class="item warn">
+      <div class="top"><h3>Selfie on punch</h3><span class="ref">F2</span></div>
+      <p>Factor HR photographs every mobile punch; this design records coordinates only.</p>
+      <div class="why">A coordinate proves a <em>phone</em> was near the gate. A photograph proves a <em>person</em> was — which matters exactly where phones get handed to a colleague. Also ~5&nbsp;MB a day, kept forever unless someone sets a retention rule.</div>
+    </div>
+
+    <div class="item warn">
+      <div class="top"><h3>The five optional holidays</h3><span class="ref">F3</span></div>
+      <p>All nine are currently one Holiday List, meaning the factory closes on each. If an employee instead <em>chooses</em> which optional days to take, that is a different structure and takes minutes to rebuild.</p>
+    </div>
+
+    <div class="item stop">
+      <div class="top"><h3>Manna Tyre UAE</h3><span class="ref">F4</span></div>
+      <p>Measured on your live data: all three UAE reps' punches are out by exactly <strong>90 minutes</strong>; every Indian rep by zero. Frappe has one timezone per site.</p>
+      <ul>
+        <li><strong>Separate site</strong> — correct on timezone, weekend, payroll and holidays. Costs a second site for six people.</li>
+        <li><strong>Fix the app, display-only</strong> — cheapest; records become consistent but shift windows still run on Indian time.</li>
+        <li><strong>Stay on Factor HR</strong> — defer it.</li>
+      </ul>
+      <div class="why stop">The app bug should be fixed either way. It is wrong today regardless of which option you pick.</div>
+    </div>
+
+    <div class="item calm">
+      <div class="top"><h3>How much history to carry</h3><span class="ref">F5</span></div>
+      <p>Our suggestion: carry the last complete financial year as read-only history and start live recording at go-live. Importing years of daily attendance produces a table nobody queries and a reconciliation nobody finishes — but gratuity may argue otherwise.</p>
+    </div>
+
+    <div class="item calm">
+      <div class="top"><h3>Which Factor HR modules do you actually use?</h3><span class="ref">F6</span></div>
+      <p>Your login page advertises ticketing, surveys, performance management and a chatbot. Paying for them is not the same as using them, and building replacements for unused modules is the easiest way to double this project for nothing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ order === -->
+<section>
+  <div class="sechead">
+    <span class="eyebrow">If you want to unblock the most with the least</span>
+    <h2>Suggested order</h2>
+  </div>
+  <ol class="order">
+    <li><div><b>The shift sheet</b> <span>— one spreadsheet, and it unblocks all of attendance</span></div></li>
+    <li><div><b>Attendance policy screenshots</b> <span>— decides the size of the custom build</span></div></li>
+    <li><div><b>The device list</b> <span>— unblocks the fingerprint bridge</span></div></li>
+    <li><div><b>The six decisions</b> <span>— no gathering needed, just answers</span></div></li>
+    <li><div><b>Gate coordinates</b> <span>— a walk round the sites with a phone</span></div></li>
+    <li><div><b>Leave types, entitlements, balances</b></div></li>
+    <li><div><b>Payroll</b> <span>— only if it is moving</span></div></li>
+  </ol>
+</section>
+
+<footer>
+  <div class="tread" style="opacity:.5"></div>
+  <p style="margin:.7rem 0 0">
+    Drop files into <code>data/factohr/</code> or <code>data/out/</code>. Screenshots are fine wherever an export is awkward.
+    Full detail in <code>docs/WHAT_WE_NEED.md</code>.
+  </p>
+</footer>
+
+</div>

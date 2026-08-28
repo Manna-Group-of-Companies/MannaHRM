@@ -1,0 +1,20 @@
+# Holds an API key that can write attendance for the whole group.
+bridge/config.toml
+bridge/*.sqlite3
+bridge/*.log
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Factor HR exports — salary, PAN, Aadhaar, bank details for the whole group.
+# Never commit these. The directory is tracked; its contents are not.
+# Git will not descend into an excluded directory, so directories have to be
+# re-included before a file inside one can be.
+data/**
+!data/**/
+!data/**/README.md

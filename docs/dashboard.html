@@ -1,0 +1,805 @@
+<title>Manna HR Changeover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground:      #F2F2EF;
+    --surface:     #FFFFFF;
+    --surface-2:   #FAFAF8;
+    --line:        #DCDDD8;
+    --line-strong: #C2C4BE;
+    --ink:         #191C1E;
+    --ink-2:       #4A4F52;
+    --ink-3:       #767B7E;
+
+    --accent:      #0E6B73;
+    --accent-ink:  #0A4E54;
+    --accent-wash: #E4EFEF;
+
+    --ok:          #2C6E49;
+    --ok-wash:     #E3EFE7;
+    --warn:        #96650B;
+    --warn-wash:   #F6EDDA;
+    --stop:        #A8332A;
+    --stop-wash:   #F7E5E3;
+
+    --shadow: 0 1px 2px rgba(25, 28, 30, .05), 0 4px 14px rgba(25, 28, 30, .05);
+
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --pad: clamp(1.1rem, 3.5vw, 2.4rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #131618;
+      --surface:     #1B1F21;
+      --surface-2:   #202426;
+      --line:        #2E3336;
+      --line-strong: #414749;
+      --ink:         #E9EBEB;
+      --ink-2:       #AFB5B7;
+      --ink-3:       #838A8D;
+
+      --accent:      #4FB3B8;
+      --accent-ink:  #7FCBCF;
+      --accent-wash: #17383B;
+
+      --ok:          #6FBF8E;
+      --ok-wash:     #1A3326;
+      --warn:        #D9A445;
+      --warn-wash:   #382C13;
+      --stop:        #E4796E;
+      --stop-wash:   #3A1E1B;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .28);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #131618;
+    --surface:     #1B1F21;
+    --surface-2:   #202426;
+    --line:        #2E3336;
+    --line-strong: #414749;
+    --ink:         #E9EBEB;
+    --ink-2:       #AFB5B7;
+    --ink-3:       #838A8D;
+
+    --accent:      #4FB3B8;
+    --accent-ink:  #7FCBCF;
+    --accent-wash: #17383B;
+
+    --ok:          #6FBF8E;
+    --ok-wash:     #1A3326;
+    --warn:        #D9A445;
+    --warn-wash:   #382C13;
+    --stop:        #E4796E;
+    --stop-wash:   #3A1E1B;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .28);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: var(--pad);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1.8rem, 4vw, 3rem);
+  }
+
+  h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .705rem;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+
+  /* --- tread rule: the one motif, taken from what they make --- */
+  .tread {
+    height: 9px;
+    border-radius: 1px;
+    background-image: repeating-linear-gradient(
+      115deg,
+      var(--line-strong) 0 7px,
+      transparent 7px 15px
+    );
+    opacity: .85;
+  }
+
+  /* ---------------------------------------------------------- header --- */
+
+  header { display: flex; flex-direction: column; gap: 1rem; }
+
+  .titleline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .5rem 1rem;
+    justify-content: space-between;
+  }
+
+  h1 {
+    font-size: clamp(1.85rem, 4.6vw, 2.9rem);
+    font-weight: 700;
+    letter-spacing: -.022em;
+    line-height: 1.06;
+  }
+
+  .standfirst {
+    max-width: 66ch;
+    color: var(--ink-2);
+    font-size: 1.02rem;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem 1.4rem;
+    font-family: var(--mono);
+    font-size: .76rem;
+    color: var(--ink-3);
+  }
+  .meta b { color: var(--ink-2); font-weight: 500; }
+
+  /* ----------------------------------------------------------- cards --- */
+
+  section { display: flex; flex-direction: column; gap: 1rem; }
+
+  .sechead { display: flex; flex-direction: column; gap: .3rem; }
+  .sechead h2 {
+    font-size: 1.24rem;
+    font-weight: 600;
+    letter-spacing: -.012em;
+  }
+  .sechead p { margin: 0; color: var(--ink-2); max-width: 68ch; font-size: .935rem; }
+
+  .grid { display: grid; gap: .9rem; }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1.05rem 1.15rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+  }
+
+  /* Severity is carried by a left stripe as well as the chip, so the page
+     reads at a glance without relying on colour alone. */
+  .card.stop { border-left: 3px solid var(--stop); }
+  .card.warn { border-left: 3px solid var(--warn); }
+  .card.ok   { border-left: 3px solid var(--ok); }
+
+  .chip {
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: .655rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: .22rem .5rem;
+    border-radius: 3px;
+  }
+  .chip.stop { background: var(--stop-wash); color: var(--stop); }
+  .chip.warn { background: var(--warn-wash); color: var(--warn); }
+  .chip.ok   { background: var(--ok-wash);   color: var(--ok); }
+  .chip.info { background: var(--accent-wash); color: var(--accent-ink); }
+
+  .card h3 { font-size: 1.02rem; font-weight: 600; letter-spacing: -.008em; }
+  .card p  { margin: 0; color: var(--ink-2); font-size: .9rem; }
+  .card p + p { margin-top: .1rem; }
+
+  .ask {
+    margin-top: .2rem;
+    padding-top: .6rem;
+    border-top: 1px dashed var(--line);
+    font-size: .855rem;
+    color: var(--ink);
+  }
+  .ask b { font-family: var(--display); font-weight: 600; }
+
+  /* ---------------------------------------------------------- figures --- */
+
+  .stat { gap: .25rem; }
+  .stat .n {
+    font-family: var(--display);
+    font-size: 2.3rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .n.good { color: var(--ok); }
+  .stat .n.bad  { color: var(--stop); }
+  .stat .k {
+    font-family: var(--mono);
+    font-size: .69rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .stat .sub { font-size: .845rem; color: var(--ink-2); }
+
+  /* meter */
+  .meter {
+    height: 9px;
+    border-radius: 5px;
+    background: var(--line);
+    overflow: hidden;
+    display: flex;
+  }
+  .meter i { display: block; height: 100%; }
+  .meter i.have { background: var(--ok); }
+  .meter i.gap  { background: var(--warn); }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem 1.1rem;
+    font-family: var(--mono);
+    font-size: .72rem;
+    color: var(--ink-2);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: .38rem; }
+  .swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+  /* ---------------------------------------------------------- tables --- */
+
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); }
+
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .89rem; }
+
+  th, td {
+    text-align: left;
+    padding: .58rem .8rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  thead th {
+    background: var(--surface-2);
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td.name { font-weight: 500; }
+  .dim { color: var(--ink-3); }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: .655rem;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    padding: .16rem .42rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .tag.yes  { background: var(--ok-wash);   color: var(--ok); }
+  .tag.no   { background: var(--stop-wash); color: var(--stop); }
+  .tag.only { background: var(--warn-wash); color: var(--warn); }
+
+  /* ------------------------------------------------------- two-stream --- */
+
+  .streams { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); }
+  .stream dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .3rem .8rem; font-size: .87rem; }
+  .stream dt { font-family: var(--mono); font-size: .72rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; padding-top: .12rem; }
+  .stream dd { margin: 0; color: var(--ink-2); }
+  .stream dd.none { color: var(--ink-3); font-style: italic; }
+
+  /* ------------------------------------------------------------ steps --- */
+
+  ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; counter-reset: s; }
+  ol.steps li {
+    counter-increment: s;
+    display: grid;
+    grid-template-columns: 2.1rem 1fr;
+    gap: .1rem .85rem;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: .8rem .95rem;
+  }
+  ol.steps li::before {
+    content: counter(s, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--accent);
+    padding-top: .12rem;
+  }
+  ol.steps h3 { font-size: .97rem; font-weight: 600; }
+  ol.steps p { margin: .15rem 0 0; color: var(--ink-2); font-size: .885rem; }
+  ol.steps .who {
+    font-family: var(--mono);
+    font-size: .655rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: .16rem .42rem;
+    border-radius: 3px;
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+    margin-left: .5rem;
+    white-space: nowrap;
+  }
+  ol.steps .who.you { background: var(--warn-wash); color: var(--warn); }
+
+  code {
+    font-family: var(--mono);
+    font-size: .855em;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: .06em .32em;
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+    color: var(--ink-3);
+    font-size: .82rem;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+  }
+
+  a { color: var(--accent-ink); }
+  a:focus-visible, li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .card, ol.steps li { transition: border-color .15s ease; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="tread" role="presentation"></div>
+    <div class="titleline">
+      <h1>Manna HR Changeover</h1>
+      <span class="eyebrow">22 Aug 2026 &middot; evening</span>
+    </div>
+    <p class="standfirst">
+      Moving 160 working people across five companies off Factor HR and onto one
+      ERPNext site — fingerprint punches from the factory floor, phone punches
+      from everyone else, one attendance record per person per day.
+    </p>
+    <div class="meta">
+      <span><b>Site</b> mannarubber.m.frappe.cloud</span>
+      <span><b>ERPNext</b> 16.32.3</span>
+      <span><b>Frappe HR</b> 16.16.0 installed</span>
+      <span><b>Source</b> 9 Factor HR reports, 504 employee rows</span>
+    </div>
+  </header>
+
+  <!-- ============================================ blocking decisions === -->
+  <section>
+    <div class="sechead">
+      <span class="eyebrow">Updated 22 Aug, evening</span>
+      <h2>Two are answered, and the biggest one dissolved</h2>
+      <p>
+        Frappe HR turns out not to need a private bench — it ships with shared
+        hosting. So the migration can start now, and hosting becomes a later
+        decision about enforcement rather than a gate on everything.
+      </p>
+    </div>
+
+    <div class="grid g3">
+      <div class="card ok">
+        <span class="chip ok">Answered</span>
+        <h3>Hi-Tech Pretreads is Manna Treads</h3>
+        <p>
+          Same company, not created separately. <b>112 rows load into Manna
+          Treads</b>, joining the 4 already there — which makes it the second
+          largest employer in the group rather than the smallest.
+        </p>
+        <p class="ask"><b>Two left to create: Hi-Tech Rubber Industries, Manna Group H-QTRS.</b></p>
+      </div>
+
+      <div class="card stop">
+        <span class="chip stop">Blocking</span>
+        <h3>Manna Tyre UAE is on an Indian clock</h3>
+        <p>
+          Measured across all 114 punches: every Indian rep agrees with the
+          server to the second, and <b>all three UAE reps are out by exactly
+          90 minutes</b>. The app stamps the handset's timezone, not the site's.
+        </p>
+        <p class="ask"><b>Separate site, or fix the app and treat UAE as display-only?</b></p>
+      </div>
+
+      <div class="card warn">
+        <span class="chip warn">Later</span>
+        <h3>Enforcement, not hosting</h3>
+        <p>
+          A private bench is needed only for our own rules app. Coordinates and
+          the server's own <code>creation</code> stamp are recorded either way,
+          so misuse can be <em>detected</em> today — just not refused.
+        </p>
+        <p class="ask"><b>First ask Frappe whether Server Scripts can be switched back on. That answer is free.</b></p>
+      </div>
+
+      <div class="card warn">
+        <span class="chip warn">Decide soon</span>
+        <h3>Selfie on every punch</h3>
+        <p>
+          Factor HR photographs each mobile punch — the sample export carried 35
+          images for 34 punches. At 160 people that is roughly 5&nbsp;MB a day,
+          held until someone sets a retention rule.
+        </p>
+        <p class="ask"><b>Keep it, drop it, or keep it only for field staff?</b></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================== what we now know === -->
+  <section>
+    <div class="sechead">
+      <span class="eyebrow">From the exports</span>
+      <h2>The workforce is smaller than the file suggests</h2>
+      <p>
+        Two thirds of the employee master is leavers. The live group is 160
+        people — small enough to migrate carefully and verify person by person,
+        which would not be affordable at ten times the size.
+      </p>
+    </div>
+
+    <div class="grid g4">
+      <div class="card stat">
+        <span class="k">Rows in master</span>
+        <span class="n">504</span>
+        <span class="sub">Every company, including leavers</span>
+      </div>
+      <div class="card stat">
+        <span class="k">Active today</span>
+        <span class="n good">160</span>
+        <span class="sub">344 inactive, all with a leaving date</span>
+      </div>
+      <div class="card stat">
+        <span class="k">Distinct shifts</span>
+        <span class="n">23</span>
+        <span class="sub">For 160 people — the real complexity</span>
+      </div>
+      <div class="card stat">
+        <span class="k">Holiday lists in ERPNext</span>
+        <span class="n bad">0</span>
+        <span class="sub">Nothing can compute a working day yet</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================ reconciliation === -->
+  <section>
+    <div class="sechead">
+      <span class="eyebrow">Companies</span>
+      <h2>The two systems disagree about what the group is</h2>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Company, as Factor HR spells it</th>
+            <th scope="col" class="num">Rows</th>
+            <th scope="col">In ERPNext</th>
+            <th scope="col">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name">MANNA RUBBER PRODUCTS PVT.LTD.</td>
+            <td class="num">306</td>
+            <td><span class="tag yes">Matched</span></td>
+            <td class="dim">Manna Rubber Products Private Limited</td>
+          </tr>
+          <tr>
+            <td class="name">HI-TECH PRETREADS</td>
+            <td class="num">112</td>
+            <td><span class="tag no">Missing</span></td>
+            <td class="dim">The Factor HR tenant is branded this</td>
+          </tr>
+          <tr>
+            <td class="name">HI-TECH RUBBER INDUSTRIES</td>
+            <td class="num">50</td>
+            <td><span class="tag no">Missing</span></td>
+            <td class="dim">No ERPNext company at all</td>
+          </tr>
+          <tr>
+            <td class="name">MANNA TYRE RETREADS</td>
+            <td class="num">31</td>
+            <td><span class="tag yes">Matched</span></td>
+            <td class="dim">—</td>
+          </tr>
+          <tr>
+            <td class="name">MANNA TREADS PVT.LTD</td>
+            <td class="num">4</td>
+            <td><span class="tag yes">Matched</span></td>
+            <td class="dim">Manna Treads</td>
+          </tr>
+          <tr>
+            <td class="name">MANNA GROUP H-QTRS</td>
+            <td class="num">1</td>
+            <td><span class="tag no">Missing</span></td>
+            <td class="dim">One person</td>
+          </tr>
+          <tr>
+            <td class="name dim">— not in Factor HR —</td>
+            <td class="num dim">0</td>
+            <td><span class="tag only">ERPNext only</span></td>
+            <td class="dim">Manna Tyre UAE</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================================================== biometrics === -->
+  <section>
+    <div class="sechead">
+      <span class="eyebrow">Fingerprint machines</span>
+      <h2>The integration works, and the hard part is already done</h2>
+      <p>
+        The employee master carries a <code>Machine Code</code> — the join
+        between a fingerprint template and a person. It is the one field that
+        could have sunk this, and it is populated and unique.
+      </p>
+    </div>
+
+    <div class="grid g3">
+      <div class="card ok">
+        <span class="chip ok">Ready</span>
+        <h3>139 of 160 have a machine code</h3>
+        <div class="meter" role="img" aria-label="139 of 160 active employees have a machine code; 21 do not">
+          <i class="have" style="width: 86.9%"></i>
+          <i class="gap" style="width: 13.1%"></i>
+        </div>
+        <div class="legend">
+          <span><i class="swatch" style="background: var(--ok)"></i> 139 enrolled</span>
+          <span><i class="swatch" style="background: var(--warn)"></i> 21 missing</span>
+        </div>
+        <p>
+          Missing: Hi-Tech Pretreads 9, Manna Rubber Products 7, Manna Tyre
+          Retreads 3, Manna Group H-QTRS 1, Manna Treads 1. Some will be office
+          staff who punch on a phone; the rest need enrolling.
+        </p>
+      </div>
+
+      <div class="card ok">
+        <span class="chip ok">Verified</span>
+        <h3>No duplicate codes</h3>
+        <p>
+          Every machine code is unique among active staff. This is the failure
+          that cannot be recovered from afterwards — two people sharing a code
+          means their punches were never distinguishable.
+        </p>
+        <p class="ask"><b>Nothing to fix here.</b></p>
+      </div>
+
+      <div class="card warn">
+        <span class="chip warn">Needed</span>
+        <h3>One terminal seen, more expected</h3>
+        <p>
+          The sample export names a single terminal,
+          <code>Manna_Rubber_Products</code>. That is one report from one
+          company.
+        </p>
+        <p class="ask"><b>Make, model, IP and location of every machine.</b></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= streams === -->
+  <section>
+    <div class="sechead">
+      <span class="eyebrow">How punches arrive</span>
+      <h2>Two sources, one stream — which is exactly how ERPNext wants it</h2>
+      <p>
+        Factor HR reports both through one screen and tells them apart by which
+        columns are filled. Frappe HR does the same thing with
+        <code>Employee&nbsp;Checkin.device_id</code>, so the mapping is direct
+        rather than a translation.
+      </p>
+    </div>
+
+    <div class="streams">
+      <div class="card stream">
+        <span class="chip info">Factory floor</span>
+        <h3>Fingerprint machine</h3>
+        <dl>
+          <dt>Terminal</dt><dd>Manna_Rubber_Products</dd>
+          <dt>Location</dt><dd class="none">none sent</dd>
+          <dt>GPS</dt><dd class="none">none sent</dd>
+          <dt>Selfie</dt><dd class="none">none</dd>
+        </dl>
+        <p class="ask">Bolted to a wall — so it is trusted, and never geofenced.</p>
+      </div>
+
+      <div class="card stream">
+        <span class="chip info">Everyone else</span>
+        <h3>Phone</h3>
+        <dl>
+          <dt>Terminal</dt><dd class="none">blank</dd>
+          <dt>Location</dt><dd>street address, resolved</dd>
+          <dt>GPS</dt><dd>lat / long, accuracy ~20&nbsp;m, handset model</dd>
+          <dt>Selfie</dt><dd>one image per punch</dd>
+        </dl>
+        <p class="ask">Accuracy is reported. A geofence that ignores it refuses honest indoor punches.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== shifts === -->
+  <section>
+    <div class="sechead">
+      <span class="eyebrow">Shifts</span>
+      <h2>Where the real work is</h2>
+      <p>
+        Twenty-three patterns for 160 people. Several need explaining before
+        they can be configured — a shift named <em>24hr</em> is not somebody
+        working 24 hours, and which of the two things it actually means changes
+        the whole auto-attendance setup.
+      </p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Shift</th>
+            <th scope="col" class="num">People</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">Manna Rubber Products — Production 8h</td><td class="num">36</td><td><span class="tag yes">Straightforward</span></td></tr>
+          <tr><td class="name">Manna Rubber Products — Production 12</td><td class="num">25</td><td><span class="tag only">Check midnight</span></td></tr>
+          <tr><td class="name">Hi-Tech Pretreads — Production shift1</td><td class="num">23</td><td><span class="tag yes">Straightforward</span></td></tr>
+          <tr><td class="name">Hi-Tech Rubber Industries — Production shift</td><td class="num">13</td><td><span class="tag yes">Straightforward</span></td></tr>
+          <tr><td class="name">Manna Tyre Retreads — Production 24hr shift</td><td class="num">7</td><td><span class="tag no">Needs explaining</span></td></tr>
+          <tr><td class="name">Manna Tyre Retreads — Production 22hr shift</td><td class="num">5</td><td><span class="tag no">Needs explaining</span></td></tr>
+          <tr><td class="name">Manna Treads — Office shift <span class="dim">09:30–18:30</span></td><td class="num">7</td><td><span class="tag yes">Confirmed</span></td></tr>
+          <tr><td class="name dim">…and 16 more, including Driver, Cook and Other location</td><td class="num dim">44</td><td><span class="tag only">To walk through</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid g3">
+      <div class="card ok">
+        <span class="chip ok">Uniform</span>
+        <h3>Sunday is the week-off — all 160</h3>
+        <p>No exceptions anywhere in the group. One rule covers everybody.</p>
+      </div>
+      <div class="card ok">
+        <span class="chip ok">Uniform</span>
+        <h3>Permanent, General Monthly — all 160</h3>
+        <p>One employment type, one payroll group. No special cases to model.</p>
+      </div>
+      <div class="card warn">
+        <span class="chip warn">New</span>
+        <h3>Breaks are tracked, and were not in the plan</h3>
+        <p>
+          Factor HR counts <em>Break Duration</em> and <em>Personal Break
+          Duration</em> separately, and both come off worked hours — so both
+          affect pay.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= steps === -->
+  <section>
+    <div class="sechead">
+      <span class="eyebrow">Sequence</span>
+      <h2>What happens next, in the order it has to happen</h2>
+      <p>
+        The first three are done. Each remaining step still depends on the one
+        above it &mdash; loading people before the holiday calendar exists gives every
+        one of them a working day that nobody checked.
+      </p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <div>
+          <h3>Upgrade the plan and install Frappe HR<span class="who">Done</span></h3>
+          <p>hrms 16.16.0 is live. Employee Checkin, Shift Type, Attendance, Leave and Payroll all present and empty.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Create the two missing companies<span class="who">Done</span></h3>
+          <p>Hi-Tech Rubber Industries (HRI) and Manna Group Headquarters (MGHQ). Six companies now.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Turn on geolocation, add departments and employment type<span class="who">Done</span></h3>
+          <p>GPS capture was off by default. Now on, plus 21 departments and the Permanent employment type.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Move the site to a private bench<span class="who you">Manna</span></h3>
+          <p>One button on the site page. Costs nothing extra, and Server Scripts switch on by themselves. Do it out of hours, and before 160 people start punching.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Send the holiday calendar<span class="who you">Manna</span></h3>
+          <p>Nothing can compute a working day without it, and a missing festival marks the whole factory absent on a day they were right to be at home.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Ten minutes on the designation list<span class="who you">Manna</span></h3>
+          <p>33 names, straight from Factor HR's capitals. They become permanent labels in ERPNext.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Import 160 employees<span class="who">Us</span></h3>
+          <p>File is built and mapped clean, nothing rejected. Two passes, because a manager must exist before anyone reports to them.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Walk through the 23 shifts<span class="who">Both</span></h3>
+          <p>Starting with the 22- and 24-hour patterns. Most likely step to take longer than expected.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Bridge the fingerprint machines<span class="who">Both</span></h3>
+          <p>Needs the device list: make, model, IP per site. Runs on a machine inside your network.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Run both systems for one month<span class="who">Both</span></h3>
+          <p>Then reconcile person by person before Factor HR is switched off.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <footer>
+    <div class="tread" role="presentation" style="opacity:.5"></div>
+    <p style="margin:.6rem 0 0">
+      Figures read directly from nine Factor HR exports and the live ERPNext site
+      on 22 August 2026. Reproduce with <code>python tools/analyse_factohr.py</code>.
+      No personal data appears on this page.
+    </p>
+  </footer>
+
+</div>

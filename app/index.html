@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manna HR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Deliberately single-theme and light. The whole point of this build is a
+   side-by-side comparison with Factor HR, which is light-only — a dark variant
+   would make the two harder to compare, not easier. Every colour is therefore
+   painted explicitly rather than inherited. */
+:root{
+  /* Manna Group. Orange and charcoal off the logo; the neutrals are warmed a
+     touch towards the orange so the greys read as chosen rather than default. */
+  --brand:#EE6A24; --brand-dark:#C9541A; --brand-soft:#FDF1EA;
+  --char:#414042;
+
+  --nav:#3A3A3D; --nav-2:#2E2E31; --nav-ink:#B9B7B4; --nav-ink-on:#fff;
+  --page:#F4F2F0; --card:#FFFFFF; --line:#E6E2DE; --line-2:#CFC9C3;
+  --ink:#26252A; --ink-2:#5C5A60; --ink-3:#918D93;
+  --accent:#A8481A; --accent-wash:#FDF1EA;
+  --live:#1F7A4D; --live-wash:#E4F3EB;
+  /* "Partial" is the brand orange on purpose — work in progress is the most
+     common state on this page, and it is the one that should look like Manna. */
+  --part:#A8481A; --part-wash:#FDF1EA;
+  --none:#A32F27; --none-wash:#FAE7E5;
+  --skip:#6E6A70; --skip-wash:#EFECEA;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+
+/* ---------------- chrome: sidebar + top bar, mirroring Factor HR ---------- */
+.shell{display:grid;grid-template-columns:112px 1fr;min-height:100vh}
+.side{background:var(--nav);display:flex;flex-direction:column;gap:.1rem;padding:.5rem 0 1rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+/* The wordmark, rebuilt in type rather than shipped as a file: MA orange,
+   NN charcoal, A orange, inside the oval. Scales cleanly and needs no asset.
+   Drop the real PNG in as app/logo.png and swap this for an <img> if preferred. */
+.brand{padding:1rem .35rem 1.15rem;text-align:center;line-height:1}
+.mark{display:inline-flex;align-items:center;justify-content:center;
+  border:2.5px solid var(--nav-ink);border-radius:50%;
+  padding:.34rem .5rem;font-family:var(--display);font-weight:700;
+  font-size:1.02rem;letter-spacing:-.02em}
+.mark .o{color:var(--brand)}
+.mark .c{color:#fff}
+.brand small{display:block;font-family:var(--display);font-weight:600;font-size:.66rem;
+  letter-spacing:.02em;color:var(--nav-ink);margin-top:.34rem}
+.nav{background:none;border:0;color:var(--nav-ink);font-family:var(--body);font-size:.74rem;padding:.62rem .3rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.28rem;width:100%;border-left:3px solid transparent}
+.nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6}
+.nav:hover{color:#fff;background:rgba(255,255,255,.05)}
+.nav[aria-current="page"]{color:#fff;background:rgba(238,106,36,.14);border-left-color:var(--brand);font-weight:600}
+.nav:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.nav .pip{position:absolute;margin:-.5rem 0 0 1.6rem;width:7px;height:7px;border-radius:50%;background:var(--none)}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--char);color:#fff;padding:.7rem 1.2rem;display:flex;flex-wrap:wrap;gap:.7rem 1.2rem;align-items:center;justify-content:space-between}
+.topbar .co{font-family:var(--display);font-weight:700;font-size:1.02rem;letter-spacing:.01em}
+.topbar select,.topbar input{font-family:var(--body);font-size:.85rem;padding:.4rem .6rem;border-radius:20px;border:0;background:rgba(255,255,255,.95);color:var(--ink);min-width:190px}
+.topbar .me{font-size:.85rem;opacity:.95}
+.subbar{background:var(--nav-2);padding:0 1.2rem;display:flex;gap:.2rem}
+.subtab{background:none;border:0;color:var(--nav-ink);font-family:var(--body);font-size:.79rem;letter-spacing:.08em;text-transform:uppercase;padding:.72rem .95rem;cursor:pointer;border-bottom:3px solid transparent}
+.subtab[aria-selected="true"]{color:#fff;background:var(--page);color:var(--ink);font-weight:600;border-radius:5px 5px 0 0}
+.content{padding:1.1rem 1.2rem 2.5rem;display:flex;flex-direction:column;gap:1rem}
+
+/* ---------------------------------------------------------- coverage ----- */
+.legend{display:flex;flex-wrap:wrap;gap:.45rem .9rem;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:.55rem .8rem;font-size:.8rem;color:var(--ink-2)}
+.cov{font-family:var(--mono);font-size:.6rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;padding:.18rem .44rem;border-radius:3px;white-space:nowrap}
+.cov.live{background:var(--live-wash);color:var(--live)}
+.cov.part{background:var(--part-wash);color:var(--part)}
+.cov.none{background:var(--none-wash);color:var(--none)}
+.cov.skip{background:var(--skip-wash);color:var(--skip)}
+
+/* ------------------------------------------------------------- cards ----- */
+.cols{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));align-items:start}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.panel > header{display:flex;flex-wrap:wrap;gap:.4rem .7rem;align-items:center;justify-content:space-between;padding:.7rem .9rem;border-bottom:1px solid var(--line)}
+.panel > header h3{font-size:.95rem;font-weight:600;display:flex;align-items:center;gap:.5rem}
+.panel > header h3 .ico{width:26px;height:26px;border-radius:7px;background:var(--brand-soft);color:var(--brand-dark);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem}
+.panel .body{padding:.9rem}
+.panel.dim .body{opacity:.72}
+
+.tiles{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.tile{border:1px solid var(--line);border-radius:6px;padding:.6rem .7rem;display:flex;flex-direction:column;gap:.15rem}
+.tile .k{font-family:var(--mono);font-size:.63rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.tile .n{font-family:var(--display);font-size:1.55rem;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.tile .n.good{color:var(--live)} .tile .n.warn{color:var(--part)} .tile .n.bad{color:var(--none)}
+.tile .s{font-size:.76rem;color:var(--ink-2)}
+
+.links{display:grid;grid-template-columns:1fr 1fr;gap:.3rem .9rem;font-size:.86rem}
+.links a,.links span{color:var(--accent);text-decoration:none}
+.links span.off{color:var(--ink-3);text-decoration:line-through}
+
+.gap{background:var(--none-wash);border:1px solid #F0CFCB;border-radius:5px;padding:.6rem .75rem;font-size:.85rem;color:#7C241D}
+.gap b{font-family:var(--display)}
+.note{background:var(--brand-soft);border:1px solid #F3D9C6;border-radius:5px;padding:.6rem .75rem;font-size:.85rem;color:#7A3D14}
+.note b{font-family:var(--display)}
+
+.rows{display:flex;flex-direction:column;gap:.45rem}
+.row{display:grid;grid-template-columns:1fr auto;gap:.15rem .7rem;align-items:center;font-size:.86rem}
+.row .val{font-family:var(--mono);font-size:.83rem;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.track{grid-column:1/-1;height:6px;border-radius:4px;background:#EDE8E4;overflow:hidden}
+.track i{display:block;height:100%;background:var(--brand);border-radius:4px}
+
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.85rem}
+th,td{text-align:left;padding:.48rem .7rem;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{position:sticky;top:0;background:#FAF8F6;font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;z-index:1}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FAF8F6}
+td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-3)}
+
+.tag{font-family:var(--mono);font-size:.61rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:.14rem .38rem;border-radius:3px;background:var(--accent-wash);color:var(--accent)}
+.tag.warn{background:var(--part-wash);color:var(--part)}
+
+.empty{padding:1.3rem .9rem;text-align:center;color:var(--ink-2);font-size:.88rem;background:#FAF8F6;border:1px dashed var(--line-2);border-radius:6px}
+.empty b{display:block;font-family:var(--display);color:var(--ink);margin-bottom:.2rem}
+
+/* The rendered letter. Serif and generous leading on purpose — it is a document
+   somebody will print and hand over, not another panel of data. */
+.letter{margin-top:.7rem;background:#fff;border:1px solid var(--line);border-radius:5px;
+  padding:1.4rem 1.6rem;font-family:Georgia,"Times New Roman",serif;font-size:.9rem;
+  line-height:1.65;max-height:520px;overflow:auto}
+.letter p{margin:0 0 .7rem}
+.letter h3{font-family:Georgia,serif;font-size:1rem;margin:0 0 .7rem;text-align:center;letter-spacing:.02em}
+.letter table{border-collapse:collapse;margin:0 0 .7rem;min-width:0;width:auto;font-size:.88rem}
+.letter td{border:0;padding:.1rem .9rem .1rem 0;white-space:normal}
+.letter table[border]{border:1px solid var(--line-2)}
+.letter table[border] td{border:1px solid var(--line-2);padding:.25rem .5rem}
+/* Unresolved merge fields are shown, never blanked. */
+.tok{background:var(--none-wash);color:var(--none);border-radius:3px;padding:0 .22em;
+  font-family:var(--mono);font-size:.82em;white-space:nowrap}
+
+.tabs{display:flex;flex-wrap:wrap;gap:.4rem}
+.tab{font-family:var(--mono);font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;padding:.34rem .68rem;border:1px solid var(--line);border-radius:4px;background:var(--card);color:var(--ink-2);cursor:pointer;display:inline-flex;gap:.4rem;align-items:center}
+.tab[aria-selected="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-wash)}
+.tab .n{font-weight:600;font-variant-numeric:tabular-nums}
+.tab .n.hot{color:var(--none)}
+
+.person{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:.6rem}
+.person .who{display:flex;flex-wrap:wrap;gap:.3rem .7rem;align-items:baseline;padding:.55rem .85rem;background:#FAF8F6;border-bottom:1px solid var(--line)}
+.person .who b{font-family:var(--display);font-size:.93rem}
+.person .who .code{font-family:var(--mono);font-size:.74rem;color:var(--ink-3)}
+.req{display:grid;grid-template-columns:minmax(150px,190px) minmax(190px,230px) 1fr auto;gap:.35rem 1rem;padding:.65rem .85rem;border-bottom:1px solid var(--line);align-items:start}
+.req:last-child{border-bottom:0}
+.req .when b{display:block;font-family:var(--display);font-size:.9rem}
+.req .when span{display:block;font-size:.77rem;color:var(--ink-3)}
+.req dl{margin:0;display:grid;grid-template-columns:auto auto auto;gap:.12rem .8rem;font-size:.8rem;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.req dl .h{color:var(--ink-3);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em}
+.req dl .lab{color:var(--ink-3)}
+.req .why{font-size:.84rem;color:var(--ink-2)}
+.req .why b{color:var(--ink);font-weight:600}
+@media (max-width:820px){.req{grid-template-columns:1fr}.shell{grid-template-columns:84px 1fr}}
+
+.status{font-family:var(--mono);font-size:.72rem;display:inline-flex;align-items:center;gap:.4rem}
+.dot{width:8px;height:8px;border-radius:50%;background:#B5B0AC;display:inline-block}
+.dot.live{background:#5BD48D} .dot.bad{background:#FF8A7E}
+.tab[aria-selected="true"]{border-color:var(--brand)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--mono);font-size:.85em;background:#F4F2F0;border:1px solid var(--line);border-radius:3px;padding:.05em .3em}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="side">
+    <div class="brand"><span class="mark"><span class="o">MA</span><span class="c">NN</span><span class="o">A</span></span><small>HR</small></div>
+    <nav id="nav"></nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="co" id="cotitle">MANNA GROUP</span>
+      <select id="company" aria-label="Company"><option value="">All companies</option></select>
+      <input type="search" id="q" placeholder="Search name, code, designation…" aria-label="Search">
+      <span class="me">Hi admin &nbsp;·&nbsp; <span class="status"><span class="dot" id="dot"></span><span id="conn">connecting…</span></span></span>
+    </div>
+    <div class="subbar" id="subbar"></div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const fmt = n => (n == null ? "—" : Number(n).toLocaleString());
+const DAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const clock = v => (v ? String(v).slice(11,16) : "—");
+const dayOf = iso => { const d = new Date(iso + "T00:00:00"); return isNaN(d) ? "" : DAY[d.getDay()]; };
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+let S = { employees:[], byName:{}, checkins:[], counts:{}, approvals:{attendance:[],leave:[]},
+          section:"dashboard", subtab:"overview", apptab:"attendance" };
+
+/* Factor HR's own left-hand nav, in its order, so the two can be compared
+   item by item. `cov` is this build's coverage of that module. */
+const SECTIONS = [
+  {key:"dashboard", label:"Dashboard", cov:"part", icon:"M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"},
+  {key:"onboard",   label:"On Board",  cov:"none", icon:"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8M19 8v6M22 11h-6"},
+  {key:"employees", label:"Employees", cov:"live", icon:"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8"},
+  {key:"attendance",label:"Attendance",cov:"part", icon:"M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2"},
+  {key:"leave",     label:"Leave",     cov:"part", icon:"M3 5h18v16H3zM3 9h18M8 3v4M16 3v4"},
+  {key:"payroll",   label:"Payroll",   cov:"skip", icon:"M6 4h9a4 4 0 0 1 0 8H6M6 8h12M9 12l5 8"},
+  {key:"loans",     label:"Loans",     cov:"none", icon:"M4 8h16v11H4zM8 8V6a4 4 0 0 1 8 0v2M12 12v3"},
+  {key:"survey",    label:"Survey",    cov:"none", icon:"M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"},
+  {key:"settings",  label:"Settings",  cov:"part", icon:"M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z"},
+];
+const COV_LABEL = {live:"Live", part:"Partial", none:"Not built", skip:"Deferred"};
+
+function renderNav(){
+  $("#nav").innerHTML = SECTIONS.map(s =>
+    '<button class="nav" data-k="'+s.key+'"'+(S.section===s.key?' aria-current="page"':'')+'>'
+    + '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="'+s.icon+'"/></svg>'
+    + '<span>'+s.label+'</span></button>').join("");
+  $("#nav").querySelectorAll(".nav").forEach(b => b.addEventListener("click", () => {
+    S.section = b.dataset.k; S.subtab = "overview"; renderNav(); renderAll();
+  }));
+}
+
+function panel(title, cov, bodyHtml, opts){
+  opts = opts || {};
+  return '<section class="panel'+(cov==="none"||cov==="skip"?" dim":"")+'">'
+    + '<header><h3><span class="ico">'+(opts.ico||"▪")+'</span>'+esc(title)+'</h3>'
+    + '<span class="cov '+cov+'">'+COV_LABEL[cov]+'</span></header>'
+    + '<div class="body">'+bodyHtml+'</div></section>';
+}
+const tile = (k,n,cls,s) => '<div class="tile"><span class="k">'+esc(k)+'</span>'
+  + '<span class="n '+(cls||"")+'">'+n+'</span><span class="s">'+esc(s||"")+'</span></div>';
+const gap = t => '<div class="gap"><b>Missing vs Factor HR.</b> '+t+'</div>';
+const note = t => '<div class="note">'+t+'</div>';
+
+/* --------------------------------------------------------------- data ---- */
+async function api(path, params){
+  const q = new URLSearchParams(params||{}).toString();
+  const r = await fetch(path + (q?"?"+q:""));
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.hint || j.error || ("HTTP "+r.status));
+  return j;
+}
+async function listAll(dt, fields, filters){
+  let out=[], start=0;
+  for(;;){
+    const p={fields:JSON.stringify(fields), limit_page_length:100, limit_start:start};
+    if(filters) p.filters = JSON.stringify(filters);
+    const page = (await api("/api/resource/"+encodeURIComponent(dt), p)).data || [];
+    out = out.concat(page);
+    if(page.length < 100) return out;
+    start += 100;
+  }
+}
+
+/* ------------------------------------------------------------ helpers ---- */
+const scoped = () => { const c=$("#company").value; return c ? S.employees.filter(e=>e.company===c) : S.employees; };
+const active = () => scoped().filter(e=>e.status==="Active");
+const tidyDept = d => (d||"—").replace(/ - [A-Z]{2,5}$/,"");
+function tally(rows,key){ const m=new Map(); rows.forEach(r=>{const k=r[key]||"—";m.set(k,(m.get(k)||0)+1)}); return [...m.entries()].sort((a,b)=>b[1]-a[1]); }
+function bars(pairs){
+  const max=Math.max(1,...pairs.map(p=>p[1]));
+  return '<div class="rows">'+pairs.map(p=>'<div class="row"><span>'+esc(p[0])+'</span><span class="val">'+p[1]+'</span>'
+    +'<span class="track"><i style="width:'+(p[1]/max*100).toFixed(1)+'%"></i></span></div>').join("")+'</div>';
+}
+
+/* ------------------------------------------------------------ sections --- */
+function secDashboard(){
+  const a=active(), dev=a.filter(e=>e.attendance_device_id), mgr=a.filter(e=>e.reports_to);
+  const ci=S.checkins, inb=new Set(ci.filter(c=>c.log_type==="IN").map(c=>c.employee));
+  const outb=new Set(ci.filter(c=>c.log_type==="OUT").map(c=>c.employee));
+  const done=[...inb].filter(e=>outb.has(e)).length;
+
+  return '<div class="legend"><b style="font-family:var(--display)">Coverage against Factor HR</b>'
+    + '<span><span class="cov live">Live</span> built and running on real data</span>'
+    + '<span><span class="cov part">Partial</span> built, waiting on data or shifts</span>'
+    + '<span><span class="cov none">Not built</span> exists in Factor HR, not here</span>'
+    + '<span><span class="cov skip">Deferred</span> dropped from this release by decision</span></div>'
+  + '<div class="cols">'
+  + panel("Employees Summary","live",
+      '<div class="tiles">'
+      + tile("Active Employees", fmt(a.length),"", "")
+      + tile("New Employees", fmt(a.filter(e=>e.date_of_joining && e.date_of_joining>=isoAgo(90)).length),"", "joined in 90 days")
+      + tile("Left Employees", fmt(S.counts.left||0),"", "not imported by default")
+      + tile("Licensed", "—","", "ERPNext does not charge per head")
+      + '</div>', {ico:"👥"})
+  + panel("Employee Attendance Summary", ci.length?"live":"part",
+      '<div class="tiles">'
+      + tile("Total In", fmt(inb.size),"good","")
+      + tile("Not Yet In", fmt(Math.max(0,a.length-inb.size)),"warn","")
+      + tile("Late-In","—","","needs shifts")
+      + tile("On Leave", fmt(S.approvals.leave.length),"","")
+      + tile("Completed", fmt(done),"","both punches")
+      + '</div>'
+      + (ci.length?"":'<div style="margin-top:.7rem">'+note('<b>No punches yet.</b> Employee Checkin is empty until the bridge runs and the phone app is live. Empty means <em>nothing recorded</em>, not <em>nobody came in</em> — which is why the tiles do not report 0% attendance.')+'</div>')
+      + '<div style="margin-top:.7rem">'+note('<b>One difference worth keeping.</b> On a Sunday Factor HR shows all 160 as “Not Yet In”. Weekly off is a state of its own here, so nobody who is not expected in is counted as outstanding.')+'</div>',
+      {ico:"🕒"})
+  + panel("Headcount by company","live", bars(tally(active(),"company")), {ico:"🏭"})
+  + panel("Headcount by department","live", bars(tally(active().map(e=>({d:tidyDept(e.department)})),"d").slice(0,10)), {ico:"🗂"})
+  + panel("Quick Reports","part",
+      '<div class="links">'
+      + '<span>Daily Detail Attendance</span><span class="off">ECR File</span>'
+      + '<span>Employee Detail</span><span class="off">Employee Earnings</span>'
+      + '<span>In / Out Activity</span><span class="off">IncomeTax Register</span>'
+      + '<span>Leave Balance</span><span class="off">Salary Pay-slip</span>'
+      + '<span class="off">Salary Register</span><span></span></div>'
+      + '<div style="margin-top:.7rem">'+note('Two ERPNext query reports exist already — <b>Punch Clock Drift</b> and <b>Open Shifts / Missed Punch-Out</b>. Neither has a Factor HR equivalent. Struck-through reports are payroll, deferred.')+'</div>',
+      {ico:"📄"})
+  + panel("Payroll Summary","skip",
+      gap("Factor HR shows Salary Proceed / Not Proceed / Stop / Hold / Arrears / Stop TDS, and an F&amp;F summary beside it.")
+      + '<div style="margin-top:.7rem">'+note('<b>Deferred by decision, 23 Aug.</b> Payroll is calculated by hand and is not processed in Factor HR either, so there is nothing to replace yet.')+'</div>',
+      {ico:"₹"})
+  + panel("Engagement panels","skip",
+      gap("Mood Analysis, CEO Speak, Announcements, Wish Celebration and Important Files all exist in Factor HR.")
+      + '<div style="margin-top:.7rem">'+note('Every one of them is <b>empty in your tenant</b>. Nothing to rebuild unless you want it. Birthdays and work anniversaries would be the cheapest to add — the dates are already loaded.')+'</div>',
+      {ico:"🎉"})
+  + panel("Help Desk","skip",
+      gap("Factor HR has a ticket queue: Open / Re-opened / Resolved.")
+      + '<div style="margin-top:.7rem">'+note('<b>Not wanted.</b> Three tickets ever raised, none resolved.')+'</div>', {ico:"🎫"})
+  + '</div>';
+}
+
+function isoAgo(days){ const d=new Date(); d.setDate(d.getDate()-days); return d.toISOString().slice(0,10); }
+
+function secApprovals(){
+  const A=S.approvals;
+  const tabs=[{k:"attendance",l:"Attendance",n:A.attendance.length},{k:"leave",l:"Leave",n:A.leave.length}];
+  let html='<div class="tabs" id="apptabs">'+tabs.map(t=>
+    '<button class="tab" data-t="'+t.k+'" aria-selected="'+(S.apptab===t.k)+'">'+t.l
+    +' <span class="n '+(t.n?"hot":"")+'">'+t.n+'</span></button>').join("")
+    + '<button class="tab" disabled aria-selected="false">Employee Profile <span class="n">0</span></button>'
+    + '<button class="tab" disabled aria-selected="false">Onboarding <span class="n">0</span></button>'
+    + '<button class="tab" disabled aria-selected="false">Transfer &amp; Promotion <span class="n">0</span></button>'
+    + '<button class="tab" disabled aria-selected="false">Letter Assignment <span class="n">0</span></button>'
+    + '</div>';
+
+  const rows=A[S.apptab];
+  if(!rows.length){
+    html += '<div class="empty"><b>Nothing waiting</b>'
+      + (S.apptab==="attendance"
+          ? "No corrections raised here yet. Factor HR is holding 35."
+          : "No leave applications are open.")+'</div>';
+  } else {
+    const byPerson=new Map();
+    rows.forEach(r=>{ const k=r.employee||"—"; if(!byPerson.has(k)) byPerson.set(k,[]); byPerson.get(k).push(r); });
+    html += [...byPerson.entries()].map(p=>{
+      const e=S.byName[p[0]]||{};
+      return '<div class="person"><div class="who"><b>'+esc(e.employee_name||p[1][0].employee_name||p[0])+'</b>'
+        +'<span class="code">'+esc(e.employee_number||p[0])+'</span>'
+        +'<span class="code">'+esc(e.company||"")+'</span></div>'
+        + p[1].map(r=>S.apptab==="attendance"?attRow(r,e):leaveRow(r)).join("")+'</div>';
+    }).join("");
+  }
+  html += note('Factor HR shows <b>35 pending attendance corrections and zero of everything else</b> — Employee Profile, Onboarding, Transfer &amp; Promotion and Letter Assignment are all empty there too. Those tabs are shown greyed rather than built, pending your call on whether they are wanted.');
+  return html;
+}
+function attRow(r,e){
+  const planned = e.default_shift ? "—" : "no shift";
+  return '<div class="req"><div class="when"><b>'+esc(r.attendance_date||"")+'</b>'
+    +'<span>'+dayOf(r.attendance_date)+'</span><span>applied '+String(r.applied_on||r.creation||"").slice(0,10)+'</span></div>'
+    +'<dl><span class="h"></span><span class="h">Planned</span><span class="h">Requested</span>'
+    +'<span class="lab">In</span><span>'+planned+'</span><span>'+clock(r.requested_in)+'</span>'
+    +'<span class="lab">Out</span><span>'+planned+'</span><span>'+clock(r.requested_out)+'</span></dl>'
+    +'<div class="why"><b>'+esc(r.reason||"No reason given")+'</b>'+(r.remarks?"<br>"+esc(r.remarks):"")+'</div>'
+    +'<span class="tag warn">'+esc(r.status||"")+'</span></div>';
+}
+function leaveRow(r){
+  return '<div class="req"><div class="when"><b>'+esc(r.from_date||"")+'</b><span>to '+esc(r.to_date||"")+'</span></div>'
+    +'<dl><span class="lab">Days</span><span>'+(r.total_leave_days==null?"":r.total_leave_days)+'</span><span></span></dl>'
+    +'<div class="why"><b>'+esc(r.leave_type||"")+'</b>'+(r.description?"<br>"+esc(r.description):"")+'</div>'
+    +'<span class="tag warn">'+esc(r.status||"")+'</span></div>';
+}
+
+function secEmployees(){
+  const q=$("#q").value.trim().toLowerCase();
+  const rows=scoped().filter(e=>!q||[e.employee_number,e.employee_name,e.designation,e.department]
+    .some(v=>(v||"").toLowerCase().includes(q)));
+  return '<div class="legend"><b style="font-family:var(--display)">'+rows.length+' people</b>'
+    + '<span class="cov live">Live</span><span>Directory, codes, reporting lines and device IDs are all loaded.</span></div>'
+    + '<div class="scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Company</th><th>Department</th>'
+    + '<th>Designation</th><th>Device ID</th><th>Reports to</th><th>Joined</th></tr></thead><tbody>'
+    + rows.slice(0,400).map(e=>'<tr><td class="mono">'+esc(e.employee_number||"—")+'</td>'
+      +'<td>'+esc(e.employee_name)+'</td><td class="muted">'+esc(e.company)+'</td>'
+      +'<td class="muted">'+esc(tidyDept(e.department))+'</td><td>'+esc(e.designation||"—")+'</td>'
+      +'<td class="mono">'+(e.attendance_device_id?esc(e.attendance_device_id):'<span class="tag">phone</span>')+'</td>'
+      +'<td class="muted">'+esc((S.byName[e.reports_to]||{}).employee_name||"—")+'</td>'
+      +'<td class="mono muted">'+String(e.date_of_joining||"").slice(0,10)+'</td></tr>').join("")
+    + '</tbody></table></div>';
+}
+
+function secAttendance(){
+  return '<div class="cols">'
+  + panel("Punches today","part",
+      S.checkins.length ? '<div class="tiles">'+tile("Punches", fmt(S.checkins.length),"","")+'</div>'
+      : '<div class="empty"><b>No punches recorded</b>Employee Checkin is empty until the fingerprint bridge runs and the phone app is live.</div>', {ico:"👆"})
+  + panel("Shifts","none",
+      gap("Factor HR has 23 shifts with start, end, break and overtime rules.")
+      + '<div style="margin-top:.7rem">'+note('<b>Five recovered so far</b>, of 23. Nothing can generate attendance until the rest are stated — a shift is what a punch is measured against.')+'</div>', {ico:"⏱"})
+  + panel("Attendance policy","none",
+      gap("Late/early forgiveness counts, deduction target, overtime rules, session mode, grace periods.")
+      + '<div style="margin-top:.7rem">'+note('This is the engine Frappe HR has no equivalent for. It is the single item that decides whether the custom build is a week or two months.')+'</div>', {ico:"⚖"})
+  + panel("Planned overtime","none",
+      gap("Plant managers select tomorrow's overtime today, per employee.")
+      + '<div style="margin-top:.7rem">'+note('<b>Newly identified, 23 Aug.</b> Frappe HR measures overtime backwards from punches; it has nothing that records an intention beforehand. Needs its own doctype and a narrow plant-manager screen.')+'</div>', {ico:"⏭"})
+  + panel("Attendance submission (monthly freeze)","none",
+      gap("Factor HR makes HR generate and save a monthly summary, which payroll then runs from and which cannot be deleted once salary is processed.")
+      + '<div style="margin-top:.7rem">'+note('Frappe HR has no such gate. A control your team has today and would otherwise lose.')+'</div>', {ico:"🔒"})
+  + '</div>';
+}
+
+function secLeave(){
+  return '<div class="cols">'
+  + panel("Leave types","part",
+      '<div class="rows">'
+      + '<div class="row"><span>Casual Leave</span><span class="val">73 with a balance</span></div>'
+      + '<div class="row"><span>Leave Without Pay</span><span class="val">1,300.5 days availed</span></div>'
+      + '<div class="row"><span class="muted">Company Purpose · Maternity · Privilege · Sick</span><span class="val muted">unused</span></div>'
+      + '</div>'
+      + '<div style="margin-top:.7rem">'+note('Four of the six types in Factor HR are defined and never used. They are not carried across.')+'</div>', {ico:"🌴"})
+  + panel("Entitlements and balances","none",
+      gap("Opening balances per person per type, and the accrual rule.")
+      + '<div style="margin-top:.7rem">'+note('<b>Nobody has a balance yet.</b> No leave type has an entitlement set. 72 people accrue Casual Leave and 88 do not, split by tenure — the rule behind that split is still needed.')+'</div>', {ico:"🧮"})
+  + '</div>';
+}
+
+/* ------------------------------------------------------------ On Board --- */
+
+/* Factor HR's merge tokens, resolved case-insensitively.
+   118 distinct tokens across 17 templates, and the same field appears as
+   EmployeeName, employeename and EMPLOYEENAME - so the key is lowercased and
+   stripped of spaces, dots and underscores, and case is re-applied on output. */
+const TOKENS = {
+  employeename:e=>e.employee_name, employeefullname:e=>e.employee_name,
+  empcode:e=>e.employee_number, employeecode:e=>e.employee_number,
+  designation:e=>e.designation, department:e=>tidyDept(e.department), branch:e=>e.branch,
+  doj:e=>e.date_of_joining, dateofjoining:e=>e.date_of_joining, pastdateofjoining:e=>e.date_of_joining,
+  dol:e=>e.relieving_date, dateofleaving:e=>e.relieving_date,
+  dateofbirth:e=>e.date_of_birth, gender:e=>e.gender,
+  nationality:e=>e.custom_nationality, maritalstatus:e=>e.marital_status,
+  fathername:e=>e.custom_father_name, employeesfathername:e=>e.custom_father_name,
+  employeefathername:e=>e.custom_father_name,
+  employeespousename:e=>e.custom_spouse_name, employeesreligion:e=>e.custom_religion,
+  employeeaddress:e=>e.current_address||e.permanent_address,
+  employeepermanentaddress:e=>e.permanent_address,
+  mobileno:e=>e.cell_number, mobile:e=>e.cell_number, employeemobileno:e=>e.cell_number,
+  email:e=>e.company_email||e.personal_email, employeeemail:e=>e.company_email||e.personal_email,
+  employeepanno:e=>e.custom_pan_no, employeeidentitypanno:e=>e.custom_pan_no,
+  employeebankname:e=>e.bank_name, employeebankaccountno:e=>e.bank_ac_no,
+  passportno:e=>e.passport_number,
+  companyname:e=>e.company, company:e=>e.company,
+  grosssalary:e=>e.ctc, currencysymbol:()=>"₹", currencytitle:()=>"Rupees",
+  employeetitle:e=>(e.gender==="Female"?"Ms.":"Mr."), title:e=>(e.gender==="Female"?"Ms.":"Mr."),
+  hisher:e=>(e.gender==="Female"?"Her":"His"),
+  currentdate:()=>new Date().toISOString().slice(0,10),
+};
+const norm = t => t.toLowerCase().replace(/[\s._\-\/]/g,"");
+
+function mergeLetter(html, emp, ctx){
+  const missing=new Set();
+  const out = html.replace(/\{([A-Za-z0-9 _.\-\/]{2,40})\}/g, (m, raw)=>{
+    const key=norm(raw);
+    if(ctx && ctx[key]!=null && ctx[key]!=="") return esc(String(ctx[key]));
+    const fn=TOKENS[key];
+    let v = fn ? fn(emp) : undefined;
+    if(v==null || v==="" ){ missing.add(raw.trim());
+      // Shown, never blanked. A letter with a visible gap is obviously
+      // unfinished; one with a blank space looks finished and is not.
+      return '<span class="tok">[['+esc(raw.trim())+']]</span>'; }
+    v=String(v);
+    if(raw===raw.toUpperCase() && /[A-Z]{3,}/.test(raw)) v=v.toUpperCase();
+    return esc(v);
+  });
+  return {html:out, missing:[...missing]};
+}
+
+function secOnboard(){
+  const types=S.letterTypes||[], issued=S.letters||[];
+  const byCat={};
+  types.forEach(t=>{ (byCat[t.category||"Uncategorised"] ||= []).push(t); });
+
+  let html = '<div class="legend"><b style="font-family:var(--display)">On Board</b>'
+    + '<span>Factor HR groups this as Candidate Master, Letter / Form / Memo, Document Management and Assets Management.</span></div>';
+
+  html += '<div class="cols">'
+  + panel("Letter Types","live",
+      Object.keys(byCat).sort().map(cat =>
+        '<div style="margin-bottom:.6rem"><div style="font-family:var(--mono);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.25rem">'
+        + esc(cat) + ' &middot; ' + byCat[cat].length + '</div>'
+        + byCat[cat].map(t=>'<div class="row"><span>'+esc(t.name)+'</span>'
+            + '<span class="val">'+((t.fields_used||"").split(",").filter(Boolean).length)+' fields</span></div>').join("")
+        + '</div>').join("")
+      + note('<b>15 of your 17 formats loaded.</b> Form 2 Revised and Form 3A hold their content in form controls rather than text, so they were flagged rather than imported blank. Nine of the rest are statutory PF forms with legally fixed layouts &mdash; a different job from the six real letters.'),
+      {ico:"📄"})
+
+  + panel("Issue a letter","live",
+      '<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.7rem">'
+      + '<select id="ltEmp" style="min-width:230px"></select>'
+      + '<select id="ltType" style="min-width:230px"></select>'
+      + '<button id="ltGo">Preview</button></div>'
+      + '<div id="ltOut"><div class="empty"><b>Pick a person and a letter</b>The template merges against their real record. Anything ERPNext cannot fill is shown in the text rather than left blank.</div></div>',
+      {ico:"✉"})
+  + '</div>';
+
+  html += '<div class="cols">'
+  + panel("Letters issued","live",
+      issued.length
+        ? '<div class="rows">'+issued.map(l=>'<div class="row"><span>'+esc(l.employee_name||l.employee)
+            +' &middot; '+esc(l.letter_type||"")+'</span><span class="val">'+esc(l.letter_date||"")+'</span></div>').join("")+'</div>'
+        : '<div class="empty"><b>None yet</b>Factor HR has issued exactly one letter in three years &mdash; an Experience Certificate for MT-003, dated 4 August 2023.</div>',
+      {ico:"📬"})
+  + panel("Candidate Master","skip",
+      note('<b>Empty in Factor HR too.</b> Nothing has ever been entered, so there is nothing to replicate. ERPNext has <code>Job Applicant</code> ready if recruitment ever moves across.'),
+      {ico:"👤"})
+  + panel("Document Management","none",
+      gap("Document Type and Document Entry &mdash; employee documents with issue and expiry dates.")
+      + '<div style="margin-top:.7rem">'+note('Not built. Worth knowing whether expiry tracking is actually used before building it &mdash; that is the only part ERPNext has no answer for.')+'</div>',
+      {ico:"📁"})
+  + panel("Assets Management","part",
+      note('<b>Mostly free.</b> ERPNext has a complete Asset module &mdash; asset register, categories, and assignment to employees via Asset Movement. It needs configuring rather than building.'),
+      {ico:"💼"})
+  + '</div>';
+  return html;
+}
+
+function wireOnboard(){
+  const e=$("#ltEmp"), t=$("#ltType"), go=$("#ltGo");
+  if(!e||!t) return;
+  const people=scoped().filter(x=>x.status==="Active")
+    .sort((a,b)=>(a.employee_name||"").localeCompare(b.employee_name||""));
+  e.innerHTML=people.map(p=>'<option value="'+p.name+'">'+esc(p.employee_name)
+    +' ('+esc(p.employee_number||"-")+')</option>').join("");
+  t.innerHTML=(S.letterTypes||[]).map(x=>'<option value="'+esc(x.name)+'">'+esc(x.name)+'</option>').join("");
+  go.addEventListener("click", async ()=>{
+    const emp=S.byName[e.value], type=(S.letterTypes||[]).find(x=>x.name===t.value);
+    if(!emp||!type) return;
+    $("#ltOut").innerHTML='<div class="empty">rendering…</div>';
+    try{
+      const full=(await api("/api/resource/Letter Type/"+encodeURIComponent(type.name))).data;
+      const r=mergeLetter(full.template||"", emp, {letterdate:new Date().toISOString().slice(0,10),
+                                                   letternumber:"(on issue)"});
+      $("#ltOut").innerHTML =
+        (r.missing.length
+          ? '<div class="gap"><b>'+r.missing.length+' field(s) ERPNext cannot fill:</b> '+esc(r.missing.join(", "))+'</div>'
+          : '<div class="note"><b>Every field resolved.</b></div>')
+        + '<div class="letter">'+r.html+'</div>';
+    }catch(err){ $("#ltOut").innerHTML='<div class="gap">'+esc(String(err.message||err))+'</div>'; }
+  });
+}
+
+function secSimple(title, bullets, cov){
+  return '<div class="cols">'+panel(title, cov||"none",
+    gap(bullets[0]) + (bullets[1]?'<div style="margin-top:.7rem">'+note(bullets[1])+'</div>':""), {ico:"▪"})+'</div>';
+}
+
+function secSettings(){
+  const c=S.counts;
+  const line=(l,n,ok,note)=>'<div class="row"><span>'+esc(l)+' <span class="cov '+(ok?"live":"none")+'">'
+    +(ok?"ready":"missing")+'</span></span><span class="val">'+n+'</span>'
+    +'<span style="grid-column:1/-1;font-size:.8rem;color:var(--ink-3)">'+esc(note)+'</span></div>';
+  return '<div class="cols">'
+  + panel("Setup readiness","part",
+      '<div class="rows">'
+      + line("Companies", c.companies||0, (c.companies||0)>0, "six, including the two created for HR")
+      + line("Holiday List", c.holiday||0, (c.holiday||0)>0, "61 entries, default on all five Indian companies")
+      + line("Departments", c.departments||0, (c.departments||0)>0, "")
+      + line("Designations", c.designations||0, (c.designations||0)>0, "")
+      + line("Leave Types", c.leavetype||0, (c.leavetype||0)>0, "two of six actually used")
+      + line("Shift Types", c.shift||0, (c.shift||0)>0, "blocks all attendance until defined")
+      + line("Attendance rows", c.attendance||0, (c.attendance||0)>0, "generated from punches through a shift")
+      + '</div>', {ico:"⚙"})
+  + panel("Enforcement","part",
+      note('Geolocation capture is <b>on</b>. Two detection reports exist — punch clock drift and open shifts. Server-side rules need the private bench, which is still open.'), {ico:"🔐"})
+  + '</div>';
+}
+
+const SUBTABS = { dashboard:[["overview","Start up"],["approvals","Approvals"]] };
+
+function renderSub(){
+  const tabs = SUBTABS[S.section];
+  $("#subbar").innerHTML = tabs ? tabs.map(t =>
+    '<button class="subtab" data-s="'+t[0]+'" aria-selected="'+(S.subtab===t[0])+'">'+t[1]+'</button>').join("") : "";
+  $("#subbar").querySelectorAll(".subtab").forEach(b=>b.addEventListener("click",()=>{
+    S.subtab=b.dataset.s; renderSub(); renderBody();
+  }));
+}
+
+function renderBody(){
+  const c=$("#content");
+  if(S.section==="dashboard") c.innerHTML = S.subtab==="approvals" ? secApprovals() : secDashboard();
+  else if(S.section==="employees") c.innerHTML = secEmployees();
+  else if(S.section==="attendance") c.innerHTML = secAttendance();
+  else if(S.section==="leave") c.innerHTML = secLeave();
+  else if(S.section==="payroll") c.innerHTML = secSimple("Payroll",
+      ["Salary structures, statutory setup, payslips, ECR and income-tax registers.",
+       "<b>Deferred by decision.</b> Payroll is calculated by hand and is not run in Factor HR either."],"skip");
+  else if(S.section==="onboard") c.innerHTML = secOnboard();
+  else if(S.section==="loans") c.innerHTML = secSimple("Loans",
+      ["Loan types, applications, and recovery through payroll.",
+       "Frappe HR has Employee Loan and Employee Advance ready to use, but recovery only means something once payroll moves."]);
+  else if(S.section==="survey") c.innerHTML = secSimple("Survey",
+      ["Surveys and acknowledgements.", "Empty in your tenant. Nothing to rebuild unless asked."]);
+  else if(S.section==="settings") c.innerHTML = secSettings();
+
+  if(S.section==="onboard") wireOnboard();
+
+  const at=$("#apptabs");
+  if(at) at.querySelectorAll(".tab[data-t]").forEach(b=>b.addEventListener("click",()=>{
+    S.apptab=b.dataset.t; renderBody();
+  }));
+}
+function renderAll(){ renderSub(); renderBody(); }
+
+async function load(){
+  $("#dot").className="dot"; $("#conn").textContent="loading…";
+  try{
+    const today=new Date().toISOString().slice(0,10);
+    const [emps,companies,checkins,shifts,holidays,leavetypes,attendance,depts,desigs,regs,leaves,
+           ltypes,letters]=await Promise.all([
+      listAll("Employee",["name","employee_name","employee_number","company","department","designation",
+                          "attendance_device_id","reports_to","date_of_joining","status","default_shift"]),
+      listAll("Company",["name","abbr"]),
+      listAll("Employee Checkin",["name","employee","time","log_type"],[["time",">=",today+" 00:00:00"]]),
+      listAll("Shift Type",["name"]), listAll("Holiday List",["name"]),
+      listAll("Leave Type",["name"]), listAll("Attendance",["name"]),
+      listAll("Department",["name"]), listAll("Designation",["name"]),
+      listAll("Employee Attendance Regularization",
+        ["name","employee","employee_name","attendance_date","requested_in","requested_out",
+         "reason","remarks","status","applied_on","creation"],[["status","=","Initiated"]]).catch(()=>[]),
+      listAll("Leave Application",
+        ["name","employee","employee_name","leave_type","from_date","to_date","total_leave_days","status","description"],
+        [["status","=","Open"]]).catch(()=>[]),
+      // Order here must match the destructuring above, position for position.
+      // These two were missing while the variables existed, so `ltypes` was
+      // undefined and the On Board panels rendered empty with no error.
+      listAll("Letter Type",["name","category","is_active","fields_used"]).catch(()=>[]),
+      listAll("Employee Letter",
+        ["name","employee","employee_name","letter_type","letter_date"]).catch(()=>[]),
+    ]);
+    S.employees=emps; S.byName=Object.fromEntries(emps.map(e=>[e.name,e])); S.checkins=checkins;
+    S.approvals={attendance:regs||[],leave:leaves||[]};
+    S.letterTypes=(ltypes||[]).filter(t=>t.is_active!==0);
+    S.letters=letters||[];
+    S.counts={companies:companies.length,shift:shifts.length,holiday:holidays.length,
+              leavetype:leavetypes.length,attendance:attendance.length,
+              departments:depts.length,designations:desigs.length,left:344};
+
+    const sel=$("#company"), cur=sel.value;
+    sel.innerHTML='<option value="">All companies</option>'
+      + companies.map(c=>'<option'+(c.name===cur?" selected":"")+'>'+esc(c.name)+'</option>').join("");
+    $("#dot").className="dot live"; $("#conn").textContent="live";
+    renderAll();
+  }catch(err){
+    $("#dot").className="dot bad"; $("#conn").textContent=String(err.message||err).slice(0,80);
+  }
+}
+$("#company").addEventListener("change",()=>{ $("#cotitle").textContent=($("#company").value||"MANNA GROUP").toUpperCase(); renderBody(); });
+$("#q").addEventListener("input",()=>{ if(S.section==="employees") renderBody(); });
+renderNav(); load();
+</script>
+</body>
+</html>

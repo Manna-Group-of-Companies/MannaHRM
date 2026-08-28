@@ -1,0 +1,34 @@
+# Copy to config.toml and fill in. config.toml is gitignored — it holds a key
+# that can write attendance for the whole group.
+
+[erp]
+url = "https://mannarubber.m.frappe.cloud"
+# Better supplied as MANNA_API_KEY / MANNA_API_SECRET in the environment, so
+# this file stays readable by whoever maintains the box.
+api_key = ""
+api_secret = ""
+
+[bridge]
+queue_path   = "punches.sqlite3"
+# Five minutes. The whole device log comes over the wire on every poll, so
+# seconds would hammer a machine that also has to answer the door.
+poll_seconds = 300
+# Delivered punches are kept this long, then pruned. Undelivered ones are never
+# pruned, however old.
+retain_days  = 90
+log_level    = "INFO"
+
+# One block per machine. `name` becomes Employee Checkin.device_id, so it must
+# be unique across every site and must start with the trusted prefix in
+# Manna HR Settings (default BIO-) or its punches will be treated as mobile
+# punches and geofenced.
+[[device]]
+name = "BIO-TREADS-GATE1"
+host = "192.168.1.201"
+port = 4370
+# The device's comm key, if one is set. 0 means none.
+password = 0
+
+[[device]]
+name = "BIO-TREADS-OFFICE"
+host = "192.168.1.202"
