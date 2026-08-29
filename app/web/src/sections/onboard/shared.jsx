@@ -1,4 +1,6 @@
-import { fmt } from "@/lib/format";
+
+import { scoped } from "@/lib/scope";
+import { filled, fmt } from "@/lib/format";
 import { Empty } from "@/components/ui";
 
 /* Nothing on the On Board pages may report "empty" while the question is still

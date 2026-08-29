@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { api, listAll } from "@/api/client";
-import { Cols, Empty, Gap, Note, NoteBelow, Panel, Scroll, Tile, Tiles } from "@/components/ui";
-import {
-	DATEISH, DATE_FIELD, DETAIL_GROUPS, ED_BASE, ED_SECTIONS, ED_STATUSES, ED_WHY, FIELD_LABEL,
-} from "@/data/employees";
-import { download, toCsv } from "@/lib/csv";
-import { ageOn, dmy, fmt, nowStamp, todayIso } from "@/lib/format";
-import { scoped } from "@/lib/scope";
+
 import { getState, set, useApp } from "@/state/store";
-import { openEmployee } from "./EmployeeMaster";
+import { useEmployeeDoc } from "@/sections/employees/useEmployeeDoc";
+import { openEmployee } from "@/sections/employees/EmployeeMaster";
+import { scoped } from "@/lib/scope";
+import { ageOn, dmy, fmt, nowStamp, todayIso } from "@/lib/format";
+import { download, toCsv } from "@/lib/csv";
+import { Cols, Desk, Empty, Gap, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
+import { deskImport, deskNew, deskUrl } from "@/lib/desk";
+import People from "@/components/People";
+import { DATEISH, DATE_FIELD, DETAIL_GROUPS, ED_BASE, ED_CHILD, ED_SECTIONS, ED_STATUSES, ED_WHY, FIELD_LABEL } from "@/data/employees";
 
 /* Factor HR's Employee Detail is a **report screen**, not a record view
    (screenshot 28 Aug 2026): a criteria form, a grid of tick boxes naming what
@@ -67,9 +67,55 @@ function Row({ label, htmlFor, children }) {
 	);
 }
 
+/** One child table off the record, drawn only when its section is ticked.
+
+    These are the rows a list call cannot reach. They are in the document that
+    was already read for this person, so showing them costs nothing further —
+    which is the whole reason the three boxes stop being dead once somebody is
+    picked. An empty child table is drawn as empty rather than hidden: "nobody
+    recorded a past employer" and "this section was not asked for" look the same
+    on a screen and are not the same finding. */
+function EdChild({ doc, spec }) {
+	const [field, heading, cols] = spec;
+	const rows = doc[field] || [];
+	return (
+		<Panel title={heading} cov={rows.length ? "live" : "none"} ico="▤">
+			{rows.length ? (
+				<Scroll>
+					<table style={{ minWidth: 0 }}>
+						<thead>
+							<tr>{cols.map((c) => <th key={c[0]}>{c[1]}</th>)}</tr>
+						</thead>
+						<tbody>
+							{rows.map((r, i) => (
+								<tr key={r.name || i}>
+									{cols.map((c) => {
+										const v = r[c[0]];
+										if (v == null || v === "") return <td className="muted" key={c[0]}>—</td>;
+										const isDate = DATE_FIELD.test(c[0]);
+										return (
+											<td key={c[0]} className={isDate ? "mono" : undefined}>
+												{isDate ? dmy(v) : String(v)}
+											</td>
+										);
+									})}
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Scroll>
+			) : (
+				<Empty title="No rows">
+					The table is on the record and empty for this person — read, not skipped.
+				</Empty>
+			)}
+		</Panel>
+	);
+}
+
 /** The record for one person, in full. The blanks are the finding rather than a
     rendering fault: the migration loaded the master and not the paperwork. */
-function EdBody({ doc }) {
+function EdBody({ doc, sections }) {
 	if (!doc) return <Empty title="reading the record…" />;
 	if (doc.__err) {
 		return (
@@ -106,17 +152,12 @@ function EdBody({ doc }) {
 						</div>
 					</Panel>
 				))}
-				<Panel title="What Factor HR shows here and this does not" cov="part" ico="📄">
-					<Gap>
-						Photograph, family and nominee details, education and previous employment, the uploaded
-						documents, and the audit of who changed what.
-					</Gap>
-					<NoteBelow>
-						Every one of them is already a field or a child table on the ERPNext{" "}
-						<code>Employee</code> record. They are blank because the migration loaded the master and
-						not the paperwork behind it — <b>nothing here needs building, it needs filling</b>.
-					</NoteBelow>
-				</Panel>
+
+				{/* The sections a list call cannot reach, for the one person whose
+				    record has been read whole. Ticked on the form above. */}
+				{(sections || []).map((k) => ED_CHILD[k]
+					? <EdChild key={k} doc={doc} spec={ED_CHILD[k]} />
+					: null)}
 			</Cols>
 		</>
 	);
@@ -124,7 +165,11 @@ function EdBody({ doc }) {
 
 export default function EmployeeDetail() {
 	const s = useApp();
-	const [report, setReport] = useState(null);
+	/* In the store rather than in this component: clicking a row opens that
+	   person's profile, and a report that vanished on the way there would be a
+	   report somebody has to spend the site's daily compute limit rebuilding. */
+	const report = s.edReport;
+	const setReport = (v) => set({ edReport: v });
 
 	const people = scoped(s).slice()
 		.sort((a, b) => (a.employee_name || "").localeCompare(b.employee_name || ""));
@@ -139,21 +184,7 @@ export default function EmployeeDetail() {
 		.map((n) => [n, s.byName[n]?.employee_name || n])
 		.sort((a, b) => a[1].localeCompare(b[1]));
 
-	/* Cached rather than re-read: the body re-renders on every keystroke in the
-	   search box, and a fetch per keypress would be one per keypress. */
-	useEffect(() => {
-		if (!picked || getState().empDoc[picked]) return;
-		let live = true;
-		api("/api/resource/Employee/" + encodeURIComponent(picked))
-			.then((r) => r.data)
-			// The failure is kept on the record rather than thrown, so the page says
-			// which person it could not read instead of blanking.
-			.catch((err) => ({ name: picked, __err: String(err.message || err) }))
-			.then((doc) => {
-				if (live && doc) set({ empDoc: { ...getState().empDoc, [picked]: doc } });
-			});
-		return () => { live = false; };
-	}, [picked]);
+	useEmployeeDoc(picked);
 
 	const toggleStatus = (v) => {
 		const next = statuses.includes(v) ? statuses.filter((x) => x !== v) : statuses.concat([v]);
@@ -246,9 +277,8 @@ export default function EmployeeDetail() {
 			edStatus: ED_STATUSES.slice(), edSections: ["category"],
 			edJoinA: "", edJoinB: "", edSepA: "", edSepB: "", edDobA: "", edDobB: "",
 			edAgeA: "", edAgeB: "", edAgeOn: todayIso(), edMgr: "", empSel: "",
-			edMsg: "", edBad: false,
+			edMsg: "", edBad: false, edReport: null,
 		});
-		setReport(null);
 	}
 
 	const dateIn = (v, on, id) => (
@@ -274,13 +304,16 @@ export default function EmployeeDetail() {
 			</div>
 
 			<div className="repbar">
-				<button
+				{/* This is how the 161 records on the site got there and how the rest
+				    would, so it goes to the wizard that does it — which previews the
+				    spreadsheet and names the rows it would refuse before it writes. */}
+				<Desk
 					className="btn ghost"
-					disabled
-					title="Not built. Importing employees is a write and this dashboard only reads — but this button is how the 161 records on the site would have got there, and how the rest would."
+					href={s.site && deskImport(s.site)}
+					title="Opens ERPNext's Data Import on the site, with Employee as the doctype to load into."
 				>
 					⇧ Import Employees from Excel
-				</button>
+				</Desk>
 			</div>
 
 			<div className="repform">
@@ -371,14 +404,22 @@ export default function EmployeeDetail() {
 				{/* Each tick box names the fields it adds to the export. Where the
 				    answer lives in a child table rather than on the record it cannot
 				    come from a list call at all — one document read per person, 161
-				    requests to build one report — so the box is drawn, disabled, and
-				    says why. */}
+				    requests to build one report — so over everybody the box is dead
+				    and says why. For one person it is not: that record has already
+				    been read whole and the rows are in it. */}
 				<div className="repchecks">
 					{ED_SECTIONS.map((x) => {
-						const off = !!x[3];
+						/* A child-table section is out of reach for a report over everybody
+						   and in reach for a report of one — so the box follows Particular
+						   Employee rather than being dead outright. The two sections ERPNext
+						   has no table for stay dead either way, and say which they are. */
+						const live = !x[3] || (x[3] === "child" && picked && ED_CHILD[x[0]]);
 						return (
-							<label className={"chk" + (off ? " off" : "")} key={x[0]} title={off ? ED_WHY[x[3]] : undefined}>
-								<input type="checkbox" disabled={off} checked={s.edSections.includes(x[0])}
+							<label className={"chk" + (live ? "" : " off")} key={x[0]}
+								title={live
+									? (x[3] ? "In reach because one person is picked — it is drawn under the record below, off the document already read." : undefined)
+									: ED_WHY[x[3]]}>
+								<input type="checkbox" disabled={!live} checked={s.edSections.includes(x[0])}
 									onChange={() => toggleSection(x[0])} />
 								{x[1]}
 							</label>
@@ -390,20 +431,27 @@ export default function EmployeeDetail() {
 					<button className="btn imp" disabled={s.edBusy} onClick={() => void generate()}>
 						▤ {s.edBusy ? "Reading the site…" : "Generate Report"}
 					</button>
-					<button className="btn ghost" disabled
-						title="Needs the File doctype, which is not on the proxy's allowlist. A token that can read every attachment on the site is not something to hand to a page on localhost.">
+					{/* Attachments are not read through this proxy — a token that can
+					    read every file on the site is not something to hand to a page on
+					    localhost — so this opens the File list over there, where they can
+					    be seen and downloaded under whoever is actually logged in. */}
+					<Desk className="btn ghost" href={s.site && deskUrl(s.site, "File")}
+						title="Opens the File list on the ERPNext site. The File doctype is deliberately not on this proxy's allowlist — a token that can read every attachment on the site is not something to hand to a page on localhost.">
 						⇩ Download Employee Picture / Documents
-					</button>
+					</Desk>
 					<button className="btn ghost" onClick={reset}>↺ Reset Fields</button>
 					{report && (
 						<button className="btn ghost" onClick={() => { setReport(null); set({ edMsg: "", edBad: false }); }}>
 							✕ Close
 						</button>
 					)}
-					<button className="btn ghost" disabled
-						title="Scheduling needs something running when nobody is watching. This page is a browser tab; the site's own scheduler is where this belongs.">
+					{/* Scheduling needs something running when nobody is watching, and
+					    this page is a browser tab — so it opens the site's own scheduler,
+					    which is a report emailed on a cron by the bench. */}
+					<Desk className="btn ghost" href={s.site && deskNew(s.site, "Auto Email Report")}
+						title="Opens a new Auto Email Report on the ERPNext site — the site's own scheduler, which runs when nobody is watching. This page cannot: it is a browser tab.">
 						⏰ Schedule Report
-					</button>
+					</Desk>
 					<button className="btn ghost" disabled
 						title="Same reason as Schedule Report. Everything here runs in front of you, which is also why it is capped.">
 						⌛ Generate In Background
@@ -466,18 +514,24 @@ export default function EmployeeDetail() {
 				</>
 			) : (
 				<>
-					<div className="legend">
-						<b className="font-display">One record in full</b>
-						<span className="cov live">Live</span>
-						<span>The whole document for whoever is picked above — or click a card on Employee Master.</span>
-					</div>
+					{/* Nothing has been generated, so the columns are not chosen yet — but
+					    who the report would cover is already known, and showing them beats
+					    a screen that looks like a failed read. Picking one from here opens
+					    the record underneath, which is the other half of this page. */}
 					{picked ? (
-						<EdBody doc={s.empDoc[picked]} />
+						<>
+							<div className="legend">
+								<b className="font-display">One record in full</b>
+								<span className="cov live">Live</span>
+								<span>The whole document for whoever is picked above. A report of one person is a record, and this is it.</span>
+							</div>
+							<EdBody doc={s.empDoc[picked]} sections={s.edSections} />
+						</>
 					) : (
-						<Empty title="Nobody picked">
-							Choose a person above, or click a card on Employee Master. A report of one person is a
-							record, and this is it.
-						</Empty>
+						<People
+							people={people}
+							note="Everybody this report would cover, at the scope set in the top bar. Generate applies the criteria above and adds the ticked columns; clicking a row opens that person's profile."
+						/>
 					)}
 				</>
 			)}

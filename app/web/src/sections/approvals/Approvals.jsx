@@ -1,9 +1,11 @@
-import { APPROVALS, QBULK, QGROUPS, QSCOPES, READ_ONLY } from "@/data/approvals";
-import { load } from "@/api/load";
-import { Empty, Html, Modal, Note, NoteBelow, Panel, Scroll, SpecTable } from "@/components/ui";
 import { set, useApp } from "@/state/store";
-import { exportLog, otherRows, qExport, qFilter, qTemplate, queueOf, reqId } from "./queue";
-import { otherCols } from "./OtherGrid";
+import { exportLog, otherRows, qExport, qFilter, qTemplate, queueOf, reqId } from "@/sections/approvals/queue";
+import { otherCols } from "@/sections/approvals/OtherGrid";
+import { scoped } from "@/lib/scope";
+import { APPROVALS, QBULK, QGROUPS, QSCOPES, READ_ONLY } from "@/data/approvals";
+
+import { Empty, Html, Modal, Note, NoteBelow, Panel, Scroll, SpecTable, panelProps, tabProps } from "@/components/ui";
+
 import OtherGrid from "./OtherGrid";
 import RequestRow from "./RequestCards";
 
@@ -315,14 +317,14 @@ export default function Approvals() {
 	const A = s.approvals;
 
 	const tabs = (
-		<div className="tabs">
+		<div className="tabs" role="tablist" aria-label="Approval queues">
 			{APPROVALS.map((x) => {
 				const n = (A[x.k] || []).length;
 				return (
 					<button
 						key={x.k}
 						className="tab"
-						aria-selected={s.apptab === x.k}
+						{...tabProps("apptab-" + x.k, "appqueue", s.apptab === x.k)}
 						onClick={() =>
 							// A selection made on one queue means nothing on the next one.
 							set({ apptab: x.k, appsel: new Set(), appmsg: "", appq: "", othf: {}, othmsg: "" })
@@ -341,9 +343,11 @@ export default function Approvals() {
 		return (
 			<>
 				{tabs}
-				<OtherGrid t={t} />
-				<Dialogs t={t} shown={otherRows(s, t, otherCols(s))} />
-				<ReqSpec t={t} />
+				<div className="flex flex-col gap-[1.15rem] min-w-0" {...panelProps("appqueue", "apptab-" + s.apptab)}>
+					<OtherGrid t={t} />
+					<Dialogs t={t} shown={otherRows(s, t, otherCols(s))} />
+					<ReqSpec t={t} />
+				</div>
 			</>
 		);
 	}
@@ -365,6 +369,7 @@ export default function Approvals() {
 	return (
 		<>
 			{tabs}
+			<div className="flex flex-col gap-[1.15rem] min-w-0" {...panelProps("appqueue", "apptab-" + s.apptab)}>
 			<QToolbar total={rows.length} shown={shown} />
 
 			{!shown.length ? (
@@ -390,6 +395,7 @@ export default function Approvals() {
 
 			<Dialogs t={t} shown={shown} />
 			<ReqSpec t={t} />
+			</div>
 
 			<Note>
 				These are Factor HR's own queues, in its order.{" "}

@@ -1,7 +1,7 @@
-import { READ_ONLY } from "@/data/approvals";
-import { clock, dayOf, dmy, dmyTime, spanOf } from "@/lib/format";
 import { set, useApp } from "@/state/store";
-import { reqId } from "./queue";
+import { reqId } from "@/sections/approvals/queue";
+import { clock, dayOf, dmy, dmyTime, spanOf } from "@/lib/format";
+import { READ_ONLY } from "@/data/approvals";
 
 /* The grey strip Factor HR puts above every card: what kind of request it is,
    its document number, and who touched it last. The approver quotes the DocNo

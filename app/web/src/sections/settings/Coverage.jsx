@@ -1,6 +1,7 @@
-import { SECTIONS, COV_LABEL } from "@/data/sections";
 import { SUBTABS } from "@/App";
-import { Cols, Gap, Note, NoteBelow, Panel, Scroll } from "@/components/ui";
+import { COV_LABEL, SECTIONS } from "@/data/sections";
+
+import { Scroll } from "@/components/ui";
 
 /* Ours, not Factor HR's. The comparison is the whole point of this page, so it
    deserves stating outright somewhere rather than only being implied by badges
@@ -46,27 +47,6 @@ export default function Coverage() {
 				</table>
 			</Scroll>
 
-			<Cols>
-				<Panel title="What is missing from this comparison" cov="none" ico="📷">
-					<Gap>The second-level menus for Loans and Survey.</Gap>
-					<NoteBelow>
-						Every page here came from <code>docs/FACTOHR_SCREENS.md</code> (screenshots of the live
-						tenant) or <code>docs/FACTOHR_DATA.md</code> (the nine exports).{" "}
-						<b>Loans and Survey appear in neither</b>, so their sub-menus are unknown, and are shown
-						as unknown rather than guessed at. A screenshot of each menu is all it takes.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="Employees is built from the export, not the menu" cov="part" ico="⚠">
-					<Note>
-						Worth being exact about. The four Employees pages come from the{" "}
-						<b>employee master export</b>, not from a screenshot of Factor HR’s Employees menu.
-						They are the right questions asked of real data — enrolment gaps, the company mismatch,
-						missing reporting lines — but they are <b>not a claim about what that menu contains</b>.
-						If it holds screens beyond a directory, nobody here has seen them.
-					</Note>
-				</Panel>
-			</Cols>
 		</>
 	);
 }

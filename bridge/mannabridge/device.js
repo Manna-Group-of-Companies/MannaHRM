@@ -21,19 +21,29 @@
  * a guess. So the raw buffer is pulled off the library's socket and decoded
  * here, against the layout `pyzk` uses:
  *
- *     uid   H    2 bytes   offset 0
- *     user  24s  24 bytes  offset 2
- *     state B    1 byte    offset 26
- *     punch B    1 byte    offset 27
- *     time  4s   4 bytes   offset 28
- *     pad   8s   8 bytes   offset 32
+ * **The layout below was read off the machine, not off a datasheet.** The two
+ * libraries disagree about where the timestamp sits — `node-zklib` says 27,
+ * `pyzk` says 28 — and this file used to follow `pyzk` on the grounds that a
+ * port should not change behaviour. It was wrong, and on 29 Aug 2026 the real
+ * device settled it. Identix K90+ID, serial CGKK211561350, 4,910 records whose
+ * timestamps are monotonic and land in the range the device itself reports:
  *
- * **The two libraries disagree about the timestamp offset** — `node-zklib`
- * reads it at 27, `pyzk` at 28 — and only one of them can be right. This file
- * follows `pyzk`, because that is what the program being replaced did and a
- * port should not quietly change behaviour. Nothing here has been run against a
- * real machine yet, so if the first punches come back with impossible dates,
- * this offset is the first thing to check and TIME_OFFSET is the knob.
+ *     uid    H    2 bytes   offset 0
+ *     user   24s  24 bytes  offset 2
+ *     status B    1 byte    offset 26   verify mode; 1 on 100% of real records
+ *     time   4s   4 bytes   offset 27   <- 27, not 28
+ *     punch  B    1 byte    offset 31   <- 31, not 27
+ *     pad    8s   8 bytes   offset 32
+ *
+ * At 28 every timestamp decoded to the year 2000. At 27 the first record reads
+ * `2023-06-28 14:53:25`, which is the date the device's own log starts.
+ *
+ * **`punch` at 31 is the one that decides pay.** Read at 27 it was the low byte
+ * of the timestamp — noise, mapped onto IN/OUT, and it looked plausible. At 31
+ * it splits 50.1/49.9 across the log, and one night-shift worker's punches
+ * alternate cleanly: in 14:54, out 03:03 the next morning. That pairing is what
+ * a shift multiplies into a day's wage, so it is checked here rather than
+ * assumed. `bridge/mannabridge/device.test.js` pins all three offsets.
  */
 
 import ZKLib from "node-zklib";
@@ -48,8 +58,12 @@ const PUNCH_IN = 0;
 const PUNCH_OUT = 1;
 
 const RECORD_SIZE = 40;
-const TIME_OFFSET = 28;
-const PUNCH_OFFSET = 27;
+const TIME_OFFSET = 27;
+const PUNCH_OFFSET = 31;
+/* Not read — the verify mode, and it is 1 on every real record. Named so the
+   next person can see the whole 40 bytes are accounted for and that nothing is
+   hiding in the gap between the user id and the timestamp. */
+const STATUS_OFFSET = 26;
 
 /* The library's own request opcode for the attendance log. Imported from its
    constants rather than retyped, so a protocol change in the library is a
@@ -152,8 +166,47 @@ export class Device {
     box, and this is the half most likely to be wrong. */
 export function decodeRecords(data, since = null) {
 	const punches = [];
-	// The first four bytes are the payload length, not a record.
-	let buf = data ? data.subarray(4) : Buffer.alloc(0);
+
+	/* The first four bytes are the payload length the device promises, not a
+	   record — so they are also the only way to tell a complete read from a
+	   partial one, and they are checked rather than skipped.
+
+	   **This throws, and the direction is deliberate.** A short read used to
+	   decode silently: the loop below took whole records off the front until it
+	   ran out, and a stream that stopped early simply produced fewer punches.
+	   Measured on the real machine on 29 Aug 2026, five reads minutes apart
+	   returned 1,637 / 4,911 / 8,184 / 8,184 / 44,194 records out of a declared
+	   79,356, and every one of them looked like a valid log.
+
+	   A punch that never arrives is a person marked absent, and that costs them
+	   the day. §4 of CLAUDE.md says errors round towards recording the punch,
+	   so refusing the whole read is the safe end: `main.js` logs it, skips this
+	   device, and leaves `lastSeen` where it was, so the same records are read
+	   again next poll. Returning what arrived would advance `lastSeen` past
+	   punches nobody ever saw. */
+	if (!data || data.length < 4) {
+		throw new Error("attendance log read returned no payload; treating as a failed read, not an empty device");
+	}
+	const declared = data.readUInt32LE(0);
+	const arrived = data.length - 4;
+	if (arrived < declared) {
+		throw new Error(
+			`attendance log truncated: device declared ${declared} bytes `
+			+ `(${Math.floor(declared / RECORD_SIZE)} records) but ${arrived} bytes `
+			+ `(${Math.floor(arrived / RECORD_SIZE)} records) arrived`,
+		);
+	}
+	/* A whole number of records, or the stream is misaligned and every field
+	   after the break is read from the wrong place. Seen on the same machine:
+	   the payload ended 20 bytes into a record. */
+	if (declared % RECORD_SIZE !== 0) {
+		throw new Error(
+			`attendance log misaligned: ${declared} bytes is not a whole number of ${RECORD_SIZE}-byte records`,
+		);
+	}
+
+	/* Only what was promised. Anything past it is padding or the next reply. */
+	let buf = data.subarray(4, 4 + declared);
 
 	while (buf.length >= RECORD_SIZE) {
 		const rec = buf.subarray(0, RECORD_SIZE);

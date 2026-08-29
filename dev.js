@@ -34,7 +34,7 @@ if (NEEDS_KEY) {
 	   is genuinely useful for styling. But the panels will all read empty, and
 	   somebody should be told which of the two that is. */
 	console.log(
-		"\n  ERP_KEY / ERP_SECRET are not set, so the site will refuse every read.\n"
+		"\n  ERP_KEY / ERP_SECRET are not set, so the proxy cannot read the site.\n"
 		+ "  The page will load and every panel will be empty. To see real data:\n\n"
 		+ "    PowerShell:  $env:ERP_KEY='...'; $env:ERP_SECRET='...'; npm run dev\n"
 		+ "    Git Bash:    ERP_KEY=... ERP_SECRET=... npm run dev\n",

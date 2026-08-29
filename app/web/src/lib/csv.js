@@ -1,16 +1,19 @@
 /** Everything this app hands back to a person as a file. */
 
-export function download(name, text) {
+export function save(name, text, mime) {
 	const a = document.createElement("a");
-	/* The BOM is for Excel, which otherwise reads a UTF-8 CSV as Latin-1 and
-	   turns every name with an accent in it into mojibake. */
-	a.href = URL.createObjectURL(new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" }));
+	a.href = URL.createObjectURL(new Blob([text], { type: mime }));
 	a.download = name;
 	document.body.appendChild(a);
 	a.click();
 	a.remove();
 	setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/* The BOM is for Excel, which otherwise reads a UTF-8 CSV as Latin-1 and turns
+   every name with an accent in it into mojibake. Only the CSV needs it: the
+   HTML documents declare their charset in their own head. */
+export const download = (name, text) => save(name, "﻿" + text, "text/csv;charset=utf-8");
 
 export const cell = (v) => {
 	const s = String(v == null ? "" : v);

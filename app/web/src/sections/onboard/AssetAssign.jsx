@@ -1,25 +1,7 @@
-import { Cols, Empty, NoteBelow, Panel, SpecTable, Tile, Tiles } from "@/components/ui";
+import { set, useApp } from "@/state/store";
+import { assetRows, assetsUnread, onboardWait } from "@/sections/onboard/shared";
 import { dmy, fmt } from "@/lib/format";
-import { useApp } from "@/state/store";
-import { assetRows, assetsUnread, onboardWait } from "./shared";
-
-const CARRIES = [
-	["Asset", "Link &rarr; Asset", "stock", ""],
-	["Employee", "custodian on Asset, set by Asset Movement", "stock",
-		"One holder at a time, and the history says who held it before"],
-	["Issued on / returned on", "Asset Movement transaction date", "stock",
-		"Purpose: Issue, Transfer, Receipt"],
-	["Location", "Link &rarr; Location", "stock",
-		"Where it went, for the things that are not carried by a person"],
-	["Acknowledgement", "Attach or check", "build",
-		"A handover the employee has signed. Nothing stock records that they agreed to hold it"],
-	["Condition on issue and return", "Small Text", "build",
-		"The argument on separation is always about condition, not about whether it was issued"],
-	["Return on separation", "Employee Separation activity", "stock",
-		"Stock Frappe HR checklist &mdash; but only if separations are run in the system"],
-	["Recovery from final settlement", "Payroll", "build",
-		"Deferred with the rest of payroll. Note it now: an unreturned asset that nobody deducts for is the whole point of the register"],
-];
+import { Cols, Empty, NoteBelow, Panel, Tile, Tiles } from "@/components/ui";
 
 export default function AssetAssign() {
 	const s = useApp();
@@ -115,15 +97,6 @@ export default function AssetAssign() {
 				</Panel>
 			</Cols>
 
-			<Cols>
-				<Panel title="What an assignment should carry" cov="part" ico="📋">
-					<SpecTable cols={["Field", "Where it lives", "State", "Note"]} list={CARRIES} />
-					<NoteBelow>
-						<b>Two of eight need building</b>, and both are about a person agreeing rather than a
-						thing moving. Everything else is stock and switched off rather than absent.
-					</NoteBelow>
-				</Panel>
-			</Cols>
 		</>
 	);
 }

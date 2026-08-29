@@ -1,10 +1,11 @@
-import { Fragment } from "react";
-import { FH_STREAMS, IO_BY, IO_MAXDAYS, IO_PERIODS } from "@/data/attendance";
-import { Cols, Empty, Gap, Html, Note, NoteBelow, Panel, Scroll } from "@/components/ui";
-import { cell, download } from "@/lib/csv";
-import { clock, dayOf, dmy, fmt, todayIso } from "@/lib/format";
-import { listAll } from "@/api/client";
 import { getState, patch, set, useApp } from "@/state/store";
+import { listAll } from "@/api/client";
+import { clock, dayOf, dmy, fmt, nowStamp, tidyDept, todayIso } from "@/lib/format";
+import { Fragment } from "react";
+import { CAT_FIELDS, CAT_GROUP_BY, IO_BY, IO_MAXDAYS, IO_PERIODS } from "@/data/attendance";
+import { Empty, ExportMenu, Gap, Html, Modal, Note, NoteBelow, Panel, Scroll, panelProps, tabProps } from "@/components/ui";
+import { download, save, toCsv } from "@/lib/csv";
+import { esc, paper, printPaper } from "@/lib/doc";
 
 /* Factor HR's newer report chrome, photographed 28 Aug 2026: the title, a row
    of labelled controls, then REPORT CRITERIA / ADVANCE tabs holding a date
@@ -22,6 +23,69 @@ import { getState, patch, set, useApp } from "@/state/store";
    Named `Unknown` rather than `Mobile` on purpose — the strong claim needs the
    prefix, and calling it mobile would geofence it in a reader's head. */
 const ioStream = (r) => (r.device_id ? "Terminal" : "Unknown");
+
+/* One column list, and the table on screen, the CSV and the printed document
+   all read it: `[heading, csv field, class, value]`. Three lists would be three
+   chances for an export to disagree with what somebody read off the screen,
+   and the export is the copy that gets argued over.
+
+   The value function returns "" for absent rather than a dash — the dash is a
+   thing a reader needs and a thing a data file must not have. */
+const IO_COLS = [
+	["Date", "date", "mono", (r) => String(r.time || "").slice(0, 10)],
+	["Time", "time", "mono", (r) => clock(r.time)],
+	["Emp code", "emp_code", "mono", (r, e) => e.employee_number || r.employee],
+	["Name", "name", "", (r, e) => e.employee_name || r.employee_name || ""],
+	["In / Out", "log_type", "", (r) => r.log_type || ""],
+	["Terminal", "terminal", "mono", (r) => r.device_id || ""],
+	["Stream", "stream", "", (r) => ioStream(r)],
+	["Company", "company", "muted", (r, e) => e.company || ""],
+];
+
+/* What Show Categories appends here. Company is already a column on this
+   report, so the categories it can add are the other two — the number is capped
+   at what this report can add rather than at what the master holds, because a
+   column repeated under a second heading is worse than a column missing. */
+const IO_CAT_COLS = CAT_FIELDS
+	.filter(([, field]) => !IO_COLS.some((c) => c[1] === field))
+	.map(([head, field]) => [
+		head, field, "muted", (r, e) => (field === "department" ? tidyDept(e.department) : e[field]) || "",
+	]);
+
+/* Selfie is on the screen and on the paper when the switch is on, because
+   their report has the column there and its emptiness is the thing worth
+   seeing. It is not in the CSV: a data file with a column that is empty by
+   construction is a column somebody later writes a formula against. */
+const ioCols = (f) => {
+	const cats = IO_CAT_COLS.slice(0, Math.max(0, Math.min(f.cats || 0, IO_CAT_COLS.length)));
+	return IO_COLS.concat(cats, f.selfie ? [["Selfie", "", "sel", () => ""]] : []);
+};
+
+/** Group By, from the Advance tab: the outer section, above the grouping the
+    Report Period and Filter By already do. Empty when no category is chosen, or
+    when the one chosen has no field on our side to read. */
+function ioCatOf(s, r) {
+	const g = CAT_GROUP_BY.find((x) => x[0] === s.io.gby);
+	if (!g || !g[2]) return "";
+	const v = s.byName[r.employee]?.[g[2]] || "—";
+	return `${g[1]}: ${g[2] === "department" ? tidyDept(v) : v}`;
+}
+
+const dash = (v, alt) => (v === "" || v == null ? alt || "—" : String(v));
+
+/* Which field heads a group: Filter By first, then the Report Period — the
+   same precedence their form implies by putting the two controls side by
+   side. Out here rather than in the table, because the printed copy has to
+   group the same way or the two are not the same report. */
+function ioKeyOf(s, r) {
+	const f = s.io;
+	if (f.by) return String(s.byName[r.employee]?.[f.by] || "—");
+	if (f.period === "Employee Wise") return s.byName[r.employee]?.employee_name || r.employee;
+	return String(r.time || "").slice(0, 10);
+}
+
+const ioGroupLabel = (s, k) =>
+	!s.io.by && s.io.period !== "Employee Wise" ? `${dmy(k)}, ${dayOf(k)}` : k;
 
 /** Today's punches, scoped by the company picker — already loaded, so shown
     without asking. */
@@ -54,6 +118,13 @@ function ioFiltered(s) {
 			return true;
 		})
 		.sort((a, b) => {
+			/* The outer section first, or its heading rows would be emitted every
+			   time the list crossed back into a category it had already left. */
+			const ca = ioCatOf(s, a);
+			if (ca) {
+				const d = ca.localeCompare(ioCatOf(s, b));
+				if (d) return d;
+			}
 			if (f.period === "Employee Wise") {
 				const an = s.byName[a.employee]?.employee_name || a.employee;
 				const bn = s.byName[b.employee]?.employee_name || b.employee;
@@ -101,27 +172,129 @@ async function ioGenerate() {
 	set({ ioRows: rows || [], ioState: "done", ioRan: `${from} to ${till}` });
 }
 
+/** Nothing to hand over is a message rather than an empty file: a CSV with a
+    header and no rows reads, to the person who opens it next week, as a day on
+    which nobody punched. */
+const IO_NOTHING = "Nothing to export — generate the report first, or widen the filters.";
+
+const ioStamp = (s) => `in-out-activity-${s.io.from || todayIso()}`;
+
 function ioExport(s) {
 	const rows = ioFiltered(s);
-	if (!rows.length) {
-		return set({ ioMsg: "Nothing to export — generate the report first, or widen the filters." });
-	}
-	const cols = ["date", "time", "emp_code", "name", "log_type", "terminal", "stream", "company"];
-	const csv = [cols.join(",")]
-		.concat(rows.map((r) => {
-			const e = s.byName[r.employee] || {};
-			return [
-				String(r.time || "").slice(0, 10), clock(r.time), e.employee_number || r.employee,
-				e.employee_name || r.employee_name || "", r.log_type || "", r.device_id || "",
-				ioStream(r), e.company || "",
-			].map(cell).join(",");
-		}))
-		.join("\r\n");
-	const name = `in-out-activity-${s.io.from || todayIso()}.csv`;
+	if (!rows.length) return set({ ioMsg: IO_NOTHING });
+	/* Every column that holds data, which is every one but the selfie — the only
+	   column empty by construction, and marked as such by having no field name.
+	   The categories Show Categories adds are real values and go in. */
+	const cols = ioCols(s.io).filter((c) => c[1]);
+	const csv = toCsv(cols.map((c) => c[1]), rows.map((r) => {
+		const e = s.byName[r.employee] || {};
+		return cols.map((c) => c[3](r, e));
+	}));
+	const name = ioStamp(s) + ".csv";
 	download(name, csv);
 	set({
 		ioMsg: `Exported ${fmt(rows.length)} punch${rows.length === 1 ? "" : "es"} to ${name}. `
 			+ "Written in the browser from what was already read — nothing was sent anywhere.",
+	});
+}
+
+/** The report as one self-contained document. Preview shows it, Word opens it,
+    and Print and PDF hand it to the print dialog — all four the same HTML, so
+    what somebody signs is what they previewed. */
+function ioPaper(s, rows) {
+	const f = s.io;
+	const cols = ioCols(f);
+
+	/* Only a category that can actually section the report is named: picking one
+	   with no field here leaves the report ungrouped, and a line claiming
+	   otherwise would be a filing error waiting to happen. */
+	const gby = CAT_GROUP_BY.find((x) => x[0] === f.gby && x[2]);
+
+	/* The criteria line is not decoration. A printed attendance report gets
+	   filed and argued over months later, and one that does not say which
+	   filters produced it cannot be checked against the site again. */
+	const crit = [
+		`${fmt(rows.length)} punch${rows.length === 1 ? "" : "es"}`,
+		gby ? `sectioned by ${gby[1]}` : "",
+		f.by ? `grouped by ${f.by}` : f.period.toLowerCase(),
+		f.cats ? `${IO_CAT_COLS.slice(0, f.cats).map((c) => c[0]).join(" and ")} shown` : "",
+		f.status ? `${f.status.toLowerCase()} employees` : "every employee status",
+		f.logtype || "in and out",
+		f.stream ? `${f.stream.toLowerCase()} punches only` : "both streams",
+		f.emp ? `matching “${f.emp}”` : "",
+	].filter(Boolean).join(" · ");
+
+	let last = null;
+	let lastCat = null;
+	const body = rows.map((r) => {
+		const e = s.byName[r.employee] || {};
+		const cat = ioCatOf(s, r);
+		/* A new section restarts the grouping inside it, so the first day in each
+		   section carries its own heading rather than inheriting the last one. */
+		const sec = cat && cat !== lastCat
+			? (last = null, `<tr class="sec"><td colspan="${cols.length}">${esc(cat)}</td></tr>`)
+			: "";
+		lastCat = cat;
+		const k = ioKeyOf(s, r);
+		const grp = k === last ? ""
+			: `<tr class="grp"><td colspan="${cols.length}">${esc(ioGroupLabel(s, k))}</td></tr>`;
+		last = k;
+		const tds = cols
+			.map((c) => `<td${c[2] ? ` class="${c[2]}"` : ""}>`
+				+ `${esc(dash(c[3](r, e), c[2] === "sel" ? "no photo" : ""))}</td>`)
+			.join("");
+		return sec + grp + `<tr>${tds}</tr>`;
+	}).join("");
+
+	return paper(`In Out Activity ${f.from} to ${f.till}`, `
+		<div class="head">
+			${f.logo ? '<div class="mark">MANNA GROUP</div>' : ""}
+			<h1>IN / OUT ACTIVITY REPORT</h1>
+			<p class="sub">${esc(`${dmy(f.from)} to ${dmy(f.till)}, ${f.t1}–${f.t2}`)}
+				· ${esc(s.company || "all companies")}</p>
+			<p class="crit">${esc(crit)}</p>
+		</div>
+		<table>
+			<thead><tr>${cols.map((c) => `<th>${esc(c[0])}</th>`).join("")}</tr></thead>
+			<tbody>${body}</tbody>
+			<tfoot><tr><td colspan="${cols.length}">Generated ${esc(nowStamp())} from Employee Checkin${
+				f.selfie ? ", whose selfie column is empty because nothing in Frappe HR captures a photo on punch" : ""
+			}. Attendance is generated from these punches by the shift job; this is the punch record, not the day.</td></tr></tfoot>
+		</table>`);
+}
+
+/** One of the five formats on their export menu. Excel is the CSV above; the
+    other four are the one document, handed to the print dialog, to Word, or to
+    an iframe on this page. */
+function ioRun(s, kind) {
+	patch("io", { fmt: kind, fmenu: false });
+	if (kind === "Excel") return ioExport(s);
+
+	const rows = ioFiltered(s);
+	if (!rows.length) return set({ ioMsg: IO_NOTHING });
+	const html = ioPaper(s, rows);
+
+	if (kind === "Preview") return set({ ioDoc: html, ioMsg: "" });
+
+	if (kind === "Word") {
+		const name = ioStamp(s) + ".doc";
+		save(name, html, "application/msword");
+		return set({
+			ioMsg: `Written to ${name}. <b>It is an HTML document with a Word content type</b> — the same `
+				+ "thing Word's own <em>Save as Web Page</em> writes, so Word opens and edits it and no library "
+				+ "was shipped to this browser to produce it. Written here from what was already read; nothing "
+				+ "was sent anywhere.",
+		});
+	}
+
+	printPaper(html);
+	set({
+		ioMsg: kind === "PDF"
+			? "<b>PDF is the print dialog with <em>Save as PDF</em> as the destination.</b> The browser writes a "
+				+ "better PDF than a library shipped to it would, and it writes it from the same document Print "
+				+ "and Preview show — a second renderer would only be a second chance to disagree with the screen."
+			: "Sent to the print dialog. Landscape A4 on purpose: the table is eight columns wide, nine with "
+				+ "the selfie column, and portrait drops the last of them off the page.",
 	});
 }
 
@@ -156,6 +329,13 @@ function IoDot({ s }) {
 	);
 }
 
+/* The shared export split button, wired to this page's state. */
+const IoExport = ({ s }) => (
+	<ExportMenu fmt={s.io.fmt} open={s.io.fmenu}
+		onToggle={() => patch("io", { fmenu: !s.io.fmenu })}
+		onPick={(kind) => ioRun(s, kind)} />
+);
+
 function IoForm({ s }) {
 	const f = s.io;
 
@@ -171,16 +351,11 @@ function IoForm({ s }) {
 		if (k === "logo" || k === "nologo") {
 			patch("io", { logo: k === "logo" });
 			return set({
-				ioMsg: "<b>Layout Options are about their PDF, not about the data.</b> This dashboard renders "
-					+ "HTML and exports CSV; the Manna wordmark is already in the page chrome, and a logo on a "
-					+ "CSV is not a thing. Kept because it is on their screen and somebody will look for it.",
-			});
-		}
-		if (k === "excel") return ioExport(s);
-		if (k === "excelmore") {
-			return set({
-				ioMsg: "Only CSV. It opens in Excel, and it is the one export format that does not need a "
-					+ "library shipped to the browser.",
+				ioMsg: k === "logo"
+					? "The wordmark now heads the PDF, the Word file and anything printed — it is a letterhead, "
+						+ "so it appears where there is a page for it to head. The CSV has no letterhead to carry "
+						+ "one, and the screen already has it in the chrome."
+					: "",
 			});
 		}
 		if (k === "genmore") {
@@ -252,19 +427,16 @@ function IoForm({ s }) {
 				</div>
 
 				<div className="right">
-					<button className="embtn" title="Export what is generated" onClick={() => button("excel")}>
-						📊 Excel
-					</button>
-					<button className="embtn" title="Other formats" onClick={() => button("excelmore")}>▾</button>
+					<IoExport s={s} />
 					<button className="embtn" title="Run it again" onClick={() => button("refresh")}>↻</button>
 					<button className="embtn pri" onClick={() => button("generate")}>Generate</button>
 					<button className="embtn pri" title="More ways to run it" onClick={() => button("genmore")}>▾</button>
 				</div>
 			</div>
 
-			<div className="iotabs">
+			<div className="iotabs" role="tablist" aria-label="Report criteria">
 				{[["criteria", "Report Criteria"], ["advance", "Advance"]].map((t) => (
-					<button key={t[0]} className="iotab" aria-selected={f.tab === t[0]}
+					<button key={t[0]} className="iotab" {...tabProps("iotab-" + t[0], "iobody", f.tab === t[0])}
 						onClick={() => patch("io", { tab: t[0] })}>
 						{t[1]}
 					</button>
@@ -272,16 +444,74 @@ function IoForm({ s }) {
 			</div>
 
 			{f.tab === "advance" ? (
-				<div className="iobody">
+				/* Photographed 29 August 2026, and it holds two controls, not the four
+				   on Daily Detail's: Group By and Show Categories. Neither filters —
+				   both change the shape of what came back, which is why they need no
+				   second Generate. */
+				<div className="iobody" {...panelProps("iobody", "iotab-" + f.tab)}>
+					<div className="iorow">
+						<div className="iof">
+							<span className="lab">Group By</span>
+							<span className="ctl">
+								<select
+									className="grow"
+									value={f.gby}
+									title="Factor HR's categories, not fields — the Category Type master behind the Categories screen."
+									onChange={(e) => {
+										const g = CAT_GROUP_BY.find((x) => x[0] === e.target.value);
+										patch("io", { gby: e.target.value });
+										set({ ioMsg: g && g[3] ? g[3] : "" });
+									}}
+								>
+									{CAT_GROUP_BY.map((g) => (
+										<option key={g[0] || "none"} value={g[0]}>
+											{g[1]}{g[0] && !g[2] ? " — no field here" : ""}
+										</option>
+									))}
+								</select>
+							</span>
+							<span className="hint text-[.79rem] text-ink-3">
+								sections the punches by category, above the grouping Report Period and Filter By
+								already do
+							</span>
+						</div>
+
+						<div className="iof">
+							<span className="lab">Show Categories</span>
+							<span className="ctl">
+								<input
+									type="number" min="0" max={IO_CAT_COLS.length} value={f.cats}
+									title="How many category columns to append to each punch."
+									onChange={(e) => {
+										const n = Math.max(0, Math.min(Number(e.target.value) || 0, IO_CAT_COLS.length));
+										patch("io", { cats: n });
+										set({
+											ioMsg: Number(e.target.value) > IO_CAT_COLS.length
+												? `Capped at ${IO_CAT_COLS.length} on this report. Three of Factor HR's categories `
+													+ "read onto a field on our side — Company, Department and Designation — and "
+													+ "<b>Company is already a column here</b>, so these two are what is left to add."
+												: "",
+										});
+									}} />
+								<span className="hint text-[.79rem] text-ink-3">
+									{f.cats
+										? `${IO_CAT_COLS.slice(0, f.cats).map((c) => c[0]).join(" and ")} appended to every punch`
+										: "their field held 0 and the label is a count, so it is read as how many category columns to append"}
+								</span>
+							</span>
+						</div>
+					</div>
+
 					<Note>
-						<b>The ADVANCE tab has never been opened.</b> It is on their screen and nothing behind it
-						has been seen, so nothing is invented here. What our side would put on it is already on the
-						criteria tab under <em>Additional Filters</em>: in / out, and which stream the punch came
-						from.
+						<b>Two controls, and both are a reading rather than a copy.</b> Group By offers their
+						categories, and the two that are pay treatment rather than groupings — Gratuity and LWF —
+						have no field here to section on; picking one says so. Show Categories is read as a count
+						of category columns, capped at what this report can add without repeating a column it
+						already has.
 					</Note>
 				</div>
 			) : (
-				<div className="iobody">
+				<div className="iobody" {...panelProps("iobody", "iotab-" + f.tab)}>
 					<div className="iorow">
 						<div className="iof">
 							<span className="lab">Date Range</span>
@@ -422,15 +652,11 @@ function IoReport({ s }) {
 		);
 	}
 
-	/* Group headings, emitted as the sorted list is walked. Which field heads a
-	   group is Filter By first, then the Report Period — the same precedence
-	   their form implies by putting the two controls side by side. */
-	const keyOf = (r) => {
-		if (f.by) return String(s.byName[r.employee]?.[f.by] || "—");
-		if (f.period === "Employee Wise") return s.byName[r.employee]?.employee_name || r.employee;
-		return String(r.time || "").slice(0, 10);
-	};
+	/* Section and group headings, emitted as the sorted list is walked — by
+	   ioCatOf and ioKeyOf, which the printed copy walks with too. */
+	const cols = ioCols(f);
 	let last = null;
+	let lastCat = null;
 
 	return (
 		<>
@@ -441,7 +667,7 @@ function IoReport({ s }) {
 					{s.ioRan}, {f.t1}–{f.t2}
 					{f.by ? `, grouped by ${f.by}` : `, ${f.period.toLowerCase()}`}.
 				</span>
-				<button className="embtn ml-auto" onClick={() => ioExport(s)}>⬇ Export CSV</button>
+				<span className="ml-auto"><IoExport s={s} /></span>
 			</div>
 
 			{f.selfie && (
@@ -456,34 +682,40 @@ function IoReport({ s }) {
 			)}
 
 			<Scroll style={{ marginTop: ".6rem" }}>
-				<table className="io" style={{ minWidth: 880 }}>
+				<table className="io" style={{ minWidth: 980 }}>
 					<thead>
-						<tr>
-							<th>Date</th><th>Time</th><th>Emp code</th><th>Name</th><th>In / Out</th>
-							<th>Terminal</th><th>Company</th>{f.selfie && <th>Selfie</th>}
-						</tr>
+						<tr>{cols.map((c) => <th key={c[0]}>{c[0]}</th>)}</tr>
 					</thead>
 					<tbody>
 						{rows.map((r) => {
 							const e = s.byName[r.employee] || {};
-							const k = keyOf(r);
+							const cat = ioCatOf(s, r);
+							const opens = cat && cat !== lastCat;
+							/* A new section restarts the grouping inside it, so the first day
+							   in each carries its own heading rather than inheriting the last. */
+							if (opens) last = null;
+							lastCat = cat;
+							const k = ioKeyOf(s, r);
 							const first = k !== last;
 							if (first) last = k;
-							const label = !f.by && f.period !== "Employee Wise" ? `${dmy(k)}, ${dayOf(k)}` : k;
 							return (
 								<Fragment key={r.name}>
+									{opens && (
+										<tr className="sec">
+											<td colSpan={cols.length}>{cat}</td>
+										</tr>
+									)}
 									{first && (
-										<tr className="grp"><td colSpan={f.selfie ? 8 : 7}>{label}</td></tr>
+										<tr className="grp">
+											<td colSpan={cols.length}>{ioGroupLabel(s, k)}</td>
+										</tr>
 									)}
 									<tr>
-										<td className="mono">{String(r.time || "").slice(0, 10)}</td>
-										<td className="mono">{clock(r.time)}</td>
-										<td className="mono">{e.employee_number || r.employee}</td>
-										<td>{e.employee_name || r.employee_name || ""}</td>
-										<td>{r.log_type || "—"}</td>
-										<td className="mono">{r.device_id || "—"}</td>
-										<td className="muted">{e.company || "—"}</td>
-										{f.selfie && <td className="sel">no photo</td>}
+										{cols.map((c) => (
+											<td key={c[0]} className={c[2]}>
+												{dash(c[3](r, e), c[2] === "sel" ? "no photo" : "")}
+											</td>
+										))}
 									</tr>
 								</Fragment>
 							);
@@ -559,65 +791,33 @@ export default function InOut() {
 				</div>
 			)}
 
-			<div className="mt-[.9rem]">
-				<Panel title="The two streams, column by column" cov="live" ico="↔">
-					<Scroll>
-						<table>
-							<thead>
-								<tr><th>Column</th><th>Biometric</th><th>Mobile</th></tr>
-							</thead>
-							<tbody>
-								{FH_STREAMS.map((r) => (
-									<tr key={r[0]}>
-										<td className="mono">{r[0]}</td>
-										<td className={r[1] === "blank" || r[1] === "none" ? "muted" : undefined}>{r[1]}</td>
-										<td className={r[2] === "blank" ? "muted" : undefined}>{r[2]}</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</Scroll>
-					<NoteBelow>
-						The same single-funnel design as <code>Employee Checkin</code>, which is why the mapping is
-						clean. Of their four columns this report can fill <b>two</b>: Terminal, and the punch
-						itself. Location and Punch Info have no column on our side yet, and <b>a{" "}
-						<code>device_id</code> that does not start with the trusted prefix is a mobile punch</b> —
-						geofenced — because no fingerprint machine sends a coordinate.
-					</NoteBelow>
-				</Panel>
-			</div>
-
-			<Cols>
-				<Panel title="Selfie on punch" cov="none" ico="📸">
-					<Gap>Nothing in Frappe HR captures a photo on punch.</Gap>
-					<NoteBelow>
-						The mobile export carried <b>35 embedded images for 34 punches</b>, roughly 14 KB each. So
-						the selfie is real and it is stored — at 160 people that is on the order of <b>5 MB a
-						day</b>. A gap nobody knew about until the export was read, and the reason <em>Show Selfie
-						Images in Report</em> is on the form above with nothing behind it.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="GPS accuracy is the useful column" cov="part" ico="📍">
-					<Note>
-						<code>Punch Info</code> carries accuracy (<code>Loc Acc: 22.7 m</code> in the samples) and
-						the handset model. Accuracy is the more useful of the two: <b>a geofence that ignores it
-						refuses honest punches made indoors.</b> Sample values sit around 20 m, which is good.
-					</Note>
-				</Panel>
-
-				<Panel title="The device list is still needed" cov="none" ico="🖥">
-					<Gap>
-						The full list of terminals, per company, with the trusted device-id prefix each sends.
-					</Gap>
-					<NoteBelow>
-						Only one terminal name appears in the sample — <code>Manna_Rubber_Products</code> — but that
-						is one report from one company. Until the prefixes are known, the <em>Stream</em> filter
-						above can only say whether a punch carries a terminal at all, which is the weaker half of
-						the same rule.
-					</NoteBelow>
-				</Panel>
-			</Cols>
+			{s.ioDoc && (
+				<Modal
+					title="Report preview"
+					wide
+					onClose={() => set({ ioDoc: "" })}
+					actions={
+						<>
+							<button className="btn tpl" onClick={() => printPaper(s.ioDoc)}>
+								<i className="fico" aria-hidden="true">🖨</i> Print / Save as PDF
+							</button>
+							<button className="embtn" onClick={() => ioRun(s, "Word")}>
+								<i className="fico" aria-hidden="true">📝</i> Word
+							</button>
+							<button className="embtn" onClick={() => ioRun(s, "Excel")}>
+								<i className="fico" aria-hidden="true">📊</i> Excel
+							</button>
+						</>
+					}
+					why={
+						<>
+							This is the document itself, not a drawing of it — the same HTML that Print, PDF and
+							Word are handed, rendered here so it can be read before it goes anywhere.
+						</>
+					}
+					extra={<iframe className="iopaper" title="Report preview" srcDoc={s.ioDoc} />}
+				/>
+			)}
 		</>
 	);
 }

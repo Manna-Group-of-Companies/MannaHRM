@@ -1,7 +1,9 @@
+
+
 import { useApp } from "@/state/store";
 import { active, scoped } from "@/lib/scope";
 import { fmt, isoAgo, tally, tidyDept } from "@/lib/format";
-import { Bars, Cols, Gap, Legend, Note, NoteBelow, Panel, Tile, Tiles } from "@/components/ui";
+import { Bars, Cols, Empty, Legend, Note, NoteBelow, Panel, Tile, Tiles } from "@/components/ui";
 
 export default function Dashboard() {
 	const s = useApp();
@@ -87,35 +89,6 @@ export default function Dashboard() {
 					</NoteBelow>
 				</Panel>
 
-				<Panel title="Payroll Summary" cov="skip" ico="₹">
-					<Gap>
-						Factor HR shows Salary Proceed / Not Proceed / Stop / Hold / Arrears / Stop TDS, and an
-						F&amp;F summary beside it.
-					</Gap>
-					<NoteBelow>
-						<b>Deferred by decision, 23 Aug.</b> Payroll is calculated by hand and is not processed
-						in Factor HR either, so there is nothing to replace yet.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="Engagement panels" cov="skip" ico="🎉">
-					<Gap>
-						Mood Analysis, CEO Speak, Announcements, Wish Celebration and Important Files all exist
-						in Factor HR.
-					</Gap>
-					<NoteBelow>
-						Every one of them is <b>empty in your tenant</b>. Nothing to rebuild unless you want it.
-						Birthdays and work anniversaries would be the cheapest to add — the dates are already
-						loaded.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="Help Desk" cov="skip" ico="🎫">
-					<Gap>Factor HR has a ticket queue: Open / Re-opened / Resolved.</Gap>
-					<NoteBelow>
-						<b>Not wanted.</b> Three tickets ever raised, none resolved.
-					</NoteBelow>
-				</Panel>
 			</Cols>
 
 			{/* Kept out of the grid: it is a footnote on the whole page rather than

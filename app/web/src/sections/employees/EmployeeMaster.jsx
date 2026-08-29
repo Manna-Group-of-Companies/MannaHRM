@@ -1,10 +1,11 @@
-import { load } from "@/api/load";
-import EmployeeCard from "@/components/EmployeeCard";
-import { Empty, Note, Scroll } from "@/components/ui";
-import { STATUS_ROWS } from "@/data/employees";
-import { fmt, tally, tidyDept } from "@/lib/format";
-import { scoped, uniq } from "@/lib/scope";
+
 import { set, useApp } from "@/state/store";
+import { scoped, uniq } from "@/lib/scope";
+import { fmt, tally, tidyDept } from "@/lib/format";
+import EmployeeCard from "@/components/EmployeeCard";
+import { Desk, Empty, Note, Scroll } from "@/components/ui";
+import { deskNew } from "@/lib/desk";
+import { STATUS_ROWS } from "@/data/employees";
 
 /* Factor HR's status filter, dot for dot: green Active, red InActive, blue All.
    A native <select> cannot colour an option, and on this control the colour is
@@ -68,9 +69,13 @@ function StatusDrop({ status, cur, menu }) {
 	);
 }
 
-/** Open one person's whole record — the same jump the list rows make. */
+/** Open one person's whole record — the same jump the list rows make.
+
+    It lands on Employee Profile rather than Employee Detail: the → on these
+    cards always read as "open this person", and Employee Detail turned out to
+    be a report builder rather than a record page. See FACTOHR_SCREENS §15, §23. */
 export const openEmployee = (name) =>
-	set({ empSel: name, section: "employees", subtab: "detail" });
+	set({ empSel: name, section: "employees", subtab: "profile" });
 
 /** The filtered master list, shared with the pages that need the same subset. */
 export function masterRows(s) {
@@ -103,15 +108,16 @@ export default function EmployeeMaster() {
 					{rows.length === all.length ? "" : " of " + fmt(all.length)} people
 				</span>
 				<span className="right">
-					{/* Read-only by design, and a button that lied about it would be
-					    worse than no button. Hiring happens on the site. */}
-					<button
-						className="embtn"
-						disabled
-						title="This dashboard only reads. New employees are created on the ERPNext site itself — see app/README.md."
+					{/* Hiring happens on the site, so this opens an empty Employee
+					    there rather than a form here. That record has a naming series and
+					    a page of required fields behind it; a second form for it would be
+					    a second opinion about what an employee is. */}
+					<Desk
+						href={s.site && deskNew(s.site, "Employee")}
+						title="Opens a new Employee on the ERPNext site — see app/README.md."
 					>
 						Add New Employee
-					</button>
+					</Desk>
 				</span>
 			</div>
 
@@ -119,7 +125,7 @@ export default function EmployeeMaster() {
 				<StatusDrop status={status} cur={s.empstatus} menu={s.empmenu} />
 
 				<span className="find">
-					<svg viewBox="0 0 24 24" width="15" height="15" stroke="#918D93" fill="none"
+					<svg className="stroke-ink-3" viewBox="0 0 24 24" width="15" height="15" fill="none"
 						strokeWidth="1.8" strokeLinecap="round">
 						<circle cx="11" cy="11" r="7" />
 						<path d="M20 20l-3.6-3.6" />

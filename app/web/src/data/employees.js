@@ -47,20 +47,46 @@ export const ED_SECTIONS = [
 	["pf",        "PF / ESIC Detail",      ["provident_fund_account"], ""],
 	["salary",    "Salary Master Detail",  ["ctc","salary_currency","salary_mode"], ""],
 	["personal",  "Personal Detail",       ["gender","date_of_birth","blood_group","marital_status","cell_number","personal_email"], ""],
-	["skills",    "Skill Set Details",     [], "child"],
+	["skills",    "Skill Set Details",     [], "nochild"],
 	["identity",  "Identity Detail",       ["pan_number","passport_number","valid_upto"], ""],
 	["bank",      "Bank Detail",           ["salary_mode","bank_name","bank_ac_no","iban"], ""],
 	["family",    "Family Detail",         ["person_to_be_contacted","relation","emergency_phone_number"], ""],
 	["past",      "Past History",          [], "child"],
 	["asjoin",    "Show Categories As Per Joining Date", [], "modifier"],
 	["qual",      "Qualification Detail",  [], "child"],
-	["nominee",   "Nominee Detail",        [], "child"],
+	["nominee",   "Nominee Detail",        [], "nochild"],
 	["transfer",  "Transfer / Promotion History", [], "child"],
 	["separation","Separation",            ["relieving_date","reason_for_leaving","held_on"], ""],
 ];
 
+/* The three sections that live in a child table *and* have somewhere to live on
+   ERPNext's Employee. A list call cannot reach a child table, which is why they
+   are out of reach for a report over everybody — but a report of one person is
+   a record, the record has already been read whole, and the rows are sitting in
+   it. So these three work the moment Particular Employee is set.
+
+   `skills` and `nominee` are not here on purpose: ERPNext's Employee carries no
+   child table for either, so no number of reads would find them. That is a gap
+   in the model rather than in the request, and the two are told apart on the
+   form. */
+export const ED_CHILD = {
+	past: ["employee_external_work_history", "Past History", [
+		["company_name", "Company"], ["designation", "Designation"], ["salary", "Salary"],
+		["total_experience", "Experience"],
+	]],
+	qual: ["employee_education", "Qualification Detail", [
+		["school_univ", "Institute"], ["qualification", "Qualification"], ["level", "Level"],
+		["year_of_passing", "Year"], ["class_per", "Score"],
+	]],
+	transfer: ["employee_internal_work_history", "Transfer / Promotion History", [
+		["branch", "Branch"], ["department", "Department"], ["designation", "Designation"],
+		["from_date", "From"], ["to_date", "To"],
+	]],
+};
+
 export const ED_WHY = {
-	child: "Lives in a child table on the record, so it cannot come from a list call — one document read per person, 161 requests for one report.",
+	child: "Lives in a child table on the record, so it cannot come from a list call — one document read per person, 161 requests for one report. Set Particular Employee and it works: a report of one person is a record, and the record is read whole.",
+	nochild: "Factor HR carries this section; ERPNext's Employee has no child table for it at all, so no number of reads would find it. A gap in the model rather than in the request — it has to be built before it can be reported.",
 	modifier: "A modifier on Category Detail rather than a section of its own, and it only means anything once categories are dated.",
 };
 // Always in the export, ticked or not: a row nobody can identify is not a row.

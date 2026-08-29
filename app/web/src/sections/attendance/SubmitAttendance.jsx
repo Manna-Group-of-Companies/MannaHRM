@@ -1,7 +1,7 @@
-import { Cols, Empty, Gap, Note, NoteBelow, Panel } from "@/components/ui";
-import { MON, fmt } from "@/lib/format";
-import { active } from "@/lib/scope";
 import { useApp } from "@/state/store";
+import { active } from "@/lib/scope";
+import { MON, fmt } from "@/lib/format";
+import { Cols, Empty, Gap, Note, NoteBelow, Panel } from "@/components/ui";
 
 /* Submit Attendance — Factor HR's monthly freeze. HR generates and saves the
    month, payroll runs from that saved copy, and it cannot be deleted once
@@ -136,36 +136,6 @@ export default function SubmitAttendance() {
 					</div>
 				</Panel>
 
-				<Panel title="What Factor HR does here" cov="live" ico="✓">
-					<Note>
-						HR generates the month and <b>saves</b> it. Payroll is then run from the saved copy rather
-						than from the live rows, and once salary has been processed{" "}
-						<b>the saved month cannot be deleted</b>. That is what makes it a gate: after it, a change
-						to a day is an argument rather than an edit.
-					</Note>
-				</Panel>
-
-				<Panel title="What it has to mean here" cov="none" ico="📝">
-					<Gap>
-						A document per company per month that records the close: who submitted, when, and the
-						totals as they stood.
-					</Gap>
-					<NoteBelow>
-						<b>The freeze records the numbers, it does not write them.</b> Attendance stays generated
-						from Employee Checkin by the shift job — a submission that wrote its own rows would be
-						the hand-written Attendance trap with a signature on it. Reopening a closed month is an
-						event with a reason attached, never a delete.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="Payroll is deferred. This is not." cov="part" ico="💰">
-					<Note>
-						Payroll is <b>calculated by hand</b> today — decision taken 23 Aug 2026 — which makes the
-						submitted month the handover to that calculation. It is the point where a wrong day stops
-						being a correction and starts being a payslip, and it is the reason this page is on the
-						list even though section E is out of the first release.
-					</Note>
-				</Panel>
 			</Cols>
 		</>
 	);

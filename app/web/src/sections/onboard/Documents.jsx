@@ -1,25 +1,11 @@
-import { DOC_BACKFILL, EMP_DOC_FIELDS } from "@/data/onboard";
-import { Cols, Empty, Gap, Html, NoteBelow, Panel, Scroll, SpecTable } from "@/components/ui";
-import { dmy, filled, fmt } from "@/lib/format";
 import { useApp } from "@/state/store";
-import { CoverageRow, daysTo, docRows, onboardWait, scopeSaid } from "./shared";
+import { daysTo, docRows, onboardWait, scopeSaid } from "@/sections/onboard/shared";
+import { active } from "@/lib/scope";
+import { dmy, filled, fmt } from "@/lib/format";
+import { DOC_BACKFILL, EMP_DOC_FIELDS } from "@/data/onboard";
+import { Cols, Empty, Html, NoteBelow, Panel, Scroll } from "@/components/ui";
 
-const DOCTYPE_FIELDS = [
-	["Employee", "Link &rarr; Employee", "build", ""],
-	["Document type", "Link &rarr; Document Type", "build",
-		"Factor HR&rsquo;s own master. Passport, licence, ESI card, gate pass, qualification, contract"],
-	["Document number", "Data", "build", "Unique per type per person, or the same card gets entered twice"],
-	["Issued by", "Data", "build", "The authority, not the person who typed it in"],
-	["Issue date", "Date", "build", ""],
-	["Expiry date", "Date", "build",
-		"The whole reason the doctype exists. Blank means does not expire, and must be allowed"],
-	["Scan", "Attach", "build", "A document register with no copy in it is an index, not a record"],
-	["Verified by, verified on", "Link &rarr; User + Date", "build", "Somebody has seen the original"],
-	["Reminder before expiry", "Notification", "stock",
-		"Frappe sends this from a date field with no code &mdash; the only genuinely free part"],
-	["Confidentiality", "Permissions on the doctype", "build",
-		"A payroll clerk should not read everybody&rsquo;s passport. Note that Frappe <b>replaces</b> standard permissions the moment one custom row exists"],
-];
+import { CoverageRow } from "./shared";
 
 export default function Documents() {
 	const s = useApp();
@@ -49,19 +35,6 @@ export default function Documents() {
 			</div>
 
 			<Cols>
-				<Panel title="Document Entry" cov="none" ico="📁">
-					<Gap>
-						A register of employee documents — type, number, issue date, expiry date and a scan —
-						with its own Document Type master.
-					</Gap>
-					<NoteBelow>
-						<b>Not built, and deliberately not designed yet.</b> Expiry tracking is the only part
-						ERPNext has no answer for, and it is worth knowing whether Manna actually uses it before
-						building it. For a factory workforce of 160 the documents that expire are passports,
-						driving licences, ESI and contractor gate passes — ask which of those anybody chases
-						today.
-					</NoteBelow>
-				</Panel>
 
 				<Panel
 					title="What the Employee record already holds"
@@ -153,15 +126,6 @@ export default function Documents() {
 				</Panel>
 			</Cols>
 
-			<Cols>
-				<Panel title="The doctype this would need" cov="none" ico="🧱">
-					<SpecTable cols={["Field", "Type", "State", "Note"]} list={DOCTYPE_FIELDS} />
-					<NoteBelow>
-						<b>Roughly a day of work, plus the decisions.</b> The build is small; what it is worth
-						depends on whether anybody chases expiry today. Ask before writing it.
-					</NoteBelow>
-				</Panel>
-			</Cols>
 		</>
 	);
 }

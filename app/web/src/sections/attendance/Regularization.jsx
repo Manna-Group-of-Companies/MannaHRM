@@ -1,9 +1,9 @@
-import { FH_REG_COLS } from "@/data/attendance";
-import { Cols, Empty, Gap, Note, NoteBelow, Panel, Scroll } from "@/components/ui";
-import { MON, dayOf, dmy, fmt, thisMonth, tidyDept } from "@/lib/format";
+import { patch, set, useApp } from "@/state/store";
 import { scoped } from "@/lib/scope";
-import { load } from "@/api/load";
-import { patch, useApp } from "@/state/store";
+import { MON, dayOf, dmy, fmt, thisMonth, tidyDept } from "@/lib/format";
+import { FH_REG_COLS } from "@/data/attendance";
+import { Desk, Empty, Scroll } from "@/components/ui";
+import { deskUrl } from "@/lib/desk";
 
 /* Factor HR's Attendance Regularization screen, photographed 28 Aug 2026:
    the title, then one bar — Attendance Cycle, the status dot, Search Employee,
@@ -88,15 +88,21 @@ function RegDot({ s }) {
 	);
 }
 
-/** One of the bar's four icons. Three of them are drawn disabled with the
-    reason on them, which is the point of drawing them at all. */
-function BarIcon({ path, label, title, dead, onClick }) {
+/** One of the bar's four icons. `href` sends it to the site; `dead` draws it
+    disabled with the reason on it, which is the point of drawing it at all. */
+function BarIcon({ path, label, title, dead, href, onClick }) {
+	const ico = (
+		<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none"
+			strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+			<path d={path} />
+		</svg>
+	);
+	if (href !== undefined) {
+		return <Desk className="embtn ic" href={href} label={label} title={title}>{ico}</Desk>;
+	}
 	return (
 		<button className="embtn ic" disabled={dead} title={title} aria-label={label} onClick={onClick}>
-			<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none"
-				strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-				<path d={path} />
-			</svg>
+			{ico}
 		</button>
 	);
 }
@@ -107,7 +113,7 @@ function RegBar({ s, cyc }) {
 	return (
 		<div className="embar regbar">
 			<label className="cyc" title="Factor HR calls the month an attendance cycle. Ours is the calendar month until somebody says the payroll month runs to a different day.">
-				<svg viewBox="0 0 24 24" width="15" height="15" stroke="#918D93" fill="none" strokeWidth="1.7">
+				<svg className="stroke-ink-3" viewBox="0 0 24 24" width="15" height="15" fill="none" strokeWidth="1.7">
 					<path d="M3 5h18v16H3zM3 9h18M8 3v4M16 3v4" />
 				</svg>
 				Attendance Cycle :
@@ -122,7 +128,7 @@ function RegBar({ s, cyc }) {
 			<span className="find rev">
 				<input type="search" placeholder="Search Employee" aria-label="Search employee"
 					value={s.reg.q || ""} onChange={(e) => patch("reg", { q: e.target.value })} />
-				<svg viewBox="0 0 24 24" width="15" height="15" stroke="#918D93" fill="none"
+				<svg className="stroke-ink-3" viewBox="0 0 24 24" width="15" height="15" fill="none"
 					strokeWidth="1.8" strokeLinecap="round">
 					<circle cx="11" cy="11" r="7" />
 					<path d="M20 20l-3.6-3.6" />
@@ -143,8 +149,13 @@ function RegBar({ s, cyc }) {
 					title="This writes attendance from a spreadsheet — no shift check, no geofence, no approver. Drawn because it exists over there, refused because it is the most dangerous button in any HR system." />
 				<BarIcon path="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4" label="Refresh"
 					title="Reload the queue from the site" onClick={() => void load()} />
-				<BarIcon path="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 8v4l3 2" label="History" dead
-					title="Only open requests are read — see pendingRegularizations(). A decided correction is history and this page has never asked for it." />
+				{/* This page reads open requests only — see pendingRegularizations() —
+				    so a decided correction vanishes from it entirely. The list on the
+				    site still holds every one, decided included, which is where a
+				    question about what happened to a request is actually answered. */}
+				<BarIcon path="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 8v4l3 2" label="History"
+					href={s.site && deskUrl(s.site, s.regDoctype)}
+					title={`Every correction on the site, decided ones included — opens the ${s.regDoctype} list. This page reads open requests only, so a decided one disappears from it.`} />
 			</span>
 		</div>
 	);
@@ -263,55 +274,6 @@ export default function Regularization() {
 			</div>
 
 			<div className="mt-4">
-				<Cols>
-					<Panel title="Their twelve columns, and the four we cannot fill" cov="part" ico="✎">
-						<div className="rows">
-							{FH_REG_COLS.map((c) => (
-								<div className="row" key={c[0]}>
-									<span className="mono">{c[0]}</span>
-									<span className="val muted">{c[2] || "held"}</span>
-								</div>
-							))}
-						</div>
-						<NoteBelow>
-							<b>Original In and Original Out are the gap.</b> Their row shows the punch beside the
-							correction, so an approver reads both without leaving the screen. Ours holds the request
-							only — the punch is on <code>Employee Checkin</code> and nothing joins them yet.{" "}
-							<b>Day Status and AR Hours</b> are outputs of the attendance policy engine, which is the
-							one part of Factor HR that Frappe HR has no equivalent for.
-						</NoteBelow>
-					</Panel>
-
-					<Panel title="Corrections write a punch, never Attendance" cov="part" ico="⚡">
-						<Note>
-							Carried into <code>regularization.py</code>. <b>Attendance is generated from Employee
-							Checkin by the shift job</b>; a hand-written row is invisible to the thing that would
-							have created it, and the two disagree the moment anything is reprocessed. So a
-							correction writes the missing <em>punch</em> and lets the job do the rest.
-						</Note>
-					</Panel>
-
-					<Panel title="Breaks are tracked, and were not in the plan" cov="none" ico="☕">
-						<Gap>
-							Break handling — <code>Break Out</code> / <code>Break In</code> and their AR
-							equivalents, plus an Exemption Type.
-						</Gap>
-						<NoteBelow>
-							<b>Two kinds of break, counted differently.</b> <code>Personal Break Duration</code>{" "}
-							appears as its own column on the daily report, separate from{" "}
-							<code>Break Duration</code>. Nothing in the current design accounts for either, and they
-							affect worked hours, which affects pay.
-						</NoteBelow>
-					</Panel>
-
-					<Panel title="Per-row durations" cov="part" ico="⏳">
-						<Note>
-							Each row also carries <code>Overtime Duration</code>, <code>Late Coming Duration</code>{" "}
-							and <code>Early Going Duration</code>. These are outputs of the attendance policy
-							engine — the one part of Factor HR that Frappe HR has no equivalent for.
-						</Note>
-					</Panel>
-				</Cols>
 			</div>
 		</>
 	);

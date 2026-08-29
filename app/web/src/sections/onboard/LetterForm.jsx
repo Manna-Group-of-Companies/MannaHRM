@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { api } from "@/api/client";
-import { Cols, Empty, Note, NoteBelow, Panel, SpecTable } from "@/components/ui";
-import { mergeLetter } from "@/lib/letter";
+
+
 import { scoped } from "@/lib/scope";
+import { Cols, Empty, Note, NoteBelow, Panel } from "@/components/ui";
+import { mergeLetter } from "@/lib/letter";
+
 import { set, useApp } from "@/state/store";
 
 /* Factor HR's On Board menu, item for item, as its flyout reads on 28 Aug 2026:
@@ -13,20 +15,6 @@ import { set, useApp } from "@/state/store";
    Only the letter screen has ever been opened in a screenshot. What Document
    Entry and the two Assets pages hold over there is therefore unknown, and
    every panel says which side of that line it is on. */
-
-const ISSUE_STEPS = [
-	["Merge against the record", "Letter Type template + Employee", "live",
-		"118 distinct tokens across the set, matched case-insensitively"],
-	["Show unresolved fields", "computed at render", "live",
-		"Printed as <code>[[FatherName]]</code>. A letter with a visible gap is obviously unfinished; one with a blank space looks finished and is not"],
-	["Freeze the rendered text", "Employee Letter", "live",
-		"Rendered once and stored. Re-rendering later against changed employee data would quietly rewrite a document somebody has already been handed"],
-	["Approve before issue", "Letter Assignment queue", "build",
-		"Factor HR has the queue and it reads 0 &mdash; see Dashboard &rarr; Approvals"],
-	["Number the letter", "series on Employee Letter", "build",
-		"The one letter ever issued carries no reference number"],
-	["Keep the signed copy back", "Attach on Employee Letter", "build", ""],
-];
 
 export default function LetterForm() {
 	const s = useApp();
@@ -184,12 +172,6 @@ export default function LetterForm() {
 					)}
 				</Panel>
 
-				<Panel title="What issuing a letter should still do" cov="part" ico="🧾">
-					<SpecTable
-						cols={["Step", "Where it would live", "State", "Note"]}
-						list={ISSUE_STEPS}
-					/>
-				</Panel>
 			</Cols>
 
 			<NoteBelow>

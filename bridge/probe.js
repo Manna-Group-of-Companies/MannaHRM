@@ -128,13 +128,48 @@ async function probe(host, port, timeout = 12) {
 			out.users = list.length || "—";
 			out.sampleUserIds = list.slice(0, 8).map((u) => String(u.userId ?? u.uid ?? ""));
 
+			/* The device's own counters, which are the only honest answer to
+			   "did we read everything?" — the log download can come back short
+			   and there is nothing in the payload that says so. They also say
+			   how close the machine is to full, and a full one either stops
+			   recording or overwrites its oldest punches. Both lose wages. */
+			/* Read twice and only believe an answer that is internally
+			   consistent. This call is not reliable on this machine: one run in
+			   three comes back with the fields shifted — `logCounts` holding
+			   the user count and `logCapacity` holding 2, which renders as
+			   "21850% full" if it is trusted. A counter that is sometimes wrong
+			   and never says so is the same fault this file is here to catch,
+			   so it is checked rather than printed. */
+			for (let attempt = 0; attempt < 2 && out.logCounts === undefined; attempt++) {
+				const info = await safe(() => zk.getInfo(), null);
+				const counts = Number(info?.logCounts);
+				const capacity = Number(info?.logCapacity);
+				const sane = Number.isInteger(counts) && Number.isInteger(capacity)
+					&& capacity > 0 && counts >= 0 && counts <= capacity;
+				if (sane) {
+					out.logCounts = counts;
+					out.logCapacity = capacity;
+				}
+			}
+
 			/* Deliberately not disabling the device: this is a read-only look,
 			   and a probe that locks the gate while somebody is trying to punch
 			   is a probe that gets run once and never again. */
 			const conn = zk.connectionType === "tcp" ? zk.zklibTcp : zk.zklibUdp;
 			const raw = await safe(() => conn.readWithBuffer(REQUEST_DATA.GET_ATTENDANCE_LOGS), null);
-			const logs = raw ? decodeRecords(raw.data) : [];
-			out.records = logs.length || "—";
+			/* `decodeRecords` refuses a short read rather than decoding it, and
+			   on this network short reads are common. A probe that dies on one
+			   tells you less than a probe that says which one it was — so the
+			   refusal is caught and printed, and the device's own counters are
+			   reported beside it so the two can be compared. */
+			let logs = [];
+			try {
+				logs = decodeRecords(raw?.data);
+				out.records = logs.length || "—";
+			} catch (e) {
+				out.records = "—";
+				out.readError = describeError(e);
+			}
 
 			if (logs.length) {
 				out.oldest = logs[0].punchedAt;
@@ -185,7 +220,21 @@ function report(d) {
 		console.log("        ^ these must match Employee.attendance_device_id in ERPNext");
 	}
 
+	if (d.logCounts !== undefined) {
+		const pct = d.logCapacity ? (d.logCounts / d.logCapacity) * 100 : 0;
+		/* 90% is the point at which this stops being a note and becomes a date
+		   in the diary: the machine fills, and then it either refuses punches
+		   or overwrites the oldest ones it is holding for us. */
+		const flag = pct >= 90 ? "  <-- FIX THIS, the device is nearly full" : "";
+		console.log(`   ${pad("Log storage (device)", 22)} ${d.logCounts} / ${d.logCapacity}`
+			+ `  (${pct.toFixed(1)}% full)${flag}`);
+	}
+
 	console.log(`   ${pad("Punch records held", 22)} ${d.records}`);
+	if (d.readError) {
+		console.log(`   ${pad("", 22)} ${d.readError}`);
+		console.log(`   ${pad("", 22)} the log was NOT read in full — nothing was decoded`);
+	}
 	if (d.oldest) console.log(`   ${pad("Records span", 22)} ${d.oldest}  ->  ${d.newest}`);
 
 	if (d.driftSeconds !== undefined) {

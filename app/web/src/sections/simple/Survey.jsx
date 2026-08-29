@@ -1,3 +1,4 @@
+import { Empty } from "@/components/ui";
 import Simple from "./Simple";
 
 export default function Survey() {

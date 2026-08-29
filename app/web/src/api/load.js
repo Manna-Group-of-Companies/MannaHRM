@@ -1,5 +1,5 @@
 import { api, listAll } from "./client";
-import { getState, set, NO_APPROVALS } from "@/state/store";
+import { getState, patch, set, NO_APPROVALS } from "@/state/store";
 import { DOC_BACKFILL } from "@/data/onboard";
 import { todayIso } from "@/lib/format";
 
@@ -62,11 +62,15 @@ export async function loadHolidayDates() {
  * detail that tells somebody which of these it actually is. */
 function connMessage(err) {
 	const status = err && err.status;
+	const text = String((err && err.message) || err);
 	if (status === 401 || status === 403) return `not authorised (${status})`;
 	// The site's own daily compute limit, which reads as a dead site otherwise.
 	if (status === 429) return "daily limit reached";
+	/* The proxy's own answer when it was started without a token, which is not
+	   the site being down and should not read as it. Its hint says how to fix
+	   it; the status line only has room to say which of the two this is. */
+	if (status === 503 && /ERP_KEY|no API key/.test(text)) return "no API key";
 	if (status >= 500) return `site error (${status})`;
-	const text = String((err && err.message) || err);
 	if (/timeout|aborted/i.test(text)) return "timed out";
 	if (/network|fetch failed|ECONNREFUSED/i.test(text)) return "no connection";
 	// Anything genuinely unexpected still gets shown, just not a whole payload.
@@ -75,6 +79,11 @@ function connMessage(err) {
 
 export async function load() {
 	set({ connState: "", conn: "loading…" });
+	/* Where the proxy is pointed, so the screens that can only read can at least
+	   link to the place a change is made. Fire-and-forget and never fatal: the
+	   dashboard reads perfectly well without knowing, and the few controls that
+	   need it stay disabled with the reason on them. */
+	void api("/api/site").then((r) => set({ site: (r && r.url) || "" })).catch(() => {});
 	try {
 		const today = todayIso();
 		const [emps, companies, checkins, shifts, holidays, leavetypes, attendance, depts, desigs,
@@ -94,7 +103,11 @@ export async function load() {
 			listAll("Holiday List", ["name"]),
 			listAll("Leave Type", ["name"]),
 			listAll("Attendance", ["name"]),
-			listAll("Department", ["name"]),
+			/* `disabled` is the Status column on the screen behind View Category.
+			   Department is the only one of these three masters that carries such a
+			   field at all, and asking for one a site does not have is a 417 on the
+			   whole call — so it falls back like the others. */
+			listAll("Department", ["name", "disabled"]).catch(() => listAll("Department", ["name"])),
 			listAll("Designation", ["name"]),
 			pendingRegularizations(),
 			listAll("Leave Application",
@@ -121,6 +134,12 @@ export async function load() {
 			letters: letters || [],
 			companies: companies || [],
 			holidayLists: holidays || [],
+			/* The names as well as the count: Apply Leave fills its type dropdown
+			   from this, and the six in Factor HR are not necessarily the six here. */
+			leaveTypes: leavetypes || [],
+			shiftTypes: shifts || [],
+			departments: depts || [],
+			designations: desigs || [],
 			counts: {
 				companies: companies.length, shift: shifts.length, holiday: holidays.length,
 				leavetype: leavetypes.length, attendance: attendance.length,
@@ -134,6 +153,140 @@ export async function load() {
 	} catch (err) {
 		set({ connState: "bad", conn: connMessage(err) });
 	}
+}
+
+/* Work Pattern's one read, on the same terms as On Board's: made the first time
+   somebody opens that half of Manage Shift, never fatal, and remembered so a
+   re-render cannot ask twice.
+
+   `Shift Assignment` is what answers "who is measured against which shift"
+   here — Factor HR carries it down the category instead, which is the finding
+   the other half of that screen is about. An empty answer is a real answer: it
+   means nothing has been rostered, and nothing can be generated from punches
+   until it has. */
+/** Apply Leave's own read: one person's whole leave history, and their
+    Attendance for the month the calendar is showing.
+
+    Two calls rather than one because they are two doctypes, and both are
+    narrow — one employee, and a month. The history is not filtered by status:
+    an application that was rejected is the thing somebody is looking for when
+    they open this screen.
+
+    Attendance is asked for last and its failure is swallowed. The site has no
+    Attendance rows at all yet, and a calendar that refuses to draw because the
+    colour nobody can fill could not be fetched would be the tail wagging the
+    dog. */
+export async function loadLeaveFor(emp, ym) {
+	if (!emp) return set({ applyHist: [], applyAtt: {} });
+	patch("apply", { busy: true, err: "" });
+	try {
+		const hist = await listAll("Leave Application",
+			["name", "employee", "employee_name", "leave_type", "from_date", "to_date", "half_day",
+				"half_day_date", "total_leave_days", "leave_balance", "posting_date", "status",
+				"description", "creation", "modified", "modified_by"],
+			[["employee", "=", emp]]);
+		set({ applyHist: hist || [] });
+	} catch (err) {
+		patch("apply", { err: String(err.message || err).slice(0, 220) });
+		set({ applyHist: [] });
+	}
+
+	const att = {};
+	if (ym) {
+		const rows = await listAll("Attendance", ["name", "attendance_date", "status"],
+			[["employee", "=", emp], ["attendance_date", ">=", ym + "-01"], ["attendance_date", "<=", ym + "-31"]])
+			.catch(() => []);
+		(rows || []).forEach((r) => { att[String(r.attendance_date).slice(0, 10)] = r.status || ""; });
+	}
+	set({ applyAtt: att });
+	patch("apply", { busy: false });
+}
+
+/** The Leave Balance Report's own read: every *approved* leave application on
+    the site, which is what "availed" on that report means.
+
+    A separate read because the one on open does not cover it. That one asks for
+    `status = "Open"` — it is filling an approval queue, where an application
+    already decided is not a row. Availed is the opposite population, so asking
+    for it is a second query rather than a wider first one: the queue is read on
+    every page load and this is read only by somebody who opened the report.
+
+    Fired once and guarded by its own state flag, the same way the Work Pattern
+    read is. `lvbState` is set before the first await so the re-render it causes
+    cannot ask again.
+
+    **This is only half of a balance, and deliberately so.** Availed comes off
+    Leave Application, which is on the proxy allowlist. Entitlement comes off
+    Leave Allocation, which is not — and adding a doctype to the allowlist of a
+    process holding a System Manager token is a decision for whoever owns that
+    key, not something this report should take on its own. The site also holds
+    no entitlement to read: see FH_LEAVE in `data/attendance.js`. The report
+    says which of its columns that leaves empty, where they are. */
+export async function loadLeaveBalances() {
+	if (getState().lvbState) return;
+	set({ lvbState: "loading" });
+	try {
+		const rows = await listAll("Leave Application",
+			["name", "employee", "employee_name", "company", "leave_type", "from_date", "to_date",
+				"half_day", "half_day_date", "total_leave_days", "status", "posting_date"],
+			[["status", "=", "Approved"]]);
+		set({ lvbRows: rows || [], lvbState: "done" });
+	} catch (err) {
+		/* An empty report and a report that could not be read are different
+		   things, and the screen says which. */
+		set({ lvbRows: [], lvbState: "error", lvbErr: String(err.message || err).slice(0, 220) });
+	}
+}
+
+/* Final Settlement's own read: the exit half of `Employee`.
+ *
+ * A separate call rather than five more fields on the one every page load
+ * makes, because this is the only screen that wants them and that call is
+ * already the widest thing this app does. Guarded by its own state flag and
+ * fired the first time somebody opens the page, the same way Work Pattern's is.
+ *
+ * **Not filtered by status, deliberately.** Somebody serving notice is still
+ * Active and is exactly who this queue is for — which is what Factor HR's own
+ * capture shows: sixteen people waiting, and not one of them with a date of
+ * leaving on the record. Filtering on `status != "Active"` would have returned
+ * a list of people who had already gone, and quietly missed everybody the
+ * screen exists to chase.
+ *
+ * `notice_number_of_days` is the one field here that some sites do not carry,
+ * and asking for a field a site does not have is a 417 on the whole call — so
+ * the narrow list is the fallback, and the page draws EXP DOL as absent rather
+ * than as empty when it lands. */
+const SEP_BASE = ["name", "employee_name", "employee_number", "company", "department",
+	"designation", "status", "date_of_joining"];
+const SEP_FULL = SEP_BASE.concat(["relieving_date", "resignation_letter_date",
+	"notice_number_of_days", "reason_for_leaving", "held_on"]);
+const SEP_LESS = SEP_BASE.concat(["relieving_date", "resignation_letter_date"]);
+
+export async function loadSeparations() {
+	if (getState().sepState) return;
+	set({ sepState: "loading" });
+
+	const rows = await listAll("Employee", SEP_FULL)
+		.catch(() => listAll("Employee", SEP_LESS))
+		.catch((e) => e);
+
+	if (Array.isArray(rows)) set({ seps: rows, sepState: "ok" });
+	else set({ seps: [], sepState: connMessage(rows) });
+}
+
+export async function loadShiftAssignments() {
+	if (getState().shAssignState) return;
+	set({ shAssignState: "loading" });
+
+	const FULL = ["name", "employee", "employee_name", "shift_type", "company",
+		"start_date", "end_date", "status", "docstatus"];
+	const STD = ["name", "employee", "shift_type", "start_date"];
+	const rows = await listAll("Shift Assignment", FULL)
+		.catch(() => listAll("Shift Assignment", STD))
+		.catch((e) => e);
+
+	if (Array.isArray(rows)) set({ shAssign: rows, shAssignState: "ok" });
+	else set({ shAssign: [], shAssignState: connMessage(rows) });
 }
 
 /* On Board's own reads, and they are allowed to fail. Three of these four calls

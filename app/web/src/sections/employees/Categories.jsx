@@ -1,19 +1,33 @@
-import { CATEGORY_FIELDS, FH_CATEGORY_TYPES, FH_CAT_SEEN, FH_CAT_TOTAL } from "@/data/masters";
-import { Bars, Cols, Empty, Gap, Html, Note, NoteBelow, Panel, Scroll } from "@/components/ui";
 import { fmt, tally, tidyDept } from "@/lib/format";
+import { Fragment } from "react";
+import { CATEGORY_FIELDS, FH_CATEGORY_TYPES, FH_CAT_SEEN, FH_CAT_TOTAL } from "@/data/masters";
+import { Bars, Cols, Desk, Empty, Gap, Html, Note, Panel, Scroll } from "@/components/ui";
+
 import { active } from "@/lib/scope";
 import { set, useApp } from "@/state/store";
+import { deskImport, deskNew, deskUrl } from "@/lib/desk";
+import { load } from "@/api/load";
 
 /* Factor HR's Categories, photographed 28 August 2026 — and it is not the
    screen the name suggested. Behind that menu item is `Category Type`: a master
    of masters, eight rows, each holding its own value list behind a View
    Category button.
 
-   Every control on it here is dead, because that one writes and this one reads.
-   The one live control is View Category, which is the only thing on the screen
-   a read-only window can honestly answer. */
+   The controls divide three ways, and the division is the point. Search, View
+   Category and Refresh act on what is on this page, so they work here. Add,
+   Edit and Import act on a master, and a master is a document on the site — so
+   they open it there rather than pretending to do it in a browser tab. Delete
+   and the pager can do neither, and say so.
 
-const DEAD = "This dashboard only reads. Category types are maintained in Factor HR, and on our side in the doctype each one maps to.";
+   `dt` on a category type is the doctype its values live in on our side. The
+   two without one are not lists at all; they are pay rules, which is the whole
+   finding of this screen. */
+
+const DEL_DEAD = "There is no Category Type on our side to delete — those eight rows are Factor HR's own master. "
+	+ "What each maps to here is a field on Employee, or a rule, and deleting the doctype behind one is a different act entirely.";
+
+const NO_MASTER = "This one has no master on our side to open: it is statutory pay treatment filed as a category over there, "
+	+ "and a rule here. View Category says what it would have to be rebuilt as.";
 
 const Ic = ({ d }) => (
 	<svg viewBox="0 0 24 24">
@@ -21,8 +35,10 @@ const Ic = ({ d }) => (
 	</svg>
 );
 
-const Act = ({ d, l }) => (
-	<span className="fhact" role="img" aria-label={`${l}, not available here`} title={DEAD}>
+/** A row action that cannot be done anywhere — drawn where Factor HR draws it,
+    with the reason on it. The other two in that cell do work. */
+const Act = ({ d, l, why }) => (
+	<span className="fhact" role="img" aria-label={`${l}, not available here`} title={why}>
 		<Ic d={d} />
 	</span>
 );
@@ -94,23 +110,264 @@ function CatValues({ t, s }) {
 	);
 }
 
+/* ---------------------------------------------------------------------------
+   The screen behind View Category, photographed 29 August 2026.
+
+   That click had never been taken before, and it settles two things this file
+   used to hedge on. It opens a **second screen**, not an expansion — back
+   arrow, its own toolbar, its own search and its own pager — and the screen is
+   a plain value list: Code, Description, Status, and the same three row
+   actions. So a category type is a list of values maintained like any other
+   master, which is exactly what makes Gratuity Applicable and LWF Applicable
+   the finding they are: two pay rules filed in a screen shaped for lists.
+
+   Ours has no Category Type doctype, so the rows come from the doctype the type
+   reads onto. Same values, different name over the door.
+   --------------------------------------------------------------------------- */
+
+/** Five to a page, which is theirs — their own footer reads *1 to 5 of 6*. */
+const CAT_PER = 5;
+
+/** The values behind one category type, as our side holds them.
+
+    `code` is their leftmost column, blank on every row of theirs. Company is the
+    one master here with anything to put in it: ERPNext keeps an `abbr`, and it
+    is the string that ends up glued to every department name, so it earns the
+    column. `status` is null where our side has no such field — drawn as a dash
+    with the reason on it, never as Active, because "we did not read a status"
+    and "the status is Active" are different claims. */
+function catRows(s, t) {
+	if (t.dt === "Company") {
+		return s.companies.map((c) => ({ name: c.name, code: c.abbr || "", desc: c.name, status: null }));
+	}
+	if (t.dt === "Department") {
+		return s.departments.map((d) => ({
+			name: d.name, code: "", desc: tidyDept(d.name),
+			status: "disabled" in d ? (d.disabled ? "Disabled" : "Active") : null,
+		}));
+	}
+	if (t.dt === "Designation") {
+		return s.designations.map((d) => ({ name: d.name, code: "", desc: d.name, status: null }));
+	}
+	return [];
+}
+
+/** One row action. All three open the same document, because on the site that
+    is where all three happen — the tooltips are what differ, and Delete is two
+    steps rather than one on purpose. */
+function DrillAct({ s, t, r, label, title, d }) {
+	return (
+		<Desk className={t.dt ? "fhact on" : "fhact"} label={label}
+			href={s.site && t.dt && deskUrl(s.site, t.dt, r.name)}
+			title={title} dead={t.dt ? undefined : NO_MASTER}>
+			<Ic d={d} />
+		</Desk>
+	);
+}
+
+/** Their list against ours, name by name, where a photograph of theirs exists.
+
+    This is the whole reason the screen was worth rebuilding. Their footer says
+    six; page 1 held five; ours holds whatever the site holds. A name on their
+    side and not on ours is a company somebody is filed under over there with
+    nowhere to land here — and it would otherwise show up much later, as one
+    employee import that refuses. */
+function CatSeen({ t, rows }) {
+	const ours = new Set(rows.map((r) => r.desc.toUpperCase()));
+	const missing = t.seen.filter((n) => !ours.has(n.toUpperCase()));
+	const unseen = t.theirs - t.seen.length;
+
+	return (
+		<div className="mb-[.8rem]">
+			<div className="rows">
+				<div className="row">
+					<span>On their screen</span>
+					<span className="val">{t.theirs}</span>
+				</div>
+				<div className="row">
+					<span>Photographed of those</span>
+					<span className="val">{t.seen.length}</span>
+				</div>
+				<div className="row">
+					<span>On the site</span>
+					<span className="val">{fmt(rows.length)}</span>
+				</div>
+			</div>
+			{missing.length ? (
+				<div className="mt-[.6rem]">
+					<Gap>
+						<b>{missing.length} of the {t.seen.length} seen on their page 1 have no match here:</b>{" "}
+						{missing.join(", ")}. Matched on the name exactly, so a different spelling reads as
+						missing — which is worth knowing either way, because an employee import matches on the
+						same string.
+					</Gap>
+				</div>
+			) : (
+				<div className="mt-[.6rem]">
+					<Note>
+						All {t.seen.length} photographed on their page 1 exist here under the same name.{" "}
+						{unseen > 0
+							? `Their page 2 holds ${unseen} more and has never been opened, so the two lists are not yet known to agree.`
+							: "Both lists are fully accounted for."}
+					</Note>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function CatDrill({ s, t }) {
+	const all = catRows(s, t).slice().sort((a, b) => a.desc.localeCompare(b.desc));
+	const q = (s.catfind || "").trim().toLowerCase();
+	const rows = q ? all.filter((r) => (r.code + " " + r.desc).toLowerCase().includes(q)) : all;
+	const pages = Math.max(1, Math.ceil(rows.length / CAT_PER));
+	const page = Math.min(Math.max(1, s.catpage || 1), pages);
+	const shown = rows.slice((page - 1) * CAT_PER, page * CAT_PER);
+	const first = rows.length ? (page - 1) * CAT_PER + 1 : 0;
+	const back = () => set({ catopen: "", catfind: "", catpage: 1 });
+
+	return (
+		<div className="fhcat">
+			<header>
+				{/* Their back arrow, and it is the only way out of this screen over
+				    there — so it is the first thing in the tab order here. */}
+				<button className="fhback" onClick={back} aria-label="Back to Category Type">‹</button>
+				<h3>Category Type : {t.name}</h3>
+				<span className={"cov " + (t.dt ? "part" : "none")}>
+					{t.dt ? "Their screen, our master" : "No master here"}
+				</span>
+				<span className="right">
+					<Desk className="embtn pri" href={s.site && t.dt && deskNew(s.site, t.dt)}
+						title={t.dt ? `Add a ${t.dt} on the ERPNext site — the master this list is.` : ""}
+						dead={t.dt ? undefined : NO_MASTER}>
+						+ Add
+					</Desk>
+					<button className="embtn" aria-label="Refresh" onClick={() => void load()}
+						title="Read the site again.">↻</button>
+					<button className="embtn" aria-label="Print" onClick={() => window.print()}
+						title="Print this list. The page has a print stylesheet — the chrome drops away and the table stays.">🖨</button>
+					<Desk className="embtn" label="Import" href={s.site && deskImport(s.site)}
+						title="Loads this master from a spreadsheet. Opens ERPNext's Data Import on the site, which previews the file before it writes anything.">↑</Desk>
+				</span>
+			</header>
+
+			<div className="find">
+				<input type="search" placeholder="Search" aria-label={`Search ${t.name}`}
+					value={s.catfind}
+					/* Back to page 1 on every keystroke: a filter that leaves you on
+					   page 3 of one result shows an empty table and blames the data. */
+					onChange={(e) => set({ catfind: e.target.value, catpage: 1 })} />
+			</div>
+
+			{t.dt ? (
+				<>
+					<Scroll>
+						<table>
+							<thead>
+								<tr>
+									<th>Code</th><th>Description</th><th>Status</th><th className="act">Action</th>
+								</tr>
+							</thead>
+							<tbody>
+								{shown.map((r) => (
+									<tr key={r.name}>
+										<td className="mono">{r.code || ""}</td>
+										<td><span className="fhname">{r.desc}</span></td>
+										<td>
+											{r.status
+												? <span className={"pill " + (r.status === "Active" ? "on" : "off")}>{r.status}</span>
+												: <span className="muted" title={`${t.dt} on our side carries no status field, so nothing is claimed here. Factor HR marks every row of theirs Active.`}>—</span>}
+										</td>
+										<td className="act">
+											<DrillAct s={s} t={t} r={r} label="View"
+												title={`Open this ${t.dt} on the ERPNext site.`}
+												d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6" />
+											<DrillAct s={s} t={t} r={r} label="Edit"
+												title={`Edit this ${t.dt} on the ERPNext site — renaming it renames it for everybody carrying it.`}
+												d="M4 20h4L20 8l-4-4L4 16Z" />
+											<DrillAct s={s} t={t} r={r} label="Delete"
+												title={`Open this ${t.dt} on the ERPNext site, where Menu → Delete removes it. Two steps rather than one: the site refuses a master anybody still carries, and that refusal is the check.`}
+												d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</Scroll>
+
+					{!rows.length && (
+						<Empty title={q ? "Nothing matches" : `No ${t.dt} on the site`}>
+							{q
+								? `Nothing in this list matches “${s.catfind}”, out of ${fmt(all.length)}.`
+								: `The site holds no ${t.dt} at all, so there is nothing for anybody to be filed under.`}
+						</Empty>
+					)}
+
+					<div className="fhfoot">
+						<span className="cnt">
+							Showing {fmt(first)} to {fmt((page - 1) * CAT_PER + shown.length)} of {fmt(rows.length)} entries
+							{q ? ` (filtered from ${fmt(all.length)})` : ""}
+						</span>
+						{/* Real, unlike the pager one screen up: these rows are ours, so
+						    there is a page 2 to go to. */}
+						<span className="fhpage">
+							<button className="embtn" disabled={page <= 1} onClick={() => set({ catpage: 1 })}>First</button>
+							<button className="embtn" disabled={page <= 1} onClick={() => set({ catpage: page - 1 })}>Previous</button>
+							<span className="cnt">Page {page} of {pages}</span>
+							<button className="embtn" disabled={page >= pages} onClick={() => set({ catpage: page + 1 })}>Next</button>
+							<button className="embtn" disabled={page >= pages} onClick={() => set({ catpage: pages })}>Last</button>
+						</span>
+					</div>
+				</>
+			) : null}
+
+			{/* Underneath their screen, the reconciliation: what the values are worth
+			    against the people actually carrying them, which is the question a
+			    list of names on its own cannot answer. */}
+			<div className="drillunder">
+				{t.seen ? <CatSeen t={t} rows={all} /> : null}
+				<CatValues t={t} s={s} />
+			</div>
+		</div>
+	);
+}
+
 /** Their screen, redrawn: title bar, search, table, pager. */
 function FhCategoryType({ s }) {
+	/* View Category replaces this screen rather than expanding a row — which is
+	   what the photograph of 29 August settled. The back arrow over there is the
+	   only way out, so it is the only way out here. */
+	const open = FH_CATEGORY_TYPES.find((x) => x.name === s.catopen);
+	if (open) return <CatDrill s={s} t={open} />;
+
+	const q = (s.catq || "").trim().toLowerCase();
+	const rows = q
+		? FH_CATEGORY_TYPES.filter((t) => (t.name + " " + t.code).toLowerCase().includes(q))
+		: FH_CATEGORY_TYPES;
 	return (
 		<div className="fhcat">
 			<header>
 				<h3>Category Type</h3>
 				<span className="cov part">Their screen, our data</span>
 				<span className="right">
-					<button className="embtn pri" disabled title={DEAD}>+ Add</button>
-					<button className="embtn" disabled title={DEAD} aria-label="Refresh">↻</button>
-					<button className="embtn" disabled title={DEAD} aria-label="Import">↑</button>
+					{/* Add on *this* screen would make a category type, and there is no
+					    such thing on our side to make. Add on the screen behind View
+					    Category is a different button and does work — it puts a value into
+					    the master that type reads onto. */}
+					<button className="embtn pri" disabled
+						title="This would add a category type, and there is no Category Type on our side to add to — the eight are Factor HR's own master. Open one with View Category: the Add there puts a value into the doctype it reads onto, and that one works.">
+						+ Add
+					</button>
+					<button className="embtn" aria-label="Refresh" onClick={() => void load()}
+						title="Read the site again. The counts under each type are off the people, so this is the control that picks up somebody's department changing.">↻</button>
+					<Desk className="embtn" label="Import" href={s.site && deskImport(s.site)}
+						title="Loads a master from a spreadsheet. Opens ERPNext's Data Import on the site, which previews the file before it writes anything.">↑</Desk>
 				</span>
 			</header>
 
 			<div className="find">
-				<input type="search" disabled placeholder="Search"
-					aria-label="Search category types, not available here" />
+				<input type="search" placeholder="Search" aria-label="Search category types"
+					value={s.catq} onChange={(e) => set({ catq: e.target.value })} />
 			</div>
 
 			<Scroll>
@@ -121,52 +378,60 @@ function FhCategoryType({ s }) {
 						</tr>
 					</thead>
 					<tbody>
-						{FH_CATEGORY_TYPES.map((t) => {
-							const open = s.catopen === t.name;
-							return [
-								<tr key={t.name}>
+						{rows.map((t) => (
+							<Fragment key={t.name}>
+								<tr>
 									<td className="mono">{t.code || ""}</td>
 									<td>
 										{t.ico} {t.name}
 										{!t.field && <> <span className="tag warn">pay</span></>}
 									</td>
 									<td>
-										{/* Clicking the open one closes it, so the row is a toggle
-										    rather than a trap on a page with no back button. */}
 										<button
 											className="fhview"
-											aria-expanded={open}
-											onClick={() => set({ catopen: open ? "" : t.name })}
+											title="Open this category type — the value list behind it, on the screen Factor HR opens"
+											onClick={() => set({ catopen: t.name, catfind: "", catpage: 1 })}
 										>
 											View Category
 										</button>
 									</td>
 									<td className="act">
-										<Act l="View" d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6" />
-										<Act l="Edit" d="M4 20h4L20 8l-4-4L4 16Z" />
-										<Act l="Delete" d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
+										{/* Their View is this page's View Category — the same act, so the
+										    same destination rather than a second control that does
+										    something almost like it. */}
+										<button className="fhact on" aria-label="View the values"
+											title="Show what this category type holds on our side"
+											onClick={() => set({ catopen: t.name, catfind: "", catpage: 1 })}>
+											<Ic d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6" />
+										</button>
+										<Desk className={t.dt ? "fhact on" : "fhact"} label="Edit"
+											href={s.site && t.dt && deskUrl(s.site, t.dt)}
+											title={t.dt ? `Open the ${t.dt} list on the ERPNext site, where these values are added, renamed and removed.` : ""}
+											dead={t.dt ? undefined : NO_MASTER}>
+											<Ic d="M4 20h4L20 8l-4-4L4 16Z" />
+										</Desk>
+										<Act l="Delete" why={DEL_DEAD} d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
 									</td>
-								</tr>,
-								open ? (
-									<tr className="vals" key={t.name + "-vals"}>
-										<td colSpan={4}>
-											<CatValues t={t} s={s} />
-										</td>
-									</tr>
-								) : null,
-							];
-						})}
+								</tr>
+							</Fragment>
+						))}
 					</tbody>
 				</table>
 			</Scroll>
 
 			<div className="fhfoot">
 				<span className="cnt">
-					Showing 1 to {FH_CAT_SEEN} of {FH_CAT_TOTAL} entries
+					{q
+						? `Showing ${rows.length} of the ${FH_CAT_SEEN} known here`
+						: `Showing 1 to ${FH_CAT_SEEN} of ${FH_CAT_TOTAL} entries`}
 				</span>
 				<span className="fhpage">
-					<button className="embtn" disabled>First</button>
-					<button className="embtn" disabled>Previous</button>
+					{/* Page 1 is the only page there is here, so back is nowhere.
+					    The reason is on all four rather than on the two that face
+					    the missing page, because a control with no explanation
+					    reads as broken next to three that have one. */}
+					<button className="embtn" disabled title="This is page 1 — there is nothing behind it.">First</button>
+					<button className="embtn" disabled title="This is page 1 — there is nothing behind it.">Previous</button>
 					<span className="cnt">Page 1 of 2</span>
 					{/* The pager is drawn dead rather than dropped. "1 to 5 of 8" is the
 					    shortest way to say that three category types exist and that
@@ -204,46 +469,6 @@ export default function Categories() {
 			<FhCategoryType s={s} />
 
 			<Cols>
-				<Panel title="Categories is a master of masters" cov="part" ico="🗂">
-					<Note>
-						The menu item does not open a list of categories. It opens a list of{" "}
-						<b>category types</b> — eight of them — each with its own values behind{" "}
-						<em>View Category</em>. So the question this page used to ask, <em>which of our five
-						link fields is it?</em>, has no answer: it is not one of them. It is a generic master
-						that happens to hold three of them and two things that are not fields at all.
-					</Note>
-					<NoteBelow>
-						<b>Only Department carries a code</b> — <code>P001</code>. The other four are blank, so
-						the code is optional and is not a key. Anything joining on it would join on nothing four
-						times out of five.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="Two of the five are pay, not grouping" cov="none" ico="₹">
-					<Gap>
-						Who is marked <b>Gratuity Applicable</b> and <b>LWF Applicable</b>, and on what rule. Two
-						View Category clicks in their tenant.
-					</Gap>
-					<NoteBelow>
-						<b>This is the finding on the screen.</b> Both sit in the same table as Department, which
-						means statutory pay treatment in Factor HR is maintained by whoever maintains
-						departments. ERPNext has neither as a category: gratuity is a <code>Gratuity Rule</code>,
-						LWF a salary component with a condition. <b>Neither imports onto a field</b> — both have
-						to be rebuilt as rules, and the two lists are how you check the rules were written right.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="Three types unseen, and three of ours absent" cov="none" ico="❓">
-					<Gap>Page 2 — three more category types, and nothing to guess them from.</Gap>
-					<NoteBelow>
-						The five on page 1 are in alphabetical order, and that carries a finding of its own:{" "}
-						<b>{ours.map((f) => f[1]).join(", ")} would all have sorted onto page 1</b>, and none of
-						them is there. So three of the five fields ERPNext groups people by have no category type
-						in Factor HR at all — they are ours rather than theirs, and nothing is coming across to
-						fill them. The three on page 2 sort after <em>LWF</em> and are something else again.{" "}
-						<b>One more screenshot settles it.</b>
-					</NoteBelow>
-				</Panel>
 
 				{CATEGORY_FIELDS.map((f) => {
 					const held = a.filter((e) => e[f[0]]);
@@ -291,15 +516,6 @@ export default function Categories() {
 					);
 				})}
 
-				<Panel title="Defined is not the same as used" cov="part" ico="✂">
-					<Note>
-						Fifteen departments are in use against the{" "}
-						<b>{fmt(s.counts.departments || 0)} sitting on the site</b>, most of them ERPNext’s own
-						defaults. The extras are worth <b>pruning rather than mapping onto</b>: each one is a
-						wrong answer somebody can pick from a dropdown, and a person filed under the wrong
-						department is a person whose corrections go to the wrong manager.
-					</Note>
-				</Panel>
 			</Cols>
 		</>
 	);

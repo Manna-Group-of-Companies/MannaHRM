@@ -150,10 +150,15 @@ five visible are not groupings at all: **Gratuity Applicable and LWF Applicable
 are statutory pay treatment**, filed in the same table as Department, and
 neither has an ERPNext field to import onto — gratuity is a `Gratuity Rule`, LWF
 a salary component. Both have to be rebuilt as rules, and their lists are how
-you check the rules were written right. View Category is the one live control;
-everything else on the screen writes, so it is drawn dead with the reason on it.
-The pager is drawn dead too, still reading *1 to 5 of 8* — the shortest way to
-say three category types exist that nobody here has seen.
+you check the rules were written right. **View Category opens a second screen**
+— theirs, photographed 29 August 2026: Code, Description, Status, the three row
+actions, its own search and its own pager. Ours fills it from the doctype the
+type reads onto, with search and pager working for real, Status filled only
+where our side has such a field, and their photographed list reconciled against
+ours by name. Search and Refresh on the list screen work here too; Add, Import
+and the row Edit act on a master, so they open it on the site. The pager stays dead, still reading *1 to 5 of 8* — the
+shortest way to say three category types exist that nobody here has seen — and
+so does row Delete, because there is no Category Type on our side to delete.
 
 **The Calendar is factoHR's calendar screen.** Toolbar, calendar name and its
 default flag, month strip, and a six-week grid with the week number down the
@@ -161,18 +166,81 @@ gutter and the day number in the corner — including their Sunday-start week
 numbering, which reads 31 where ISO says 30. What is in the cells is ours: the
 named holiday, the weekly off, and anybody whose first day it was. `Calendar
 Name` is the Holiday List and `Default Calendar` is the company's
-`default_holiday_list`. New, Edit, Delete and Data Import are drawn disabled
-with the reason on them — a holiday list is a document on the site.
+`default_holiday_list`. Its toolbar behaves the way every toolbar here now does
+— see **Controls that write** below.
+
+**Monthly Basic groups.** Its *Filter By* control has never been screenshotted
+open on their side, so the five groupings offered are ours — the same ones the
+CTC and In / Out reports use. It sections the muster and sorts the CSV the same
+way, because a report that groups on screen and not in the export is two
+reports.
+
+**Employee Detail reaches the child tables for one person.** Past History,
+Qualification and Transfer / Promotion live in child tables, which a list call
+cannot reach — 161 document reads for a report over everybody. For a report of
+one person the record has already been read whole, so those three tick boxes
+come alive the moment Particular Employee is set, and the tables are drawn under
+the record. Skill Set and Nominee stay dead and say why: ERPNext's `Employee`
+has no child table for either, so no number of reads would find them.
+
+**Every report screen names its people.** Employee Detail, Daily Detail, CTC /
+Earnings and Statutory Reports all copy Factor HR in generating nothing until
+Generate is pressed — right for the report, whose filters nobody has chosen yet,
+and wrong for the screen, because a page with one sentence on it cannot be told
+from a page whose read failed. So each of them now lists **who the report would
+cover**, at the criteria on its own form, from the employee list the dashboard
+read once at load. No request is made to draw it; a row opens that person's
+profile. Employee Profile's own "nobody picked" state is the same list, and
+there the click is how somebody is picked. `components/People.jsx`.
+
+**Controls that write open the site.** Add, Edit, Delete, Import and the rest
+are not drawn dead any more: each one opens the same job on the ERPNext site in
+a new tab — a new `Employee`, this `Holiday List`, ERPNext's Data Import wizard.
+Nothing about the proxy changed to allow it, and nothing needed to: a link needs
+no allowlist, no method and no token. The write still happens in the one place
+the rules guarding it run (CLAUDE.md §1), under whoever is logged in over there
+rather than under this process's System Manager key.
+
+The site they open is whatever `ERP_URL` the proxy was started with, which the
+page asks for once on `/api/site` — the base URL and nothing else. Until that
+answers, and wherever there is genuinely no document to open, the control falls
+back to disabled with the reason on it. Three kinds of control stay disabled for
+good: the ones whose data does not exist here yet (Submit Attendance, the salary
+lock), the ones whose Factor HR screen has never been photographed (Work
+Pattern, Monthly Basic's Filter By, page 2 of Category Type), and background
+scheduling, which needs something running when nobody is watching. `lib/desk.js`
+holds the routes and `Desk` in `components/ui.jsx` draws them.
+
+**Manage Shift has both its halves.** The Shift half is Factor HR's own table,
+read off a photograph, with Show and Search working over it. The **Work Pattern**
+half is ours — theirs has never been opened — and it is the roster: who has a
+dated `Shift Assignment`, who is on `default_shift` alone, and who has neither
+and so cannot have a punch measured at all. It reads `Shift Assignment` once,
+the first time somebody selects it, not on every page load.
 
 **Salary Master and CTC / Earnings are empty on purpose.** Payroll has not been
 started, and the proxy's allowlist has no payroll doctype on it — salary is the
 one table where a read-only window on a System Manager token is still a leak.
 Both pages say so rather than showing zeroes.
 
+**Final Settlement is the one payroll page with a list on it, and the list is
+not payroll.** Factor HR's screen is headed *FNF & Separation* and carries three
+numbered stages; theirs had sixteen people waiting in the third. What this one
+draws is who *this site* says is leaving or has left — a relieving date, a
+resignation letter date, or a status that is no longer Active. That last test is
+the one that matters: somebody serving notice is still Active, and is exactly
+who the queue is for. The exit fields come off `Employee` in a read of this
+page's own, made the first time somebody opens it. Nothing here can process a
+settlement — `Full and Final Statement` ships with Frappe HR, which is not
+installed — so the FNF column is a dash on every row and the table under the
+list says why. See `docs/FACTOHR_SCREENS.md` §28.
+
 **Daily Detail Attendance Report is their panel, and it generates.** Particular
 Employee, Employee Status, Filter By, Report Period, the date range, the layout
-chips and the Advance tab — and nothing listed until Generate is pressed, which
-is their model. It runs one row per person per day in factoHR's fourteen
+chips and the Advance tab — and nothing *generated* until Generate is pressed,
+which is their model. What stands where their blank screen does is the list of
+people the report would cover, off records already read: see **Every report
+screen names its people** below. It runs one row per person per day in factoHR's fourteen
 columns; five of them are dashes for everybody, which is the deliverable rather
 than a fault. Both chips work — Show Employee Grouping sections the output,
 With Logo heads it — Filter By groups a level above, and the Excel button

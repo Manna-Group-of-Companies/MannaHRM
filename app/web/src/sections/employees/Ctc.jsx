@@ -1,8 +1,11 @@
-import { COV_LABEL } from "@/data/sections";
+
+import { active } from "@/lib/scope";
+import { filled, fmt, tidyDept, todayIso } from "@/lib/format";
+import { download, toCsv } from "@/lib/csv";
 import { CTC_BY, CTC_UNITS, CTC_WHY } from "@/data/masters";
 import { Cols, Empty, Gap, Html, Note, NoteBelow, Panel, Scroll, Tile, Tiles } from "@/components/ui";
-import { download, toCsv } from "@/lib/csv";
-import { fmt, tidyDept, todayIso } from "@/lib/format";
+import People from "@/components/People";
+
 import { patch, set, useApp } from "@/state/store";
 
 /* Factor HR's CTC report is a filter panel and a Generate button, and the panel
@@ -47,24 +50,6 @@ function ctcRows(s) {
 		});
 }
 
-const CAN_ANSWER = [
-	["Filter By", "live", "groups the output and subtotals it"],
-	["Employee Status", "live", "read off <code>status</code>"],
-	["Active Date From / Till", "part",
-		"filters date of joining; no relieving date came across, so a window of <em>employment</em> cannot be reproduced"],
-	["Particular Employee", "live", "code, name or ID"],
-	["WEF", "none",
-		"our <code>ctc</code> is one undated number on the person, so no effective date can change the answer"],
-	["With Increment History", "none", "no dated salary revisions exist here"],
-	["Output Unit", "part", "Yearly and Monthly are arithmetic; Daily needs a divisor nobody has stated"],
-	["Based on Attendance Days", "none", "0 Attendance rows, and the divisor is an unstated policy"],
-	["Hide Wage Type Group", "none", "no earning heads have been loaded to group"],
-	["Generate In Background", "none", "no queue; the report is computed in the browser"],
-	["The two imports", "none", "this page proxies GET only"],
-];
-
-/** The generated report. Grouped with subtotals when Filter By is set, because
-    a CTC report without a per-company subtotal is half a report. */
 function CtcReport() {
 	const s = useApp();
 	const f = s.ctc;
@@ -387,10 +372,13 @@ export default function Ctc() {
 			{s.ctcRun ? (
 				<CtcReport />
 			) : (
-				<Empty title="Nothing generated yet">
-					Factor HR lists nothing until Generate is pressed, and that is copied — a report that runs
-					on open is a report nobody chose the filters for.
-				</Empty>
+				/* The one number this site holds about pay is `ctc`, and it is on the
+				   record already — so it rides along in the listing. Blank on somebody
+				   is the finding this whole page is about, and it reads better against a
+				   name than as a count. */
+				<People people={ctcRows(s)}
+					note="Everybody this report would cover, at the criteria above. Generate converts CTC to the chosen unit and groups it; the figure here is the raw yearly number on the record."
+					extra={["CTC", (e) => (e.ctc ? "₹" + fmt(e.ctc) : <span className="muted">not recorded</span>)]} />
 			)}
 
 			<Cols>
@@ -409,59 +397,6 @@ export default function Ctc() {
 					</NoteBelow>
 				</Panel>
 
-				<Panel title="What the form can and cannot answer" cov="part" ico="⚙">
-					<div className="rows">
-						{CAN_ANSWER.map((r) => (
-							<div className="row" key={r[0]}>
-								<span>
-									{r[0]} <span className={"cov " + r[1]}>{COV_LABEL[r[1]]}</span>
-								</span>
-								<span className="val muted" />
-								<span className="col-[1/-1] text-[.81rem] text-ink-2">
-									<Html html={r[2]} />
-								</span>
-							</div>
-						))}
-					</div>
-					<NoteBelow>
-						<b>Every control is here, including the six that cannot answer.</b> A control left out
-						hides the gap; a control that says why it cannot answer names it — and five of these six
-						name the same missing thing, which is the salary data behind <b>E1</b>.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="The earning heads are the missing half" cov="none" ico="₹">
-					<Gap>
-						Basic, HRA, the allowances, and the employer’s PF, ESI and gratuity — head by head, per
-						person.
-					</Gap>
-					<NoteBelow>
-						Factor HR’s <em>Employee Earnings Report</em> is exactly this, and it exports without
-						asking support. It is the same ask as <b>E1</b>, and three months of payslips (<b>E3</b>)
-						are what would prove any structure built from it right.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="The two systems do not agree on shape" cov="part" ico="⚖">
-					<Note>
-						Factor HR shows the CTC and its breakup on one screen. ERPNext splits them:{" "}
-						<code>ctc</code> is a single number on the person, and the breakup lives in their Salary
-						Structure Assignment. <b>Nothing makes the two agree</b> — a CTC of 4,80,000 sitting
-						above heads that sum to 4,20,000 is a valid record here. Worth a check the day payroll is
-						loaded, because nobody will notice it afterwards.
-					</Note>
-				</Panel>
-
-				<Panel title="Employer contributions" cov="none" ico="🏦">
-					<Gap>
-						PF, ESI and gratuity as employer cost rather than as deduction — the difference between
-						gross and CTC.
-					</Gap>
-					<NoteBelow>
-						The <em>ECR File</em> export in Factor HR confirms PF is live and being filed, so these
-						numbers exist and are current. They are a download, not a reconstruction.
-					</NoteBelow>
-				</Panel>
 			</Cols>
 		</>
 	);

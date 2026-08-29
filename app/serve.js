@@ -42,6 +42,25 @@ const ERP_URL = (process.env.ERP_URL || "https://mannarubber.m.frappe.cloud").re
 const ERP_KEY = process.env.ERP_KEY || "";
 const ERP_SECRET = process.env.ERP_SECRET || "";
 
+/* A key is not required to start. Without one nothing can be read from the
+   site, but the page, the layouts and every empty state still work, and that is
+   most of what styling this dashboard consists of.
+
+   Exiting here instead used to take `npm run dev` down with it: dev.js prints
+   "not fatal, the panels will just be empty" and then watches this process die,
+   which stops Vite too. So the reads fail one at a time, each saying why, and
+   the page keeps running. */
+const HAVE_KEY = Boolean(ERP_KEY && ERP_SECRET);
+
+/* Said per request rather than only at startup, in the shape the client already
+   reads — `hint` is the half that reaches the status line. Somebody looking at
+   an empty panel is looking at a browser, not at this process's log. */
+const NO_KEY = {
+	error: "the proxy has no ERP_KEY / ERP_SECRET, so it cannot read the site",
+	hint: "no API key: restart with ERP_KEY and ERP_SECRET set",
+	status: 503,
+};
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 /* The React build, when there is one. `web/` is the app; `web/dist` is what
@@ -173,6 +192,13 @@ function serveStatic(req, res, pathname) {
 async function proxyGet(req, res, url) {
 	const pathname = decodeURIComponent(url.pathname);
 
+	/* Where this proxy is pointed, so a page that can only read can still link to
+	   the one place a change is made. The base URL and nothing else — it is
+	   already in app/README.md and printed in the banner below, and it is what
+	   turns the calendar's New / Edit / Delete from dead controls into a way to
+	   the site. The token stays in this process. */
+	if (pathname === "/api/site") return sendJson(res, 200, { url: ERP_URL });
+
 	/* An allowed doctype covers both its list endpoint and single documents
 	   under it — `/api/resource/Letter Type` and `.../Letter Type/Gratuity`.
 	   Still an allowlist: a doctype absent from ALLOWED is unreachable either
@@ -183,6 +209,10 @@ async function proxyGet(req, res, url) {
 		if (pathname === a || pathname.startsWith(a + "/")) { ok = true; break; }
 	}
 	if (!ok) return sendJson(res, 403, { error: "not allowed through this proxy: " + pathname });
+
+	// After the allowlist, so a path that would never have been proxied reads as
+	// refused rather than as a missing key.
+	if (!HAVE_KEY) return sendJson(res, 503, NO_KEY);
 
 	const target = ERP_URL + url.pathname + (url.search || "");
 	try {
@@ -228,6 +258,8 @@ async function proxyPut(req, res, url) {
 				+ "PowerShell:  $env:ERP_WRITE='1'; node app/serve.js",
 		});
 	}
+
+	if (!HAVE_KEY) return sendJson(res, 503, NO_KEY);
 
 	let patch;
 	try {
@@ -287,18 +319,23 @@ const server = http.createServer((req, res) => {
 });
 
 function main() {
-	if (!ERP_KEY || !ERP_SECRET) {
-		process.stderr.write(
-			"ERP_KEY and ERP_SECRET are not set.\n\n"
-			+ "  PowerShell:  $env:ERP_KEY='...'; $env:ERP_SECRET='...'; node app/serve.js\n"
-			+ "  Git Bash:    ERP_KEY=... ERP_SECRET=... node app/serve.js\n",
-		);
-		process.exit(1);
+	if (!HAVE_KEY) {
+		/* A warning, not an exit. See HAVE_KEY above: stopping here stopped Vite
+		   too, and a dashboard you cannot open is worse than an empty one. */
+		process.stderr.write(`
+ERP_KEY and ERP_SECRET are not set. Serving the page anyway - every read will
+answer 503 and every panel will be empty.
+
+  PowerShell:  $env:ERP_KEY='...'; $env:ERP_SECRET='...'; node app/serve.js
+  Git Bash:    ERP_KEY=... ERP_SECRET=... node app/serve.js
+
+`);
 	}
 
 	console.log("Manna HR dashboard");
 	console.log(`   site   ${ERP_URL}`);
 	console.log(`   open   http://localhost:${PORT}`);
+	console.log(`   token  ${HAVE_KEY ? "set" : "MISSING - every read answers 503"}`);
 	console.log(`   write  ${WRITE
 		? "ON - approvals from this page will be written to the site"
 		: "off - read only (set ERP_WRITE=1 to allow decisions)"}`);
@@ -309,6 +346,25 @@ function main() {
 		: "app/index.html - the original page (run `npm run build` in app/web for the React one)"}`);
 	console.log("   stop   Ctrl+C\n");
 
+	/* A port already taken is almost always this same file still running from
+	   an earlier terminal, and Node's default for it is an unhandled 'error'
+	   event — a stack trace ending in EADDRINUSE, which under `npm run dev`
+	   scrolls past and takes Vite down with it. Say the one useful sentence
+	   instead. */
+	server.on("error", (e) => {
+		if (e.code === "EADDRINUSE") {
+			process.stderr.write(`
+port ${PORT} is already in use, most likely by an earlier node app/serve.js that
+is still running. Stop that one, or start this one somewhere else:
+
+  PowerShell:  $env:PORT='8771'; node app/serve.js
+  Git Bash:    PORT=8771 node app/serve.js
+
+`);
+			process.exit(1);
+		}
+		throw e;
+	});
 	server.listen(PORT, "127.0.0.1");
 	process.on("SIGINT", () => {
 		console.log("\nstopped");

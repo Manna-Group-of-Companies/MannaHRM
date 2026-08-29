@@ -124,6 +124,28 @@ three more machines are expected at Manna Rubber Products alone.
 
 ---
 
+## The device is nearly full — 29 Aug 2026
+
+Read off the machine's own counters, not from the log download:
+
+```
+userCounts: 437   logCounts: 79356   logCapacity: 80000
+```
+
+**644 punches of headroom, and this gate takes 37–110 a day.** That is about a
+week. When a ZK device fills it either refuses new punches or overwrites its
+oldest, and both of those are somebody's wages.
+
+This collides head-on with the rule in CLAUDE.md §5 that the bridge must never
+clear the log, because the device is the last copy of a punch that failed to
+deliver. Both cannot hold once the machine is full. The way out is to get all
+79,356 records into ERPNext and *verify the count on the site* before anything
+is cleared — which is blocked on the ERPNext API credentials being dead.
+
+**This is a date in the diary, not a backlog item.**
+
+---
+
 ## Two things to fix on the device itself
 
 1. **The clock is 7.5 minutes slow.** Nothing downstream can tell drift from
@@ -133,6 +155,56 @@ three more machines are expected at Manna Rubber Products alone.
 2. **437 enrolments for 76 active staff.** Unenrolling leavers is optional for
    us and good hygiene for you; a fingerprint that still opens a gate three
    years after somebody left is its own question.
+
+---
+
+## Reading this machine: two faults found on 29 Aug 2026
+
+Both were in our code, not the device, and both were introduced by the
+Python → JavaScript conversion (`6e6e428`, 28 Aug). The Python reader used
+`pyzk`'s own decoder and was right; the JavaScript port hand-rolled one from the
+`pyzk` docs and its header said plainly that it had never been run against a
+real machine. It hadn't.
+
+### The record layout, read off the machine
+
+`pyzk`'s documented layout puts the timestamp at byte 28 and the direction at
+27. **On this device both are wrong.** Verified against 4,910 records whose
+timestamps are monotonic and fall inside the span the device reports:
+
+| Offset | Field | Evidence |
+|---|---|---|
+| 0 | uid, 2 bytes | |
+| 2 | user id, 24 bytes | matches `Employee.attendance_device_id` |
+| 26 | status, 1 byte | `1` on 100% of real records — verify mode, not direction |
+| **27** | **time, 4 bytes** | at 27 the log starts `2023-06-28 14:53:25`; at 28 every record decodes to the year 2000 |
+| **31** | **punch, 1 byte** | splits 50.1 / 49.9 across the log; read at 27 it was the timestamp's low byte |
+| 32 | padding, 8 bytes | |
+
+The direction byte is the one that matters most: it decides whether a shift
+pairs punches by log type or alternates them, and that decides a day's pay. One
+night-shift worker's punches alternate cleanly at offset 31 — in 14:54, out
+03:03 the next morning — which is the same rotation §"The night shift" records.
+
+`bridge/mannabridge/device.test.js` pins all three offsets. `npm test` in
+`bridge/`.
+
+### The log download truncates, and used to do so silently
+
+`readWithBuffer` returns short on this LAN, and it does not say so. Five reads
+minutes apart returned 1,637 / 4,911 / 8,184 / 8,184 / 44,194 records against a
+declared 79,356 — and the old decoder returned each of them as though it were
+the whole log, because it simply took records off the front until it ran out.
+
+A punch that never arrives is a person marked absent. `decodeRecords` now
+compares the payload against the length the device declares in the first four
+bytes and **refuses the read** rather than decoding part of it: `main.js`
+already logs the failure, skips the device and leaves `lastSeen` untouched, so
+the same records are retried on the next poll. Erring towards a retry rather
+than a silent gap is CLAUDE.md §4's rule about which way to round.
+
+**Why the download truncates is still open** — it is a full read of ~3 MB over
+this network — but it can no longer corrupt attendance while it is open.
 
 ---
 

@@ -1,9 +1,9 @@
-import { OTHER_BUTTONS, OTHER_TYPES, QSCOPES } from "@/data/approvals";
-import { dmy } from "@/lib/format";
 import { set, useApp } from "@/state/store";
-import { load } from "@/api/load";
+import { otherRows, qExport, reqId } from "@/sections/approvals/queue";
+import { dmy } from "@/lib/format";
+import { OTHER_BUTTONS, OTHER_TYPES, QSCOPES } from "@/data/approvals";
+
 import { Note, Scroll } from "@/components/ui";
-import { otherRows, qExport, reqId, saveApprovals } from "./queue";
 
 /* ---------------------------------------------------------------------------
    Factor HR's Other queue, which is a different screen from the card queues:

@@ -1,5 +1,6 @@
+
 import { useApp } from "@/state/store";
-import { Cols, Note, Panel } from "@/components/ui";
+import { Cols, Panel } from "@/components/ui";
 
 /** One readiness line: the thing, how many there are, and what its absence
     would cost. `ok` is a count being non-zero and nothing cleverer — the
@@ -37,12 +38,6 @@ export default function Settings() {
 				</div>
 			</Panel>
 
-			<Panel title="Enforcement" cov="part" ico="🔐">
-				<Note>
-					Geolocation capture is <b>on</b>. Two detection reports exist — punch clock drift and open
-					shifts. Server-side rules need the private bench, which is still open.
-				</Note>
-			</Panel>
 		</Cols>
 	);
 }

@@ -1,9 +1,12 @@
-import { Fragment } from "react";
-import { CAL_DOW, CAL_MONTHS, CAL_SHOWN, CAL_TOOLS } from "@/data/masters";
-import { Bars, Cols, Empty, Gap, Note, NoteBelow, Panel, Scroll, Tile, Tiles } from "@/components/ui";
-import { dayOf, dmy, fmt, monthCells, tally, thisMonth, todayIso, weekNo, ymd } from "@/lib/format";
-import { active } from "@/lib/scope";
 import { patch, set, useApp } from "@/state/store";
+import { dayOf, dmy, fmt, monthCells, tally, thisMonth, todayIso, weekNo, ymd } from "@/lib/format";
+import { cell } from "@/lib/csv";
+import { Fragment } from "react";
+import { CAL_DOW, CAL_DT, CAL_MONTHS, CAL_SHOWN, CAL_TOOLS } from "@/data/masters";
+import { Bars, Cols, Desk, Empty, Gap, NoteBelow, Panel, Scroll, Tile, Tiles } from "@/components/ui";
+import { deskImport, deskNew, deskUrl } from "@/lib/desk";
+
+import { active, scoped } from "@/lib/scope";
 
 /* Factor HR's calendar screen, drawn the way it draws it: the toolbar, the
    calendar name beside its default flag, the month strip with the arrows in the
@@ -61,15 +64,29 @@ function calEntries(s) {
 	return by;
 }
 
+/* Factor HR's toolbar buttons all write, and this page reads — so each of them
+   opens the same job on the site. New makes an empty document; Edit and Delete
+   open the list the month below is drawn from, so the toolbar acts on what is
+   on screen rather than on whatever the site opens first. */
 function CalToolbar({ s }) {
 	const busy = s.holidayLists.length > 0 && !Object.keys(s.holidays).length;
+	const list = calList(s);
 	return (
 		<div className="embar calbar">
 			{CAL_TOOLS.map((t) => (
-				<button key={t[0]} className="embtn" disabled title={t[3]}>
-					<span className={"cico " + t[0]}>{t[2]}</span>
-					{t[1]}
-				</button>
+				<Desk
+					key={t.k}
+					href={s.site && (t.needsList
+						? list && deskUrl(s.site, CAL_DT, list)
+						: deskNew(s.site, CAL_DT))}
+					title={t.tip}
+					dead={t.needsList && !list
+						? `There is no holiday list on the site to ${t.label.toLowerCase()}.`
+						: undefined}
+				>
+					<span className={"cico " + t.k}>{t.ico}</span>
+					{t.label}
+				</Desk>
 			))}
 			<button
 				className="embtn"
@@ -93,10 +110,10 @@ function CalToolbar({ s }) {
 			</button>
 			<span className="ml-auto inline-flex gap-[.45rem] items-center">
 				{busy && <span className="n text-[.78rem] text-ink-3">reading the holiday dates…</span>}
-				<button className="embtn" disabled
-					title="Factor HR imports holidays from a spreadsheet here. Importing days off is a write, and a wrong row is a day the plant is marked absent.">
+				<Desk href={s.site && deskImport(s.site)}
+					title="Factor HR imports holidays from a spreadsheet here. Opens ERPNext's Data Import on the site — a wrong row is a day the plant is marked absent, and over there the file is previewed before anything is written.">
 					⭳ Data Import ▾
-				</button>
+				</Desk>
 			</span>
 		</div>
 	);
@@ -152,7 +169,7 @@ function CalNameRow({ s }) {
 			{s.cal.search && (
 				<div className="embar">
 					<span className="find">
-						<svg viewBox="0 0 24 24" width="15" height="15" stroke="#918D93" fill="none"
+						<svg className="stroke-ink-3" viewBox="0 0 24 24" width="15" height="15" fill="none"
 							strokeWidth="1.8" strokeLinecap="round">
 							<circle cx="11" cy="11" r="7" />
 							<path d="M20 20l-3.6-3.6" />
@@ -375,29 +392,6 @@ export default function Calendar() {
 					);
 				})}
 
-				<Panel title="What this grid still cannot show" cov="none" ico="▦">
-					<Gap>
-						Factor HR’s calendar is also a month per person: their shift each day, their leave, and
-						the days they were absent — in these same cells.
-					</Gap>
-					<NoteBelow>
-						The chrome above is theirs and the cells are ours, and the difference is the whole gap:{" "}
-						<b>holidays and joining dates are all this site can put in a day</b>. The rest needs the
-						23 shifts stated, punches arriving, and attendance generated from them.{" "}
-						<b>It is the last page to finish rather than a hard one</b> — every missing entry is a
-						join over records that will exist.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="A weekly off is its own state" cov="live" ico="✓">
-					<Note>
-						Worth saying next to the grid. Factor HR’s dashboard reported all 160 people as{" "}
-						<em>Not Yet In</em> on Sunday 23 August — its tile does not net off the weekly off, so on
-						the one day nobody is expected it reports the whole workforce as outstanding.{" "}
-						<code>rules.py</code> treats weekly-off as a state of its own precisely so that cannot
-						happen: <b>a person who is not expected in is not somebody to chase</b>.
-					</Note>
-				</Panel>
 			</Cols>
 		</>
 	);

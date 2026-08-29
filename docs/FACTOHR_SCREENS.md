@@ -96,7 +96,9 @@ Payroll Summary and F&F Summary both default to **Mar-25**:
 - Salary Proceed **134**
 - Salary Not Proceed **6**
 - Stop Salary 0 · Hold Salary 0 · Pending Arrears 0 · Stop TDS 0
-- F&F: all zero, 0 on notice, 0 exit clearance pending
+- F&F: all zero, 0 on notice, 0 exit clearance pending — **but see §28**: the
+  screen behind that tile holds sixteen people. Nothing has been *processed*;
+  sixteen are *waiting*, and only the first of those is what the zero counts.
 
 Two things do not add up and need asking:
 
@@ -758,7 +760,9 @@ toolbar, the same grid/list toggle — with three deliberate differences:
   open in Factor HR, so rather than draw a dead control it was given a filter
   this site can answer. The Filter button opens designation and biometric
   enrolment, and the panel says the same thing about itself.
-- **A card opens Employee Detail**, which is what the **→** appears to do there.
+- **A card opens the person's record** — Employee Profile, §23. It opened
+  Employee Detail until 29 Aug, which turned out to be a report screen rather
+  than a record page.
 
 ### Still open
 
@@ -829,9 +833,13 @@ a real report from loaded records: filters on status, joining-date window and
 employee, groups and subtotals by company, department, designation, grade or
 branch, converts Yearly to Monthly, and exports CSV from the browser.
 
-**Nothing is listed until Generate is pressed**, which is Factor HR's behaviour
-and worth copying: a report that runs on open is a report nobody chose the
-filters for.
+**Nothing is generated until Generate is pressed**, which is Factor HR's
+behaviour and worth copying: a report that runs on open is a report nobody chose
+the filters for. What is drawn in the meantime is not their blank screen but the
+**people the report would cover** — the criteria on the form applied to records
+already in hand, with the raw `ctc` beside each name, since a figure missing on
+somebody reads better against a name than as a count. Nothing is read from the
+site to show it.
 
 ### Still open
 
@@ -886,9 +894,12 @@ that does not exist would show an empty month and blame the month — and
 **`Default Calendar` is the company's `default_holiday_list`**, which reads as
 unknown rather than false if the Company query comes back without the field.
 
-Four of the six controls are drawn disabled with the reason on them: New, Edit,
-Delete and Data Import all write, and a holiday list is a document on the site.
-Search filters the cells. Close returns to Employee Master.
+All four of New, Edit, Delete and Data Import write, and this page reads — so
+all four **open the job on the ERPNext site**: New an empty `Holiday List`, Edit
+and Delete the one the month is drawn from, Data Import ERPNext's own wizard,
+which previews a spreadsheet before it writes. They fall back to disabled, with
+the reason on them, when the site is not known yet or when there is no holiday
+list to act on. Search filters the cells. Close returns to Employee Master.
 
 ### Still open
 
@@ -998,11 +1009,34 @@ The dashboard's **Employees → Categories** page is now that screen — the sam
 title bar, search, four columns, row actions and pager — with the differences
 this build always makes:
 
-- **Add, search, import, refresh and the row actions are drawn dead**, and each
-  says why on hover. This dashboard reads.
-- **View Category is live**, and it is the one control a read-only window can
-  honestly answer. It opens what our site holds for that type, counted off the
-  records rather than off a master, because we have no category master.
+- **Search, refresh and View Category act on this page**, so they work here:
+  search filters the five rows, refresh re-reads the site, and View Category
+  opens the screen below.
+- **View Category opens a second screen, not an expansion** — settled by the
+  capture of 29 August 2026, the first time anybody had clicked one. Back arrow,
+  its own toolbar (**+ Add**, refresh, print, import), its own search, and a
+  four-column table: **Code · Description · Status · Action**, with the same
+  view/edit/delete icons and a pager of its own. So a category type is a plain
+  value list maintained like any other master — which is what makes Gratuity
+  Applicable and LWF Applicable the finding they are: two pay rules filed in a
+  screen shaped for lists.
+- **Ours is rebuilt on that shape**, with the values coming from the doctype the
+  type reads onto — `Company`, `Department`, `Designation`. Search and the pager
+  are real there, because the rows are ours. Status is filled only where our
+  side has such a field (`Department.disabled`) and drawn as a dash with the
+  reason on it everywhere else: *we did not read a status* and *the status is
+  Active* are different claims. `Code` carries the company `abbr`, the one thing
+  our side has for a column blank on every row of theirs.
+- **Their list is reconciled against ours by name**, where a photograph exists.
+  Their footer says six companies; page 1 held five; a name of theirs missing
+  here is an employee import that will refuse, found now instead of then.
+- **Add, Import and the row Edit act on a master, so they open the site.** Add
+  makes a new document of whatever doctype the open row reads onto, Edit opens
+  that doctype's list, Import opens ERPNext's Data Import. Which doctype Add
+  means depends on which row is open, so until one is, it says so.
+- **Row Delete stays dead, and the reason is the finding.** There is no Category
+  Type on our side to delete: those eight rows are Factor HR's own master, and
+  deleting the doctype behind one is a different act entirely.
 - **The two pay rows open the gap instead**, and say what has to be built.
 - **The pager is drawn dead rather than dropped.** *Showing 1 to 5 of 8* is the
   shortest way on the page to say that three category types exist and nobody
@@ -1014,8 +1048,13 @@ this build always makes:
 ### Still open
 
 - **Page 2 — the three unseen category types.** One click on *Next*.
+- **The sixth company.** Their Company Name list pages *1 to 5 of 6* and page 2
+  has not been opened. Five are known; the sixth is not, and it is the one most
+  likely to be missing from our site.
 - **The values behind Gratuity Applicable and LWF Applicable.** Two clicks on
-  *View Category*, and both are needed before payroll is scoped rather than
+  *View Category* — and now that the screen behind that button is known to be
+  an ordinary value list, both are one click each and would settle the two
+  hardest items on this page. Needed before payroll is scoped rather than
   before it is built.
 - **Whether the three unseen types are groupings or more pay flags.** Two of
   the five seen were pay, so the base rate on this screen is not low.
@@ -1034,6 +1073,9 @@ this build always makes:
 **report builder**: a criteria form, a grid of fourteen tick boxes naming what
 the export should carry, and six buttons. Worth stating plainly, because the
 wrong guess had already been built.
+
+*(The record page does exist, separately, and is not on this menu at all —
+see §23.)*
 
 ### The form
 
@@ -1228,9 +1270,13 @@ holds the request only, and nothing joins it to `Employee Checkin` yet.
 `Day Status` and `AR Hours` are outputs of the attendance policy engine, the one
 part of factoHR that Frappe HR has no equivalent for.
 
-Three of the four icons are drawn disabled with the reason on them. Refresh
-works. `Select Categories` offers Department, which is the one category type
-both systems hold.
+Two of the four icons are drawn disabled with the reason on them: their filter
+panel has never been opened, and **Import writes attendance from a spreadsheet
+with no shift check, no geofence and no approver** — refused here on purpose,
+and the one control on this dashboard that is deliberately not linked out
+either. Refresh works. **History opens the correction list on the site**, which
+holds the decided ones this page cannot see. `Select Categories` offers
+Department, the one category type both systems hold.
 
 ### Still open
 
@@ -1249,8 +1295,8 @@ both systems hold.
 The filter panel above their punch report:
 
 > **Particular Employee** (status dot + Search Employee + an import arrow) ·
-> **Employee Status** · **Filter By** · **Report Period** (Date Wise) · Excel ·
-> refresh · **Generate**
+> **Employee Status** · **Filter By** · **Report Period** (Date Wise) ·
+> **Excel** split (PDF · Excel · Word · Print · Preview) · refresh · **Generate**
 > — tabs: **REPORT CRITERIA** / **ADVANCE** —
 > **Date Range** · **From Time** / **Till Time** · ☑ **Show Selfie Images in
 > Report** · **Layout Options** [With Logo] · **Additional Filters**
@@ -1306,13 +1352,43 @@ arithmetic on what came back, and exports to CSV from the browser.
 dropping it, and `Stream` can only say whether a punch carries a terminal at
 all, which is the weaker half of the real rule.
 
+### The ADVANCE tab, 29 August 2026
+
+Opened, and it holds **two** controls — not the four on Daily Detail's:
+
+| Control | Reads |
+|---|---|
+| **Group By** | `Select Category` |
+| **Show Categories** | `0` |
+
+Same two controls, same meaning as on Daily Detail (§18), so they are one list
+in the code. Neither filters: both change the shape of what came back, which is
+why neither needs a second Generate.
+
+**Group By sections the punch list by category**, above the grouping Report
+Period and Filter By already do — a company heading, dates inside it. The two
+categories that are pay treatment rather than groupings, Gratuity and LWF, have
+no field on our side to section on, and picking one says so.
+
+**Show Categories appends category columns**, capped at **two** on this report
+rather than three: Company is already a column here, and a column repeated under
+a second heading is worse than a column missing. So Department and Designation
+are what it can add. They go into the CSV as well — unlike the selfie column,
+these hold real values, and the only column kept out of the data file is the one
+that is empty by construction.
+
+**That the two reports' Advance tabs differ is itself worth having.** Daily
+Detail's carries a Day Of Week and a Punch Type; this one does not. Both are
+properties of a *day*, and this report's rows are punches — so their absence
+here is consistent rather than an omission.
+
 ### Still open
 
 - **The trusted device-id prefixes**, per company. Without them a punch can be
   sorted into "has a terminal" and "has none", but not into biometric and
   mobile — and that distinction is what decides whether a punch is geofenced.
-- **Whether these reports are printed**, per Layout Options above.
-- **What the ADVANCE tab holds.** It has never been opened.
+- **What Show Categories does when it is not 0**, which would confirm the
+  reading above.
 - **How long selfies have to be kept**, now that they are known to be a feature
   rather than a by-product.
 
@@ -1344,16 +1420,18 @@ select. Ours binds both to one value, because two controls for one filter that
 can disagree is a bug waiting to be reported. Whether their dot means something
 else here is unknown; nobody has opened it.
 
-**`Report Period: Date Wise` implies the report has other shapes** — month wise,
-summary wise, something. Only Date Wise has been seen, so only Date Wise is
-offered here rather than a guessed list.
+**`Report Period: Date Wise` implies the report has other shapes** — and on 29
+August 2026 the menu was opened. It holds **two** entries, not a family of them:
+*Date Wise* and *Month Wise*. Both are offered here now.
 
 ### Rebuilt here
 
 Attendance → Daily Detail Attendance Report now carries that panel, control for
-control, and **nothing is listed until Generate is pressed** — their model, and
-the same one CTC / Earnings copies. Generate runs one row per person per day
-over the chosen range, in factoHR's own fourteen columns.
+control, and **nothing is generated until Generate is pressed** — their model,
+and the same one CTC / Earnings copies. Until it is, the screen lists **who the
+report would cover** at the criteria set, off records already read, rather than
+sitting blank. Generate then runs one row per person per day over the chosen
+range, in factoHR's own fourteen columns.
 
 Both layout chips do what they say: **Show Employee Grouping** sections the
 output per person, **With Logo** puts the Manna wordmark and the period on the
@@ -1368,11 +1446,69 @@ the dashboard loads one day of punches. Day Status is the holiday list — weekl
 off and named holidays are the only part of a day this site can state on its
 own.
 
+### The ADVANCE tab, 29 August 2026
+
+Opened at last, and it holds four controls:
+
+| Control | Reads |
+|---|---|
+| **Group By** | `Select Category` — a category picker, not a field picker |
+| **Day Of Week** | `Select day of week` |
+| **Show Categories** | `0` — a number field |
+| **Punch Type** | `All` · `Attendance Punch Required` · `Attendance Punch Not Required` · `Attendance Single Punch Required` |
+
+**Group By offers categories, which settles what §9's Categories screen is for.**
+It is Factor HR's `Category Type` master — Company Name, Department,
+Designation, Gratuity Applicable, LWF Applicable — the same rows behind that
+screen. Three of the five read onto an `Employee` field here and can section the
+report. The other two are pay treatment rather than groupings and have no field
+on our side at all; picking one says so rather than grouping everybody into one
+section. **Group By and Filter By stack**, which is what two grouping controls on
+two tabs has to mean if neither is to be ignored.
+
+**Day Of Week comes off the date, so it is exact.** Seven toggles here rather
+than a multi-select, because which days are on has to be readable without
+opening anything: it silently removes rows from an attendance report.
+
+**Show Categories is a count, and the reading here is ours.** Their field held
+`0` and the label is plural, so it is read as *how many category columns to
+append to each row* — capped at three, which is all this site can fill (Company,
+Department, Designation). One screenshot of it set above zero would settle it.
+
+**Punch Type is read as a property of the day, not of the person**, because that
+is the only reading this site can answer: the holiday list is what says a punch
+was expected. A weekly off or a holiday is *not required*; every other day is
+*required*. **Attendance Single Punch Required cannot be answered at all** — it
+needs a flag saying one punch is enough for a person or a shift, and neither
+`Employee` nor `Shift Type` holds one. So it leaves the report unfiltered and
+says why, rather than filtering to nothing: an empty report reads as nobody
+qualifying, which is a different claim from not knowing.
+
+### The two split buttons, 29 August 2026
+
+Both menus were opened, and both are now real here.
+
+**Export** — `PDF · Excel · Word · Print · Preview`. The same menu as the In /
+Out report's, so it is one component. There is no PDF writer and no Word writer
+in a browser and there is not going to be one for a table: PDF and Print are the
+print dialog (*Save as PDF* is a destination in it), Word is an HTML document
+with a Word content type — what Word's own *Save as Web Page* writes — Preview
+is that same document in an iframe, and Excel is the CSV. One document behind
+four of the five, so what somebody signs is what they previewed.
+
+**Generate** — `Generate in Background · Create Schedule Report · View Scheduled
+Reports`. All three are about a queue. This page has none: it holds what was
+already read and does the arithmetic in the browser, which is why it answers at
+once. But scheduling has a real home on the site — ERPNext's `Auto Email Report`
+is one doctype with a frequency and a recipient list, running on the site's
+scheduler, which is the only clock that keeps time when this browser is closed.
+So the two scheduling items open it rather than explaining that they cannot.
+
 ### Still open
 
-- **What the Advance tab holds.** Never opened, and everything this report
-  cannot answer would plausibly be configured behind it.
-- **What Report Period offers besides Date Wise.**
+- **Whether their Punch Type means the day or the person.** One screenshot of a
+  person's record with such a flag on it would settle it.
+- **What Show Categories does when it is not 0.**
 - **Whether Additional Filters is more than shift and department.**
 
 ---
@@ -1590,7 +1726,22 @@ nothing catches them.
 
 Attendance → Manage Shift now opens with that screen: the title bar and its
 bare **+**, the three-part toolbar, the five sortable columns, the rows as read,
-and the two row actions. Every control is drawn dead with the reason on hover.
+and the two row actions. **Show and Search act on this table**, so they work
+here. **+ opens a new `Shift Type` on the site** — which is the whole ask of the
+page, since nothing generates attendance until these exist. **The two row
+actions open that shift on the site**, but only for a row we actually hold: the
+names here are Factor HR's, and one with no `Shift Type` of that name on our
+side says so rather than looking broken. **The Work Pattern selector works, and
+what it opens is ours**: their half has never been screenshotted, so rather than
+invent it the second view answers the same question our way — `Shift Assignment`
+rows, who is measured against which shift and between which dates, read once the
+first time somebody selects it. Three counts sit above it and they are the
+readiness check this whole page is for: **rostered**, **default shift only** (a
+fallback on the record, with no dates, so a shift that changes in March cannot
+be said in it), and **neither** — people whose punch has nothing to be measured
+against at all. That last number has to reach zero before anybody is paid from
+this system. The + button follows the selector: a `Shift Type` on one half, a
+`Shift Assignment` on the other.
 
 **The clipped row is drawn clipped** — its name is legible and its two counts
 are not, so they render as `—` with the reason on hover rather than as numbers.
@@ -1606,7 +1757,9 @@ known: the export's four largest shifts, the one confirmed timing
 - **Which category type carries the shift.** One click on a shift name. This is
   the most valuable single screenshot outstanding on the whole tenant — it is
   the join between §14 and everything attendance.
-- **Work Pattern**, the second half of this screen.
+- **Work Pattern as *they* draw it.** Ours answers the same question from
+  `Shift Assignment`, but what their screen carries — a named rotation, most
+  likely — is still unseen, and a rotation is a thing ERPNext has no object for.
 - **The rest of the list**, and their total.
 - **The timings.** Not one shift on this screen shows a start or an end. Every
   window is still unknown except Manna Treads Office.
@@ -1665,20 +1818,1312 @@ has never run; the day it runs, the page fills itself.
 - **Show Day Status on Week Off/Holiday** does what it says: off, Sunday reads
   `WO`; on, Sunday is drawn like any other day and shows whatever it holds.
 - **Filter By** is disabled — never screenshotted open, and in that position it
-  is probably a grouping. **Advance** is drawn and empty for the same reason.
+  is probably a grouping.
+- **The Advance tab now carries Group By and Show Categories.** *This* report's
+  tab has still never been opened; those are the two controls the In / Out and
+  Daily Detail tabs were photographed holding (§17, §18), carried across and
+  labelled as carried across rather than as seen. Group By sections the muster
+  by category, above Filter By, which sections it above the person; Show
+  Categories puts up to three category columns beside the name, where a reader
+  will find them rather than past thirty-one day columns. If Factor HR's own tab
+  turns out to hold these two, nothing changes.
 - **The Payable column stays blank until there is something behind it.** Five
   Sundays in a month is not five payable days; it is a month nobody has
   measured, and this is the column payroll reads. It fills in only for a person
   with at least one real `Attendance` row, and it adds up what the grid holds
   rather than applying a policy — **because the policy has not been stated**.
-- **Excel** exports exactly what is on screen as a CSV, filters and layout
-  options included.
+- **The Excel button is now the five-format split** the other two attendance
+  reports carry — PDF · Excel · Word · Print · Preview — over the grid exactly as
+  it is on screen, filters, categories and layout options included. A muster is
+  the one attendance report somebody genuinely prints, and With Logo has been a
+  letterhead waiting for a page since §22 was written.
+- **Generate has its split back**, with the same three items and the same answer:
+  no queue here, and the two scheduling items open ERPNext's `Auto Email Report`
+  on the site.
 
 ### Still open
 
 - **What the upload icon beside Search Employee does.** A list of employee codes
   to filter by is the guess; nobody has pressed it.
-- **What else Report Period offers** besides *Date Wise*.
-- **What the Advance tab holds** — one screenshot.
+- **What else Report Period offers** besides *Date Wise*. Daily Detail's menu
+  turned out to hold exactly two entries (§18); this one has not been opened, so
+  it still offers the one that has been seen.
+- **What this report's Advance tab actually holds** — one screenshot. Two
+  controls are on it here, borrowed from the tabs that have been opened.
 - **What the grid looks like with data in it**, which is the half of this screen
   that would tell us what the columns actually are.
+
+---
+
+## 23 · Employees — Employee Profile, 29 Aug 2026
+
+**§15 was right that Employee Detail is a report builder, and wrong to conclude
+from that that Factor HR has no record page.** It has one, and this is it. It is
+not on the Employees sub-menu in §9; it is reached by clicking a person, which
+is what the **→** on a card on Employee Master always looked like it did.
+
+### The screen
+
+A header card across the top, a thirteen-item list down the left, and one pane
+at a time on the right.
+
+| Part | What is on it |
+|---|---|
+| **Avatar** | Two initials in a circle — `CJ` — with a pencil badge. No photograph on this record |
+| **Name line** | `HPT-001 - CHARLEYS JOSEPH`, and five icons top right: reload, print, org chart, history, ⋮ |
+| **Chips** | ● Active · **Machine Code** 07 · **Old Code** 07 · PRODUCTION FOREMAN · PRODUCTION · 📍 - |
+| **Header fields** | Date Of Birth · Date Of Joining · Leaving Date · Confirmation Date · Company Email · Mobile Number · Reporting Manager · Approving Manager |
+| **Sidebar** | About · Joining Details · Past Company Detail · Organization Info. · Attendance Info. · Employee Identity · PF & ESIC Details · **Personal Details ⌄** · Other Details ⌄ · Separation · Document · Assets **0** · Bank |
+| **Personal Details, opened** | Personal Info. · Address Info. · Family Details · Miscellaneous Info. · Emergency Address · Qualification Details |
+| **Pane** | The heading, a pencil and a reload icon, then the fields in three columns |
+
+Only one pane has been seen open: **Joining Details**. One caret has been seen
+opened: **Personal Details**, and its six sub-items are below.
+
+### Machine Code and Old Code are the two chips that matter
+
+**Machine Code 07** is the fingerprint machine's enrolment number, on the header
+card, beside the name — which tells us Factor HR treats it as identifying rather
+than as a setting. It maps to `attendance_device_id`, and CLAUDE.md §5 already
+says what happens when one of those is wrong.
+
+**Old Code 07** is a field for the system *before* Factor HR. Whoever migrated
+into Factor HR kept the previous identifier on the record, and it is still being
+displayed years later. `custom_factor_hr_id` in [SCHEMA.md](SCHEMA.md) §3 is the
+same idea one migration further on, which is a small confirmation that keeping
+it was right.
+
+### Personal Details, opened — the menu is deeper than ours, not wider
+
+Six sub-items, and the useful half of the finding is that **five of them land on
+fields ERPNext already has**. This is a menu one level deeper than the ERPNext
+record, not a system holding more than it.
+
+| Sub-item | What is behind it here |
+|---|---|
+| **Personal Info.** | `gender`, `date_of_birth`, `blood_group`, `marital_status`, `salutation`, plus `custom_nationality` and `custom_religion` off the 25 Aug backfill |
+| **Address Info.** | `current_address` and `permanent_address`, with their accommodation types. **Free text, one blob each** |
+| **Family Details** | The three backfilled names — father, mother, spouse — and `family_background` |
+| **Miscellaneous Info.** | `bio`, `health_details`, `prefered_contact_email` |
+| **Emergency Address** | `person_to_be_contacted`, `relation`, `emergency_phone_number` — **and no address** |
+| **Qualification Details** | The `employee_education` child table |
+
+Three of the six are worth arguing about:
+
+**Emergency Address is named after the one part ERPNext does not have.** Frappe
+holds a name, a relation and a phone number; Factor HR names the whole pane
+after the address. It is also **empty for everybody on this site** — and this is
+the pane somebody reads at two in the morning when a night shift goes wrong.
+Closing that is a data load, not code, and it belongs before go-live.
+
+**Address Info. having a pane to itself usually means the parts are separate
+fields there** — district, PIN, state. Here it is one free-text blob per
+address, so nothing can be reported on by area. A group that buses people into
+factories may well want that.
+
+**Family Details has nowhere to grow.** The three names came across in the
+backfill and are empty for everybody. But **ERPNext's `Employee` has no family
+member table at all**, so dependants, their dates of birth, and the **nominee**
+have nowhere to go — and the nominee is the one that matters when somebody dies
+in service. §15 flagged Nominee as a section of Factor HR's report screen with
+no equivalent here; this is the second place the same hole shows up.
+
+### Joining Details, transcribed — and the rows with nothing behind them
+
+The pane holds sixteen labels. Ten map onto ERPNext's `Employee`. **The rest do
+not, and those are the finding:**
+
+| Factor HR | Where the answer actually is |
+|---|---|
+| **Group Joining Date** | Nowhere. ERPNext has one joining date; Manna is a group, and this dates service to the group. **It decides gratuity**, so it is a field to add |
+| **Gratuity Start Date** | Nowhere. hrms computes gratuity from `date_of_joining`, which differs from the above exactly for anybody who has moved between Manna companies |
+| **Transfer Date** | On the `Employee Transfer` document, not on `Employee` |
+| **Expected Confirmation Date** | Nowhere. ERPNext holds the confirmation, not the date it was due |
+| **Probation Period In Days** | Nowhere — and without it nothing can compute the row above |
+| **Last Working Date** | Nowhere. Factor HR keeps the date a resignation takes effect apart from the last day somebody was at the gate; ERPNext has one `relieving_date` |
+| **Pay Structure Applied From Date** | On the Salary Structure Assignment, one per revision |
+| **Notice Period For Employer** | ERPNext has one `notice_number_of_days` and does not say whose |
+
+The first two are the same question asked twice, and it is a **payroll** question
+rather than a display one: somebody who joined Manna Rubber in 2013 and moved to
+another Manna company in 2020 has one gratuity entitlement and two joining
+dates, and only one of them is on the ERPNext record. **Worth putting to Manna
+before anybody is paid a gratuity out of this system.**
+
+`Confirmation Date` is the one row that came out better than expected: the
+25 Aug backfill landed Factor HR's own value in `custom_confirmation_date` for
+72 people, where ERPNext's `final_confirmation_date` is empty on every record
+read so far. The screen prefers the backfilled one.
+
+### Rebuilt here
+
+`app/web/src/sections/employees/EmployeeProfile.jsx`, with the field map in
+`src/data/profile.js` — header card, sidebar and pane, in that shape.
+
+- **A card on Employee Master now opens this**, not Employee Detail. That is
+  what §11 recorded the **→** as doing, and it was pointing at a report screen.
+- **Joining Details is transcribed label for label, in its order**, dead rows
+  included. Each says *not on this site* with the reason on hover. A row dropped
+  because we cannot answer it reads as an oversight when the two screens are put
+  side by side, and every one of them is a decision waiting to be taken.
+- **Empty and absent are drawn differently, and that is the point.** *Not set*
+  means the field is on this site with nothing in it — the migration's finding,
+  since it loaded the master and not the paperwork. *No such field here* means
+  ERPNext has no such field, and that is work. Frappe's document endpoint
+  returns every column including the nulls, which is what makes the two
+  separable; the page checks that nulls really are coming back rather than
+  assuming it, and says so in the legend when they are not.
+- **Personal Details is a caret group with its six sub-items under it**, drawn
+  and behaving as a disclosure: opening it lands on Personal Info., closing it
+  leaves the pane where it was and marks the group itself as current, so the
+  list never shows nothing selected. At 900px the whole list becomes one
+  scrolling strip and the children carry the page's wash instead of an indent.
+- **Other Details keeps its caret in Factor HR and is a leaf here.** Nobody has
+  opened theirs, so it holds the three leftover ERPNext fields rather than six
+  invented children.
+- **The panes nobody has screenshotted open say so on the screen.** They carry
+  the fields this site holds under that heading, labelled as ours to argue with
+  rather than as a copy of theirs.
+- **Past Company Detail, Qualification and the transfer history come off the
+  child tables** — the only place in this app they can. §15 had to disable six
+  of its fourteen tick boxes because a list call cannot reach a child table; a
+  document read carries them whole, and this page already makes one.
+- **Assets reads the live register**, filtered to this person's `custodian`, and
+  carries the count on the sidebar item the way Factor HR does. It is 0 on both
+  sides.
+- **Document draws nothing, deliberately.** Attachments are the `File` doctype,
+  which is not on the proxy's allowlist — a token that can read every attachment
+  on the site is not something to hand to a page on localhost.
+- **PF & ESIC is the statutory blocker in one screen**: no UAN, no ESIC number,
+  and no IFSC on Bank. None of the three is on ERPNext's `Employee`, and no
+  Indian return or bank transfer file can be written without them.
+- **Every pencil is disabled** and says why on hover. The dashboard reads.
+- **The report on Employee Detail moved into the store**, so clicking a row
+  there to open somebody's profile no longer throws the report away. Rebuilding
+  one costs the site's daily compute limit.
+
+### Still open
+
+- **The panes themselves, opened.** Personal Details' six sub-items are now
+  known by name; what is *inside* each of the six is not, and neither is any
+  pane but Joining Details.
+- **Other Details, expanded.** It is the one caret still shut. The report
+  screen's Skill Set and Nominee are the likeliest contents, and Nominee is the
+  one with no ERPNext field behind it.
+- **What the ⋮ and the history icon hold.** History is presumably an audit of
+  who changed what, which ERPNext keeps on `Version` and this page cannot reach.
+- **Whether Group Joining Date is per company or per person**, and who sets it
+  when somebody transfers. This is the gratuity question above.
+- **Whether the pencil edits in place or raises a request.** §6 lists an
+  `Employee Profile` approval queue, empty at every look — which suggests the
+  answer is "it raises a request and nobody has ever used it".
+
+---
+
+## 24 · Employees — Salary Master, 29 Aug 2026
+
+The screen §9 could only guess at from its menu entry. It opens **empty**, and
+what it opens with is the whole finding.
+
+### What it draws
+
+> **SALARY MASTER**  ·  three icons hard right: a padlock, an upload, an exit
+>
+> a bar: the status dot · `Search Employee` (magnifier on the right) · `+` ·
+> a small list icon · **List of Employees**, blue-outlined, far right
+>
+> No Employee Selected
+> Please select employee for show salary revisions
+
+### What it settles
+
+- **It is one person at a time**, exactly like Attendance Regularization in
+  §16 — same empty state, same grammar, the noun swapped. Two screens built to
+  the same pattern is a pattern, and it is the one their whole app navigates
+  by: pick a person, then look at their history of a thing.
+- **The unit is a *revision*, not a structure.** Their own word, in their own
+  empty state. A salary structure is what somebody is on; a revision is a dated
+  change to it, and it is the dated part that §12's CTC report cannot do —
+  `ctc` on `Employee` is one undated number.
+- **`List of Employees` is a second way into the same choice**, which is why it
+  is the only coloured control on the bar. Typing is the fast path and the
+  panel is the browsing one; neither is a different screen.
+- **The three title icons are a lock, an import and an export.** An import on a
+  salary master is the most dangerous button in either system, and it sits two
+  clicks from the login.
+
+### What was built
+
+`app/web/src/sections/employees/SalaryMaster.jsx` draws it — the title bar, the
+three icons, the dot, both pickers and the empty state, word for word. Picking
+somebody works and lands on the honest answer: **no revisions for anybody**,
+because a revision needs a `Salary Structure Assignment` and none exist. The
+one figure it can show is `ctc`, and it is labelled as what it is.
+
+Everything that would write is drawn disabled with its reason on hover. The
+proxy's allowlist carries no payroll doctype and that is deliberate rather than
+pending — this process holds a System Manager token, and salary is the one
+table where a read-only window is still a leak.
+
+### Still open
+
+- **The screen with somebody selected.** This is now the screenshot worth
+  having, and the only one that answers what a revision row carries: effective
+  date, gross, the earning heads, who approved it. Everything above is the
+  frame around a list nobody has seen.
+- **What `+` asks for.** It is the form that creates a revision, so it is also
+  the closest thing to a specification of their salary structure.
+- **What the small list icon shows** — never opened, and not guessed at here.
+- **Who can open this page.** Unchanged from §9 and still the one that decides
+  a permission build: if Salary Master is visible to every HR login, the
+  like-for-like in ERPNext is not the default, and per CLAUDE.md §5 an omission
+  there is a leak rather than a lockout.
+- **Open question E1 is still the unlock.** The Salary Register export is this
+  screen for all 504 people at once, and nothing here can be filled without it.
+
+---
+
+## 25 · Leave — the sub-menu, 29 Aug 2026
+
+The Leave module's second-level menu, read off the tenant:
+
+> Apply Leave · Leave Balance Report · All
+
+**Three items, against Attendance's eight.** That is the finding, not a gap in
+the screenshot: leave in this tenant is one form and one report. Neither page
+underneath has been opened, so what follows is what the menu itself settles.
+
+### The one report on it is the one we already hold
+
+`Leave Balance Report` is a Quick Report as well as a menu item — §1 lists it
+under the exports available without asking support, and its numbers are
+transcribed in §4. So of the two real pages on this menu, **one is already
+covered by data in hand**, which is why Leave has never needed a screenshot
+round of its own.
+
+What we hold is the report's *summary* — six types, people with a balance,
+accrued, availed, balance. What is still missing is the per-person opening
+balance behind it, which is open question **D3** and unchanged by this screen.
+
+### Apply Leave is the whole of the write side
+
+One form. There is no separate leave approval page on this menu, because
+approvals live under Dashboard → Approvals (§6, the Leave tab, 3 pending on
+28 Aug). So Factor HR's leave model is: apply here, decide there, report from
+the balance screen — and stock Frappe HR covers all three with `Leave
+Application` plus `Leave Ledger Entry`.
+
+**Nothing on this menu is the accrual rule.** Same shape as the attendance
+policy engine in §10: the configuration that decides the numbers has no menu
+item of its own, so it cannot be recovered from screenshots of this module. It
+has to be asked for. The difference is that this one is a much smaller ask —
+who accrues, how much, monthly or annual, and whether the leave year runs
+January or April.
+
+### What was built
+
+All three now exist in the dashboard, in this order and under these names —
+`app/web/src/sections/leave/`, reached from Leave in the nav.
+
+| Menu item | Page | What is behind it |
+|---|---|---|
+| **Apply Leave** | `ApplyLeave.jsx` | Their screen, control for control — the form, the month calendar and its seven-colour legend, Other Team Member On Leave, and Leave History. It does not submit |
+| **Leave Balance Report** | `LeaveBalances.jsx` | Their export of 23 Aug, unchanged — already built, now under their own name for it |
+| **All** | `LeaveAll.jsx` | The module index, the same shape as Attendance → All |
+
+Two pages we carry that they have no menu item for — **Leave types** and
+**Reports** — are appended after `All` rather than interleaved, so the three
+above still compare item for item. Both existed before this menu was captured;
+`Leave types` is the page that was previously the module's landing page.
+
+**Apply Leave does not write, and says so on the button rather than being
+greyed out.** Two reasons, and only the first is about the page: creating a
+Leave Application is a POST, and the proxy answers GET plus one allowlisted PUT
+(`app/serve.js`); and no leave type has an entitlement, so there is no balance
+for an application to be checked against. The second is the real blocker and it
+is the same one §4 ends on.
+
+### Apply Leave itself, 29 August 2026
+
+Screenshotted at last, and it answers the half-day question §24 was holding
+open. Two columns — the application on the left, a month calendar on the right —
+with Leave History across the bottom.
+
+| Part | What it holds |
+|---|---|
+| Above the panel | the coloured status dot · `Search Employee` |
+| Panel head | **APPLY LEAVE** · search · refresh · import |
+| Row 1 | **Document No** `-` · **Date Of Application** `29-Aug-2026` |
+| Row 2 | **Leave Type** *(Select Leave Type)* · **Available Balance** `0` |
+| Row 3 | **From Date** · **Leave Value** |
+| Row 4 | **Till Date** · **Leave Value** |
+| Then | **Remarks** · **Attachment** *(Choose file / Browse)* · **Email Notification To** (dot + `Search Employee`) · **Submit** / **Cancel** |
+| Right | **August 2026** · Today · ‹ › · the month · the legend · **Other Team Member On Leave** — *No team member on leave* |
+| Below | **Leave History** — Leave Type · From Date · Till Date · Day(s)/Hour(s) · Applied · Status · Last Action By · Last Action On |
+
+**Leave Value is asked per date, and that is the finding.** Full Day / First
+Half / Second Half against *each* end of the range. Frappe HR's `Leave
+Application` carries one `half_day` flag and one `half_day_date` — so a range
+that is half a day at both ends is a shape their form can hold and the doctype
+cannot. It would have to be two applications, or a field added. Our form counts
+it correctly and says where the writing stops rather than rounding somebody's
+leave.
+
+**Available Balance reads `0` on their screen too.** The same zero for a
+different reason on each side, and worth pinning down: on ours it is because no
+leave type has an entitlement, so nothing has been allocated. On theirs it is
+either the same gap or a person with none of that type left — and the screenshot
+was taken with no leave type selected, so it is probably the placeholder. Either
+way it is the number an application is measured against, and it is question
+**D3** again.
+
+**The legend is seven colours**, unspaced as they write them: Absent, WeekOff,
+UnApprovedLeave, Partial, Holiday, ApprovedLeave, OptionalHoliday. Five can be
+answered here — weekly offs and named holidays off the employee's holiday list,
+Open and Approved applications off `Leave Application`, and Partial off
+`half_day_date`. **Absent** needs generated `Attendance` and the site holds
+none. **OptionalHoliday** cannot be filled at all: a stock ERPNext `Holiday` row
+has a date, a description and a weekly-off flag, and no optional flag — Factor
+HR treats optional holidays as a category somebody picks from, and rebuilding
+that is a decision rather than a query.
+
+**Email Notification To is a second employee picker**, which ERPNext has no
+field for: it notifies the `leave_approver`, which nobody has set. The reporting
+manager is offered in its place and labelled as the inference it is.
+
+**Other Team Member On Leave needs a definition of "team".** Theirs has not been
+seen. Ours reads it as everybody reporting to the same manager, falling back to
+the same department where nobody has one — 88 people have no `reports_to` — and
+the page says so rather than leaving it to be assumed.
+
+**Last Action By / On are `modified_by` and `modified`.** Who touched the row
+last, which on an application edited after approval is not who approved it.
+Their column reads as an approval trail; ours is labelled as what it holds.
+
+### Still open
+
+- **The accrual rule.** Unchanged from §4, and now visibly the thing every page
+  on this menu waits for. It is question **D3** and it is one conversation.
+- **What Available Balance shows for somebody who has a balance.** The
+  screenshot was taken with no leave type chosen.
+- **Whether OptionalHoliday is a second holiday list or a flag on the rows.**
+  Decides whether it is a migration or a model change.
+- **Factor HR's definition of a team**, for the panel that uses it.
+- **Whether "All" is a page or the menu spilling over.** Same question as §10,
+  read the same way — as the module index, which is useful either way.
+
+---
+
+## 26 · Loans — the sub-menu, 29 Aug 2026
+
+The last uncaptured menu but one. Four items:
+
+> **Loan Application · Loan Register · Loan Projection · All**
+
+This closes the gap the module coverage table has carried since it was written.
+**Survey is now the only Factor HR menu nobody has looked at.**
+
+### What the menu itself says
+
+Three real pages, and the third is the informative one.
+
+- **Application and Register would be on this menu whatever Manna does.** Every
+  HR product has them and their presence tells us nothing.
+- **Projection only earns a menu item if the schedules are long.** Nobody builds
+  a forward recovery view for an advance recovered out of next month's pay. That
+  points at multi-month loans, which is a materially bigger build than an
+  advance — and it is the first question to ask.
+
+Note also what is **not** there: no approval queue and no disbursement screen.
+§6 lists seven approval tabs and none of them is a loan, so either sanctioning
+happens inside the application itself or it happens off the system entirely.
+
+### Nothing on our site can receive any of it
+
+`hrms` is not installed — the standing blocker for half this nav. Loans carries
+a second one on top of it:
+
+**On Frappe v15 and later the Loan Management doctypes are not part of `hrms`.**
+They were moved out into a separate `lending` app; `Employee Advance` stayed
+behind. [FACTOHR.md](FACTOHR.md) §3 marks Loans **Free** against the older
+layout, and on a v16 site that verdict may cost a third app rather than nothing.
+
+*This has not been checked on a bench.* It is one `bench get-app` either way, but
+it is not the answer the parity table currently gives, and it should be confirmed
+before it is quoted to anybody.
+
+### The blocker is an export, not a build
+
+**None of the nine Factor HR exports carries a loan report.** So we hold no
+outstanding balance for any running loan.
+
+This is the same shape as the leave opening balances (**D3**) and it is worse.
+A wrong leave balance is an argument; a wrong loan balance is money — recovering
+from somebody who has finished paying, or stopping short and writing off the
+rest without meaning to. Outstanding is `disbursed − recovered` and we hold
+neither side of that subtraction, so it cannot be derived, only loaded.
+
+**Ask for the loan register as an export**, the way the Leave Balance Report was
+asked for. Until it arrives the module cannot be migrated, only started fresh —
+which is a legitimate answer if the running count is small, and nobody knows
+whether it is.
+
+### The Loan Application screen, 29 Aug 2026
+
+Photographed at last, and it is a bigger screen than the menu implied: five
+tabs, seventeen fields, an attachment box and an amortization grid.
+
+> **Loan Application · Pre Recovery · Recovery From Payroll ·
+> Stop Loan Deduction · Manual EMI Deduction**
+
+**The form carries a whole lending product.** Interest Type, a schedule, a Loan
+Balance split into principal and interest, and four Perquisites columns —
+Perquisite Rate, Perquisite On, Perk Value, Perk Amount. Held against the
+Projection capture, where the two types in use are *Salary Advance* and *Tour
+Advance* and Include Interest is unticked, the reading is that **the machinery
+is the vendor's and Manna uses some subset of it**. So the lend-or-advance
+question is narrowed rather than closed — but it is now worth asking precisely,
+because the answer is a *setting* over there and an *app* over here.
+
+**Sanctioning happens on this form.** Amount Requested and Sanctioned Amount are
+two fields on one screen with Loan Status beside them, and none of §6's seven
+approval queues is a loan. That confirms what the menu only suggested: whoever
+can open this screen can sanction, and there is no workflow in front of it. Same
+shape as `Additional Salary` under §27, and the same policy question.
+
+**Closure is automatic unless somebody stops it** — Loan Completed, drawn
+read-only, with *Do not auto complete* beside it and Loan Completed On under
+both. A loan can finish its schedule and still be owed, and their form has a
+control for exactly that.
+
+**Four of the five tabs are the recovery lifecycle**, and each is a way for the
+schedule and the payslip to stop agreeing: a repayment outside payroll, a
+deduction inside it, a hold, and an instalment typed by hand. All four exist
+over there because over there they happen — and any of them can leave a balance
+that is neither what the schedule says nor what has been recovered, which is the
+number this section already says has to be loaded rather than derived.
+
+**The rate and the term are not on the form.** They belong to the loan *type*,
+which is also where ERPNext keeps them (`Loan Product`). A rare case where the
+two systems already agree about where a number lives, so that part of the
+migration is a master rather than a mapping.
+
+#### And one thing nobody has costed
+
+**An interest-free advance over ₹20,000 is a taxable perquisite.** Sec 17(2)(viii)
+with Rule 3(7)(i): valued at the State Bank rate on the first day of the year,
+applied to the maximum outstanding monthly balance, less any interest actually
+charged. Exempt in two cases only — an aggregate at or under ₹20,000, and
+treatment of a specified disease, which is what *Loan Required For* on their form
+decides. Their four Perquisites columns are that calculation. **Nothing in
+`hrms` computes it, and neither does the `lending` app** — it is an Indian
+payroll rule, so it lands in the same place as the PT slabs and the bonus
+working: a build, and one that feeds TDS rather than a report.
+
+#### Rebuilt here
+
+`app/web/src/sections/loans/LoanApplication.jsx`, control for control — their
+bar, their five tabs, both columns with the four mandatory fields shaded the
+yellow their form shades them, the attachment box and the grid with its two
+spanned column groups. Nothing on it writes; there is no doctype to write to.
+
+The schedule is the exception and it runs, because it is arithmetic rather than
+storage: reducing balance, flat or interest-free, rounding absorbed by the last
+instalment so the principal column sums to the sanctioned amount exactly, and
+the perquisite computed per month beside it. Rate, term and the State Bank rate
+are asked for in a box of their own labelled **Not on their form**, because they
+are not.
+
+### Still open
+
+- ~~**Does Manna lend, or only advance?**~~ **Answered: they advance.** The Loan
+  Type box on *both* Loans forms — the projection and the register's criteria
+  panel — reads `Salary Advance, Tour Advance`. The Projection item suggested
+  lend and was wrong about it; what it actually implies is a multi-month
+  recovery schedule, which an advance can have.
+- **How many loans are running, and what is outstanding?** Neither is knowable
+  from anything we hold.
+- **Is there interest?** An interest-free advance needs no accrual and no rest
+  calculation, and is a much smaller build.
+- **Up to what, and on whose signature?** *Where* is answered: sanctioning
+  happens on the application itself, with no approval in front of it — see the
+  Loan Application capture above. The limit, and whether it is per company or
+  group-wide, is still a policy question and impossible to guess.
+- **What happens to a balance when somebody leaves?** 344 people have left over
+  the years. Deducted from the final settlement, written off, or chased — and
+  the register cannot have a Status field until this is answered.
+
+
+---
+
+## 27 · Payroll — the sub-menu, 29 Aug 2026
+
+Nine items, read off the tenant's left-hand nav:
+
+> **Adhoc Payments/Deductions · Salary Process · Final Settlement ·
+> IT Declarations · Bank Transfer · Bonus Working Report · Salary Payslip ·
+> Salary Register · Prof. Tax Statement**
+
+**The capture is cropped at the top.** Whatever sits above Adhoc Payments is
+unread, so it is left blank rather than guessed at — §1 already has their
+Payroll Summary from the dashboard, and Final Settlement is the screen §1 read
+as "F&F Summary". Their menu's spelling is the one used on the tab here.
+
+**This changes nothing about the decision.** Payroll is calculated by hand and
+section E is out of the initial release — 23 Aug 2026, still true. What the menu
+gives is the *price* of the decision, which is the thing anybody will be asked
+for the moment it is revisited.
+
+### Seven of the nine are stock Frappe HR
+
+| Factor HR page | What would stand behind it | |
+|---|---|---|
+| Adhoc Payments/Deductions | `Additional Salary` | stock |
+| Salary Process | `Payroll Entry` → `Salary Slip` | stock |
+| Final Settlement | `Full and Final Statement` + `Gratuity` | stock |
+| IT Declarations | `Employee Tax Exemption Declaration` / `Proof Submission` | stock |
+| Bank Transfer | `Make Bank Entry` + the `Bank Remittance` report | **part** |
+| Bonus Working Report | nothing | **build** |
+| Salary Payslip | `Salary Slip` + a print format | stock |
+| Salary Register | the `Salary Register` query report, same name both sides | stock |
+| Prof. Tax Statement | a salary component with a condition | **build** |
+
+That is the useful finding about the module everybody assumes is the expensive
+one: **the expense is not the payroll engine, it is the data and the two India
+statutory reports.**
+
+### The two that are not free are both statutory reporting
+
+- **Bonus Working Report.** The Payment of Bonus Act working — who is eligible
+  (wage up to ₹21,000, thirty working days), what it is computed on (₹7,000 or
+  the minimum wage, whichever is higher), and the rate between 8.33% and 20%.
+  `Additional Salary` *pays* a bonus; nothing computes one, and nothing prints
+  Form C.
+- **Prof. Tax Statement.** PT is a state levy and Frappe HR models it as a
+  salary component with a condition — the mechanism ships, the slab table and
+  the statement do not. Same shape as the LWF finding in §14.
+
+### Three blockers that are not payroll at all
+
+1. **E1.** The Salary Register export is one click away in their Quick Reports
+   and nothing under this menu can be built without it.
+2. **PAN is on 2 of 504 people.** No PAN, no TDS computation, and a flat 20%
+   under §206AA. IT Declarations is a collection exercise before it is a build.
+3. **There is no IFSC field on ERPNext's `Employee`.** §23 found the same hole
+   from the profile side. No Indian bank transfer file can be written without
+   it, and the bank's own upload format is a per-bank build on top.
+
+### And one trap worth writing down before the first run
+
+`Payroll Settings` has **Consider Unmarked Attendance As**. Set to *Absent*, a
+day the shift job has not yet processed is a day's pay gone — which is the same
+class of mistake as the one §5 of [../CLAUDE.md](../CLAUDE.md) is about, arriving
+from the payroll side instead. Read it before anybody is paid from this site.
+
+### Adhoc Payments/Deductions, the screen itself — 29 Aug 2026
+
+Photographed. A title bar with six icons pinned right — **+Add, edit, delete,
+search, import, export** — then one bar of five filters:
+
+> **Employee** (a status dot and Search Employee) · **Year** · **Payment
+> Process** (*Salary*) · **Payroll Type** · **Day**
+
+Only Payment Process carried a value, and none of the four lists has been
+opened. Under the bar, four columns — DESCRIPTION, EARNING, DEDUCTION,
+REFERENCE / REMARKS — over one heading and four rows:
+
+> **CTC Wise Input** → GRATUITY AMOUNT MANUAL · HEALTH INSURANCE CTC ·
+> **1 REGULAR EARNING** · FOOD ALLOWANCE · LEAVE TRAVEL ALLOWANCE
+
+The capture is cropped below the last of them, so the list has no end here and
+nothing on our side states a total. REGULAR EARNING sits at the same indent as
+the component rows but carries a 1 and is drawn in their link blue: heading or
+row is not resolvable from the capture, and is left unresolved.
+
+**The two amount cells are blank because they are inputs.** So this screen is
+not a list of payments already made — it is the component list, and somebody
+types an amount against a person into it. Three findings follow:
+
+1. **Their one screenful is our N documents.** `Additional Salary` is one
+   document per person, per component, per date. Forty people taking a food
+   allowance is one grid there and forty rows here, and any import written
+   against **E1** has to unfold it that way round.
+2. **Two of the rows are not adhoc payments at all.** Gratuity is computed from
+   service length by a `Gratuity Rule`; Health Insurance CTC is employer cost
+   carried in the CTC. Both are salary-structure components here, not
+   `Additional Salary`. One screen there is three doctypes here, and the labels
+   do not show the split.
+3. **Nothing approves any of it** — the open question above, arriving from the
+   screen instead of from the menu.
+
+Drawn at `app/web/src/sections/payroll/Adhoc.jsx`, rows in
+`src/data/payroll.js`. The employee picker is live because `Employee` is; the
+four lists are dead and each says which kind of dead; +Add and Import open the
+job on the site.
+
+### Salary Process, the screen itself — 29 Aug 2026
+
+Photographed on **MAR 2026**. Three lists — **Year** (*2025-26*), **Payroll
+Type** (*Monthly*), **Process For** (*All Employees*) — over a strip of twelve
+month chips, April first, with a **+** on the end. Then one summary line:
+
+> MAR 2026 · PAYROLL DATE: 01 Mar – 31 Mar 2026 | CALENDAR DAYS 31 ·
+> ATTENDANCE DATE: 01 Mar – 31 Mar 2026 | CALENDAR DAYS 31 ·
+> STATUS: **NOT GENERATED**
+
+six tiles, Generated By / Generated On with a **Payslip Remarks** box, and
+**Start Salary Process** (split), **Finalize Process** and a gear.
+
+| Tile | Read | What stands behind it here |
+|---|---|---|
+| Total employees *(incl. left)* | **160** `+9` `-13` | `Employee` — joiners off `date_of_joining`, leavers off `relieving_date` |
+| Pending count | **147** | `Employee`; nothing is processed, so pending is everybody |
+| Process count | **0 / 160** | `Salary Slip` — none, and no `Payroll Entry` has ever run |
+| Stop salary | 0 | **nothing** |
+| Stop payment | 0 | **nothing** |
+| Total arrears | 0 / 0 | `Additional Salary` with a back-dated `payroll_date` |
+
+**147 is exactly 160 − 13.** Which reads as leavers dropping out of the
+ordinary run and going through Final Settlement instead. It is a reading of two
+numbers rather than something their screen says, and it decides whether a
+part-month leaver is paid here or on the F&F screen — worth confirming before
+anybody relies on it.
+
+**Stop Salary and Stop Payment have no equivalent at all.** Frappe HR ships no
+flag on `Employee` or `Salary Slip` that holds one person out of a run, and the
+two are not the same hold — one stops the salary, the other stops only the
+payment of a slip that still generates. Both are a custom field plus a rule
+inside the run. Both read zero in the capture, so how often they are used is
+unknown.
+
+**Their two date ranges are separate controls**, and identical here. That is how
+an attendance cut-off other than the month end would be said — 26th to 25th,
+say. A `Payroll Entry` has one period for both, so a cut-off would be a custom
+field and a change to how attendance is counted, not a setting.
+
+Drawn at `app/web/src/sections/payroll/SalaryProcess.jsx`. The year, the month
+strip and everything on the summary line are live — it is date arithmetic off
+the same `fyMonths()` the payslip form walks. Everything below it is payroll
+state, so the tiles come off `Employee` where `Employee` can answer and are
+drawn as a dash where nothing here means what the tile means. `relieving_date`
+is a probe made when the screen is first opened, not a field on the dashboard's
+own load. All three buttons write, so all three open on the site — and the gear
+goes to `Payroll Settings`, which is where the trap below lives.
+
+### Rebuilt here
+
+One page per item on their menu, and nothing else:
+`app/web/src/sections/payroll/`, with the mapping tables in
+`src/data/payroll.js`. Every one carries the **Deferred** badge, and the ones
+that show a number say where it came from — no payroll doctype is on the proxy's
+allowlist, so every figure on them is read off `Employee`, off `Company`, or off
+the Factor HR export, and is labelled as such.
+
+**Payroll Summary and Quick Reports · Payroll were dropped, 29 Aug 2026.**
+Neither was on their menu. The first was §1's reading of their dashboard tile
+and drew nothing but its own title; the second was a panel of five report names
+already recorded above and in `FH_REPORTS`. Clicking Payroll in the rail now
+lands on **Adhoc Payments/Deductions**, the first item of their own menu — the
+same rule On Board, Attendance and Leave already follow.
+
+Three of them do say something this site can answer today:
+
+- **Salary Process** counts holiday lists and `Attendance` rows, because those
+  two decide payment days and both are the real blocker.
+- **Bonus Working Report** is the one page under this menu that computes rather
+  than describes, and it is built to their form: From and Till as *months*,
+  Employee Status as a chip box, Particular Employee, Filter By, Output
+  Currency, Report Output and With Logo, then their five buttons. Their range
+  read Apr-23 to Mar-27, which is four accounting years — so the working is one
+  row per person **per accounting year**, April to March, sectioned and never
+  added across. Every figure on it is a floor, and for three separate reasons
+  rather than one: eligibility is tested on CTC ÷ 12 because no basic-plus-DA
+  figure exists (so **Yes** and **No** are certain and the third value is
+  **Unknown**); sec 12's basis is ₹7,000 because no minimum wage notification is
+  held anywhere; and sec 8's thirty *working* days is tested on days in service
+  because there are no `Attendance` rows. The output is the same one HTML
+  document the other reports print, so Excel, PDF, Word, Print and Preview
+  cannot disagree with the screen.
+- **Prof. Tax Statement** lists the four companies and marks Manna Tyre UAE as
+  the one none of it applies to. One salary structure cannot serve both
+  regulators, which is F4 arriving a third time.
+
+### Still open
+
+- **What sits above Adhoc Payments on their menu.** One screenshot.
+- **Which state each Indian company is registered in for PT**, and in Kerala,
+  which local body. One answer settles the slabs, the periodicity and how many
+  components exist. Ask it with **E2**, not separately.
+- **Whether adhoc pay needs approving.** There is no workflow on
+  `Additional Salary`, so today anybody who can create the doctype can pay
+  somebody. A Workflow plus a queue row is about a day — but it is a policy
+  question first.
+- **How a payslip reaches somebody with no email and no login.** 0–4 web logins
+  a day across the company says the portal is not the answer, which leaves paper
+  or the phone app.
+- **Which bank each company pays from**, and whether the group pays through one
+  account or four.
+
+
+---
+
+## 28 · Payroll — FNF & Separation, 29 Aug 2026
+
+Their Final Settlement menu item opens a screen headed **FNF & Separation**,
+and it is three screens rather than one — three numbered stages across the top:
+
+> **① Separation · ② Exit Employees Clearance · ③ Final Settlement (16)**
+
+The third was the one open in the capture. Two bars of filters sit under the
+stages, and under those a card per person.
+
+| Bar | Controls, left to right |
+|---|---|
+| First | `Last 50 Activities` · radio **Date of Leaving Range** / Settlement Date Range · `YEAR 2026- 2027` · the status dot · `Search employee…` |
+| Second | a tick-all box · `DATE FROM` · `DATE TILL` · `STATUS: FNF Not Done` · `SEARCH` · refresh, download, upload |
+
+Each card carries a photo circle, `MRP-032 MR ARUN BENG`, the designation under
+it, a green **FNF Not Done** chip, and three underlined marks on the right —
+**SEPARATION** and **CLEARANCE** green, **FNF** amber. Below that: `DOJ`, `DOL`,
+`EXP DOL`, `FNF PROCESSED DATETIME`, and four action icons.
+
+### The zero on their summary tile is a backlog
+
+§1 read their F&F Summary as three zeroes — *0 processed, 0 on notice, 0 exit
+clearance pending* — and this repo has been repeating "all zero in Factor HR"
+ever since. **Sixteen people are in the settlement stage.** Both readings are
+true and they are not the same sentence: nothing has been *processed*, and
+sixteen are *waiting*. The distinction matters because it is the number the
+migration gets sized from, and a summary tile that reads zero when there is a
+queue behind it is exactly how a backlog gets carried across unnoticed.
+
+### DOL and EXP DOL are empty on every visible row
+
+These are people their system has already put in a leaving queue, and it holds
+neither the day they left nor the day they are expected to. So whatever puts
+somebody into this list, **it is not a date of leaving** — which is worth
+stating twice, because the filter directly above the rows is a *Date of Leaving
+Range*, and a range over a column that is empty for everybody returns nobody.
+
+The reading is that these sixteen are on notice rather than gone: somebody
+serving notice is still an active employee, and their DOL is not written until
+they actually go.
+
+### What would stand behind it
+
+| Their stage | Ours | |
+|---|---|---|
+| Separation | `Employee Separation` | stock |
+| Exit Employees Clearance | the activity table *inside* `Employee Separation` | stock |
+| Final Settlement | `Full and Final Statement` + `Gratuity` | stock |
+
+All three ship with Frappe HR, which is not installed here — and no payroll
+doctype is on the proxy's allowlist even once it is.
+
+### Rebuilt here
+
+`app/web/src/sections/payroll/FnF.jsx`, with the capture in `FH_FNF_*` in
+`src/data/payroll.js`. The three stages are drawn as tabs; the Final Settlement
+one carries a real list, and the other two say only that they were never opened.
+
+The list is **ours, not theirs**. It is everybody this site says is leaving or
+has left — a relieving date, a resignation letter date, *or a status that is no
+longer Active*. The third test is what their capture teaches: a filter on
+`status != "Active"` would return the people who have already gone and miss the
+entire queue the screen exists to chase. The exit fields come off `Employee` in
+a read of this page's own (`loadSeparations`), guarded and never fatal.
+
+Three of their four columns can be answered honestly and one cannot:
+
+- **DOJ** and **DOL** are `date_of_joining` and `relieving_date`, read.
+- **EXP DOL** is **computed, not stored** — `resignation_letter_date` plus
+  `notice_number_of_days`. ERPNext has no expected-last-day field, and the page
+  says so where it draws the column.
+- **FNF PROCESSED DATETIME** is always a dash, and the table under the list says
+  it can never be anything else here.
+
+### Still open
+
+- **What their ① and ② screens look like.** Two screenshots. Neither has been
+  opened, and nothing about them is guessed at on our side.
+- **Whether the sixteen are on notice or already gone.** The reading above is a
+  reading. One column of their export settles it.
+- **Which departments sign off an exit clearance, and in what order.** That list
+  is the `Employee Separation` activity table, and it is a policy answer rather
+  than a build.
+- **What happens to a running loan balance at settlement** — §26 asks the same
+  question from the other side, and it is the same answer.
+
+
+---
+
+## 29 · Payroll — Salary Payslip, 29 Aug 2026
+
+Their **SALARY PAYSLIP** screen, captured whole: one bar of filters, two tabs,
+and three checkboxes.
+
+| Bar, left to right | Value in the capture |
+|---|---|
+| `PARTICULAR EMPLOYEE` — status dot + `Search Employee` | empty, dot on All |
+| `EMPLOYEE STATUS` | `All` |
+| `Filter By` | empty |
+| `PERIOD TYPE` | `Single Period` |
+| import arrow, refresh, `Generate` split button | — |
+
+The tabs are **BASIC** and **ADVANCE**, where every other report of theirs says
+*Report Criteria* and *Advance*. Only BASIC was open.
+
+| BASIC | Value |
+|---|---|
+| `PAYROLL TYPE` | `Monthly` |
+| `YEAR` | `2025-26` |
+| `REPORT OUTPUT` | `PDF` |
+| `MONTH` | empty |
+| `PAYSLIP FORMAT` | `Format 7` |
+| ☐ Generate report for employees without email | off |
+| ☑ Include Zero Value Employees | **on** |
+| ☐ Include IT Statement | off |
+
+### The three checkboxes are the finding, not the six dropdowns
+
+Every one of them is about **delivery** rather than arithmetic: who gets a
+document, whether somebody with nothing to pay still gets one, and whether the
+tax sheet rides along. Factor HR is not only computing payroll on this screen,
+it is mailing a hundred and sixty people a PDF every month — and that is the
+part of E1 nobody has costed. A payroll engine that produces correct numbers
+and cannot post them is not a replacement.
+
+### Format 7 means there are at least seven
+
+A payslip layout is a numbered library on their side and somebody chose the
+seventh. Here it is a Print Format against `Salary Slip`, and stock ERPNext
+ships one. **How many of their seven are actually in use is unknown**, and it is
+a real number of days either way — worth asking before payroll is scheduled.
+
+### PAYROLL TYPE now has one known value
+
+The same control sits on their Adhoc Payments screen (§27), where it was empty
+and was recorded as unknown. This capture is the first time it has held
+anything: `Monthly`. The rest of its list is still unopened.
+
+### Rebuilt here
+
+`app/web/src/sections/payroll/Payslip.jsx`, with the capture in `PSL_*` in
+`src/data/payroll.js`. The form is copied control for control, including the
+controls nothing here can honour.
+
+**The page produces the envelope, not the amounts.** Who a payslip would go to,
+for which month, at which address, is answerable off the `Employee` master.
+What would be *printed* on it is not answerable at all — no payroll doctype is
+on the proxy allowlist and the site holds no salary structure — so the earnings
+and deductions tables are drawn and left **empty** rather than filled with a
+number derived from CTC. A payslip that is nearly right is worse than a blank
+one, because somebody will be paid from it.
+
+Four of the eleven columns are blank on every row, and they are the four payroll
+would have filled: Payment days, Gross, Deductions, Net. CTC is real and is
+labelled as what it is — an annual cost, not a month’s pay.
+
+What the page *can* answer is the delivery question their own form keeps asking.
+Pressing Generate probes `company_email`, `personal_email` and `prefered_email`
+off `Employee` — a probe rather than three more fields on the page load, because
+a field this site does not carry would fail the read that draws the whole
+dashboard. The count of people with nowhere to send a payslip is then a real
+number rather than an estimate.
+
+Their *without email* box is only applied when those addresses actually came
+back. With nothing to filter on it would silently drop all 160 people and read
+as an empty payroll, and refusing somebody who is there is the expensive
+mistake — CLAUDE.md §4.
+
+### Still open
+
+- **Their ADVANCE tab.** One screenshot. Nothing is drawn under it here.
+- **What else PERIOD TYPE offers.** The name implies a multi-period sibling; the
+  list was never opened, and what a payslip covers is not a thing to guess at.
+- **Which of the seven payslip formats are in use**, and whether any of them is
+  contractual.
+- **How the slips are delivered, and to whom.** The line this page carried
+  before today — *"getting it to 160 people is the part nobody has decided"* —
+  now has half an answer: it can say how many of them have an address. Who
+  sends, from which mailbox, and what happens to the ones with no address, it
+  cannot.
+
+## 30 · Payroll — Salary Register, 29 Aug 2026
+
+Their **SALARY REGISTER** form, captured whole. It is the payslip screen's
+near-twin — same chrome, same Payroll Type / Year / Month — with the three
+checkboxes replaced by one chip box and two controls of its own.
+
+| Row | Controls, left to right | Value in the capture |
+|---|---|---|
+| tabs | `BASIC OPTION` · `ADD ADDITIONAL COLUMN`, then refresh and a `Generate` split button | BASIC OPTION open |
+| 1 | `SELECT EMPLOYEE` — status dot + `Search Employee` + import arrow | empty, dot on All |
+| 1 | `EMPLOYEE STATUS` | `All` |
+| 1 | `FILTER BY` | empty |
+| 2 | `PAYROLL TYPE` | `Monthly` |
+| 2 | `YEAR` | `2025-26` |
+| 2 | `MONTH` | empty |
+| 3 | `OUTPUT CURRENCY` | `Default` |
+| 3 | `GROUP BY` | `-- Select --` |
+| 4 | `OTHER OPTIONS` | five chips, all present |
+
+The five chips, in their order: *Include Employee Master*, *Hide Old Code*,
+*Hide Zero Value Columns*, *Include Zero Value Employees*, *Auto Correct Bank
+Account Number*.
+
+Note where the two buttons sit. **Refresh and Generate are on the tab row here**,
+where every other report of theirs carries them on the filter bar. Same controls,
+different furniture.
+
+### Two of the five chips are not options, they are questions
+
+- **Hide Old Code** says their system remembers a code somebody was known by
+  before. `Employee` carries one, `employee_number`, and nothing that remembers
+  a former one — so whether the Factor HR codes survive the migration at all is
+  a decision, not a checkbox.
+- **Auto Correct Bank Account Number** *writes*. A register run repairs the
+  employee master as it goes. Whatever the intent, it means the act of printing
+  a report edits records, and that is worth knowing before it is switched on
+  anywhere near a live site.
+
+### ADD ADDITIONAL COLUMN was not opened
+
+Only the tab's name has been seen, and the name alone carries a finding: **their
+register's columns are chosen per run.** On our side that is a Query Report with
+its own column set, or a Script Report — so how configurable the register has to
+be is a decision to take before E1 is unpacked, not after.
+
+### Rebuilt here
+
+`app/web/src/sections/payroll/SalaryRegister.jsx`, with the capture in `SREG_*`
+in `src/data/payroll.js`. The form is copied control for control, and Generate
+runs — over the `Employee` master, which is the only thing it is allowed to read.
+
+Six of the ten columns are blank on every row, and they are the six the register
+exists for: Payment Days, LWP, Gross, Total Deduction, Net Pay — and each is
+blank for *two* independent reasons, no readable payroll doctype and no
+generated `Attendance`, so fixing either alone would change nothing. **They are
+blank rather than zero**, and the page draws the difference rather than
+footnoting it: a zero is a figure somebody can be paid.
+
+`CTC ÷ 12` is the one money column with anything in it, off the master, and it
+is labelled as what it is — what somebody is contracted for, not what a month
+paid them.
+
+Of the five chips, two do something (Include Employee Master appends the master
+columns; Include Zero Value Employees filters on the master's CTC, which is the
+nearest question this side can ask). The other three are drawn, dashed, and each
+says what it is short of when it is picked up or put down.
+
+`OUTPUT CURRENCY` offers only `Default`, and that is the finding rather than a
+gap in the copy: `Company` is read here without `default_currency`, and one of
+the group's companies is in another country. A register that adds a dirham
+column to a rupee column is wrong in a way no total shows.
+
+### Still open
+
+- **ADD ADDITIONAL COLUMN.** One screenshot, and with it whether their register's
+  column set is per-run configuration we have to match.
+- **What else PAYROLL TYPE offers.** Still `Monthly` and nothing else, on this
+  screen as on the payslip and the adhoc one. Whether the factories run a weekly
+  or fortnightly payroll is a policy answer nobody has given.
+- **The currency per company**, without which a group-wide register cannot total.
+- **E1 itself.** `REGISTER_COLS` at the foot of the page is the acceptance test:
+  compare it column for column when the export lands, before anybody agrees a
+  go-live date.
+
+
+---
+
+## 31 · Loans — Loan Register, the criteria panel, 29 Aug 2026
+
+Their **Loan Register** opens on a report criteria panel: nine controls down one
+column, three buttons under them.
+
+| Control | Value in the capture |
+|---|---|
+| `Employee Status` | `Active, Inactive, Suspended, Tempo…` — clipped at the edge of the box |
+| `Particular Employee` | empty, with a `…` picker beside it |
+| `From Date` | `01-Apr-2025` |
+| `Till Date` | `31-Aug-2026` |
+| `Loan Type` | `Salary Advance, Tour Advance`, with a green tick and a red cross beside it |
+| `Filter By` | empty |
+| `Group By` | empty |
+| `Report Type` | `Month Wise Recovery` |
+| ☐ Exclude Zero Balance Loans | off |
+
+Buttons: **Generate · Reset Fields · Close**. No Schedule Report and no Generate
+In Background, both of which their attendance reports carry.
+
+### It is the Loan Projection form with two controls swapped
+
+Same status box clipped at the same word, same two loan types, same 01-Apr-2025
+to 31-Aug-2026 window. Include Principal and Include Interest are gone; Report
+Type, Group By and Exclude Zero Balance Loans stand in their place.
+
+**So the two Loans reports are one query with a Report Type on it.** Worth
+knowing before either is quoted as a separate build, and worth knowing when the
+export is finally asked for — one request can cover both.
+
+It is also a second, independent sighting of everything the projection capture
+established: the advance-not-loan finding does not rest on one screenshot.
+
+### Month Wise Recovery names the schedule
+
+A month-wise recovery report only exists if recovery runs over months. The
+seventeen-month default window said the same thing from the other side; this
+says it in a field name.
+
+`Employee Advance` — which is where advances live, and which stayed in hrms when
+Loan Management moved out to the separate `lending` app — **carries no
+schedule**. It is one document, one amount, claimed and settled. An advance
+recovered over months needs the instalment plan and the deduction rows built on
+top of it, and that is the whole of the Loans build. It is much smaller than a
+lending ledger and it is not nothing.
+
+### Exclude Zero Balance Loans says the closed ones are kept
+
+A register that can *hide* a settled loan is a register that still holds it. So
+when the export is asked for, **ask for it with that box unticked** — the
+history is what makes an opening balance checkable, and it is the one thing
+nobody can reconstruct later.
+
+### Rebuilt here
+
+`app/web/src/sections/loans/LoanRegister.jsx`, with the capture in the LOAN
+REGISTER block of `src/data/loans.js`. The form is drawn control for control,
+and shares `LOAN_TYPES`, the clipped status list and `monthsBetween` with the
+projection page — two reports over one range must not each round a part-month
+their own way.
+
+Generate produces the recovery grid **at full size and empty**: a row per month
+in the range, a column per ticked loan type, and every cell a dash. Drawn at
+size rather than replaced by a sentence, because a report that quietly shrinks
+to fit what it can answer hides how much of it is missing.
+
+Two things on the output are real and are labelled as such:
+
+- **The months**, off the date range.
+- **The population**, off `Employee` — how many people the status and employee
+  filters leave in scope.
+
+Filter By and Group By are meant to section the recovery grid. With no recovery
+to section they section the population it would have been recovered *from*,
+which is the one thing under the form that is read off the site, and the page
+says that is what happened. Exclude Zero Balance Loans is drawn and left
+working: it empties the report completely, which is the honest consequence of
+every balance being zero.
+
+### Still open
+
+- **What else Report Type offers.** One value, and the list was never opened. If
+  there is an outstanding-balance report behind it, that is the export to ask
+  for rather than this one.
+- **How many advances are running, and what is outstanding.** §26's question,
+  unchanged and still the blocker. Neither side of `disbursed − recovered` is
+  held here.
+- **Over how many months an advance is recovered, and who decides.** The form
+  proves it is more than one; nothing says whether it is three or thirty.
+- **Whether the clipped fourth status is a fifth status or their spelling of
+  one of ours.** Two captures, both clipped at `Tempo`. One click on that box
+  settles it.
+
+## 31 · Loans — Loan Projection, 29 Aug 2026
+
+Their **LOAN PROJECTION** criteria panel: six controls down one column, two
+checkboxes, three buttons. It shares its first six boxes with the Loan Register
+panel — same chrome, as everywhere in this product.
+
+| Control | Value in the capture |
+|---|---|
+| `Employee Status` | `Active, Inactive, Suspended, Tempo…` — **clipped at the box edge** |
+| `Particular Employee` | empty, with their `…` picker beside it |
+| `From Date` | `01-Apr-2025` |
+| `Till Date` | `31-Aug-2026` |
+| `Loan Type` | **`Salary Advance, Tour Advance`**, with a green tick and a red cross |
+| `Filter By` | empty |
+| ☑ `Include Principal` | **on** |
+| ☐ `Include Interest` | **off** |
+| buttons | `Generate` · `Reset Fields` · `Close` |
+
+No Schedule Report and no Generate In Background, both of which their attendance
+reports carry.
+
+### Two of §26's five open questions now have an answer
+
+- **"Does Manna lend, or only advance?"** The Loan Type box reads *Salary
+  Advance, Tour Advance*. **Both are advances** — money paid early and recovered
+  out of payroll, not money charged for. And it is better evidence than a
+  dropdown would have been: it is what somebody actually selected, not what the
+  product offers.
+- **"Is there interest?"** It is a checkbox, and it is **unticked**. So interest
+  exists over there — the box would not be drawn otherwise — but the projection
+  somebody ran did not ask for it.
+
+Together those move the likely shape of this module off the `lending` app —
+which on Frappe v15 and later is a third `bench get-app` with an accounting
+build behind it — and onto `Employee Advance`, which stayed in hrms. **That is
+the whole spread of the Loans estimate**, and it is not yet closed: one
+screenshot of their Loan Application would close it.
+
+### "Projection" is their word for a schedule
+
+The window runs **01-Apr-2025 to 31-Aug-2026** on a form captured on 29 August
+2026. Seventeen months, and most of them already paid. So this is not a
+forecast: it prints every instalment in a window, behind and ahead alike.
+
+That matters for what has to be built. A forward view of the next few months
+could be computed on demand; a schedule that reaches back two fiscal years has
+to reconcile against what was actually deducted — which means the recovery rows
+have to exist and be queryable, not just the plan.
+
+### The status box disagrees with ours again
+
+`Active, Inactive, Suspended` and a fourth value cut off at `Tempo`.
+`Employee.status` offers Active, Inactive, Suspended and **Left**, and has
+nothing temporary on it. Whether their fourth is a fifth status or their
+spelling of one of ours cannot be told from the capture and is not guessed at —
+the form draws the three that are legible, offers `Left` because 344 people have
+one, and says the fourth was clipped.
+
+### Rebuilt here
+
+`app/web/src/sections/loans/LoanProjection.jsx`, with the capture in `LP_*` and
+`PROJ_COLS` in `src/data/loans.js`. The four constants the Register panel shares
+with it — the statuses, the truncated fourth, and the two loan types — are
+defined once and read by both, because the same box recorded twice in two
+spellings is how two forms end up disagreeing about who is in scope.
+
+Generate runs and produces the **shape**: the window unfolded month by month
+against the selected loan types, which is the report somebody has to fill. The
+months, the rows and the columns are all real arithmetic on the controls —
+change a date and the rows change; clear a loan type and half of them go;
+untick a checkbox and its column goes. Every **figure** is blank, and blank
+rather than zero: a zero here reads as an instalment somebody has already paid.
+
+An empty status box is treated as *no filter*, not as *nobody*, and the control
+says so where it happens. Leaving somebody out of a recovery schedule is how a
+balance quietly stops being recovered — CLAUDE.md §4.
+
+Their `Close` has nothing to close: theirs is a dialog over a list, and this
+page *is* the form. It puts the report away instead and says why. `Reset Fields`
+restores the capture by construction — its defaults are read off the same
+constants the form is drawn from, so a value corrected in `data/loans.js` cannot
+leave the button behind.
+
+### Still open
+
+- **What the clipped status says.** One screenshot of the open box.
+- **Whether interest is ever charged.** The box exists; nobody has said Manna
+  ticks it. This is the difference between a deduction component and the
+  `lending` app.
+- **How many loans are running and what is outstanding.** Unchanged from §26:
+  none of the nine Factor HR exports carries a loan report, so `disbursed −
+  recovered` has neither side. It cannot be derived, only loaded — **ask for the
+  loan register as an export.**
+
+
+---
+
+## 32 · Payroll — Bank Transfer, 29 Aug 2026
+
+Both tabs photographed. It is the first screen of theirs seen here that is not a
+form above a report: a **rail of filters down the left** and a **preview panel**
+beside it.
+
+| Part | What the capture holds |
+|---|---|
+| tabs | **`Regular`** · `Release Held Salary` |
+| rail | a `Search all filters` box, then three shut groups — **`Payroll Details`** · **`Employee Selection`** · **`Bank Details`** — then `Reset` |
+| panel title | `Report Preview` on Regular, **`With Held Salary`** on the second tab |
+| panel buttons | `Show Amounts` · `Generate Payment File` · `Hold Salary Register` / **`Release Salary Register`** · **`Preview`** |
+| panel body | `No Data Available` — *Apply filters and click Preview to view data* |
+
+**Both captures are of an empty screen and all three groups are shut**, so what
+is under them has not been seen. Nine fields are drawn here in their place and
+every one of them is ours, said on the page — the same call §20 makes about
+Work Pattern, and a safer one here, because what a bank line needs is not a
+matter of opinion.
+
+### The second tab is the finding, and it is not a screen
+
+`Release Held Salary`, with a register and a payment file of its own, means
+Factor HR **holds somebody's pay as a state on the payroll** and releases it
+later. §27's Salary Process capture shows the same thing from the other side:
+two separate tiles, **Stop Salary** and **Stop Payment**, which are two
+different holds — one stops the slip, the other stops only the money.
+
+Frappe HR ships neither. No flag on `Employee`, none on `Salary Slip`, and no
+document that means *this person's money is withheld and will be released*. So
+it is a custom field plus a rule inside the run — and possibly a document with
+an approval on it, if a hold is ever disputed.
+
+**It is a cutover question before it is a build question.** Anybody held on the
+day the group moves is money that has to land somewhere here. Two answers
+settle the shape: *is anybody held today*, and *what is a hold for* — a
+disciplinary matter, an unreturned asset, a disputed final settlement.
+
+### Why no payment file can be written, in four parts
+
+1. **The amount.** Net pay is a `Salary Slip` figure. No payroll doctype is on
+   the proxy's allowlist (`app/serve.js`), and no slip has ever been generated
+   on this site. Two independent reasons — fixing either alone changes nothing.
+2. **The IFSC.** **There is no such field on ERPNext's `Employee`.** §23 found
+   the same hole from the profile side and §27 listed it as one of three
+   blockers. It is a custom field, then 160 values only Factor HR holds, then a
+   check — a wrong branch code is a payment that bounces a week after everybody
+   was told they were paid.
+3. **The layout.** A payment file is written in one bank's own format; HDFC,
+   ICICI, SBI and Federal differ in column order, header and encoding. **Which
+   bank each company pays from is still open** — §27 already asks it.
+4. **The debit side.** `Bank Account` is not on this proxy's allowlist, so the
+   account the money would leave cannot even be read. It is per company, so
+   four companies is four files in the same month.
+
+### Rebuilt here
+
+`app/web/src/sections/payroll/BankTransfer.jsx`, with the capture in `BT_*` in
+`src/data/payroll.js` and the rail's own CSS under *the Bank Transfer screen* in
+`index.css`.
+
+The panel is empty until `Preview` is pressed, exactly as theirs is — that is
+what makes Preview the first thing anybody touches, and a page that listed 160
+people on open would be answering a question nobody asked.
+
+What Preview produces is **not a payment file and is never described as one.**
+It is the readiness check underneath it: everybody in scope, with salary mode,
+bank, account number and IBAN read off `Employee` — one probe, made when the
+screen is first opened, on the same terms as Final Settlement's — and IFSC and
+Amount drawn **absent rather than empty**, because they are different kinds of
+missing and only one of them arrives with payroll.
+
+Four tiles say the useful thing: in scope, **account on file**, paid by bank,
+and *lines a bank would take*, which is nought and stays nought.
+
+Three of the four panel buttons refuse, and each refuses **for its own reason**
+rather than for the module's — a button that says "payroll is deferred" four
+times over teaches nobody which of these four things is the hard one.
+
+If the probe is refused, no count is offered at all and the two bank filters
+stop filtering: *nobody has an account number* and *nobody was asked* are
+opposite findings, and dropping somebody who is there is the expensive mistake
+(CLAUDE.md §4).
+
+### Worth doing before payroll is anywhere near ready
+
+**Count the missing account numbers, then chase them.** It needs no payroll
+code, it is weeks of somebody's time in HR, and it is exactly the kind of work
+that gets discovered late and then holds a go-live. This screen counts them
+today.
+
+### Still open
+
+- **Which bank each company pays from**, and whether the group pays through one
+  account or four. Unchanged from §27, and it is now blocking a file rather
+  than a question.
+- **What is actually under their three filter groups.** One screenshot with them
+  open. The nine fields here are ours until then.
+- **Is anybody's salary held today, and what for.** Ask HR, not Factor HR.
+- **What their `Generate Payment File` actually writes** — one sample file would
+  settle the format argument in an afternoon.

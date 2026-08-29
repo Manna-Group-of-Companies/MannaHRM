@@ -28,37 +28,6 @@ export const TOKENS = {
   hisher:e=>(e.gender==="Female"?"Her":"His"),
   currentdate:()=>new Date().toISOString().slice(0,10),
 };
-
-/* Factor HR's last menu item. Read here as the module index: every On Board
-   page, what stands behind it, and what is still a question — which is the
-   view somebody comparing the two systems actually wants, and the one that
-   makes an empty page an answer rather than a hole. */
-export const ONBOARD_PAGES = [
-  ["Candidate Master",     "candidates", "Job Applicant &rarr; Employee Onboarding", "skip",
-   "Empty on both sides. Stock ERPNext if recruitment ever moves across"],
-  ["Create Letter / Form", "overview",   "Letter Type + Employee Letter",            "live",
-   "15 of 17 formats loaded, merging against live employee records"],
-  ["Document Entry",       "documents",  "Employee fields only",                     "none",
-   "No doctype. Expiry tracking is the one part ERPNext has no answer for"],
-  ["Assets Details",       "assets",     "ERPNext Asset + Asset Category",           "part",
-   "Installed and empty. Configuration and a data load, not code"],
-  ["Assets Assignment",    "assignment", "Asset custodian + Asset Movement",         "part",
-   "Stock, minus the signed handover and the recovery on separation"],
-];
-
-/* Factor HR's dashboard panels that are switched on and unused, in the state
-   read on 23 Aug 2026. Kept rather than dropped, because "it exists there and
-   is empty" is the finding that makes them safe to leave out — and that
-   argument disappears if the panels simply vanish from the comparison. */
-export const ENGAGEMENT = [
-  ["Mood Analysis",    "empty"],
-  ["CEO Speak",        "0"],
-  ["Announcements",    "0"],
-  ["Wish Celebration", "0 — birthdays, work anniversaries, marriages"],
-  ["Important Files",  "0"],
-  ["Help Desk",        "3 tickets, all Open · 0 resolved, 0 re-opened"],
-];
-
 /* The document fields ERPNext ships on Employee, which is all Document Entry
    has to stand on until a doctype of its own exists. Counted live, because
    "the field exists" and "the field is filled" are different findings and only

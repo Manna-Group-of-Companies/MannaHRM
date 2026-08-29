@@ -28,7 +28,7 @@ One row per person, every company, including people who have left.
 | Date of birth, gender | same | |
 | Mobile, personal email | `cell_number`, `personal_email` | |
 | **Biometric / device user id** | `attendance_device_id` | **The critical one — see below** |
-| Bank account, IFSC | payroll | Only if payroll moves too |
+| Bank account, IFSC | `bank_ac_no`, **nothing** | Only if payroll moves too — but **ERPNext's `Employee` has no IFSC field at all**, so that column is a custom field before it is a load. See [FACTOHR_SCREENS.md](FACTOHR_SCREENS.md) §32 |
 | PF number, UAN, ESI number | payroll | Same |
 | PAN, Aadhaar | payroll | Same |
 

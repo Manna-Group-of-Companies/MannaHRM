@@ -1,9 +1,11 @@
+import { cell, download } from "@/lib/csv";
 import { Fragment } from "react";
 import { SR_BY, SR_COLS, SR_OUTPUTS } from "@/data/attendance";
 import { Cols, Empty, Gap, Html, Note, NoteBelow, Panel, Scroll } from "@/components/ui";
-import { cell, download } from "@/lib/csv";
+import People from "@/components/People";
+
 import { MONTHS, fmt } from "@/lib/format";
-import { listAll } from "@/api/client";
+
 import { getState, patch, set, useApp } from "@/state/store";
 
 /* Statutory Reports, read on 28 Aug 2026 with **Report Type unselected** — so
@@ -423,24 +425,15 @@ export default function Statutory() {
 
 			{s.srRun ? <SrReport s={s} /> : (
 				<div className="mt-[.9rem]">
-					<Empty title="Nothing generated yet">
-						Factor HR lists nothing until Generate is pressed, and that is copied — a report that runs
-						on open is a report nobody chose the period for.
-					</Empty>
+					{/* The period is still nobody's choice until Generate is pressed, but
+					    who the return would cover does not depend on the period — so the
+					    screen shows them rather than a sentence about why it will not. */}
+					<People people={srRows(s)}
+						note="Everybody this return would cover, at the criteria above. Generate adds the statutory columns and checks which of them this site can actually fill." />
 				</div>
 			)}
 
 			<Cols>
-				<Panel title="One dropdown would settle this page" cov="none" ico="❓">
-					<Gap>The Report Type list, expanded.</Gap>
-					<NoteBelow>
-						It is the only control that says <em>what</em> is filed from here, and it was left on{" "}
-						<em>Select report type</em> when the screen was photographed. Everything else on the form
-						is a filter over whatever it names. <b>One screenshot with that dropdown open closes the
-						whole page</b> — and until it arrives, the list above is our own statutory Letter Types
-						standing in, labelled as such.
-					</NoteBelow>
-				</Panel>
 
 				<Panel title="Statutory forms already loaded" cov={forms.length ? "live" : "none"} ico="📜">
 					{forms.length ? (
@@ -464,36 +457,6 @@ export default function Statutory() {
 					</NoteBelow>
 				</Panel>
 
-				<Panel title="Two would not convert" cov="none" ico="⚠">
-					<Gap>
-						<code>Form 2 Revised</code> and <code>Form 3A</code>.
-					</Gap>
-					<NoteBelow>
-						Their content sits in Word form controls and images rather than in text, so nothing came
-						out of the extraction. <b>A statutory layout is legally fixed: reproduce it exactly or not
-						at all</b>, which makes these two a typesetting job rather than a templating one — and it
-						is why <em>Report Output: PDF</em> above refuses rather than approximates.
-					</NoteBelow>
-				</Panel>
-
-				<Panel title="PF is live over there" cov="part" ico="📊">
-					<Note>
-						The <b>ECR File</b> sits in Factor HR’s Quick Reports, which confirms the EPFO return is
-						filed from it, and an IncomeTax Computation Register sits beside it for TDS. Both are
-						outputs of payroll, and <b>payroll is calculated by hand today</b> — so these are
-						background rather than a target for the first release.
-					</Note>
-				</Panel>
-
-				<Panel title="Why this sits under Attendance" cov="none" ico="⚖">
-					<Note>
-						Worth a question rather than a conclusion. The forms we hold are PF and ESI forms attached
-						to <em>people</em>, and the ECR file is a payroll output — neither obviously belongs on an
-						attendance menu. But every monthly return needs <b>days paid</b>, and days paid is an
-						attendance number. If that is why it is here, then this page is downstream of the policy
-						engine like everything else on this menu.
-					</Note>
-				</Panel>
 			</Cols>
 		</>
 	);

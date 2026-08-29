@@ -1,21 +1,7 @@
-import { Bars, Cols, Empty, NoteBelow, Panel, Scroll, SpecTable, Tile, Tiles } from "@/components/ui";
-import { dmy, fmt, tally } from "@/lib/format";
 import { useApp } from "@/state/store";
-import { assetRows, assetsUnread, onboardWait } from "./shared";
-
-const FREE = [
-	["Asset Category", "Depreciation rules, accounts, finance book", "stock",
-		"Load this before the assets themselves"],
-	["Asset", "One physical thing: name, code, cost, location, custodian, status", "stock",
-		"Draft &rarr; Submitted &rarr; In Use / Issued / Scrapped / Sold"],
-	["Location", "Where an asset sits", "stock",
-		"Plant, office, store. Not the same as Work Location, which is a geofence for punches"],
-	["Asset Movement", "Every issue, transfer and return, dated", "stock",
-		"This is the audit trail Assets Assignment reads from"],
-	["Asset Repair", "Downtime, cost, who fixed it", "stock", ""],
-	["Asset value adjustment, depreciation", "Scheduled", "stock",
-		"Accounting rather than HR. It runs whether HR wants it or not once an asset is submitted"],
-];
+import { assetRows, assetsUnread, onboardWait } from "@/sections/onboard/shared";
+import { dmy, fmt, tally } from "@/lib/format";
+import { Bars, Cols, Empty, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 
 export default function Assets() {
 	const s = useApp();
@@ -99,16 +85,6 @@ export default function Assets() {
 				</Scroll>
 			)}
 
-			<Cols>
-				<Panel title="What ERPNext gives without building anything" cov="part" ico="🧰">
-					<SpecTable cols={["Doctype", "What it holds", "State", "Note"]} list={FREE} />
-					<NoteBelow>
-						<b>Mostly free, and that is the point.</b> Assets is the cheapest of the four On Board
-						groups to match: it is configuration and a data load, not code. What it needs is the
-						list of what Manna actually issues — and the categories, before the rows.
-					</NoteBelow>
-				</Panel>
-			</Cols>
 		</>
 	);
 }

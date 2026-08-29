@@ -11,8 +11,9 @@ export const CATEGORY_FIELDS = [
 /* Factor HR's Categories, photographed 28 August 2026 — and it is not the
    screen the name suggested. Behind that menu item is `Category Type`: a
    master of masters, eight rows, each holding its own value list behind a
-   View Category button. Two things follow from that, and FACTOHR_SCREENS §9
-   guessed both of them wrong.
+   View Category button — a second screen, photographed 29 August 2026: a plain
+   Code / Description / Status list with its own toolbar and pager. Two things
+   follow from that, and FACTOHR_SCREENS §9 guessed both of them wrong.
 
    It is not one Worker / Staff / Contract list, so there is no single field to
    map it onto. And two of the five rows visible are not groupings at all —
@@ -29,6 +30,8 @@ export const CATEGORY_FIELDS = [
  * @property {string} name
  * @property {string} code
  * @property {string|null} field the ERPNext field it reads onto, or null
+ * @property {string} [dt] the doctype holding those values on our side — what
+ *   Add and Edit open. Absent where the type is a pay rule rather than a list.
  * @property {string} [count] which dashboard count answers it
  * @property {string} ico
  * @property {string} [maps] how it maps onto our side — HTML, hand-written here
@@ -39,11 +42,19 @@ export const CATEGORY_FIELDS = [
 
 /** @type {CategoryType[]} */
 export const FH_CATEGORY_TYPES = [
-  {name:"Company Name", code:"", field:"company", count:"companies", ico:"🏭",
-   maps:'<code>Employee.company</code>, with a real <code>Company</code> doctype behind it'},
-  {name:"Department", code:"P001", field:"department", count:"departments", ico:"🏢",
+  {name:"Company Name", dt:"Company", code:"", field:"company", count:"companies", ico:"🏭",
+   maps:'<code>Employee.company</code>, with a real <code>Company</code> doctype behind it',
+   /* Photographed 29 August 2026 — the first View Category anybody has opened,
+      and it settles what that button does: a second screen, not an expansion.
+      Their own pager says 6 entries; page 1 held these five, and the sixth has
+      still not been seen. Kept as evidence rather than as a count, because the
+      gap between their six and ours is the only thing this screen is for. */
+   seen:["HI-TECH PRETREADS", "HI-TECH RUBBER INDUSTRIES", "MANNA GROUP H-QTRS",
+         "MANNA RUBBER PRODUCTS PVT.LTD.", "MANNA TREADS PVT.LTD"],
+   theirs:6},
+  {name:"Department", dt:"Department", code:"P001", field:"department", count:"departments", ico:"🏢",
    maps:'<code>Employee.department</code>'},
-  {name:"Designation", code:"", field:"designation", count:"designations", ico:"🎓",
+  {name:"Designation", dt:"Designation", code:"", field:"designation", count:"designations", ico:"🎓",
    maps:'<code>Employee.designation</code>'},
   {name:"Gratuity Applicable", code:"", field:null, ico:"🏦",
    why:'Whether gratuity applies to a person. In Factor HR that is a <b>category</b> — set from this screen, by whoever maintains departments.',
@@ -68,14 +79,26 @@ export const CAL_DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
    HR's own "+ N more…". Two fits the cell at every width this page is used at. */
 export const CAL_SHOWN = 2;
 
-/* The five buttons and the Data Import menu, in Factor HR's order. Four of them
-   write, and this page proxies GET only — so they are drawn where Factor HR
-   draws them and disabled with the reason on them, rather than quietly missing
-   or, worse, present and inert. A holiday list is a document on the site. */
+/** What a calendar is on our side. The toolbar's three buttons open one. */
+export const CAL_DT = "Holiday List";
+
+/* The three buttons and the Data Import menu, in Factor HR's order. All of them
+   write, and this page proxies GET only — so rather than sitting dead with the
+   reason on a tooltip, each one opens the same job on the ERPNext site, where a
+   holiday list is a document and where the rules that guard it actually run.
+   A link rather than a form on purpose: the write path stays on the site, and
+   the API token never has to leave the proxy. See CLAUDE.md §1.
+
+   `needsList` marks the two that act on the list currently shown rather than on
+   the doctype — with no holiday list on the site there is nothing for them to
+   open, and they stay disabled. */
 export const CAL_TOOLS = [
-  ["new",    "New",    "＋", "Holiday lists are created on the ERPNext site. This page only reads — see app/README.md."],
-  ["edit",   "Edit",   "✎", "Editing a holiday list changes who is expected at the gate, and that is a write. It belongs on the site."],
-  ["delete", "Delete", "⊘", "Deleting a holiday list would leave everybody on it with no weekly off. Not from a dashboard."],
+  {k: "new", label: "New", ico: "＋", needsList: false,
+   tip: "Create a holiday list on the ERPNext site — this page only reads. Opens in a new tab."},
+  {k: "edit", label: "Edit", ico: "✎", needsList: true,
+   tip: "Open this holiday list on the ERPNext site. Editing it changes who is expected at the gate, so it is a write and it belongs there. Opens in a new tab."},
+  {k: "delete", label: "Delete", ico: "⊘", needsList: true,
+   tip: "Open this holiday list on the ERPNext site, where Menu → Delete removes it. Deleting one leaves everybody on it with no weekly off, so it is deliberately two steps rather than one click here."},
 ];
 
 export const CTC_UNITS = ["Yearly","Monthly","Daily"];
