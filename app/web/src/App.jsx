@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { SECTIONS } from "@/data/sections";
 import { useApp, set, getState } from "@/state/store";
 import { load, loadOnBoard } from "@/api/load";
@@ -147,10 +147,30 @@ function TopBar() {
 
 function SubBar() {
 	const { section, subtab } = useApp();
+	const bar = useRef(null);
 	const tabs = SUBTABS[section];
+
+	/* On a phone this strip is one scrolling row rather than five wrapped ones,
+	   which means the selected tab can sit off the right-hand edge — landing on
+	   Manage Shift and seeing "Attendance Regularization" highlighted nowhere is
+	   worse than the five rows were.
+
+	   `scrollLeft` rather than `scrollIntoView`, which also scrolls the page
+	   vertically and would jump the panel you just opened out of view. */
+	useEffect(() => {
+		const el = bar.current;
+		const active = el?.querySelector('[aria-selected="true"]');
+		if (!el || !active || el.scrollWidth <= el.clientWidth) return;
+		const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		el.scrollTo({
+			left: Math.max(0, active.offsetLeft - (el.clientWidth - active.offsetWidth) / 2),
+			behavior: smooth ? "smooth" : "auto",
+		});
+	}, [section, subtab]);
+
 	if (!tabs) return <div className="subbar" />;
 	return (
-		<div className="subbar">
+		<div className="subbar" ref={bar}>
 			{tabs.map((t) => (
 				<button
 					key={t[0]}

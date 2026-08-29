@@ -53,6 +53,26 @@ export async function loadHolidayDates() {
 	}
 }
 
+/* What the status line in the top bar says when a load fails.
+ *
+ * Frappe answers a refused request with its own JSON — `{"exc_type":
+ * "AuthenticationError"}` — and putting that straight into the chrome printed a
+ * raw object next to "Hi admin". The status line has room for about four words,
+ * so it gets four words; the status code rides along because it is the one
+ * detail that tells somebody which of these it actually is. */
+function connMessage(err) {
+	const status = err && err.status;
+	if (status === 401 || status === 403) return `not authorised (${status})`;
+	// The site's own daily compute limit, which reads as a dead site otherwise.
+	if (status === 429) return "daily limit reached";
+	if (status >= 500) return `site error (${status})`;
+	const text = String((err && err.message) || err);
+	if (/timeout|aborted/i.test(text)) return "timed out";
+	if (/network|fetch failed|ECONNREFUSED/i.test(text)) return "no connection";
+	// Anything genuinely unexpected still gets shown, just not a whole payload.
+	return text.replace(/\s+/g, " ").slice(0, 40);
+}
+
 export async function load() {
 	set({ connState: "", conn: "loading…" });
 	try {
@@ -112,7 +132,7 @@ export async function load() {
 
 		void loadHolidayDates();
 	} catch (err) {
-		set({ connState: "bad", conn: String(err.message || err).slice(0, 80) });
+		set({ connState: "bad", conn: connMessage(err) });
 	}
 }
 

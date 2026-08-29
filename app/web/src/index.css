@@ -55,6 +55,7 @@
            cursor-pointer flex flex-col items-center gap-[.28rem] w-full border-l-[3px] border-l-transparent;
   }
   .nav svg { @apply w-5 h-5 stroke-current fill-none; stroke-width: 1.6; }
+  .nav { transition: background-color .14s ease, color .14s ease, border-color .14s ease; }
   .nav:hover { @apply text-white bg-white/5; }
   .nav[aria-current="page"] {
     @apply text-white font-semibold border-l-brand;
@@ -75,6 +76,8 @@
     @apply bg-transparent border-0 text-nav-ink font-body text-[.79rem] tracking-[.08em] uppercase
            px-[.95rem] py-[.72rem] cursor-pointer border-b-[3px] border-b-transparent;
   }
+  .subtab { transition: background-color .14s ease, color .14s ease; }
+  .subtab:hover { @apply text-white; }
   .subtab[aria-selected="true"] { @apply bg-page text-ink font-semibold rounded-t-[5px]; }
   .content { @apply px-[1.2rem] pt-[1.1rem] pb-10 flex flex-col gap-4; }
 
@@ -93,8 +96,17 @@
   .cov.skip { @apply bg-skip-wash text-skip; }
 
   /* ------------------------------------------------------------- cards --- */
-  .cols  { @apply grid gap-4 items-start; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
-  .panel { @apply bg-card border border-line rounded-md overflow-hidden; }
+  /* `min(400px, 100%)` rather than a bare `400px`. A bare minimum wider than the
+     screen makes the column wider than its container, and the whole page then
+     scrolls sideways — on a phone every panel on this app did. The `min()` lets
+     the track collapse to the viewport instead. Same trick on .cards and .tiles. */
+  .cols  { @apply grid gap-4 items-start; grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr)); }
+  .panel {
+    @apply bg-card border border-line rounded-md overflow-hidden;
+    /* Barely there, and deliberately so: enough to lift a panel off the page
+       without turning a dense comparison screen into a stack of floating cards. */
+    box-shadow: 0 1px 2px rgba(38, 37, 42, .045), 0 1px 1px rgba(38, 37, 42, .03);
+  }
   .panel > header {
     @apply flex flex-wrap gap-y-[.4rem] gap-x-[.7rem] items-center justify-between
            px-[.9rem] py-[.7rem] border-b border-line;
@@ -107,7 +119,7 @@
   .panel .body     { @apply p-[.9rem]; }
   .panel.dim .body { @apply opacity-[.72]; }
 
-  .tiles { @apply grid gap-[.6rem]; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .tiles { @apply grid gap-[.6rem]; grid-template-columns: repeat(auto-fit, minmax(min(130px, 46%), 1fr)); }
   .tile  { @apply border border-line rounded-md px-[.7rem] py-[.6rem] flex flex-col gap-[.15rem]; }
   .tile .k { @apply font-mono text-[.63rem] tracking-[.09em] uppercase text-ink-3; }
   .tile .n { @apply font-display text-[1.55rem] font-bold leading-[1.05] tabular-nums; }
@@ -131,7 +143,18 @@
   .track { @apply h-[6px] rounded overflow-hidden; grid-column: 1/-1; background: #EDE8E4; }
   .track i { @apply block h-full bg-brand rounded; }
 
-  .scroll { @apply overflow-x-auto border border-line rounded-md bg-card; }
+  .scroll {
+    @apply overflow-x-auto border border-line rounded-md bg-card;
+    /* A table clipped with no visible bar reads as a table that ends there.
+       Thin, always drawn, in the page's own greys rather than the OS default. */
+    scrollbar-width: thin;
+    scrollbar-color: #CFC9C3 transparent;
+    overscroll-behavior-x: contain;
+  }
+  .scroll::-webkit-scrollbar { height: 9px; }
+  .scroll::-webkit-scrollbar-track { @apply bg-transparent; }
+  .scroll::-webkit-scrollbar-thumb { @apply rounded; background: #CFC9C3; }
+  .scroll::-webkit-scrollbar-thumb:hover { @apply bg-ink-3; }
   table { @apply border-collapse w-full min-w-[760px] text-[.85rem]; }
   th, td { @apply text-left px-[.7rem] py-[.48rem] border-b border-line whitespace-nowrap; }
   thead th {
@@ -219,7 +242,7 @@
   .emmenu button.zero .sdot { @apply opacity-[.45]; }
   .emmenu button:focus-visible { @apply outline outline-2 -outline-offset-2 outline-brand; }
 
-  .cards { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .cards { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
   .ecard {
     @apply bg-card border border-line rounded-md px-[.9rem] py-[.85rem] grid gap-[.9rem] items-center cursor-pointer;
     grid-template-columns: auto minmax(0, 1fr);
@@ -765,12 +788,158 @@
   .ddasection h4 span { @apply font-mono text-[.72rem] text-ink-3; }
 }
 
-/* The two responsive breaks the original carries. Outside @layer so they are
-   never dropped along with an unused component class. */
+/* ---------------------------------------------------------------------------
+   Responsive.
+
+   Outside @layer so these are never dropped along with an unused component
+   class, and so they win over the definitions above without needing !important.
+
+   Four widths, each a real device rather than a round number: a laptop at 1100,
+   a split window or small tablet at 900, a phone in landscape at 720, and a
+   small phone at 420.
+
+   **The rule throughout is that the page itself never scrolls sideways.** Wide
+   things — the muster grid, the report tables, the approval queue — scroll
+   inside their own `.scroll` box instead. That is deliberate and not a
+   compromise: a muster row that wraps is a row nobody can read across, and this
+   is a screen people read across.
+   --------------------------------------------------------------------------- */
+
 @media (max-width: 1100px) {
   .reqx { grid-template-columns: auto 1fr; }
+  /* Drop the times column first. It is the one a reader can reconstruct from
+     the row below it; the person and the reason cannot be. */
+  .req  { grid-template-columns: minmax(140px, 180px) 1fr auto; }
 }
-@media (max-width: 820px) {
-  .req   { grid-template-columns: 1fr; }
-  .shell { grid-template-columns: 84px 1fr; }
+
+@media (max-width: 900px) {
+  .shell   { grid-template-columns: 84px 1fr; }
+  .req     { grid-template-columns: 1fr; }
+
+  .content { padding-left: .9rem; padding-right: .9rem; }
+  .topbar, .subbar { padding-left: .9rem; padding-right: .9rem; }
+
+  /* Label above control rather than beside it. Two columns at this width leaves
+     the control about nine characters wide, and a date range does not fit in
+     nine characters. */
+  .repgrid { grid-template-columns: 1fr; }
+  .repgrid > label { text-align: left; }
+  .repgrid > label.off { text-align: left; }
+}
+
+@media (max-width: 720px) {
+  /* The rail becomes a bar along the bottom of the screen.
+     Bottom rather than top because it is the part of a phone a thumb reaches
+     without regripping, and this is the control people press most. */
+  :root { --manna-bar: 3.9rem; }
+
+  .shell { grid-template-columns: 1fr; }
+  .side {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    /* An explicit height, not `auto`. A fixed box with `top:auto; bottom:0` and
+       an auto height is ambiguous enough that Chrome stretches it from its
+       static position instead of shrink-wrapping — measured at 549px tall on a
+       667px screen, i.e. the whole page. Stating the height removes the
+       question, and `.main` below reserves exactly this much. */
+    height: calc(var(--manna-bar) + env(safe-area-inset-bottom));
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 0 env(safe-area-inset-bottom) 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-top: 1px solid rgba(255, 255, 255, .09);
+    scrollbar-width: none;
+  }
+  .side::-webkit-scrollbar { display: none; }
+  .brand { display: none; }
+
+  /* The buttons live inside a <nav>, which is the only flex child of .side —
+     so making .side a row lays out that one element and leaves the nine buttons
+     stacked inside it. This is the rule that actually turns them into a bar.
+     (They stacked at x:0 without it, which an overflow check cannot catch:
+     nine items on top of each other are exactly as wide as one.) */
+  .side > nav {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .nav {
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: center;
+    padding: .5rem .7rem;
+    font-size: .66rem;
+    /* The active marker moves from the left edge to the top edge, because on a
+       bottom bar the left edge is between two items rather than beside one. */
+    border-left: 0;
+    border-top: 3px solid transparent;
+  }
+  .nav[aria-current="page"] { border-left: 0; border-top-color: #EE6A24; }
+
+  /* So the last panel is not sitting underneath the bar. */
+  .main { padding-bottom: calc(var(--manna-bar) + env(safe-area-inset-bottom) + .4rem); }
+
+  .content { padding-left: .7rem; padding-right: .7rem; padding-top: .8rem; gap: .75rem; }
+  .topbar, .subbar { padding-left: .7rem; padding-right: .7rem; }
+  .topbar { column-gap: .7rem; }
+  /* 190px each is wider than the screen once there are two of them. */
+  .topbar select, .topbar input { min-width: 0; flex: 1 1 8rem; }
+  .topbar .me { order: 9; width: 100%; font-size: .78rem; }
+
+  /* Attendance has eight subtabs, and wrapped they take five rows — most of a
+     667px screen before a single panel. One scrolling row instead, which is the
+     same sideways gesture as the bar along the bottom, so it is learned once
+     rather than twice. */
+  .subbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .subbar::-webkit-scrollbar { display: none; }
+  .subtab { flex: 0 0 auto; padding: .6rem .62rem; font-size: .72rem; }
+
+  .tiles { grid-template-columns: repeat(auto-fit, minmax(min(118px, 46%), 1fr)); }
+  .links { grid-template-columns: 1fr; }
+
+  /* Every fixed minimum inside a form control, released. Each of these was
+     chosen to look right on a laptop and each one overflows a phone. */
+  .repform .wide,
+  .mbf .grow,
+  .iof .grow,
+  .qbar input[type=search] { min-width: 0; width: 100%; }
+  .repset { max-width: none; }
+  .repacts { justify-content: flex-start; }
+
+  /* Their report toolbars stack rather than sit in a row. */
+  .mbbar, .iotop, .ddabar { flex-direction: column; align-items: stretch; }
+  .mbbar .right, .iotop .right, .ddabar .right { margin-left: 0; }
+
+  .modal .box { width: min(100%, 32rem); }
+  .calmonth { min-width: 0; }
+}
+
+@media (max-width: 420px) {
+  /* A 1.55rem number beside a two-word label wraps the label onto three lines,
+     which reads worse than a slightly smaller number. */
+  .tile .n { font-size: 1.28rem; }
+  .tiles   { grid-template-columns: 1fr 1fr; }
+  .legend  { font-size: .76rem; }
+  .panel > header h3 { font-size: .88rem; }
+  .content { padding-left: .55rem; padding-right: .55rem; }
+}
+
+/* Somebody who has asked their system for less motion has asked for it here
+   too. The transitions above are decoration; nothing depends on them. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
