@@ -19,13 +19,25 @@ showing up"* is otherwise a long afternoon.
 
 ## While working on it
 
+From the **repo root**, one command for both halves:
+
+```bash
+npm run dev
+```
+
+Vite prints the address to open. It proxies `/api` through to `serve.js`, so the
+browser still sees one origin and the token still never reaches it.
+
+Developing this needs two processes — `serve.js` holds the token and proxies to
+ERPNext, Vite serves the page and forwards `/api` to it — and running only the
+second gives a page where every panel reads empty, which looks like a broken app
+rather than a missing process. `dev.js` at the root starts both, labels their
+output, and stops the pair when either one dies. By hand it is:
+
 ```bash
 node app/serve.js            # terminal 1 — the proxy, holding the token
 cd app/web && npm run dev    # terminal 2 — Vite on :5173, hot reload
 ```
-
-Open **http://localhost:5173**. Vite proxies `/api` through to `serve.js`, so
-the browser still sees one origin and the token still never reaches it.
 
 ## The original single-file page is still here
 

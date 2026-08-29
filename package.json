@@ -1,0 +1,19 @@
+{
+  "name": "manna-hrm",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Group-wide attendance and HR for the Manna companies",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "node dev.js",
+    "serve": "node app/serve.js",
+    "build": "npm --prefix app/web run build",
+    "install:all": "npm --prefix app/web install && npm --prefix bridge install && npm --prefix tools install",
+    "bridge": "node bridge/mannabridge/main.js",
+    "bridge:once": "node bridge/mannabridge/main.js --once",
+    "probe": "node bridge/probe.js"
+  }
+}
