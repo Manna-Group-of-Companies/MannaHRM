@@ -3,6 +3,15 @@
 What `manna_hr` creates, what it expects from `hrms`, and the configuration
 values that decide behaviour. Field names here match the code exactly.
 
+> **The `manna_hr` app is no longer in this repo.** It was removed on 31 August
+> 2026 when the repo was converted to one language — see the root
+> [README](../README.md). This document is unchanged and still describes what
+> has to exist *on the site* for attendance to be enforceable: whoever builds it
+> next, as a Frappe app or as Server Scripts, needs these doctypes, these fields
+> and these names. The pure rules survive as `client/src/lib/rules.js` and
+> `client/src/lib/geo.js`.
+
+
 ---
 
 ## 1. What comes from Frappe HR

@@ -1,15 +1,10 @@
 # Holds an API key that can write attendance for the whole group.
 bridge/config.toml
-bridge/*.sqlite3
-bridge/*.log
 
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-*.egg-info/
-.pytest_cache/
-.ruff_cache/
+# The same key, for the dashboard proxy. `.env.example` is the tracked one and
+# is deliberately empty — a committed key is a key that has to be rotated.
+.env
+.env.local
 
 # Factor HR exports — salary, PAN, Aadhaar, bank details for the whole group.
 # Never commit these. The directory is tracked; its contents are not.
@@ -19,8 +14,11 @@ data/**
 !data/**/
 !data/**/README.md
 
-# Node: installed packages, and the bridge's own working files.
+# Node: installed packages, the built site, and the bridge's working files.
 node_modules/
+dist/
+bridge/*.sqlite3
 bridge/*.sqlite3-wal
 bridge/*.sqlite3-shm
+bridge/*.log
 bridge/bridge.log

@@ -1957,8 +1957,8 @@ read so far. The screen prefers the backfilled one.
 
 ### Rebuilt here
 
-`app/web/src/sections/employees/EmployeeProfile.jsx`, with the field map in
-`src/data/profile.js` — header card, sidebar and pane, in that shape.
+`client/src/features/employees/EmployeeProfile.jsx`, with the field map in
+`client/src/data/profile.js` — header card, sidebar and pane, in that shape.
 
 - **A card on Employee Master now opens this**, not Employee Detail. That is
   what §11 recorded the **→** as doing, and it was pointing at a report screen.
@@ -2054,7 +2054,7 @@ what it opens with is the whole finding.
 
 ### What was built
 
-`app/web/src/sections/employees/SalaryMaster.jsx` draws it — the title bar, the
+`client/src/features/employees/SalaryMaster.jsx` draws it — the title bar, the
 three icons, the dot, both pickers and the empty state, word for word. Picking
 somebody works and lands on the honest answer: **no revisions for anybody**,
 because a revision needs a `Salary Structure Assignment` and none exist. The
@@ -2123,7 +2123,7 @@ January or April.
 ### What was built
 
 All three now exist in the dashboard, in this order and under these names —
-`app/web/src/sections/leave/`, reached from Leave in the nav.
+`client/src/features/leave/`, reached from Leave in the nav.
 
 | Menu item | Page | What is behind it |
 |---|---|---|
@@ -2139,7 +2139,7 @@ above still compare item for item. Both existed before this menu was captured;
 **Apply Leave does not write, and says so on the button rather than being
 greyed out.** Two reasons, and only the first is about the page: creating a
 Leave Application is a POST, and the proxy answers GET plus one allowlisted PUT
-(`app/serve.js`); and no leave type has an entitlement, so there is no balance
+(`server/index.js`); and no leave type has an entitlement, so there is no balance
 for an application to be checked against. The second is the real blocker and it
 is the same one §4 ends on.
 
@@ -2322,7 +2322,7 @@ working: a build, and one that feeds TDS rather than a report.
 
 #### Rebuilt here
 
-`app/web/src/sections/loans/LoanApplication.jsx`, control for control — their
+`client/src/features/loans/LoanApplication.jsx`, control for control — their
 bar, their five tabs, both columns with the four mandatory fields shaded the
 yellow their form shades them, the attachment box and the grid with its two
 spanned column groups. Nothing on it writes; there is no doctype to write to.
@@ -2456,8 +2456,8 @@ types an amount against a person into it. Three findings follow:
 3. **Nothing approves any of it** — the open question above, arriving from the
    screen instead of from the menu.
 
-Drawn at `app/web/src/sections/payroll/Adhoc.jsx`, rows in
-`src/data/payroll.js`. The employee picker is live because `Employee` is; the
+Drawn at `client/src/features/payroll/Adhoc.jsx`, rows in
+`client/src/data/payroll.js`. The employee picker is live because `Employee` is; the
 four lists are dead and each says which kind of dead; +Add and Import open the
 job on the site.
 
@@ -2501,7 +2501,7 @@ an attendance cut-off other than the month end would be said — 26th to 25th,
 say. A `Payroll Entry` has one period for both, so a cut-off would be a custom
 field and a change to how attendance is counted, not a setting.
 
-Drawn at `app/web/src/sections/payroll/SalaryProcess.jsx`. The year, the month
+Drawn at `client/src/features/payroll/SalaryProcess.jsx`. The year, the month
 strip and everything on the summary line are live — it is date arithmetic off
 the same `fyMonths()` the payslip form walks. Everything below it is payroll
 state, so the tiles come off `Employee` where `Employee` can answer and are
@@ -2513,8 +2513,8 @@ goes to `Payroll Settings`, which is where the trap below lives.
 ### Rebuilt here
 
 One page per item on their menu, and nothing else:
-`app/web/src/sections/payroll/`, with the mapping tables in
-`src/data/payroll.js`. Every one carries the **Deferred** badge, and the ones
+`client/src/features/payroll/`, with the mapping tables in
+`client/src/data/payroll.js`. Every one carries the **Deferred** badge, and the ones
 that show a number say where it came from — no payroll doctype is on the proxy's
 allowlist, so every figure on them is read off `Employee`, off `Company`, or off
 the Factor HR export, and is labelled as such.
@@ -2622,8 +2622,8 @@ doctype is on the proxy's allowlist even once it is.
 
 ### Rebuilt here
 
-`app/web/src/sections/payroll/FnF.jsx`, with the capture in `FH_FNF_*` in
-`src/data/payroll.js`. The three stages are drawn as tabs; the Final Settlement
+`client/src/features/payroll/FnF.jsx`, with the capture in `FH_FNF_*` in
+`client/src/data/payroll.js`. The three stages are drawn as tabs; the Final Settlement
 one carries a real list, and the other two say only that they were never opened.
 
 The list is **ours, not theirs**. It is everybody this site says is leaving or
@@ -2708,8 +2708,8 @@ anything: `Monthly`. The rest of its list is still unopened.
 
 ### Rebuilt here
 
-`app/web/src/sections/payroll/Payslip.jsx`, with the capture in `PSL_*` in
-`src/data/payroll.js`. The form is copied control for control, including the
+`client/src/features/payroll/Payslip.jsx`, with the capture in `PSL_*` in
+`client/src/data/payroll.js`. The form is copied control for control, including the
 controls nothing here can honour.
 
 **The page produces the envelope, not the amounts.** Who a payslip would go to,
@@ -2796,8 +2796,8 @@ be is a decision to take before E1 is unpacked, not after.
 
 ### Rebuilt here
 
-`app/web/src/sections/payroll/SalaryRegister.jsx`, with the capture in `SREG_*`
-in `src/data/payroll.js`. The form is copied control for control, and Generate
+`client/src/features/payroll/SalaryRegister.jsx`, with the capture in `SREG_*`
+in `client/src/data/payroll.js`. The form is copied control for control, and Generate
 runs — over the `Employee` master, which is the only thing it is allowed to read.
 
 Six of the ten columns are blank on every row, and they are the six the register
@@ -2891,8 +2891,8 @@ nobody can reconstruct later.
 
 ### Rebuilt here
 
-`app/web/src/sections/loans/LoanRegister.jsx`, with the capture in the LOAN
-REGISTER block of `src/data/loans.js`. The form is drawn control for control,
+`client/src/features/loans/LoanRegister.jsx`, with the capture in the LOAN
+REGISTER block of `client/src/data/loans.js`. The form is drawn control for control,
 and shares `LOAN_TYPES`, the clipped status list and `monthsBetween` with the
 projection page — two reports over one range must not each round a part-month
 their own way.
@@ -2989,8 +2989,8 @@ one, and says the fourth was clipped.
 
 ### Rebuilt here
 
-`app/web/src/sections/loans/LoanProjection.jsx`, with the capture in `LP_*` and
-`PROJ_COLS` in `src/data/loans.js`. The four constants the Register panel shares
+`client/src/features/loans/LoanProjection.jsx`, with the capture in `LP_*` and
+`PROJ_COLS` in `client/src/data/loans.js`. The four constants the Register panel shares
 with it — the statuses, the truncated fourth, and the two loan types — are
 defined once and read by both, because the same box recorded twice in two
 spellings is how two forms end up disagreeing about who is in scope.
@@ -3067,7 +3067,7 @@ disciplinary matter, an unreturned asset, a disputed final settlement.
 ### Why no payment file can be written, in four parts
 
 1. **The amount.** Net pay is a `Salary Slip` figure. No payroll doctype is on
-   the proxy's allowlist (`app/serve.js`), and no slip has ever been generated
+   the proxy's allowlist (`server/index.js`), and no slip has ever been generated
    on this site. Two independent reasons — fixing either alone changes nothing.
 2. **The IFSC.** **There is no such field on ERPNext's `Employee`.** §23 found
    the same hole from the profile side and §27 listed it as one of three
@@ -3083,8 +3083,8 @@ disciplinary matter, an unreturned asset, a disputed final settlement.
 
 ### Rebuilt here
 
-`app/web/src/sections/payroll/BankTransfer.jsx`, with the capture in `BT_*` in
-`src/data/payroll.js` and the rail's own CSS under *the Bank Transfer screen* in
+`client/src/features/payroll/BankTransfer.jsx`, with the capture in `BT_*` in
+`client/src/data/payroll.js` and the rail's own CSS under *the Bank Transfer screen* in
 `index.css`.
 
 The panel is empty until `Preview` is pressed, exactly as theirs is — that is

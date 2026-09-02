@@ -100,6 +100,13 @@ do at 5pm on a Friday either.
 
 ## 3. Install `manna_hr` — *us, once 1 and 2 are done*
 
+> **The `manna_hr` app is no longer in this repo** — removed 31 August 2026, when
+> everything here became JavaScript. The commands below therefore have nothing
+> to install yet, and are kept because the step is still required and the shape
+> of it has not changed. See [ENFORCEMENT.md](ENFORCEMENT.md) for what has to be
+> rebuilt, and the root [README](../README.md) for what moved where.
+
+
 ```bash
 bench get-app https://github.com/Manna-Group-of-Companies/MannaHRM --branch main
 bench --site mannarubber.m.frappe.cloud install-app manna_hr

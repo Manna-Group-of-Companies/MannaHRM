@@ -1,0 +1,2281 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   The design system, as component classes.
+
+   Every colour and every family in here resolves to a token in
+   tailwind.config.js rather than to a literal, so the palette has one home. The
+   classes exist because these are the shapes that repeat forty times across the
+   app — a panel, a tile, a coverage chip, a report form — and a repeated shape
+   named once is a shape that cannot drift between two screens that are meant to
+   be compared. One-off layout stays as utilities in the JSX.
+   --------------------------------------------------------------------------- */
+
+@layer base {
+  /* **The one size lever.** Nearly every measurement in this file is in `rem`,
+     which resolves against this and nothing else — so the whole interface, text
+     and padding and gaps and radii together, scales from this single number.
+     Raised from the browser's 16px because this app is read all day at arm's
+     length on a desk monitor, and at 16px its micro-labels were 10px.
+
+     It steps back down on a phone rather than staying put: the same 17px that
+     is comfortable on a 24" monitor is what pushes a report toolbar off a 390px
+     screen. See the responsive block at the foot of the file. */
+  html { font-size: 17px; -webkit-text-size-adjust: 100%; }
+  html, body, #root { height: 100%; }
+  body {
+    @apply m-0 bg-page text-ink font-body antialiased;
+    font-size: .92rem;
+    /* 1.55 rather than 1.5. Half the text on these screens is a wrapped label
+       under a control, and the extra leading is what separates it from the next
+       control down without spending a margin on it. */
+    line-height: 1.55;
+    /* A grey tap flash on every button on Android reads as a rendering fault. */
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1, h2, h3 { @apply font-display m-0; text-wrap: balance; }
+
+  /* One focus ring for the whole app, and a wide one. The old 2px accent ring
+     disappeared against the orange controls it most often landed on; the white
+     inner halo makes it visible on the rail, on a brand button and on white. */
+  :where(button, a, select, input, textarea, summary, [tabindex]):focus-visible {
+    @apply outline-none;
+    box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px theme(colors.brand.dark);
+    border-radius: 5px;
+  }
+
+  /* Every control inherits the body face. Browsers default form elements to
+     the system UI font, and a toolbar in Segoe next to a panel in Plex Sans is
+     the kind of thing people read as "unfinished" without being able to say
+     why. */
+  button, input, select, textarea, optgroup { font: inherit; color: inherit; }
+  button { @apply cursor-pointer; }
+  button[disabled], select[disabled], input[disabled] { @apply cursor-not-allowed; }
+
+  ::selection { background: theme(colors.brand.tint); color: theme(colors.brand.deep); }
+
+  code {
+    @apply font-mono text-[.85em] bg-page border border-line rounded-sm px-[.3em] py-[.05em];
+  }
+}
+
+@layer components {
+
+  /* ---------------- chrome: sidebar + top bar, mirroring Factor HR -------- */
+  /* `rem`, not the 112px it was, so the rail grows with the type scale rather
+     than squeezing a longer label into the same gutter. */
+  .shell { @apply grid min-h-screen; grid-template-columns: 7.1rem 1fr; }
+  .side  {
+    @apply flex flex-col gap-[.15rem] pt-2 pb-4 sticky top-0 h-screen overflow-y-auto;
+    /* A vertical gradient rather than a flat fill: it separates the rail from
+       the top bar, which is the same family of dark, without drawing a line
+       between two things that are meant to read as one piece of chrome. */
+    background: linear-gradient(180deg, theme(colors.nav.3) 0%, theme(colors.nav.DEFAULT) 22%, theme(colors.nav.2) 100%);
+  }
+
+  /* The wordmark, rebuilt in type rather than shipped as a file: MA orange,
+     NN charcoal, A orange, inside the oval. Scales cleanly and needs no asset.
+     Drop the real PNG in as public/logo.png and swap this for an <img>. */
+  .brand { @apply px-[.35rem] pt-4 pb-[1.15rem] text-center leading-none; }
+  .mark {
+    @apply inline-flex items-center justify-center border-[2.5px] border-nav-ink
+           rounded-full px-2 py-[.34rem] font-display font-bold text-[1.02rem] tracking-[-.02em];
+  }
+  /* The Manna orange, held out of the palette swap on purpose — see `manna` in
+     tailwind.config.js. This is the one thing on the rail that is not blue. */
+  .mark .o { @apply text-manna; }
+  .mark .c { @apply text-white; }
+  .brand small {
+    @apply block font-display font-semibold text-[.66rem] tracking-[.02em] text-nav-ink mt-[.34rem];
+  }
+
+  .nav {
+    @apply bg-transparent border-0 text-nav-ink font-body text-[.75rem] leading-tight px-[.3rem] py-[.7rem]
+           cursor-pointer flex flex-col items-center gap-[.34rem] w-full border-l-[3px] border-l-transparent
+           no-underline text-center;
+    /* 44px is the smallest thing a thumb hits reliably, and this is the control
+       pressed more than any other in the app. */
+    min-height: 3.1rem;
+  }
+  .nav svg { @apply w-[1.35rem] h-[1.35rem] stroke-current fill-none; stroke-width: 1.6; }
+  .nav { transition: background-color .14s ease, color .14s ease, border-color .14s ease; }
+  .nav:hover { @apply text-white; background: rgba(255, 255, 255, .07); }
+  .nav[aria-current="page"] {
+    @apply text-white font-semibold border-l-brand-lift;
+    background: rgba(91, 155, 238, .20);
+  }
+  /* The rail is dark, so the app-wide white-halo ring would be the brightest
+     thing on it. Here the ring is the brand instead. */
+  .nav:focus-visible { box-shadow: inset 0 0 0 2px theme(colors.brand.lift); }
+
+  .main   { @apply flex flex-col min-w-0; }
+  .topbar {
+    @apply text-white px-[1.3rem] py-[.8rem] flex flex-wrap gap-y-[.7rem] gap-x-[1.2rem] items-center justify-between;
+    background: linear-gradient(180deg, theme(colors.char) 0%, theme(colors.nav.DEFAULT) 100%);
+  }
+  .topbar .co { @apply font-display font-bold text-[1.08rem] tracking-[.01em]; }
+  .topbar select, .topbar input {
+    @apply font-body text-[.86rem] px-[.85rem] py-[.44rem] rounded-full border-0 text-ink min-w-[190px];
+    background: rgba(255, 255, 255, .96);
+    /* Same height as the pills either side of them whatever the browser thinks
+       a select should be — a toolbar of three different heights reads as a
+       toolbar somebody assembled rather than designed. */
+    min-height: 2.15rem;
+    transition: box-shadow .14s ease;
+  }
+  .topbar select:hover, .topbar input:hover { box-shadow: 0 0 0 2px rgba(91, 155, 238, .45); }
+  .topbar select:focus-visible, .topbar input:focus-visible {
+    box-shadow: 0 0 0 2px theme(colors.char), 0 0 0 4px theme(colors.brand.lift);
+  }
+  .topbar .me { @apply text-[.85rem] opacity-95; }
+
+  .subbar  { @apply bg-nav-2 px-[1.3rem] flex flex-wrap gap-[.15rem] items-end; }
+  .subtab  {
+    @apply bg-transparent border-0 text-nav-ink font-body text-[.78rem] tracking-[.07em] uppercase
+           px-[1rem] py-[.78rem] cursor-pointer border-b-[3px] border-b-transparent
+           no-underline whitespace-nowrap;
+  }
+  .subtab { transition: background-color .14s ease, color .14s ease; }
+  .subtab:hover { @apply text-white; background: rgba(255, 255, 255, .07); }
+  /* The selected tab is the page's own background running up into the bar, so
+     the tab and the panels under it read as one surface. The orange cap is what
+     makes it findable in a strip of eight at a glance. */
+  .subtab[aria-current="page"] {
+    @apply bg-page text-ink font-semibold rounded-t;
+    box-shadow: inset 0 3px 0 theme(colors.brand.DEFAULT);
+  }
+  .content { @apply px-[1.3rem] pt-[1.2rem] pb-10 flex flex-col gap-[1.15rem]; }
+  /* The page is a landmark and takes focus from the skip link, so it can be
+     focused — but it is not a control and must never draw the app's ring. */
+  .content:focus { @apply outline-none; }
+
+  /* Off-screen rather than `display: none`: a hidden link is not focusable, and
+     being focusable is the entire point of this one. */
+  .skip {
+    @apply fixed left-2 z-50 px-[.9rem] py-[.55rem] rounded bg-brand-dark text-white
+           font-semibold text-[.86rem] no-underline shadow-pop;
+    top: -100%;
+  }
+  .skip:focus { top: .5rem; }
+
+  /* ---------------------------------------------------------- coverage --- */
+  .legend {
+    @apply flex flex-wrap gap-y-[.45rem] gap-x-[.9rem] items-center bg-card border border-line
+           rounded-md px-[.95rem] py-[.65rem] text-[.82rem] text-ink-2 shadow-raise;
+  }
+  .legend .right { @apply ml-auto; }
+  .cov {
+    @apply font-mono text-[.6rem] font-semibold tracking-[.09em] uppercase
+           px-[.44rem] py-[.18rem] rounded-sm whitespace-nowrap;
+  }
+  .cov.live { @apply bg-live-wash text-live; }
+  .cov.part { @apply bg-part-wash text-part; }
+  .cov.none { @apply bg-bad-wash text-bad; }
+  .cov.skip { @apply bg-skip-wash text-skip; }
+
+  /* ------------------------------------------------------------- cards --- */
+  /* `min(400px, 100%)` rather than a bare `400px`. A bare minimum wider than the
+     screen makes the column wider than its container, and the whole page then
+     scrolls sideways — on a phone every panel on this app did. The `min()` lets
+     the track collapse to the viewport instead. Same trick on .cards and .tiles. */
+  .cols  { @apply grid gap-4 items-start; grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr)); }
+  .panel {
+    /* Barely there, and deliberately so: enough to lift a panel off the page
+       without turning a dense comparison screen into a stack of floating cards. */
+    @apply bg-card border border-line rounded-md overflow-hidden shadow-raise;
+  }
+  .panel > header {
+    /* The header carries a wash rather than only a rule under it, so the title
+       row survives being scrolled past in a long stack of panels. */
+    @apply flex flex-wrap gap-y-[.4rem] gap-x-[.7rem] items-center justify-between
+           px-[1rem] py-[.78rem] border-b border-line bg-wash;
+  }
+  .panel > header h3 { @apply text-[1rem] font-semibold flex items-center gap-[.55rem]; }
+  .panel > header h3 .ico {
+    @apply w-[1.7rem] h-[1.7rem] rounded-lg bg-brand-soft text-brand-deep border border-brand-tint
+           inline-flex items-center justify-center text-[.82rem] shrink-0;
+  }
+  .panel .body     { @apply p-[1rem]; }
+  .panel.dim .body { @apply opacity-[.72]; }
+
+  .tiles { @apply grid gap-[.7rem]; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 46%), 1fr)); }
+  .tile  { @apply border border-line rounded-md bg-wash px-[.85rem] py-[.75rem] flex flex-col gap-[.2rem]; }
+  .tile .k { @apply font-mono text-[.65rem] font-semibold tracking-[.09em] uppercase text-ink-3; }
+  .tile .n { @apply font-display text-[1.7rem] font-bold leading-[1.05] tabular-nums; }
+  .tile .n.good { @apply text-live; }
+  .tile .n.warn { @apply text-part; }
+  .tile .n.bad  { @apply text-bad; }
+  .tile .s { @apply text-[.76rem] text-ink-2; }
+
+  .links { @apply grid grid-cols-2 gap-y-[.3rem] gap-x-[.9rem] text-[.86rem]; }
+  .links a, .links span { @apply text-accent no-underline; }
+  .links span.off { @apply text-ink-3 line-through; }
+
+  /* A left bar rather than a full border on three sides: these two sit in a
+     column of panels, and the bar is what makes a reader's eye stop at them
+     without another boxed thing on a page already full of boxes. */
+  .gap  {
+    @apply bg-bad-wash rounded px-[.85rem] py-[.7rem] text-[.86rem] border border-l-4;
+    border-color: #F0CFCB; border-left-color: theme(colors.bad.DEFAULT); color: #7C241D;
+  }
+  .gap b  { @apply font-display; }
+  .note {
+    @apply bg-brand-soft rounded px-[.85rem] py-[.7rem] text-[.86rem] border border-l-4 border-brand-tint;
+    border-left-color: theme(colors.brand.DEFAULT); color: theme(colors.brand.deep);
+  }
+  .note b { @apply font-display; }
+
+  .rows  { @apply flex flex-col gap-[.45rem]; }
+  .row   { @apply grid gap-y-[.15rem] gap-x-[.7rem] items-center text-[.86rem]; grid-template-columns: 1fr auto; }
+  .row .val { @apply font-mono text-[.83rem] text-ink-2 tabular-nums; }
+  .track { @apply h-[7px] rounded-full overflow-hidden; grid-column: 1/-1; background: #E3E9F2; }
+  .track i { @apply block h-full rounded-full; background: linear-gradient(90deg, theme(colors.brand.DEFAULT), theme(colors.brand.dark)); }
+
+  .scroll {
+    @apply overflow-x-auto border border-line rounded-md bg-card;
+    /* A table clipped with no visible bar reads as a table that ends there.
+       Thin, always drawn, in the page's own greys rather than the OS default. */
+    scrollbar-width: thin;
+    scrollbar-color: #C7D2E2 transparent;
+    overscroll-behavior-x: contain;
+  }
+  .scroll::-webkit-scrollbar { height: 10px; }
+  .scroll::-webkit-scrollbar-track { @apply bg-transparent; }
+  .scroll::-webkit-scrollbar-thumb { @apply rounded-full; background: #C7D2E2; }
+  .scroll::-webkit-scrollbar-thumb:hover { @apply bg-ink-3; }
+  table { @apply border-collapse w-full min-w-[760px] text-[.86rem]; }
+  /* Row height is what makes a forty-row report readable or not, and .48rem was
+     a row a reader loses their place in. This is about 2.35rem a row. */
+  th, td { @apply text-left px-[.8rem] py-[.58rem] border-b border-rule whitespace-nowrap; }
+  thead th {
+    @apply sticky top-0 bg-wash font-mono text-[.64rem] tracking-[.08em] uppercase text-ink-3 font-semibold z-[1]
+           border-b border-line;
+  }
+  tbody tr:last-child td { @apply border-b-0; }
+  tbody tr { transition: background-color .1s ease; }
+  tbody tr:hover { @apply bg-brand-soft/60; }
+  td.mono { @apply font-mono tabular-nums; }
+  /* A column that *cannot* be filled, as against one that is filled with zero.
+     Drawn rather than dropped: a missing column is a column nobody argues
+     about, and on the leave report the two empty ones are the whole finding. */
+  td.gone { @apply text-ink-3 italic; }
+  tr[data-emp] { @apply cursor-pointer; }
+  .muted { @apply text-ink-3; }
+
+  .tag {
+    @apply font-mono text-[.61rem] font-semibold tracking-[.06em] uppercase
+           px-[.38rem] py-[.14rem] rounded-sm bg-accent-wash text-accent;
+  }
+  .tag.warn { @apply bg-part-wash text-part; }
+
+  .empty {
+    @apply px-[1rem] py-[1.6rem] text-center text-ink-2 text-[.88rem] bg-wash
+           border border-dashed border-line-2 rounded-md;
+  }
+  .empty b { @apply block font-display text-[.95rem] text-ink mb-[.25rem]; }
+
+  /* ------------------------------------------------- Employee Master ----- */
+  /* Factor HR's own Employee Master, card for card. Kept close to that screen
+     deliberately: it is the page HR opens most, and asking somebody whether the
+     replacement is better is only a fair question if the two look alike enough
+     to compare. */
+  .emhead { @apply flex flex-wrap gap-y-2 gap-x-[.9rem] items-center bg-card border border-line rounded-md px-[1rem] py-[.8rem] shadow-raise; }
+  .emhead h2 { @apply font-display text-[1.1rem] font-bold; }
+  .emhead .n { @apply text-[.83rem] text-ink-2; }
+  .emhead .right { @apply ml-auto flex gap-[.4rem] items-center; }
+
+  /* **Every control in this file is edged in `line-ctl`, and every divider in
+     `line` or `line-2`.** They were the same colour until 29 Aug 2026, and that
+     colour was chosen to be a quiet rule between two panels — 1.58:1 on white,
+     which is fine for a divider and under the 3:1 WCAG 1.4.11 asks of anything
+     drawing the boundary of a control. On a page like Daily Detail, which is
+     eleven boxes and nothing else, that is the difference between a form and a
+     list of labels with nowhere obvious to type.
+
+     So the split is by job rather than by place: if a reader has to find the
+     edge before they can use the thing, it is `line-ctl`. If the edge is only
+     separating two things they can already see, it stays quiet. */
+  .embar { @apply flex flex-wrap gap-[.5rem] items-center bg-card border border-line rounded-md px-[.8rem] py-[.65rem] shadow-raise; }
+  .embar select, .embar input {
+    @apply text-[.84rem] px-[.6rem] py-[.42rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 2.1rem;
+  }
+  .embar select:hover, .embar input:hover { @apply border-brand; }
+  .embar .find { @apply flex items-center gap-[.4rem] min-w-0; flex: 1 1 220px; }
+  .embar .find input { @apply min-w-0; flex: 1 1 auto; }
+  /* Their search box puts the magnifier on the right, not the left. */
+  .embar .find.rev { @apply flex-row-reverse; }
+
+  /* Every toolbar button in the app is this one. `min-height` rather than more
+     padding, so an icon-only button and a worded one line up on the same bar
+     and neither of them is a 24px target. */
+  .embtn {
+    @apply text-[.84rem] px-[.75rem] py-[.42rem] border border-line-ctl rounded
+           bg-white text-ink-2 cursor-pointer inline-flex items-center justify-center gap-[.4rem];
+    min-height: 2.1rem;
+    transition: background-color .13s ease, border-color .13s ease, color .13s ease;
+  }
+  .embtn:hover:not([disabled]) { @apply border-brand text-brand-deep bg-brand-soft; }
+  .embtn:active:not([disabled]) { @apply bg-brand-tint; }
+  .embtn[aria-pressed="true"]  { @apply bg-brand-soft border-brand text-brand-deep font-semibold; }
+  .embtn[disabled]             { @apply opacity-[.45] cursor-not-allowed; }
+  .embtn.pri                   { @apply bg-brand-dark border-brand-dark text-white font-semibold shadow-raise; }
+  .embtn.pri:hover:not([disabled]) { @apply bg-brand-deep border-brand-deep text-white; }
+  .embtn.pri.split             { @apply px-[.45rem] py-[.42rem]; }
+
+  /* Add New Employee is one blue control with a caret bitten out of its right
+     hand end, not two buttons that happen to touch — see EmployeeMaster. Two
+     adjacent buttons each carry their own border, so untreated the seam is a
+     2px dark line down the middle of the control.
+
+     Opt-in rather than applied to every `.empdrop`: the split buttons on the
+     report forms ship the two-pill look today, and restyling those is not this
+     screen's business. */
+  .empdrop.joined .embtn { @apply rounded-r-none; }
+  .empdrop.joined .embtn + .embtn {
+    @apply rounded-l-none rounded-r;
+    border-left-color: rgba(255, 255, 255, .38);
+  }
+
+  .emview { @apply ml-auto flex gap-1; }
+  .emview .embtn { @apply px-[.45rem] py-[.3rem]; }
+  .emview svg { @apply w-4 h-4 stroke-current fill-none; stroke-width: 1.7; }
+
+  .sdot { @apply w-[.55rem] h-[.55rem] rounded-full inline-block bg-ink-3; flex: 0 0 .55rem; }
+  .sdot.on  { @apply bg-live; }
+  .sdot.off { @apply bg-bad; }
+  /* Factor HR's own blue for All. Not from the Manna palette on purpose: this
+     one control is a straight copy of theirs, and on it the colour is the thing
+     being read — somebody picking a filter looks at the dot, not at the word. */
+  .sdot.all { @apply bg-info; }
+
+  .empdrop { @apply relative inline-flex; }
+  .empdrop .cx { @apply text-[.58rem] text-ink-3 leading-none; }
+  .emmenu {
+    @apply absolute left-0 z-20 min-w-[10rem] bg-card border border-line-2 rounded-md p-[.3rem] flex flex-col shadow-pop;
+    top: calc(100% + .35rem);
+  }
+  .emmenu[hidden] { @apply hidden; }
+  /* Anchors as well as buttons: the Generate list's two scheduling items open
+     the site rather than acting here, and a link in a menu of buttons has to
+     look like the buttons or it reads as a different kind of thing. */
+  .emmenu button, .emmenu a {
+    @apply text-[.84rem] text-left bg-transparent border-0 rounded no-underline
+           px-[.6rem] py-[.5rem] cursor-pointer text-ink flex items-center gap-[.55rem];
+  }
+  .emmenu button:hover, .emmenu a:hover { @apply bg-brand-soft text-brand-deep; }
+  .emmenu button[disabled] { @apply text-ink-3 cursor-not-allowed; }
+  /* :hover still matches a disabled button, so without this a dead item lights
+     up blue under the pointer and reads as clickable right up until it is
+     clicked. Picture Import on Add New Employee is the item that showed it. */
+  .emmenu button[disabled]:hover { @apply bg-transparent text-ink-3; }
+  .emmenu button[aria-selected="true"] { @apply font-semibold; }
+  .emmenu button.zero { @apply text-ink-3; }
+  .emmenu button.zero .sdot { @apply opacity-[.45]; }
+
+  /* The export list hangs off the right-hand edge of the form, so it opens
+     leftwards — anchored left it would run off the page on a narrow screen. */
+  .emmenu.end { left: auto; right: 0; }
+  .fico { @apply not-italic text-[.92rem] leading-none; }
+
+  /* The preview is the printable document in an iframe, at something close to
+     a page's proportions. Its own stylesheet is inside it, which is the point:
+     what is on screen here is what the printer is handed. */
+  .iopaper {
+    @apply w-full bg-white border border-line rounded;
+    height: min(60vh, 520px);
+  }
+
+  .cards { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
+  .ecard {
+    @apply bg-card border border-line rounded-md px-[1rem] py-[.95rem] grid gap-[1rem] items-center cursor-pointer shadow-raise;
+    grid-template-columns: auto minmax(0, 1fr);
+    transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease;
+  }
+  .ecard:hover { @apply border-brand shadow-lift; transform: translateY(-1px); }
+  .ava {
+    @apply w-[4.4rem] h-[4.4rem] shrink-0 rounded-full bg-brand-soft text-brand-deep
+           border border-brand-tint flex items-center justify-center font-display text-[1.5rem] font-bold;
+  }
+  .ename { @apply flex items-baseline gap-2 font-semibold text-[.92rem]; }
+  .ename span { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
+  .ename .go { @apply ml-auto text-ink-3 text-base leading-none; }
+  .ecard:hover .ename .go { @apply text-brand; }
+  .estat { @apply flex items-center gap-[.35rem] text-[.78rem] text-ink-2 mt-[.2rem] mb-[.45rem]; }
+  .eline { @apply flex items-center gap-2 text-[.82rem] text-accent py-[.1rem]; }
+  .eline svg { @apply w-[14px] h-[14px] stroke-ink-3 fill-none; flex: 0 0 14px; stroke-width: 1.6; }
+  .eline span { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
+  .eline.off { @apply text-ink-3; }
+
+  /* ---- Category Type, as Factor HR draws it ----------------------------
+     Their Categories page is a plain paginated master: title bar, search,
+     table, pager. Copied close for the same reason Employee Master is — but
+     every control on it here is dead, because that one writes and this one
+     reads. */
+  .fhcat { @apply bg-card border border-line rounded-md overflow-hidden; }
+  .fhcat > header { @apply flex flex-wrap gap-2 items-center px-[.9rem] py-[.65rem] border-b border-line; }
+  .fhcat > header h3 { @apply font-display text-[.98rem] font-bold; }
+  .fhcat > header .right { @apply ml-auto flex gap-[.4rem] items-center; }
+  .fhcat .embtn.pri { @apply bg-brand-dark border-brand-dark text-white; }
+  .fhcat .find { @apply px-[.9rem] py-[.6rem] border-b border-line; }
+  .fhcat .find input {
+    @apply text-[.85rem] px-[.7rem] py-[.44rem] border border-line-ctl rounded bg-white;
+    min-height: 2.1rem;
+    width: min(20rem, 100%);
+  }
+  .fhcat table { @apply min-w-[620px]; }
+  .fhcat td.act { @apply text-right; }
+  /* `inline-flex`, and it has to be said. Preflight makes every `svg` a block,
+     and a block inside an inline `<span>` splits the span into block boxes — so
+     the three action icons stacked, one per line, and a five-row table was 465px
+     of mostly nothing. Any inline wrapper around an icon needs this. */
+  .fhact {
+    @apply inline-flex items-center justify-center border-0 bg-transparent
+           px-1 py-[.15rem] text-ink-3 cursor-not-allowed;
+  }
+  .fhact svg { @apply w-[15px] h-[15px] stroke-current fill-none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  /* The row actions that do something. `.fhact` on its own is the dead one and
+     keeps its not-allowed cursor; `.on` is the live pair beside it — the value
+     list here, the master on the site. */
+  .fhact.on { @apply cursor-pointer text-ink-2; }
+  .fhact.on:hover { @apply text-brand-deep; }
+  .fhview {
+    @apply text-[.82rem] px-[.8rem] py-[.36rem] border border-brand rounded
+           bg-white text-brand-deep cursor-pointer;
+    min-height: 1.95rem;
+    transition: background-color .13s ease, color .13s ease;
+  }
+  .fhview:hover { @apply bg-brand-soft; }
+  .fhview[aria-expanded="true"] { @apply bg-brand-dark border-brand-dark text-white; }
+  .fhcat tr.vals > td { @apply bg-wash whitespace-normal px-[.9rem] py-3; }
+  .fhcat tr.vals .lead { @apply text-[.85rem] text-ink-2 mb-[.6rem]; }
+  .fhcat tr.vals .lead b { @apply font-display text-ink; }
+  .fhfoot { @apply flex flex-wrap gap-2 items-center px-[.9rem] py-[.6rem] border-t border-line; }
+  .fhcat .cnt { @apply text-[.8rem] text-ink-3; }
+  .fhpage { @apply ml-auto flex flex-wrap gap-[.3rem] items-center; }
+  .fhpage .embtn { @apply px-[.55rem] py-[.26rem] text-[.8rem]; }
+
+  /* SHIFT & WORK PATTERN reuses the Category Type shell — same product, same
+     kind of master, a different toolbar. */
+  .fhcat h3.caps { @apply tracking-[.04em] text-[.9rem]; }
+  .fhcat .bar3 { @apply flex flex-wrap gap-y-[.6rem] gap-x-4 items-center px-[.9rem] py-[.6rem] border-b border-line; }
+  .fhcat .lbl { @apply text-[.83rem] text-ink-2 inline-flex items-center gap-[.4rem]; }
+  .fhcat .lbl.mid, .fhcat .lbl.right { @apply ml-auto; }
+  .fhcat .bar3 select, .fhcat .bar3 input {
+    @apply text-[.85rem] px-[.6rem] py-[.38rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 2rem;
+  }
+  .fhcat th .sort { @apply text-ink-3 font-normal text-[.75rem]; }
+  .fhcat th.num, .fhcat td.num { @apply text-right; }
+  .fhcat td.num { @apply font-mono tabular-nums; }
+  .fhcat td.num.zero, .fhcat td.num.clip { @apply text-ink-3; }
+  /* Their shift names are links. Ours are not, because there is nothing behind
+     them on this side — but a name that reads as plain text loses the fact that
+     one click over there is what answers the open question on this page. */
+  .fhname { @apply text-accent border-b border-dotted border-line-2; }
+
+  /* The screen behind View Category. Their back arrow is a plain glyph at the
+     head of the title bar, so it is drawn as one rather than as a button that
+     looks like the toolbar's. */
+  .fhback {
+    @apply inline-flex items-center justify-center w-[1.6rem] h-[1.6rem] rounded
+           text-ink-2 text-[1.1rem] leading-none cursor-pointer bg-transparent border-0;
+  }
+  .fhback:hover { @apply bg-wash text-ink; }
+  /* Their Status chip: a pale green pill, and a grey one for anything that is
+     not Active. Ours only ever fills it from a field actually read. */
+  .pill {
+    @apply inline-flex items-center px-[.55rem] py-[.12rem] rounded-full text-[.75rem] font-semibold;
+  }
+  .pill.on  { @apply bg-live-wash text-live; }
+  .pill.off { @apply bg-wash text-ink-3; }
+  /* The reconciliation under their screen — separated by a rule rather than a
+     panel, because it is the same subject continued, not a second one. */
+  .drillunder { @apply px-[.9rem] py-[.8rem] border-t border-line; }
+  .fhcat tr.clip > td { @apply opacity-50; }
+
+  /* The rendered letter. Serif and generous leading on purpose — it is a
+     document somebody will print and hand over, not another panel of data. */
+  .letter {
+    @apply mt-[.7rem] bg-white border border-line rounded-md px-[1.8rem] py-[1.6rem]
+           text-[.92rem] max-h-[34rem] overflow-auto shadow-raise;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.65;
+  }
+  .letter p  { @apply m-0 mb-[.7rem]; }
+  .letter h3 { @apply text-base m-0 mb-[.7rem] text-center tracking-[.02em]; font-family: Georgia, serif; }
+  .letter table { @apply border-collapse m-0 mb-[.7rem] min-w-0 w-auto text-[.88rem]; }
+  .letter td { @apply border-0 pl-0 pr-[.9rem] py-[.1rem] whitespace-normal; }
+  .letter table[border] { @apply border border-line-2; }
+  .letter table[border] td { @apply border border-line-2 px-2 py-1; }
+  /* Unresolved merge fields are shown, never blanked. */
+  .tok { @apply bg-bad-wash text-bad rounded-sm font-mono text-[.82em] whitespace-nowrap; padding: 0 .22em; }
+
+  .tabs { @apply flex flex-wrap gap-[.4rem]; }
+  .tab {
+    @apply font-mono text-[.73rem] tracking-[.05em] uppercase px-[.8rem] py-[.42rem]
+           border border-line-ctl rounded-full bg-card text-ink-2 cursor-pointer inline-flex gap-[.4rem] items-center;
+    min-height: 2rem;
+    transition: background-color .13s ease, border-color .13s ease, color .13s ease;
+  }
+  .tab:hover { @apply border-ink-3 text-ink; }
+  .tab[aria-selected="true"] { @apply border-brand text-brand-deep bg-brand-soft font-semibold; }
+  .tab .n { @apply font-semibold tabular-nums; }
+  .tab .n.hot { @apply text-bad; }
+
+  .person { @apply bg-card border border-line rounded-md overflow-hidden mb-[.7rem] shadow-raise; }
+  .person .who {
+    @apply flex flex-wrap gap-y-[.3rem] gap-x-[.7rem] items-baseline px-[.85rem] py-[.55rem]
+           bg-wash border-b border-line;
+  }
+  .person .who b { @apply font-display text-[.93rem]; }
+  .person .who .code { @apply font-mono text-[.74rem] text-ink-3; }
+
+  .req {
+    @apply grid gap-y-[.35rem] gap-x-4 px-[.85rem] py-[.65rem] border-b border-line items-start;
+    grid-template-columns: minmax(150px, 190px) minmax(190px, 230px) 1fr auto;
+  }
+  .req:last-child { @apply border-b-0; }
+  .req .when b { @apply block font-display text-[.9rem]; }
+  .req .when span { @apply block text-[.77rem] text-ink-3; }
+  .req dl { @apply m-0 grid gap-y-[.12rem] gap-x-[.8rem] text-[.8rem] font-mono tabular-nums; grid-template-columns: auto auto auto; }
+  .req dl .h { @apply text-ink-3 text-[.66rem] uppercase tracking-[.06em]; }
+  .req dl .lab { @apply text-ink-3; }
+  .req .why { @apply text-[.84rem] text-ink-2; }
+  .req .why b { @apply text-ink font-semibold; }
+
+  /* ---- the approval queue, laid out as Factor HR lays it out ------------
+     Toolbar, then a card per request under a per-person heading. The card is
+     copied deliberately closely: an approver comparing the two screens should
+     not have to hunt for the same number in a different place. */
+  .qbar {
+    @apply flex flex-wrap gap-y-2 gap-x-[.6rem] items-center bg-card border border-line
+           rounded-md px-[.8rem] py-[.6rem] mt-[.6rem] mb-[.8rem] shadow-raise;
+  }
+  .qbar select, .qbar input {
+    @apply font-body text-[.84rem] px-[.65rem] py-[.42rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 2.1rem;
+  }
+  .qbar input[type=search] { @apply min-w-[160px]; flex: 1 1 210px; }
+  .qbar .icon {
+    @apply w-[2.1rem] h-[2.1rem] border border-line-ctl rounded bg-white text-ink-2 cursor-pointer text-[.95rem] leading-none;
+  }
+  .qbar .icon:hover { @apply text-accent border-accent; }
+  .qbar .picked { @apply font-mono text-[.74rem] text-ink-3 ml-auto; }
+  .qbar .picked b { @apply text-accent font-mono; }
+
+  .reqhead {
+    @apply flex flex-wrap gap-y-[.2rem] gap-x-[.9rem] justify-between items-baseline
+           bg-rule border-t border-b border-line px-[.85rem] py-[.34rem] text-[.76rem];
+  }
+  .reqhead .kind { @apply font-mono text-[.68rem] tracking-[.09em] uppercase text-ink-2 font-semibold; }
+  .reqhead .meta { @apply text-accent text-[.74rem]; }
+  .reqhead .meta .muted { @apply text-ink-3; }
+
+  /* Six columns, in Factor HR's order: pick · day · planned vs attended ·
+     hours · what the correction asks for · decide. */
+  .reqx {
+    @apply grid gap-y-[.45rem] gap-x-4 px-[.85rem] py-[.7rem] items-start;
+    grid-template-columns: auto minmax(130px, 160px) minmax(175px, 205px) minmax(165px, 1fr) minmax(180px, 1.1fr) auto;
+  }
+  .reqx .day b { @apply block font-display text-[.95rem]; }
+  .reqx .day span { @apply block text-[.79rem] text-ink-2; }
+  .reqx .day .applied { @apply mt-[.3rem] text-[.75rem] text-ink-3; }
+  /* The shift sits under the Planned | Attended pair, not in a row of its own —
+     otherwise it pushes the hours and the ask down and leaves the card's top
+     right empty, which is not how Factor HR reads. */
+  .reqx .shift { @apply mt-[.4rem] text-[.76rem] text-accent whitespace-normal; }
+
+  .pa { @apply grid gap-y-[.14rem] gap-x-[.6rem] text-[.82rem] font-mono tabular-nums; grid-template-columns: auto 1fr 1fr; }
+  .pa .h { @apply text-[.66rem] tracking-[.06em] uppercase text-ink-3 font-mono; }
+  .pa .lab { @apply text-ink-3; }
+  .pa .att { @apply text-ink font-semibold; }
+  .hrs, .ask { @apply text-[.81rem] text-ink-2; }
+  .hrs b, .ask b { @apply text-ink font-semibold font-body; }
+  .hrs .link, div.act .link { @apply inline-block mt-1 text-[.79rem] text-accent underline cursor-help; }
+
+  /* `div.act`, not `.act`. Approvals stacks its tick, cross and link in a
+     column — but Categories and Manage Shift both name their action *cell*
+     `act` too, and a bare rule turned those `<td>`s into column flex boxes:
+     three 20px icons became a 93px row, and the five-row table 501px tall.
+     The tag is the only thing that separates the two, so the tag is in the
+     selector. */
+  div.act { @apply flex flex-col items-center gap-[.35rem]; }
+  .yn  { @apply flex gap-[.45rem]; }
+  /* Enabled on purpose: a control that reports itself disabled never fires,
+     so a screen-reader user would get silence instead of the reason. */
+  .yn button {
+    @apply w-[1.85rem] h-[1.85rem] rounded-full bg-white leading-none text-[.85rem] font-bold
+           inline-flex items-center justify-center cursor-pointer;
+    border-width: 1.6px; border-style: solid;
+    transition: background-color .13s ease;
+  }
+  .yn .ok { @apply border-live text-live; }
+  .yn .no { @apply border-bad text-bad; }
+  .yn .ok:hover { @apply bg-live-wash; }
+  .yn .no:hover { @apply bg-bad-wash; }
+
+  /* Import / Export opens a dialog in Factor HR rather than acting at once, and
+     that is worth copying: two of its three buttons are harmless and one of
+     them overwrites attendance. */
+  .modal {
+    @apply fixed inset-0 flex items-start justify-center px-4 z-50;
+    background: rgba(16, 24, 40, .48);
+    padding-top: 5vh; padding-bottom: 5vh;
+  }
+  .modal .box {
+    @apply bg-card border border-line rounded-lg shadow-modal;
+    width: min(560px, 100%);
+  }
+  /* The log carries a table, and a table in a 560px box is one nobody reads. */
+  .modal .box.wide { width: min(900px, 100%); }
+  .modal header { @apply flex items-center justify-between gap-4 px-4 py-3 border-b border-line; }
+  .modal header h3 { @apply text-[1.02rem]; }
+  .modal .x { @apply bg-transparent border-0 text-[1.2rem] leading-none text-ink-3 cursor-pointer px-[.3rem] py-[.1rem]; }
+  .modal .x:hover { @apply text-ink; }
+  .modal .acts { @apply flex flex-wrap gap-[.7rem] px-4 pt-[1.1rem] pb-[.9rem]; }
+  .modal .why  { @apply px-4 pb-[.9rem] text-[.84rem] text-ink-2; }
+  .modal .why b { @apply text-ink; }
+  .modal .foot { @apply px-4 py-[.7rem] border-t border-line; }
+
+  .btn {
+    @apply font-body text-[.88rem] font-semibold px-[1.05rem] py-[.5rem] rounded border border-transparent
+           text-white cursor-pointer inline-flex items-center justify-center gap-[.45rem] shadow-raise;
+    min-height: 2.35rem;
+    transition: background-color .13s ease, border-color .13s ease, box-shadow .13s ease;
+  }
+  .btn:active:not([disabled]) { @apply shadow-none; }
+  .btn.go  { @apply bg-live; }
+  .btn.tpl { @apply bg-brand-dark; }
+  .btn.imp { @apply bg-char; }
+  .btn.go:hover  { background: #19643E; }
+  .btn.tpl:hover { @apply bg-brand-deep; }
+  .btn.imp:hover { @apply bg-nav-2; }
+  /* The caret half of a split button: the same fill, half the padding. */
+  .btn.split { @apply px-[.5rem]; }
+  .btn.ghost { @apply bg-white text-accent border-line-ctl; }
+  .btn.ghost:hover { @apply border-accent; }
+  .btn[disabled] { @apply opacity-[.45] cursor-not-allowed shadow-none; }
+  .btn.ghost[disabled]:hover { @apply border-line-ctl; }
+
+  /* The Other queue is a grid, not a stack of cards — because Factor HR's is.
+     The two screens look different there because they are used differently. */
+  .gbar { @apply flex flex-wrap gap-[.45rem] mt-[.6rem] mb-[.55rem]; }
+  .gbtn {
+    @apply font-body text-[.84rem] px-[.85rem] py-[.44rem] border border-line-ctl rounded
+           bg-white text-ink cursor-pointer inline-flex gap-[.42rem] items-center;
+    min-height: 2.1rem;
+    transition: background-color .13s ease, border-color .13s ease, color .13s ease;
+  }
+  .gbtn:hover { @apply border-brand text-brand-deep bg-brand-soft; }
+  .gfil { @apply flex flex-wrap gap-y-[.45rem] gap-x-[1.4rem] items-center mb-[.6rem] text-[.83rem] text-ink-2; }
+  .gfil label { @apply inline-flex gap-[.45rem] items-center; }
+  .gfil select {
+    @apply font-body text-[.85rem] px-[.6rem] py-[.4rem] border border-line-ctl rounded bg-white text-ink min-w-[11rem];
+    min-height: 2.05rem;
+  }
+  table.grid th { @apply align-top; }
+  table.grid td, table.grid th { @apply whitespace-nowrap; }
+  table.grid tr.fil th { @apply pt-0 bg-wash; }
+  table.grid tr.fil input {
+    @apply w-full min-w-[6rem] font-body text-[.82rem] px-[.5rem] py-[.32rem] border border-line-ctl rounded bg-white;
+  }
+  table.grid select {
+    @apply font-body text-[.82rem] px-[.45rem] py-[.3rem] border border-line-ctl rounded bg-white;
+  }
+  table.grid td.desc { @apply whitespace-normal min-w-[260px]; }
+
+  /* The muster grid on Monthly Basic Attendance. Thirty-one day columns, so the
+     padding that suits a data table would push half the month off the screen. */
+  table.muster th.d, table.muster td.d { @apply px-[.22rem] py-[.3rem] text-center font-mono text-[.7rem]; }
+  table.muster th.d small { @apply block text-[.56rem] font-normal text-ink-3; }
+  table.muster td.d.wo  { @apply bg-skip-wash text-skip font-semibold; }
+  table.muster td.d.non { @apply text-line-2; }
+  table.muster td.pay { @apply font-mono text-right text-ink-3; }
+
+  /* The CTC / Earnings report form, laid out as Factor HR lays it out: labels
+     right-aligned in a narrow column, controls in a wide one, the buttons in a
+     row across the bottom. */
+  .repbar  { @apply flex justify-end mb-[.55rem]; }
+  .repform { @apply bg-card border border-line rounded-md px-[1.1rem] py-[.8rem]; }
+
+  /* Their criteria screen is one screenful and no more — twelve rows of fields,
+     an age box to their right, fourteen tick boxes and a button row, all
+     visible at once. That is what makes it a form rather than a questionnaire:
+     you set the fields you care about and press Generate without losing the
+     top of it. So the fields and the age box sit side by side, and every
+     measurement below is chosen to keep the whole thing above the fold on a
+     laptop. It stacks on a phone, where scrolling is expected anyway. */
+  .reptop { @apply grid gap-x-[1.4rem] gap-y-[.8rem] items-start; grid-template-columns: minmax(0, 1fr) minmax(0, 21rem); }
+  .repside { @apply flex flex-col items-end gap-[.6rem]; }
+  .repside .btn { @apply whitespace-nowrap; }
+
+  .repset  { @apply border border-line-2 rounded px-[.8rem] pt-[.15rem] pb-[.55rem] m-0 w-full; }
+  .repset legend { @apply text-[.79rem] text-ink-2 px-[.32rem]; }
+  /* Four columns, so a `pair` row puts two fields on one line. Everything else
+     spans the remaining three — which is what keeps a date range in one row
+     rather than wrapping under its own label. `.two` opts back out, for the age
+     box in the sidebar where four columns would leave an input nine characters
+     wide. */
+  .repgrid { @apply grid gap-y-[.32rem] gap-x-3 items-center; grid-template-columns: auto 1fr auto 1fr; }
+  .repgrid > .ctl { grid-column: span 3; }
+  .repgrid > .ctl.pair { grid-column: span 1; }
+  .repgrid.two { grid-template-columns: auto 1fr; }
+  .repgrid.two > .ctl { grid-column: span 1; }
+  .repgrid > label { @apply text-right text-[.84rem] text-ink-2 whitespace-nowrap; }
+  .repgrid > label.off { @apply text-ink-3; }
+  .repgrid .ctl { @apply flex flex-wrap gap-y-[.3rem] gap-x-[.6rem] items-center text-[.83rem] text-ink-2; }
+  .repform input, .repform select {
+    @apply font-body text-[.84rem] px-[.5rem] py-[.2rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 1.62rem;
+    transition: border-color .13s ease, box-shadow .13s ease;
+  }
+  .repform input:focus, .repform select:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px theme(colors.brand.soft); }
+  .repform input:disabled, .repform select:disabled { @apply bg-page text-ink-3 cursor-not-allowed; }
+  .repform input[type=number] { @apply w-24; }
+  .repform .wide { @apply min-w-[210px]; }
+  .repform .hint { @apply text-[.79rem] text-ink-3; }
+  .repform label.chk { @apply inline-flex gap-[.38rem] items-center text-left text-[.84rem] text-ink-2 whitespace-nowrap; }
+  .repform label.chk.off { @apply text-ink-3 cursor-not-allowed; }
+  .repform .dots {
+    @apply px-2 py-[.3rem] border border-line-ctl rounded-sm bg-white text-ink-2 cursor-pointer font-mono leading-none;
+  }
+  .repform .dots:hover { @apply border-accent text-accent; }
+  .repacts { @apply flex flex-wrap gap-[.5rem] justify-center mt-[.7rem] pt-[.65rem] border-t border-line; }
+  .repmore { @apply mt-[.6rem] text-[.84rem] text-ink-2; }
+  /* Their five More options boxes sit one under another, indented under the
+     summary — theirs do, and a row of five across would read as a toolbar
+     rather than as a list of things the report can add. */
+  .repopts { @apply flex flex-col gap-[.24rem]; }
+
+  /* CTC Rating Data Import is a menu with two items, and in their capture both
+     items are filled navy bars with an icon rather than plain rows on white.
+     Copied, because on this page the *weight* of a control is information: these
+     two are the only things on the screen that would write, and theirs are drawn
+     to look it. Ours refuse — which is the point of drawing them at their own
+     weight rather than quietly demoting them to text. */
+  .ctcdrop { @apply relative inline-flex; }
+  .ctcdrop > .btn { @apply bg-nav border-nav text-white; }
+  .ctcdrop > .btn:hover { @apply bg-nav-2 border-nav-2 text-white; }
+  .ctcdrop .cx { @apply text-[.7rem] ml-[.15rem]; }
+  .ctcmenu {
+    @apply absolute right-0 z-30 min-w-[16.5rem] flex flex-col gap-[.25rem] bg-card
+           border border-line-2 rounded-md p-[.3rem] shadow-pop;
+    top: calc(100% + .3rem);
+  }
+  .ctcmenu button {
+    @apply flex items-center gap-[.5rem] text-[.85rem] text-left bg-nav border-0 rounded-sm
+           px-[.7rem] py-[.5rem] cursor-pointer text-white whitespace-nowrap;
+  }
+  .ctcmenu button:hover { @apply bg-nav-3; }
+  .ctcmenu button:focus-visible { @apply outline-none; box-shadow: 0 0 0 2px theme(colors.brand.lift); }
+  /* The glyph carries no meaning the label does not — it is there because
+     theirs is, so the two screens compare row for row. */
+  .ctcmenu .ico { @apply text-[.9rem] leading-none opacity-90; }
+  .repmore summary { @apply cursor-pointer text-accent text-[.83rem]; }
+  .repmore .body { @apply pt-2 pl-4; }
+  /* Fourteen tick boxes do not fit a two-column grid. Theirs is five across and
+     three deep; ours fits as many as the width allows and lands on the same
+     five on a laptop, which is the arrangement that keeps them to three rows. */
+  .repchecks {
+    @apply grid gap-y-[.22rem] gap-x-[.9rem] mt-[.7rem] pt-[.65rem] border-t border-line;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  .repradio { @apply flex gap-[2.2rem] justify-center mt-[.2rem] mb-[1.1rem] text-[.88rem] text-ink-2; }
+  .repradio label { @apply inline-flex gap-[.42rem] items-center cursor-pointer; }
+
+  table.ctc td.n, table.ctc th.n { @apply text-right font-mono tabular-nums; }
+  table.ctc tr.grp td { @apply bg-rule font-semibold; }
+  table.ctc tr.tot td { @apply bg-wash font-bold border-t-2 border-t-line-2; }
+  table.sr th.gapcol, table.sr td.gapcol { @apply text-bad; background: #FDF6F5; }
+  table.sr td.gapcol { @apply font-mono text-[.78rem]; }
+  table.io tr.grp td { @apply bg-rule font-semibold; }
+  /* The outer section, when Group By is set on the Advance tab. Heavier than a
+     group heading on purpose: two levels of heading that look alike is one
+     level as far as a reader is concerned. */
+  table.io tr.sec td { @apply bg-nav text-white font-semibold; }
+  table.muster tr.grp td { @apply bg-rule font-semibold text-left; }
+  table.muster tr.sec td { @apply bg-nav text-white font-semibold text-left; }
+  table.muster tr.sec td .muted { @apply text-white opacity-[.72]; }
+  table.io td.sel { @apply text-ink-3; }
+
+  /* The Monthly Basic toolbar: a row of controls each under its own uppercase
+     micro-label, which is how Factor HR labels a report toolbar. */
+  .mbbar { @apply flex flex-wrap gap-y-[.6rem] gap-x-[.9rem] items-end mb-[.85rem]; }
+  .mbf   { @apply flex flex-col gap-[.24rem] min-w-0; }
+  .mbf > span { @apply font-mono text-[.62rem] tracking-[.08em] uppercase text-ink-3; }
+  .mbf select, .mbf input {
+    @apply text-[.85rem] px-[.6rem] py-[.4rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 2.05rem;
+  }
+  .mbf .grow { @apply min-w-[210px]; }
+
+  .taglist {
+    @apply flex flex-wrap gap-[.35rem] items-center border border-line-ctl rounded
+           px-[.5rem] py-[.36rem] bg-white min-h-[2.2rem];
+  }
+  .taglist .t { @apply inline-flex items-center gap-[.4rem] text-[.8rem] px-[.45rem] py-[.16rem] rounded-sm bg-brand-soft text-brand-deep; }
+  .taglist .t button { @apply border-0 bg-transparent cursor-pointer leading-none p-0; color: inherit; font: inherit; }
+  .taglist .add { @apply text-[.8rem] text-accent bg-transparent border-0 cursor-pointer; }
+  .taglist .add:hover { @apply underline; }
+
+  .dtbar { @apply flex flex-wrap gap-y-[.45rem] gap-x-[.9rem] items-center justify-between text-[.83rem] text-ink-2; }
+  .dtbar select, .dtbar input {
+    @apply text-[.84rem] px-[.5rem] py-[.34rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 1.95rem;
+  }
+  .dtbar .pager { @apply flex gap-[.3rem]; }
+  .dtbar .pager button {
+    @apply text-[.82rem] px-[.8rem] py-[.34rem] border border-line-ctl rounded bg-white text-ink-2;
+    min-height: 1.95rem;
+  }
+  .dtbar .pager button:hover:not([disabled]) { @apply border-brand text-brand-deep bg-brand-soft; }
+
+  /* IN / OUT ACTIVITY REPORT — Factor HR's newer report chrome: uppercase field
+     labels above boxed controls, a criteria tab strip beneath them, the primary
+     action on the right. Their palette is blue and ours stays Manna orange: a
+     screenshot comparison is about where a control is and what it does. */
+  .iotop { @apply flex flex-wrap gap-y-3 gap-x-4 items-end px-[.9rem] py-[.85rem]; }
+  .iof   { @apply flex flex-col gap-[.3rem] min-w-0; }
+  .iof > .lab { @apply font-mono text-[.6rem] tracking-[.1em] uppercase text-ink-3; }
+  .iof > .ctl { @apply flex items-center gap-[.35rem]; }
+  .iof input, .iof select {
+    @apply text-[.85rem] px-[.6rem] py-[.4rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 2.05rem;
+  }
+  .iof input:focus, .iof select:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px theme(colors.brand.soft); }
+  .iof .grow { @apply min-w-[206px]; }
+  .iotop .right { @apply ml-auto flex items-end gap-[.4rem]; }
+  .iotabs { @apply flex gap-[1.35rem] px-[.9rem] border-b border-line; }
+  .iotab {
+    @apply text-[.75rem] tracking-[.08em] uppercase bg-transparent border-0
+           border-b-2 border-b-transparent px-[.1rem] py-[.55rem] text-ink-3 cursor-pointer;
+    font: inherit;
+  }
+  .iotab[aria-selected="true"] { @apply text-brand-dark border-b-brand font-semibold; }
+  .iobody { @apply px-[.9rem] pt-[.95rem] pb-4; }
+  .iorow  { @apply flex flex-wrap gap-y-[.85rem] gap-x-6 items-end mb-[.95rem]; }
+  .iorow:last-child { @apply mb-0; }
+  .chipbox {
+    @apply flex flex-wrap gap-[.4rem] items-center border border-line-ctl rounded bg-white px-[.6rem] py-[.44rem] min-h-[2.4rem];
+    width: min(40rem, 100%);
+  }
+  .chip {
+    @apply inline-flex items-center gap-[.35rem] bg-page border border-line rounded-sm
+           pl-[.45rem] pr-[.2rem] py-[.16rem] text-[.82rem] text-ink-2;
+  }
+  .chip button { @apply bg-transparent border-0 text-ink-3 cursor-pointer text-[.9rem] leading-none px-1 py-0; }
+  .chip button:hover { @apply text-bad; }
+  /* A chip that is theirs but does nothing here — three of the Salary Register's
+     five. Dashed rather than faded: a washed-out chip reads as disabled, and
+     these are not disabled, they are options with nothing behind them. */
+  .chip.dim { @apply border-dashed text-ink-3 bg-transparent; }
+  /* The green tick and red cross Factor HR pins inside its multi-select boxes —
+     select everything, clear everything. Drawn as buttons rather than as the
+     glyphs they look like: a decoration that turns out to be a control is worse
+     than a plain control. */
+  .chiptool { @apply bg-transparent border-0 cursor-pointer text-[.86rem] leading-none px-[.25rem] py-0; }
+  .chiptool.ok { @apply text-live; }
+  .chiptool.no { @apply text-bad; }
+  .iofun {
+    @apply inline-flex items-center gap-2 bg-transparent border-0 cursor-pointer
+           font-mono text-[.62rem] tracking-[.1em] uppercase text-ink-3;
+  }
+  .iofun svg { @apply w-[15px] h-[15px] stroke-current fill-none; stroke-width: 1.6; stroke-linejoin: round; }
+  .iofun:hover, .iofun[aria-expanded="true"] { @apply text-brand-dark; }
+
+  .nopend { @apply px-[.9rem] py-[1.1rem] text-ink-2 text-[.9rem] bg-wash border border-line border-t-0 rounded-b-md; }
+
+  .status { @apply font-mono text-[.72rem] inline-flex items-center gap-[.4rem]; }
+  /* On the dark top bar, so these are the bright end of each hue rather than
+     the `live`/`none` tokens, which are chosen to be read on white. */
+  .dot { @apply w-[.55rem] h-[.55rem] rounded-full inline-block; background: #98A5BA; }
+  .dot.live { background: #57D68C; box-shadow: 0 0 0 3px rgba(87, 214, 140, .22); }
+  .dot.bad  { background: #FF8A7E; box-shadow: 0 0 0 3px rgba(255, 138, 126, .22); }
+
+  /* --------------------------------------- Employees, the calendar screen -- */
+  /* Factor HR's calendar, laid out as it lays it out: toolbar, the calendar name
+     beside its default flag, a month strip with the arrows in the middle, then
+     six weeks with the week number down the gutter and the day number in the
+     corner. Their layout, this build's palette. */
+  /* ------------------------------------------------------------------ *
+     Apply Leave. Their screen is two columns — the application on the left,
+     the month and the team on the right — and one full-width history below.
+     It collapses to one column early: the form is the thing somebody is
+     filling in, and a calendar squeezed beside it on a phone helps nobody.
+     ------------------------------------------------------------------ */
+  .lvtop { @apply flex items-center gap-[.4rem] mt-[.8rem] relative; }
+  .lvtop .find { @apply flex items-center gap-[.4rem] border border-line-ctl rounded px-2 py-[.1rem] bg-white min-w-0; flex: 1 1 320px; max-width: 26rem; }
+  .lvtop .find input { @apply border-0 px-[.1rem] py-[.3rem] min-w-0 bg-transparent; flex: 1 1 auto; }
+  .lvtop .regfind { @apply absolute left-0 z-20 w-[min(26rem,100%)]; top: calc(100% + .3rem); }
+
+  .lvsplit { @apply grid gap-[.9rem] mt-[.8rem] items-start; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 62rem) { .lvsplit { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); } }
+  .lvside { @apply flex flex-col gap-[.8rem]; }
+
+  .lvform { @apply grid gap-x-[1.2rem] gap-y-[.85rem] px-[.1rem] py-[.3rem]; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); }
+  .lvf { @apply flex flex-col gap-[.28rem] min-w-0; }
+  .lvf.wide { grid-column: 1 / -1; }
+  .lvf > .lab { @apply font-mono text-[.6rem] tracking-[.1em] uppercase text-ink-3; }
+  .lvf > .ctl { @apply flex items-center gap-[.4rem] min-w-0 relative; }
+  .lvf .find { @apply flex items-center gap-[.4rem] border border-line-ctl rounded px-2 py-[.1rem] bg-white min-w-0; flex: 1 1 auto; }
+  .lvf .find input { @apply border-0 px-[.1rem] py-[.3rem] min-w-0 bg-transparent; flex: 1 1 auto; }
+  .lvf .regfind { @apply absolute left-0 right-0 z-20; top: calc(100% + .3rem); }
+  .lvf input, .lvf select, .lvf textarea {
+    @apply font-body text-[.86rem] px-[.6rem] py-[.42rem] border border-line-ctl rounded bg-white text-ink w-full;
+  }
+  .lvf input[type=file] { @apply py-[.3rem]; }
+  .lvf textarea { @apply resize-y; }
+  .lvf input:focus, .lvf select:focus, .lvf textarea:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px theme(colors.brand.soft); }
+  .lvf input[disabled], .lvf select[disabled] { @apply bg-wash text-ink-3; }
+  .lvf .hint { @apply text-[.79rem] text-ink-3; }
+  .lvf b { @apply text-[.95rem]; }
+
+  .lvcal { @apply bg-card border border-line rounded-md p-[.7rem] flex flex-col gap-[.7rem]; }
+  .lvcalbar { @apply flex flex-wrap items-center gap-[.5rem]; }
+  .lvcalbar b { @apply font-display font-semibold text-[1.3rem] leading-none text-brand-dark; }
+  .lvcalbar .nav { @apply ml-auto flex gap-[.4rem]; }
+  /* Their month controls are outlined, not filled — the screenshot of 29 Aug
+     2026. Worth copying rather than tidying: a filled pair of chevrons sitting
+     a few centimetres from a filled Submit puts two primary actions on one
+     screen, and only one of them is what somebody came here to press. */
+  .lvcalbar .embtn      { @apply border-brand-tint text-brand-dark px-[.75rem] py-[.32rem]; }
+  .lvcalbar .embtn.step { @apply border-brand px-[.85rem] text-[1rem] leading-none; }
+
+  /* Ruled on all four sides, as their grid is. The top and left rules come from
+     the container because the cells only carry their right and bottom ones —
+     this is the one place on the screen where a date is found by counting
+     across a row rather than read in a line, and an open edge is a column with
+     nothing to count from. */
+  .lvgrid {
+    @apply grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-top: 1px solid theme(colors.line.DEFAULT);
+    border-left: 1px solid theme(colors.line.DEFAULT);
+  }
+  .lvgrid .dow { @apply text-center font-semibold text-[.82rem] text-ink py-[.45rem] border-r border-b border-line; }
+  .lvgrid .cell {
+    @apply relative border-r border-b border-line min-h-[3.1rem] px-[.4rem] pt-[.3rem] pb-[.55rem]
+           text-right font-mono text-[.84rem] text-ink tabular-nums;
+  }
+  .lvgrid .cell.out { @apply text-line-2; }
+  /* Their own today-fill, a pale amber. It cannot be mistaken for one of the
+     seven states even though one of those is yellow: state is carried by the
+     dot under the number and never by the cell's fill. */
+  .lvgrid .cell.now { @apply font-semibold; background: #FDF6E3; }
+  /* The colour sits under the number rather than behind it: seven fills behind
+     a date is a grid nobody can read the dates off. */
+  .lvdot { @apply inline-block w-[.5rem] h-[.5rem] rounded-full align-middle; flex: 0 0 .5rem; }
+  .lvgrid .lvdot { @apply absolute left-1/2 bottom-[.22rem]; transform: translateX(-50%); }
+  .lvdot.absent  { background: #EF6C6C; }
+  .lvdot.weekoff { background: #26252A; }
+  .lvdot.unappr  { background: #F2D24B; }
+  .lvdot.partial { background: #F0932B; }
+  .lvdot.holiday { background: #6C63FF; }
+  .lvdot.appr    { background: #918D93; }
+  .lvdot.opthol  { background: #7A3E1D; }
+  .lvkey { @apply flex flex-wrap gap-x-[.9rem] gap-y-[.3rem] text-[.8rem] text-ink-2; }
+  .lvkey span { @apply inline-flex items-center gap-[.35rem]; }
+
+  /* An inline link inside prose, as opposed to a control. */
+  .lnk { @apply text-accent underline underline-offset-2; }
+  .lnk:hover { @apply text-brand-deep; }
+
+  .lvteam { @apply flex flex-col gap-[.4rem] px-[.9rem] py-[.7rem] m-0 list-none; }
+  .lvteam li { @apply flex flex-wrap items-baseline gap-x-[.6rem] gap-y-[.2rem] text-[.86rem]; }
+  .lvteam .muted { @apply text-[.8rem]; }
+  .lvteam .mono { @apply font-mono text-[.78rem] text-ink-2; }
+
+  .calwrap { @apply flex flex-col gap-2; }
+  .calbar .cico {
+    @apply inline-flex items-center justify-center w-[15px] h-[15px] rounded-full
+           text-[.62rem] leading-none text-white bg-ink-3;
+  }
+  .calbar .cico.new    { @apply bg-live; }
+  .calbar .cico.edit   { @apply bg-accent; }
+  .calbar .cico.delete { @apply bg-bad; }
+  .calbar .cico.close  { @apply bg-skip; }
+  .calname { @apply gap-y-2 gap-x-[.9rem]; }
+  .calname label { @apply text-[.83rem] text-ink-2 inline-flex items-center gap-[.4rem]; }
+  .calname .n { @apply text-[.79rem] text-ink-3; }
+  .calname .calgo { @apply ml-auto text-accent; }
+  .calname input[type=month] {
+    @apply text-[.84rem] px-[.55rem] py-[.38rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 2rem;
+  }
+  /* A 15px tick box is a 15px target. 1.05rem is ~18px and still reads as the
+     small control it is meant to be. */
+  .caldef input { @apply w-[1.05rem] h-[1.05rem]; accent-color: theme(colors.brand.dark); }
+
+  /* The month strip. Factor HR puts nothing but the arrows here — the month is
+     named in the first cell of the grid — but a strip that does not say which
+     month it is showing is a strip somebody misreads. */
+  .calstrip { @apply bg-char rounded-t-md px-[.7rem] py-[.42rem] flex items-center justify-center gap-[.9rem]; }
+  .calmonth { @apply font-display font-semibold text-[.92rem] text-white min-w-[11rem] text-center; }
+  .calnav {
+    @apply border-0 rounded text-white cursor-pointer text-[.82rem] leading-none px-[.75rem] py-[.42rem];
+    background: rgba(255, 255, 255, .13);
+    transition: background-color .13s ease;
+  }
+  .calnav:hover { @apply bg-brand-dark; }
+
+  .calgrid {
+    @apply bg-card border border-line border-t-0 rounded-b-md overflow-hidden grid;
+    grid-template-columns: 30px repeat(7, minmax(0, 1fr));
+  }
+  .calgrid .dow {
+    @apply bg-wash border-b border-r border-line px-[.3rem] py-[.4rem] text-center
+           font-mono text-[.64rem] font-semibold tracking-[.08em] uppercase text-ink-3;
+  }
+  .calgrid .wk { @apply bg-wash border-r border-b border-line p-[.3rem] font-mono text-[.6rem] text-ink-3 tabular-nums; }
+  .calgrid .cell { @apply border-r border-b border-line min-h-[5rem] px-[.4rem] py-[.32rem] flex flex-col gap-[.18rem]; }
+  /* The days either side of the month are greyed rather than blanked, as they
+     are over there: a punch on the 31st of last month is still somebody's day. */
+  .calgrid .cell.out { @apply bg-wash; }
+  .calgrid .cell.out .num { @apply text-ink-3; }
+  .calgrid .cell.today { @apply bg-brand-soft; box-shadow: inset 0 0 0 2px theme(colors.brand.DEFAULT); }
+  .calgrid .cell.today .num { @apply text-brand-deep font-semibold; }
+  .calgrid .num { @apply self-end font-mono text-[.7rem] text-ink-2 tabular-nums whitespace-nowrap; }
+
+  .ev { @apply text-[.72rem] leading-[1.25] rounded-sm px-[.3rem] py-[.08rem] overflow-hidden text-ellipsis whitespace-nowrap; }
+  .ev.hol  { @apply bg-live-wash text-live; }
+  .ev.off  { @apply bg-skip-wash text-skip; }
+  .ev.join { @apply bg-brand-soft text-brand-deep; }
+  .more { @apply bg-transparent border-0 p-0 text-[.72rem] text-accent cursor-pointer text-left; font: inherit; }
+  .more:hover { @apply underline; }
+  .callegend { @apply flex flex-wrap gap-y-[.4rem] gap-x-[.8rem] items-center text-[.8rem]; }
+  .callegend .n { @apply text-ink-3 ml-auto font-mono text-[.74rem]; }
+  .callegend .ev { @apply whitespace-nowrap; }
+
+  /* ------------------------------ Attendance, the regularization screen ---- */
+  /* Factor HR's screen as photographed: the title with a rule under it, one bar
+     of controls, and nothing at all beneath until a person is picked. */
+  .fhscreen { @apply flex flex-col gap-2 mt-[.8rem]; }
+  .fhtitle  { @apply font-display font-bold text-[.86rem] tracking-[.06em] uppercase text-ink pb-2 border-b border-line; }
+  .regbar   { @apply gap-y-[.45rem] gap-x-2; }
+  .regbar .cyc {
+    @apply inline-flex items-center gap-[.4rem] text-[.84rem] text-ink-2 border border-line-ctl
+           rounded px-[.6rem] py-[.3rem] bg-white;
+    min-height: 2.1rem;
+  }
+  .regbar .cyc select { @apply border-0 px-[.2rem] py-[.1rem] text-[.83rem]; }
+  .regicons { @apply inline-flex gap-[.3rem] ml-auto; }
+  .regicons .ic { @apply px-[.45rem] py-[.3rem]; }
+
+  .regfind {
+    @apply bg-card border border-line-2 rounded-md p-[.3rem] flex flex-col shadow-pop;
+  }
+  .regfind button {
+    @apply text-[.86rem] text-left bg-transparent border-0 rounded
+           px-[.6rem] py-[.48rem] cursor-pointer text-ink flex items-center gap-[.6rem];
+  }
+  .regfind button:hover { @apply bg-brand-soft text-brand-deep; }
+  .regfind .mono  { @apply font-mono text-[.78rem] text-ink-2; }
+  .regfind .muted { @apply ml-auto text-[.8rem]; }
+  .regfind .none  { @apply p-2 text-[.84rem] text-ink-3; }
+
+  /* The screen with nobody chosen, which is how it opens. */
+  .regnone { @apply px-[1rem] py-[2.4rem] text-center bg-card border border-line rounded-md shadow-raise; }
+  .regnone b    { @apply block font-display text-base text-ink mb-1; }
+  .regnone span { @apply text-[.85rem] text-ink-3; }
+
+  .regwho { @apply flex flex-wrap gap-y-2 gap-x-[.8rem] items-center bg-card border border-line rounded-md px-[.9rem] py-[.68rem] text-[.9rem] shadow-raise; }
+  .regwho .mono  { @apply font-mono text-[.8rem] text-ink-2; }
+  .regwho .muted { @apply text-[.82rem]; }
+  .regwho .n     { @apply ml-auto font-mono text-[.76rem] text-ink-3; }
+
+  /* ---------------------------- Employees, the Salary Master screen -------- */
+  /* Their screen as photographed: the title with three icons pinned to its
+     right edge, one bar of controls, and nothing under it until a person is
+     picked. The empty state reuses `.regnone` rather than restating it —
+     Factor HR draws the same block on both screens, and two copies of it here
+     is two things to keep in step. */
+  .fhtitle.row { @apply flex items-center gap-[.4rem]; }
+  .fhtitle .ics { @apply ml-auto inline-flex gap-[.1rem]; }
+  .fhtitle .ics .embtn { @apply border-0 bg-transparent px-[.3rem] py-[.15rem] text-ink-3; }
+  /* Dimmer than live, lighter than the .45 a dead control on a bar gets:
+     these three are chrome in the photograph, and washing them out would
+     lose the title bar's shape. The not-allowed cursor still says it. */
+  .fhtitle .ics .embtn[disabled] { @apply opacity-[.7]; }
+
+  .salbar .find { flex: 1 1 clamp(180px, 26vw, 320px); }
+  .salbar .ic { @apply px-[.42rem] py-[.3rem] text-[.95rem] leading-none; }
+  /* This was Factor HR's own blue, held apart from the Manna palette because on
+     their bar it is the one control meant to be found by colour. That worked
+     while this app was orange. It does not now: their blue is 1.2:1 from the
+     brand, which is not a distinction anybody can see, and a colour that is
+     almost but not quite the brand reads as a mistake rather than an emphasis.
+     So it is the brand ramp, and the outline is what sets it apart on a bar of
+     grey-edged buttons. */
+  .salbar .list { @apply ml-auto border-brand text-brand-dark px-[.7rem]; }
+  .salbar .list:hover:not([disabled]) { @apply border-brand-dark text-white bg-brand-dark; }
+
+  /* Their empty state carries a washed-out drawing. Kept, and kept quiet: it is
+     the one part of the screen with nothing to say. */
+  .regnone .art { @apply mx-auto mt-[1.1rem] block opacity-[.28]; }
+
+  /* The List of Employees panel — the same rows as the search picker, so a
+     person chosen either way is chosen the same way. */
+  .sallist { @apply max-h-[19rem] overflow-auto; }
+
+  /* ------------------ Salary Master, the form behind their + -------------- */
+  /* Their revision form: a header strip carrying the person, the effective date
+     and an attachments chip, then thirty-four wage types under six headings,
+     then their two SAVE buttons. The table is the screen, so it gets the width
+     and everything else is chrome around it.
+
+     The wrapper is `.srform` and the table is `.salrev` — deliberately not the
+     same name. They were, and `.salrev { display: flex }` then matched the
+     `<table>` as well as the `<div>`. A flex table takes `thead` and `tbody`
+     out of table layout, so the header row sized itself independently of the
+     rows and every heading sat over the wrong column. It renders as a near-miss
+     rather than as a break, which is how it survived a build and a read-through
+     and was only caught by measuring the cells against each other. */
+  .srform { @apply flex flex-col gap-2; }
+
+  /* The way back. It sits where the subtab strip would be if this page had not
+     taken it, so the eye finds it in the place it already looks. */
+  .srback { @apply flex flex-wrap gap-y-1 gap-x-[.7rem] items-center; }
+  .srback .embtn { @apply gap-[.3rem] border-brand text-brand-dark px-[.7rem] font-semibold; }
+  .srback .embtn:hover { @apply bg-brand-dark border-brand-dark text-white; }
+  .srback .muted { @apply text-[.8rem]; }
+
+  .srhead {
+    @apply flex flex-wrap gap-y-2 gap-x-[.7rem] items-center bg-card border border-line
+           rounded-md px-[.9rem] py-[.6rem] shadow-raise;
+  }
+  .srhead .ava {
+    @apply inline-flex items-center justify-center w-[2rem] h-[2rem] rounded-full not-italic
+           bg-brand-soft text-brand-deep font-display font-bold text-[.8rem];
+    flex: 0 0 2rem;
+  }
+  .srhead > b { @apply font-display text-[.95rem] font-semibold; }
+  .srhead > b .mono { @apply font-mono text-[.82rem] text-ink-2 font-normal; }
+  .srhead .on {
+    @apply inline-flex items-center gap-[.4rem] border border-line-ctl rounded px-[.55rem] py-[.22rem] bg-white;
+  }
+  .srhead .on input { @apply border-0 bg-transparent px-0 py-[.1rem] text-[.84rem]; }
+  /* Dead, and dimmed only as far as the bar icons are: it is the shape of their
+     header, and washed out to nothing the strip stops being a copy of it. */
+  .srhead .clip { @apply gap-[.35rem] opacity-[.7] text-[.8rem]; }
+
+  /* The header strip's replacement while nobody is picked. It sits in the same
+     box as .srhead so the form does not change shape when the question is
+     answered — the row is filled in rather than swapped out. */
+  /* -------------------------------------------------------------------------
+     Create Employee — Factor HR's three-step wizard, drawn control for control
+     from the screenshot of 2 September 2026. See
+     features/employees/CreateEmployee.jsx and NEW_EMP_STEPS.
+
+     Their page is one white card: a grey title bar, three circles joined by a
+     rule, a heading with a full-width rule under it, the fields, and a single
+     blue Next hard against the right edge. That shape is the whole reason it
+     reads as a wizard rather than as a long form, so it is copied rather than
+     approximated with the panel styles above. */
+  /* The card stops growing at a form's width. Twenty-four columns across a
+     2560px monitor makes a name box eight hundred pixels wide — a line of input
+     the eye has to travel the width of a desk to follow, for a field holding
+     nine characters. Their form is about 1090px; this is the nearest round
+     number above it, and the page is left-aligned like every other. */
+  .wiz { @apply bg-card border border-line rounded-md overflow-hidden shadow-raise; max-width: 76rem; }
+  .wizbar { @apply bg-wash border-b border-line px-[1rem] py-[.7rem]; }
+  .wizbar h2 { @apply font-display text-[1.05rem] font-bold; }
+
+  .wizsteps {
+    @apply relative flex justify-between items-start gap-[.4rem] m-0 px-[1.4rem] pt-[1.4rem] pb-[.9rem] list-none;
+  }
+  .wizsteps li { @apply relative flex flex-col items-center gap-[.5rem] min-w-0; flex: 1 1 0; }
+
+  /* The rule is drawn per step, half to each side of its own circle, rather
+     than as one line across the strip. Two reasons, and the second is the one
+     that bites: a single line has to know where the first and last circles are,
+     which is a fraction that is only right for three steps — and it has to run
+     *behind* the circles, which means it shows through a hollow one. */
+  .wizsteps li::before, .wizsteps li::after {
+    @apply absolute border-t border-line-2;
+    content: ""; top: .82rem;
+  }
+  .wizsteps li::before { left: 0;   right: 50%; margin-right: 1.1rem; }
+  .wizsteps li::after  { left: 50%; right: 0;   margin-left: 1.1rem; }
+  .wizsteps li:first-child::before, .wizsteps li:last-child::after { @apply hidden; }
+  /* A step already finished draws its own segments green, so the strip shows
+     how far in somebody is without their having to count circles. */
+  .wizsteps li.ok::before, .wizsteps li.ok::after { @apply border-live; }
+
+  .wizdot {
+    @apply w-[1.65rem] h-[1.65rem] rounded-full border-2 border-brand bg-card text-brand-dark
+           font-mono text-[.74rem] font-semibold cursor-pointer inline-flex items-center justify-center p-0;
+    transition: background-color .14s ease, border-color .14s ease, color .14s ease;
+  }
+  .wizdot:hover:not([disabled]) { @apply bg-brand-soft; }
+  .wizdot:focus-visible { @apply outline-none; box-shadow: 0 0 0 3px theme(colors.brand.soft); }
+  /* Not merely dimmed: a step you cannot reach yet is a control, and a control
+     that looks live and does nothing is the thing this dashboard avoids. */
+  .wizdot[disabled] { @apply border-line-2 text-line-2 cursor-not-allowed; }
+  .wizsteps li.on .wizdot { @apply bg-brand-dark border-brand-dark text-white; }
+  .wizsteps li.ok .wizdot { @apply bg-live border-live text-white; }
+  .wizlab { @apply text-[.82rem] text-ink-2 text-center leading-[1.25] px-[.2rem]; }
+  .wizsteps li.on .wizlab { @apply text-ink font-semibold; }
+
+  .wizbody { @apply px-[1rem] pt-[.2rem] pb-[1rem] flex flex-col gap-[.9rem]; }
+  /* Their step heading is sentence case over a full-width rule, where .fhtitle
+     is the small caps this site uses for a report title. Same rule, their
+     lettering. */
+  .wizbody > .fhtitle { @apply font-display text-[.95rem] tracking-normal normal-case pb-[.45rem]; }
+
+  /* A group of fields inside a step, with its own small heading. Steps 2 and 3
+     have four each; step 1 has one with no heading, which is their screenshot.
+
+     The heading is quiet on purpose — it divides, it does not compete with the
+     step title above it or with the labels under it. A second bold rule here
+     and the page has three levels of heading in four centimetres. */
+  .wizgroup { @apply flex flex-col; }
+  /* Padding only, no margin. `.wizbody` is a flex column with a .9rem gap, so a
+     margin here is added to that gap rather than replacing it — the rule ended
+     up 2rem below one group and 1rem above the next, which reads as a heading
+     with a line stuck to it rather than as a divider between two things. */
+  .wizgroup + .wizgroup { @apply pt-[1rem] border-t border-line; }
+  .wizgroup > h4 {
+    @apply font-body text-[.78rem] font-semibold uppercase tracking-[.07em] text-ink-3 mb-[.15rem];
+  }
+
+  /* -------- the field grid ------------------------------------------------
+     Twenty-four columns, because their first row is a wide Emp Code and Machine
+     Code, a *narrow* Title and a medium First Name — 8, 8, 3 and 5 of 24,
+     measured off the screenshot. Twelve columns cannot say "3", and a Title box
+     as wide as a name box is the single most obvious way a copy of this screen
+     stops looking like one.
+
+     The span rides in on a custom property because it is data — it lives in
+     NEW_EMP_STEPS beside the field it belongs to. A class per width would be a
+     second copy of the same numbers, kept in step by hand. */
+  .wizform {
+    @apply grid gap-x-[1rem] gap-y-[1.05rem] pt-[.2rem] pb-[.3rem] items-start;
+    grid-template-columns: repeat(24, minmax(0, 1fr));
+    /* One control height for the whole form, declared once. Every box, the
+       checkbox row included, measures itself from this — so the touch-size
+       bump at the bottom of this file changes one number instead of three
+       rules that have to be remembered together. */
+    --wctl: 2.25rem;
+  }
+  .wizform .wizf { grid-column: span var(--w, 8); }
+
+  /* Their labels are sentence case above the box, not the small caps the rest
+     of this site puts over a field. Overridden here rather than given .lvf a
+     second mode, because the difference is theirs and stops at this screen.
+
+     The minimum height is one line of it. Without that, a label long enough to
+     wrap drops its own box half a line below the boxes either side of it, and a
+     row of inputs that nearly line up looks worse than one that plainly does
+     not. */
+  .wizform .lab {
+    @apply font-body text-[.82rem] tracking-normal normal-case text-ink font-semibold leading-[1.3];
+    min-height: 1.08rem;
+  }
+  /* Their star is small and red. Two things have to be said about it rather than
+     one, and the second cost an afternoon.
+
+     `.lvf b` sets .95rem — bigger than the label it sits on — so the size has to
+     be restated here as well as the colour.
+
+     And the class is `wizreq`, not `req`. **`.req` was already taken**: it is
+     the Approvals queue's request row, a grid with padding and a bottom border.
+     Overriding its colour and weight here left every other property of it in
+     force, so the asterisk rendered as a block-level grid box on a line of its
+     own — which pushed the input under every *required* field about 39px below
+     the inputs beside it, and made the whole form look like a broken grid. The
+     lesson is the one already in CLAUDE.md §4 about naming a colour after a CSS
+     keyword: a short class name in a shared stylesheet is not free. */
+  .wizform .wizreq { @apply text-bad font-normal; font-size: .95em; }
+
+  /* One height for every control on the form. A date input carries a picker
+     icon, a number input carries steppers and a select carries a caret, and
+     left to themselves the four come out four different heights — which reads
+     as a wonky form rather than as the browser difference it is.
+
+     `min-width: 0` is the other half, and it is the one that actually breaks
+     something: a text input's intrinsic minimum is about twenty characters, and
+     `.ctl` is a flex box, where that minimum wins over `width: 100%`. Without
+     it the narrow Title box — 3 of 24 columns, by measurement — pushes its way
+     out of its own column and shunts First Name off the row. */
+  .wizform input, .wizform select {
+    @apply text-[.86rem] px-[.6rem] py-0 min-w-0;
+    min-height: var(--wctl);
+  }
+  /* The whole checkbox in one rule. Split across `.wizform input` and `.onoff
+     input` it was not: the attribute selector outranks the class, so the box
+     kept `width: auto` from the reset above and came out the browser default. */
+  .wizform input[type=checkbox] {
+    @apply w-[1.05rem] h-[1.05rem] p-0 cursor-pointer;
+    min-height: 0;
+    accent-color: theme(colors.brand.dark);
+  }
+
+  /* A checkbox with the answer written next to it. "Punch From Anywhere" is a
+     decision about how somebody's attendance is judged, and a bare tick with no
+     word beside it is a control people misread at a glance.
+
+     The row is a control height tall so that it sits on the same baseline as a
+     box would, rather than riding up under the label. */
+  .onoff { @apply inline-flex items-center gap-[.5rem]; height: var(--wctl); }
+  .onoff span { @apply text-[.86rem] text-ink-2; }
+
+
+  /* -------- the state of a box --------------------------------------------
+     A control has four looks and `.lvf` above only gives it two — resting and
+     focused. These are the other two, plus the two widgets the browser draws
+     inside a box and paints to its own taste rather than the form's. */
+
+  .wizform input, .wizform select { transition: border-color .13s ease, box-shadow .13s ease; }
+  .wizform input:hover:not(:focus):not([disabled]),
+  .wizform select:hover:not(:focus):not([disabled]) { @apply border-ink-3; }
+
+  /* `opacity: 1` because Firefox dims a placeholder on top of its colour, which
+     takes ink-3 under the contrast floor the palette was checked against. */
+  .wizform ::placeholder { @apply italic text-ink-3; opacity: 1; }
+
+  /* The calendar glyph and the number steppers are the two things on this form
+     that are not the weight of anything beside them. The calendar is quietened
+     until the box is pointed at; the steppers come off altogether, because a
+     number box with arrows in it is a different width from its neighbours and
+     Notice (Days) sits between two dates. Arrow keys still step it. */
+  .wizform input[type=date]::-webkit-calendar-picker-indicator {
+    @apply cursor-pointer;
+    opacity: .5;
+  }
+  .wizform input[type=date]:hover::-webkit-calendar-picker-indicator,
+  .wizform input[type=date]:focus::-webkit-calendar-picker-indicator { opacity: 1; }
+  .wizform input[type=number] { appearance: textfield; -moz-appearance: textfield; }
+  .wizform input[type=number]::-webkit-outer-spin-button,
+  .wizform input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* Chrome paints an autofilled box pale yellow. On a form of white boxes that
+     reads as three fields having gone wrong, and an inset shadow the depth of
+     the box is the only thing that overrides it. The focus ring is restated in
+     the same declaration because a box-shadow does not cascade in halves. */
+  .wizform input:-webkit-autofill,
+  .wizform input:-webkit-autofill:hover {
+    -webkit-text-fill-color: theme(colors.ink.DEFAULT);
+    box-shadow: 0 0 0 40px theme(colors.card) inset;
+  }
+  .wizform input:-webkit-autofill:focus {
+    -webkit-text-fill-color: theme(colors.ink.DEFAULT);
+    box-shadow: 0 0 0 40px theme(colors.card) inset, 0 0 0 3px theme(colors.brand.soft);
+  }
+
+  /* The tick is the one control here a keyboard reaches and the focus rule
+     above does not cover — it is sized by the checkbox rule, which wins. */
+  .wizform input[type=checkbox]:focus-visible {
+    @apply outline-none;
+    box-shadow: 0 0 0 3px theme(colors.brand.soft);
+  }
+
+  /* Their Next sits alone on the right of the footer. `.wizgrow` is what pushes
+     it there and also what the "still needed" line fills, so the button does not
+     move as that line appears and disappears. */
+  .wizacts { @apply flex flex-wrap gap-[.5rem] items-center px-[1rem] py-[.8rem] border-t border-line; }
+  .wizacts .wizgrow { @apply flex-1 text-[.82rem] min-w-0; flex-basis: 8rem; }
+  .wizacts .wizgrow b { @apply text-ink font-semibold; }
+
+  .wizlist { @apply m-0 mt-[.35rem] pl-[1.1rem] flex flex-col gap-[.2rem]; }
+  /* Wrapped, not clipped: a Frappe traceback names the field it choked on, and
+     that name is usually past the width of the box. */
+  .wizerr {
+    @apply mt-[.4rem] m-0 font-mono text-[.76rem] leading-[1.45] text-ink-2 whitespace-pre-wrap break-words
+           max-h-[14rem] overflow-auto;
+  }
+
+  .wizdone { @apply bg-card border border-line rounded-md px-[1.1rem] py-[1rem] flex flex-col gap-[.6rem] shadow-raise; }
+  .wizdone > b { @apply font-display text-[1.05rem]; }
+  .wizdone > .mono { @apply font-mono text-[.8rem] text-ink-3; }
+  .wizdone p { @apply m-0 text-[.88rem] text-ink-2; }
+  .wizdone .wizacts { @apply px-0 pb-0 pt-[.7rem] border-t-0; }
+
+  /* Factor HR's List of Employees — see features/employees/EmployeeList.jsx.
+     Nine columns and a pager, inside the panel their button opens. */
+  .ellist { @apply flex flex-col gap-[.6rem] mt-[.6rem]; }
+
+  /* Their three dropdowns. They wrap rather than scroll: this sits inside a
+     panel that is already the width of the page, and a row that scrolls
+     sideways hides the third control on a phone. */
+  .elcats { @apply grid gap-[.6rem]; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); }
+  .elcats label { @apply flex flex-col gap-[.25rem] min-w-0; }
+  .elcats span { @apply font-mono text-[.6rem] tracking-[.1em] uppercase text-ink-3; }
+  .elcats select {
+    @apply font-body text-[.86rem] px-[.6rem] py-[.42rem] border border-line-ctl rounded bg-white text-ink w-full;
+  }
+  .elcats select:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px theme(colors.brand.soft); }
+  .elcats select:disabled { @apply bg-wash text-ink-3; }
+
+  /* Nine columns do not fit a laptop, so the table scrolls inside its own box
+     and the page never does. */
+  .elscroll { @apply overflow-x-auto border border-line rounded-md bg-card; }
+  table.eltab { @apply w-full border-collapse text-[.84rem]; min-width: 62rem; }
+  table.eltab th, table.eltab td { @apply border-b border-line text-left align-middle whitespace-nowrap; }
+  table.eltab thead th { @apply bg-wash sticky top-0 z-10; }
+  table.eltab th.n, table.eltab td.n {
+    @apply w-[3rem] text-right pr-[.5rem] pl-[.6rem] font-mono text-[.76rem] text-ink-3;
+  }
+
+  /* The heading is the sort control, so it is a button — but it has to read as
+     a heading, which is why none of a button's own look survives here. */
+  table.eltab .hd {
+    @apply w-full flex items-center gap-[.35rem] bg-transparent border-0 cursor-pointer
+           px-[.6rem] py-[.5rem] font-mono text-[.62rem] tracking-[.09em] uppercase text-ink-2 text-left;
+  }
+  table.eltab .hd:hover { @apply text-brand-dark; }
+  table.eltab .hd:disabled { @apply cursor-default text-ink-3; }
+  table.eltab th.empty .hd { @apply italic; }
+  .srt { @apply shrink-0 fill-ink-3; }
+  /* The arrow that is NOT the current direction is the dimmed one, so the solid
+     arrow points the way the column is actually sorted. */
+  .srt .dim { @apply opacity-[.25]; }
+
+  table.eltab tr.filt th { @apply px-[.4rem] pb-[.45rem] pt-0 bg-wash; }
+  table.eltab tr.filt input {
+    @apply w-full font-body text-[.8rem] px-[.45rem] py-[.28rem] border border-line-ctl rounded bg-white text-ink;
+  }
+  table.eltab tr.filt input:focus { @apply outline-none border-brand; box-shadow: 0 0 0 2px theme(colors.brand.soft); }
+
+  /* Every cell is the pick control, so the row is clickable anywhere. The
+     button is invisible and fills its cell; the row highlights, not the box. */
+  table.eltab td { @apply p-0; }
+  table.eltab .pick {
+    @apply w-full flex items-center gap-[.4rem] bg-transparent border-0 cursor-pointer
+           text-left px-[.6rem] py-[.5rem] text-ink font-body text-[.84rem];
+  }
+  table.eltab tbody tr:hover td { @apply bg-brand-soft; }
+  table.eltab tbody tr:hover .pick { @apply text-brand-deep; }
+  table.eltab .pick:focus-visible { @apply outline-none bg-brand-soft; box-shadow: inset 0 0 0 2px theme(colors.brand.DEFAULT); }
+  table.eltab td.code .pick, table.eltab td.mobile .pick { @apply font-mono text-[.8rem]; }
+  table.eltab td.name .pick { @apply font-semibold; }
+  table.eltab td.email .pick { @apply max-w-[16rem] truncate block; }
+  table.eltab tr.none td { @apply px-[.7rem] py-[1.2rem] text-center text-ink-3 whitespace-normal; }
+  table.eltab tr.none:hover td { @apply bg-transparent; }
+
+  /* Their pager, and their words in the count. */
+  .elpage { @apply flex flex-wrap gap-y-[.5rem] gap-x-[.8rem] items-center justify-between; }
+  .elpage .cnt { @apply text-[.82rem] text-ink-2; }
+  .elpage .pg { @apply flex flex-wrap items-center gap-[.35rem]; }
+  .elpage .pg label { @apply flex items-center gap-[.35rem] text-[.82rem] text-ink-2 px-[.3rem]; }
+  .elpage .pg input {
+    @apply w-[3.4rem] font-body text-[.82rem] px-[.4rem] py-[.25rem] border border-line-ctl rounded bg-white text-ink text-center;
+  }
+  .elpage .pg input:focus { @apply outline-none border-brand; box-shadow: 0 0 0 2px theme(colors.brand.soft); }
+
+  .srpick {
+    @apply flex flex-col gap-[.5rem] bg-card border border-line rounded-md
+           px-[.9rem] py-[.7rem] shadow-raise;
+  }
+  .srpick > b { @apply text-[.95rem]; }
+  .srpick .find {
+    @apply flex items-center gap-[.4rem] border border-line-ctl rounded px-2 py-[.1rem]
+           bg-white w-[min(24rem,100%)];
+  }
+  .srpick .find input { @apply border-0 px-[.1rem] py-[.35rem] min-w-0 bg-transparent w-full; }
+  .srpick .find input:focus { @apply outline-none; }
+  .srpick .regfind { @apply shadow-none border-line w-[min(30rem,100%)]; }
+
+  table.salrev { @apply min-w-[880px]; }
+  /* Dimmed, not hidden. The point of opening this form with nobody picked is to
+     be read, so the rows stay legible and only the controls recede — enough to
+     say "not yet" without turning the copy of their form into a grey field. */
+  table.salrev.ro input, table.salrev.ro select { @apply bg-wash text-ink-3 cursor-not-allowed; }
+  table.salrev.ro td.man label { @apply cursor-not-allowed; }
+  table.salrev th.g, table.salrev td.g {
+    @apply w-[2.2rem] pr-0 text-center font-mono text-[.76rem] text-ink-3 align-middle;
+  }
+  table.salrev td.g svg { @apply inline-block cursor-help; }
+  /* The two outer headings sit above the numbered groups, so they take the
+     darker of the two treatments already in use on these report tables. */
+  table.salrev tr.sec td { @apply bg-nav text-white font-display font-semibold; }
+  table.salrev tr.grp td { @apply bg-rule font-display font-semibold; }
+  table.salrev tr.sec:hover, table.salrev tr.grp:hover { @apply bg-transparent; }
+
+  table.salrev td.desc { @apply whitespace-normal min-w-[15rem] pl-[1.2rem]; }
+  /* What the row maps onto here, under the wage type rather than in a column of
+     its own — their five columns are the form, and a sixth would stop it being
+     a copy of one. The reason is in the tooltip, which is why it is cursor-help
+     rather than decoration. */
+  table.salrev td.desc small {
+    @apply block text-[.72rem] text-ink-3 font-normal cursor-help;
+  }
+
+  table.salrev th.amt, table.salrev td.amt { @apply w-[7.5rem] text-right; }
+  table.salrev td.amt input {
+    @apply w-full text-right font-mono text-[.82rem] tabular-nums border border-line-ctl
+           rounded px-[.4rem] py-[.2rem] bg-white;
+  }
+  table.salrev td.amt input:hover, table.salrev td.ref input:hover { @apply border-brand; }
+  /* Typed, and not a number. Marked rather than corrected or refused: the
+     subtotal leaves it out and says so, and a box that rejects keystrokes is a
+     box that argues with whoever is filling the form. */
+  table.salrev td.amt input.bad { @apply border-bad text-bad; }
+  /* Derived, so it is not a control — right-aligned with the amount it comes
+     from and quiet enough that nobody tries to type in it. */
+  table.salrev td.amt.yr { @apply font-mono text-[.8rem] tabular-nums text-ink-2 bg-wash cursor-help; }
+
+  table.salrev th.man, table.salrev td.man { @apply w-[5.5rem] text-center; }
+  table.salrev td.man label { @apply inline-flex cursor-pointer p-[.2rem]; }
+
+  table.salrev th.ref, table.salrev td.ref { @apply min-w-[13rem]; }
+  table.salrev td.ref input {
+    @apply w-full text-[.82rem] border border-line-ctl rounded px-[.4rem] py-[.2rem] bg-white;
+  }
+
+  table.salrev tr.sub td { @apply bg-wash font-semibold border-t border-t-line-2; }
+  table.salrev tr.sub td.amt { @apply font-mono tabular-nums; }
+  /* Which rows the subtotal left out, and why. Under the count rather than
+     beside it: on a narrow screen that sentence is the first thing to wrap, and
+     it must not push the figure off its own row. */
+  table.salrev tr.sub small { @apply block text-[.72rem] text-ink-3 font-normal whitespace-normal; }
+  table.salrev tr.sub:hover { @apply bg-transparent; }
+
+  /* The one row nobody has read. Italic and quiet, like the clipped-list row on
+     the adhoc table, because both are the same admission. */
+  table.salrev tr.clip td { @apply whitespace-normal text-[.8rem] text-ink-3 italic; }
+  table.salrev tr.clip td b { @apply not-italic font-mono text-ink-2; }
+  table.salrev tr.clip:hover { @apply bg-transparent; }
+
+  .sracts { @apply flex flex-wrap gap-2 items-center mt-[.3rem]; }
+
+  /* What a save is about to do, and afterwards what it did. A list rather than
+     a paragraph: somebody is about to agree to it, and a count they have to
+     find inside a sentence is a count they skip. */
+  .srplan { @apply mt-[.5rem] flex flex-col gap-[.3rem] text-[.84rem]; }
+  .srplan li { @apply pl-[.9rem] relative; }
+  .srplan li::before { @apply absolute left-0 text-ink-3; content: "·"; }
+  .srplan li.ok::before { @apply text-live; content: "✓"; }
+  .srplan li.warn { @apply text-bad; }
+  .srplan li.warn::before { @apply text-bad; content: "!"; }
+  .srplan code { @apply font-mono text-[.78rem] bg-wash px-[.25rem] rounded; }
+  .srplan .lk { @apply font-mono text-[.78rem] text-brand-dark underline underline-offset-2; }
+  .srplan .lk:hover { @apply text-brand-deep; }
+
+  /* The site's own words, wrapped and scrollable. A validation from hrms can be
+     long and it is the one sentence that says what to fix, so it is never
+     truncated into an ellipsis. */
+  .srerr {
+    @apply mt-[.5rem] mb-[.6rem] max-h-[14rem] overflow-auto whitespace-pre-wrap break-words
+           font-mono text-[.76rem] leading-[1.45] bg-wash border border-line rounded p-[.6rem] text-ink-2;
+  }
+
+  /* -------------------- Payroll, the Adhoc Payments/Deductions screen ------ */
+  /* Their bar is an employee search and four labelled lists; their table is
+     four columns with the two amount cells left blank, because on their screen
+     those cells are inputs. Both are copied. The labels sit over the lists
+     rather than beside them for the same reason the report forms' do: at 390px
+     a label beside a select is a select two characters wide. */
+  .adbar .find { flex: 1 1 clamp(170px, 22vw, 300px); }
+  .adbar .adf  { @apply flex flex-col gap-[.24rem] min-w-0; flex: 0 1 8.5rem; }
+  .adbar .adf label {
+    @apply font-mono text-[.62rem] font-semibold tracking-[.09em] uppercase text-ink-3;
+  }
+  /* Dead, and every one of them says why on hover. Lighter than the .45 a dead
+     button gets — these are the shape of their bar, and washed out to nothing
+     the bar stops being a copy of it. */
+  .adbar .adf select[disabled] { @apply opacity-[.6] cursor-not-allowed bg-wash; }
+  /* Their +Add is the one control on the title bar meant to be found by colour,
+     so it keeps its fill where the five icons beside it do not. */
+  .fhtitle .ics .adadd { @apply border border-brand-dark px-[.6rem] py-[.2rem] text-[.78rem]; }
+  .adfind { @apply bg-card border border-line rounded-md px-[.7rem] py-[.4rem] shadow-raise; }
+  .adfind input { @apply border-0 bg-transparent px-[.1rem] py-[.3rem] min-w-0; flex: 1 1 auto; }
+
+  table.adhoc { @apply min-w-[680px]; }
+  table.adhoc th.g, table.adhoc td.g {
+    @apply w-[2.6rem] text-right pr-[.5rem] font-mono text-[.78rem] text-ink-3;
+  }
+  table.adhoc tr.grp td { @apply bg-rule font-semibold font-display; }
+  /* Their component rows sit one indent in from the heading above them. */
+  table.adhoc td.desc { @apply pl-[1.6rem] whitespace-normal min-w-[240px]; }
+  table.adhoc td.desc.lnk { @apply text-accent font-semibold; }
+  table.adhoc td.desc small { @apply block text-[.72rem] text-ink-3 font-normal cursor-help; }
+  table.adhoc td.desc small.unread { @apply italic; }
+  /* The two amount columns. Empty on purpose, and wide enough to read as
+     columns waiting for a figure rather than as a table that lost one. */
+  table.adhoc th.amt, table.adhoc td.amt { @apply w-[7rem] text-right; }
+  table.adhoc tr.clip td, table.adhoc td.none { @apply text-[.8rem] text-ink-3 italic; }
+  table.adhoc tr.clip:hover { @apply bg-transparent; }
+
+  /* ----------------------- Payroll, the IT Declarations screen ------------- */
+  /* Their bar is the status dot, Search Employee and one list — Select Options,
+     closed on its own placeholder. The list carries no label over it, unlike
+     Adhoc's four, because theirs carries none either: the placeholder is the
+     label, which is why it can never be read once something is chosen. Drawn
+     that way rather than corrected. */
+  .itdbar .find { flex: 1 1 clamp(170px, 22vw, 300px); }
+  .itdbar .adf  { @apply min-w-0; flex: 0 1 17rem; }
+  .itdbar .adf select[disabled] { @apply w-full opacity-[.6] cursor-not-allowed bg-wash; }
+
+  /* Three columns and no rows. The two right-hand ones keep their width even
+     while empty, for the same reason Adhoc's amount cells do: a table that
+     narrows to fit its emptiness reads as a table that lost its columns. */
+  table.itd { @apply min-w-[560px]; }
+  table.itd th.amt, table.itd td.amt { @apply w-[11rem] text-right; }
+  table.itd th.act, table.itd td.act { @apply w-[9rem]; }
+  table.itd td.none { @apply whitespace-normal text-[.82rem] text-ink-3 italic; }
+  table.itd tbody tr:hover { @apply bg-transparent; }
+
+  /* ------------------------ Payroll, the Salary Process screen ------------- */
+  /* Their run screen: three lists, a strip of twelve month chips, a summary
+     line, six tiles with a coloured left edge, and the buttons. The chips
+     scroll rather than wrap — twelve of them wrapped to three rows stops being
+     a strip, and a payroll year read out of order is how March gets run
+     twice. */
+  .spbar { @apply flex flex-wrap gap-y-[.6rem] gap-x-[.9rem] items-end; }
+  .spbar .adf { @apply flex flex-col gap-[.24rem] min-w-0; flex: 0 1 11rem; }
+  .spbar .adf label {
+    @apply font-mono text-[.62rem] font-semibold tracking-[.09em] uppercase text-ink-3;
+  }
+  .spbar select { @apply border border-line-ctl rounded px-[.55rem] py-[.4rem] bg-white text-[.86rem]; }
+  .spbar select[disabled] { @apply opacity-[.6] cursor-not-allowed bg-wash; }
+
+  .spmonths { @apply flex gap-[.3rem] items-stretch; }
+  .spm {
+    @apply flex flex-col items-center justify-center gap-[.05rem] cursor-pointer
+           border border-line-2 rounded-sm bg-wash text-ink-2 px-[.75rem] py-[.4rem];
+    min-width: 4.4rem;
+  }
+  .spm b     { @apply font-display text-[.8rem] tracking-[.05em]; }
+  .spm small { @apply text-[.66rem] text-ink-3; }
+  .spm:hover:not([disabled]) { @apply border-brand text-brand-deep; }
+  /* The selected chip is theirs — lifted out of the strip rather than merely
+     tinted, because on a row of twelve a tint is not a selection anybody finds. */
+  .spm.on { @apply bg-brand-dark border-brand-dark text-white; }
+  .spm.on small { @apply text-white/75; }
+  /* A month that has not happened. Dimmed, never disabled: looking at next
+     month is not the mistake, paying it is. */
+  .spm.ahead { @apply opacity-[.55]; }
+  .spm.add   { @apply text-[1.05rem] text-ink-3 cursor-not-allowed opacity-[.6]; }
+
+  /* The strip swaps this whole block, so it is one flex item of .fhscreen and
+     has to carry the column gap itself. */
+  .sppanel { @apply flex flex-col gap-2; }
+
+  .spsum {
+    @apply flex flex-wrap gap-y-[.35rem] gap-x-[1.1rem] items-baseline text-[.84rem] text-ink-2
+           border-b border-line pb-[.6rem];
+  }
+  .spsum b  { @apply font-display text-[.9rem] text-ink; }
+  .spsum i  { @apply not-italic font-semibold text-ink-3 tracking-[.04em] uppercase text-[.7rem]; }
+  .spsum .st { @apply ml-auto; }
+
+  /* Their tile strip: one bordered block with a coloured left edge. */
+  .sptiles {
+    @apply grid gap-x-[1rem] gap-y-[.8rem] bg-card border border-line rounded-md
+           px-[1rem] py-[.8rem] shadow-raise border-l-[3px] border-l-brand;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+  .sptile   { @apply flex flex-col gap-[.2rem] min-w-0; }
+  .sptile .k { @apply font-mono text-[.62rem] font-semibold tracking-[.08em] uppercase text-ink-3; }
+  .sptile .k small { @apply font-sans tracking-normal normal-case text-[.66rem]; }
+  .sptile .n { @apply font-display text-[1.35rem] leading-none text-ink; }
+  .sptile .n em { @apply not-italic font-sans text-[.8rem] ml-[.35rem] cursor-help; }
+  .sptile .n em.up { @apply text-live; }
+  .sptile .n em.dn { @apply text-bad; }
+  /* Nothing on this side means what this tile means. Dimmed rather than hidden:
+     a tile removed hides the gap, a tile drawn empty names it. */
+  .sptile.dead .n { @apply text-ink-3; }
+  .sptile.warn .k { @apply text-bad; }
+
+  .spgen { @apply flex flex-wrap gap-y-[.5rem] gap-x-[1.2rem] items-center text-[.84rem]; }
+  .spgen i { @apply not-italic font-semibold text-ink-3 tracking-[.04em] uppercase text-[.7rem] mr-[.35rem]; }
+  .spgen input {
+    @apply border border-line-ctl rounded px-[.6rem] py-[.42rem] bg-wash text-[.86rem]
+           opacity-[.7] cursor-not-allowed;
+    flex: 1 1 18rem;
+  }
+
+  .spacts { @apply flex flex-wrap gap-[.45rem] items-center pt-[.7rem] border-t border-line; }
+  .spacts b { @apply w-full text-[.72rem] tracking-[.08em] uppercase text-ink-3 mb-[.15rem]; }
+  .spacts .gear  { @apply ml-auto text-[1rem] leading-none px-[.55rem]; }
+  .spacts .spexp { @apply text-[.82rem]; }
+
+  /* ------------------------- Attendance, the Daily Detail report panel ----- */
+  /* Their panel: one row of labelled controls, two tabs, a date range, layout
+     chips, and the Additional Filters funnel. */
+  .ddaform { @apply gap-[.7rem]; }
+  .ddabar  { @apply flex flex-wrap gap-y-[.7rem] gap-x-[.9rem] items-end; }
+  .ddabar .fld { @apply flex flex-col gap-[.28rem] min-w-0; }
+  .ddabar .fld.grow { flex: 1 1 240px; }
+  .ddabar .fld.wide { flex: 1 1 320px; }
+  .ddabar .lab, .ddafield .lab {
+    @apply font-mono text-[.62rem] font-semibold tracking-[.09em] uppercase text-ink-3;
+  }
+  .ddabar .ctl { @apply flex gap-[.35rem] items-center min-w-0; }
+  .ddabar .ctl .find { @apply border border-line-ctl rounded px-2 py-[.1rem] bg-white; flex: 1 1 auto; }
+  .ddabar .ctl .find input { @apply border-0 px-[.1rem] py-[.28rem] min-w-0; flex: 1 1 auto; }
+  .ddabar select { @apply text-[.85rem] px-[.6rem] py-[.4rem] border border-line-ctl rounded bg-white text-ink; min-height: 2.05rem; }
+  .ddabar select.wide { @apply w-full; }
+  .ddabar .ic  { @apply px-[.45rem] py-[.3rem]; }
+  .ddabar .xls { @apply px-2 py-[.26rem] text-live border-live; }
+  .ddabar .xls b { @apply font-display text-[.9rem]; }
+
+  .ddatabs { @apply flex gap-[1.2rem] border-b border-line; }
+  .ddatabs button {
+    @apply bg-transparent border-0 border-b-2 border-b-transparent cursor-pointer font-mono
+           text-[.68rem] tracking-[.09em] uppercase text-ink-3 px-[.1rem] py-2;
+  }
+  .ddatabs button[aria-selected="true"] { @apply text-brand-dark border-b-brand; }
+  /* The Salary Register pins refresh and Generate to the tab row, where every
+     other report of theirs carries them on the bar below. So the row is a
+     wrapper and the tablist keeps its own border and its own type — which must
+     not reach the two buttons on it that are not tabs, and would, since
+     `.ddatabs button` outranks `.embtn`. */
+  .fhtabrow { @apply flex flex-wrap items-end gap-x-[.6rem] gap-y-[.2rem] border-b border-line; }
+  .fhtabrow .ddatabs { @apply border-b-0 min-w-0; flex: 1 1 auto; }
+  .fhtabrow .right { @apply ml-auto flex items-center gap-[.35rem] pb-[.4rem]; }
+  .ddapane  { @apply flex flex-col gap-[.85rem] pt-[.2rem] pb-[.3rem]; }
+  .ddafield { @apply flex flex-col gap-[.3rem]; }
+  .daterange {
+    @apply inline-flex items-center gap-[.45rem] border border-line-ctl rounded
+           bg-white px-[.65rem] py-[.34rem] w-fit max-w-full flex-wrap;
+    min-height: 2.1rem;
+  }
+  .daterange input { @apply text-[.85rem] border-0 p-[.1rem] text-ink bg-transparent; font: inherit; }
+  .daterange .sep  { @apply text-ink-3; }
+  .ddafield .hint  { @apply text-[.79rem] text-ink-3; }
+  .ddafield .chips {
+    @apply flex flex-wrap gap-[.4rem] items-center border border-line-ctl rounded
+           bg-white px-[.6rem] py-[.44rem] min-h-[2.5rem];
+  }
+  .ddafield .chips select {
+    @apply text-[.8rem] border border-dashed border-line-ctl rounded-sm
+           bg-transparent text-ink-3 px-[.3rem] py-[.14rem];
+    font: inherit;
+  }
+  /* Their Advance tab is a row of labelled fields that wraps — three across on
+     a wide screen, one on a phone. */
+  .ddagrid { @apply grid gap-x-[1.4rem] gap-y-[.9rem]; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+  .ddagrid select, .ddagrid input {
+    @apply text-[.85rem] px-[.6rem] py-[.4rem] border border-line-ctl rounded bg-white text-ink w-full;
+    min-height: 2.05rem;
+  }
+  .ddagrid select:focus, .ddagrid input:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px theme(colors.brand.soft); }
+
+  /* Salary Payslip's BASIC tab ends in a row of checkboxes rather than a row of
+     fields. Its own class rather than .ddagrid, which stretches every input it
+     contains to the full column — on a checkbox that is a very large tick. */
+  .ddachks { @apply grid gap-x-[1.4rem] gap-y-[.5rem] pt-[.2rem]; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+  .ddapane label.chk { @apply inline-flex gap-[.42rem] items-start text-[.84rem] text-ink-2 cursor-pointer; }
+  .ddapane label.chk input { @apply mt-[.15rem]; }
+
+  /* Seven days as seven toggles rather than a multi-select: which days are on
+     has to be readable without opening anything, because it silently removes
+     rows from an attendance report. */
+  .dow { @apply flex flex-wrap gap-[.3rem]; }
+  .dow button {
+    @apply font-mono text-[.72rem] px-[.42rem] py-[.3rem] border border-line-ctl rounded bg-white text-ink-2 cursor-pointer;
+  }
+  .dow button:hover { @apply border-brand text-brand-deep; }
+  .dow button[aria-pressed="true"] { @apply bg-brand-soft border-brand text-brand-deep font-semibold; }
+  .dow .clr { @apply border-0 bg-transparent text-ink-3 underline; }
+
+  .ddamore { @apply inline-flex items-center gap-[.45rem] bg-transparent border-0 p-0 cursor-pointer text-ink-3 w-fit; }
+  .ddamore:hover { @apply text-accent; }
+
+  .ddaout  { @apply flex flex-col gap-[.6rem] mt-[.85rem]; }
+  .ddalogo { @apply flex items-center gap-[.8rem] bg-card border border-line rounded-md px-[.9rem] py-[.6rem] text-[.82rem] text-ink-2; }
+  .ddalogo .mark { @apply border-char px-[.42rem] py-[.26rem] text-[.86rem]; }
+  .ddalogo .mark .c { @apply text-char; }
+  .ddalogo b { @apply block font-display text-ink text-[.92rem]; }
+  .ddacount { @apply font-mono text-[.76rem] text-ink-3; }
+  .ddagroup { @apply bg-card border border-line rounded-md overflow-hidden; }
+  .ddagroup > header {
+    @apply flex flex-wrap gap-y-[.4rem] gap-x-[.8rem] items-baseline px-[.8rem] py-2 border-b border-line text-[.86rem];
+  }
+  .ddagroup > header b { @apply font-display; }
+  .ddagroup > header .mono  { @apply font-mono text-[.78rem] text-ink-2; }
+  .ddagroup > header .muted { @apply text-[.8rem]; }
+  .ddagroup > header .n     { @apply ml-auto font-mono text-[.74rem] text-ink-3; }
+  .ddagroup .scroll { @apply border-0 rounded-none; }
+  .ddasection { @apply flex flex-col gap-2; }
+  .ddasection h4 { @apply font-display text-[.86rem] font-semibold text-ink-2 flex gap-[.6rem] items-baseline mt-[.35rem] mb-0; }
+  .ddasection h4 span { @apply font-mono text-[.72rem] text-ink-3; }
+
+  /* ------------------------------------------- employee profile, §23 ---- */
+  /* Factor HR's record page: a header card, a sidebar of thirteen panes, and
+     one of them on the right. Two columns down to 900px, where the sidebar
+     becomes a scrolling strip like .subbar rather than thirteen stacked rows
+     between the reader and the fields they came for. */
+  .prohead { @apply bg-card border border-line rounded-md p-[.9rem] flex gap-[.9rem] items-start; }
+  .proava {
+    @apply relative w-[5.4rem] h-[5.4rem] shrink-0 rounded-full bg-brand-soft text-brand-deep
+           border-2 border-brand-tint font-display text-[2rem] font-bold inline-flex items-center justify-center;
+  }
+  .proava .pen {
+    @apply absolute right-0 bottom-0 w-[1.75rem] h-[1.75rem] rounded-full bg-card border border-line
+           text-ink-3 text-[.72rem] leading-none inline-flex items-center justify-center;
+  }
+  .proava .pen[disabled] { @apply cursor-not-allowed opacity-60; }
+  .proava a.pen:hover { @apply border-brand text-brand-deep; }
+  .prowho  { @apply min-w-0 flex-1 flex flex-col gap-[.5rem]; }
+  .proname { @apply flex flex-wrap gap-x-[.7rem] gap-y-[.4rem] items-center; }
+  .proname b { @apply font-display text-[1.05rem] font-bold; }
+  .proacts { @apply ml-auto flex gap-[.3rem]; }
+  .prochips { @apply flex flex-wrap gap-x-[.9rem] gap-y-[.35rem] items-center text-[.78rem] text-ink-2; }
+  .prostat { @apply inline-flex items-center gap-[.35rem] font-semibold text-ink; }
+  .prochip { @apply inline-flex items-center gap-[.35rem]; }
+  .prochip b { @apply font-display font-semibold text-ink; }
+  .prochip.off { @apply text-ink-3; }
+  .prokeys {
+    @apply grid gap-x-[1.2rem] gap-y-[.55rem] mt-[.25rem];
+    grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  }
+  .prochoose { @apply text-[.8rem] text-ink-2; }
+  .proline { @apply flex flex-wrap gap-[.35rem]; }
+
+  .probody-grid { @apply grid gap-4 items-start mt-4; grid-template-columns: 208px minmax(0, 1fr); }
+  .protabs { @apply bg-card border border-line rounded-md overflow-hidden flex flex-col; }
+  .protab {
+    @apply flex items-center gap-[.55rem] text-left px-[.85rem] py-[.62rem]
+           text-[.85rem] text-ink-2 border-b border-rule;
+    min-height: 2.4rem;
+    transition: background-color .13s ease, color .13s ease;
+  }
+  .protab:last-child { @apply border-b-0; }
+  .protab:hover { @apply bg-brand-soft text-brand-deep; }
+  .protab[aria-current="page"] { @apply bg-brand-dark text-white font-semibold; }
+  .protab .ico { @apply text-[.9rem] w-[1.15rem] text-center; }
+  .protab .lb  { @apply truncate; }
+  .protab .cnt { @apply ml-auto font-mono text-[.64rem] font-semibold px-[.4rem] py-[.05rem] rounded-full bg-skip-wash text-skip; }
+  .protab .cnt.hot { @apply bg-bad-wash text-bad; }
+  .protab[aria-current="page"] .cnt { @apply bg-white/25 text-white; }
+
+  /* A caret group and its children. The children are indented and sit on the
+     page's own wash rather than the card's white, which is how Factor HR draws
+     them — the shade is what says "inside", and it survives the 900px strip
+     where the indent cannot. */
+  .protab .caret { @apply ml-auto text-[.7rem] text-ink-3; }
+  .protab[aria-current="page"] .caret { @apply text-white; }
+  .pgroup[aria-expanded="true"] { @apply text-ink font-semibold; }
+  .protab.pchild { @apply bg-wash pl-[2.1rem] text-[.81rem]; }
+  .protab.pchild:hover { @apply bg-brand-soft text-brand-deep; }
+  .protab.pchild[aria-current="page"] { @apply bg-brand-dark text-white; }
+
+  .propane { @apply flex flex-col gap-4 min-w-0; }
+  .procard { @apply bg-card border border-line rounded-md overflow-hidden; }
+  .procard > header {
+    @apply flex items-center justify-between gap-[.7rem] px-[1rem] py-[.7rem] border-b border-line bg-wash;
+  }
+  .procard > header h3 { @apply text-[.95rem] font-semibold; }
+  .proico { @apply flex gap-[.15rem]; }
+  .proico button { @apply w-[1.8rem] h-[1.8rem] rounded text-ink-3 text-[.82rem] leading-none; }
+  /* The pencil is an anchor now — it opens the record on the site — and an
+     anchor is not a button box, so it needs saying which way it centres. */
+  .proico a { @apply inline-flex items-center justify-center w-[1.8rem] h-[1.8rem] rounded text-ink-3 text-[.82rem] leading-none; }
+  .proico button:hover:not([disabled]), .proico a:hover { @apply bg-wash text-ink; }
+  .proico button[disabled] { @apply opacity-40 cursor-not-allowed; }
+  .probody { @apply p-[1rem]; }
+  .profields {
+    @apply grid gap-x-[1.2rem] gap-y-[.85rem];
+    grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+  }
+  .profield { @apply flex flex-col gap-[.1rem] min-w-0; }
+  .profield.long { grid-column: 1/-1; }
+  .profield .k { @apply text-[.78rem] text-ink-2; }
+  .profield .v { @apply text-[.88rem] text-ink; overflow-wrap: anywhere; }
+  /* Empty and absent are drawn apart on purpose: one is a hole in the data and
+     the other is a hole in the schema, and only the second one is work. */
+  .profield .v.off  { @apply text-ink-3 italic; }
+  .profield .v.gone { @apply text-bad/70 italic; }
+
+  /* ------------------------------- payroll, the FNF & Separation screen ---- */
+  /* Factor HR's three numbered stages, two filter bars and a card per person.
+     The stages are drawn as chips with a rule under each rather than as a
+     progress bar, because that is what theirs are — three marks that are each
+     either done or not, not one thing that is 60% finished. */
+  .fnftabs { @apply flex flex-wrap gap-[.5rem]; }
+  .fnftab {
+    @apply inline-flex items-center gap-[.5rem] bg-white border border-line-ctl rounded
+           px-[.9rem] py-[.55rem] text-[.82rem] text-ink-2 cursor-pointer;
+    transition: background-color .14s ease, color .14s ease, border-color .14s ease;
+  }
+  .fnftab:hover { @apply border-brand text-brand-deep; }
+  .fnftab[aria-selected="true"] { @apply bg-brand-dark border-brand-dark text-white font-semibold; }
+  .fnftab .num {
+    @apply not-italic inline-flex items-center justify-center w-[1.25rem] h-[1.25rem] rounded-full
+           border border-current font-mono text-[.68rem] leading-none;
+  }
+  .fnftab .n { @apply font-mono text-[.78rem] tabular-nums; }
+
+  .fnfpane { @apply flex flex-col gap-[.7rem]; }
+
+  /* Their bars carry labelled fields rather than bare controls, so the label
+     sits above the control the way it does on the report forms. */
+  .fnfbar { @apply gap-y-[.55rem] gap-x-[.7rem] items-end; }
+  .fnfbar .ic { @apply px-[.45rem] py-[.3rem]; }
+  .fnfbar .find { flex: 1 1 clamp(170px, 22vw, 300px); }
+  .fnfradio { @apply flex flex-wrap gap-x-[.9rem] gap-y-[.3rem] items-center text-[.83rem] text-ink-2; }
+  .fnfradio label { @apply inline-flex items-center gap-[.35rem] cursor-pointer; }
+  .fnfradio input { accent-color: theme(colors.brand.dark); }
+
+  .fnff { @apply flex flex-col gap-[.14rem] min-w-0; }
+  .fnff.grow { flex: 1 1 200px; }
+  .fnff > .k { @apply font-mono text-[.6rem] font-semibold tracking-[.09em] uppercase text-ink-3; }
+  .fnff > .v { @apply text-[.85rem] text-ink tabular-nums; }
+  .fnff > .v.off { @apply text-ink-3; }
+  .fnff.top select, .fnff.top input {
+    @apply text-[.85rem] px-[.55rem] py-[.36rem] border border-line-ctl rounded bg-white text-ink w-full;
+    min-height: 2.05rem;
+  }
+  .fnff.top select:disabled, .fnff.top input:disabled { @apply bg-wash text-ink-3 cursor-not-allowed; }
+  .pick { @apply inline-flex items-center; }
+  .pick input { @apply w-[1.05rem] h-[1.05rem]; accent-color: theme(colors.brand.dark); }
+
+  .fnflist { @apply flex flex-col gap-[.6rem]; }
+  .fnfcard { @apply bg-card border border-line rounded-md overflow-hidden shadow-raise; }
+  .fnfcard .who {
+    @apply flex flex-wrap gap-y-[.5rem] gap-x-[.8rem] items-center px-[.9rem] py-[.7rem] border-b border-line;
+  }
+  .fnfcard .nm { @apply flex flex-col min-w-0; flex: 1 1 14rem; }
+  .fnfcard .nm b { @apply font-display text-[.92rem] truncate; }
+  .fnfcard .nm .code { @apply font-mono text-[.8rem] text-ink-2; }
+  .fnfcard .nm .role { @apply text-[.79rem] text-accent truncate; }
+  .fnfcard .stages { @apply flex flex-wrap gap-[.9rem] ml-auto; }
+
+  /* The rule under the word is the state. Colour alone would be the whole
+     message on a screen somebody reads across quickly, so the underline is
+     thick enough to be seen at a glance and the title says what it means. */
+  .fnfstage {
+    @apply font-mono text-[.66rem] font-semibold tracking-[.08em] uppercase text-ink-2
+           pb-[.2rem] border-b-[3px] cursor-help;
+  }
+  .fnfstage.done { @apply border-b-live; }
+  .fnfstage.part { @apply border-b-part; }
+  .fnfstage.none { @apply border-b-line-2 text-ink-3; }
+
+  .fnfcard .det {
+    @apply flex flex-wrap gap-y-[.55rem] gap-x-[1.4rem] items-end px-[.9rem] py-[.65rem] bg-wash;
+  }
+  .fnfcard .det .acts { @apply flex gap-[.15rem] ml-auto; }
+  .fnfcard .det .pick { @apply self-center; }
+  .fnfcount { @apply text-[.8rem] text-ink-3; }
+
+  /* ---------------------------------- payroll, the Bank Transfer screen ---- */
+  /* A rail of collapsed filter groups down the left and a preview panel beside
+     it — the only screen of Factor HR's here that is not a form above a report.
+     The shape is the message on this one: the panel is empty until Preview is
+     pressed, and the rail is what somebody is meant to work through first.
+
+     17rem for the rail because the widest control on it is a month — "December
+     2026" — and a rail that wraps its own labels reads as a broken column
+     rather than a narrow one. */
+  .btsplit { @apply grid gap-[.9rem] items-start mt-[.2rem]; grid-template-columns: 17rem minmax(0, 1fr); }
+
+  .btrail { @apply bg-card border border-line rounded-md overflow-hidden flex flex-col shadow-raise; }
+  .btfind { @apply flex items-center gap-[.4rem] px-[.7rem] py-[.55rem] border-b border-line; }
+  .btfind input { @apply border-0 bg-transparent px-[.1rem] py-[.3rem] min-w-0 text-[.85rem]; flex: 1 1 auto; }
+  .btfind input:focus { @apply outline-none; }
+
+  .btgroup { @apply border-b border-line; }
+  .bthead {
+    @apply w-full flex items-center gap-[.5rem] px-[.8rem] py-[.62rem] text-left
+           text-[.87rem] text-ink bg-transparent border-0 cursor-pointer;
+    min-height: 2.6rem;
+  }
+  .bthead b { @apply font-display font-semibold; }
+  .bthead:hover { @apply bg-wash; }
+  /* The caret points at what it opens, which is the one part of an accordion
+     nobody should have to press to find out. */
+  .bthead .cx { @apply ml-auto text-[.8rem] text-ink-3 leading-none; transition: transform .14s ease; }
+  .bthead[aria-expanded="true"] .cx { transform: rotate(180deg); }
+  .bthead[aria-expanded="true"] b { @apply text-brand-deep; }
+
+  .btfields { @apply flex flex-col gap-[.8rem] px-[.8rem] pt-[.1rem] pb-[.8rem] bg-wash; }
+  .btfields[hidden] { @apply hidden; }
+  .btf { @apply flex flex-col gap-[.26rem] min-w-0; }
+  .btf > .lab { @apply font-mono text-[.6rem] tracking-[.1em] uppercase text-ink-3; }
+  .btf select, .btf input {
+    @apply w-full text-[.85rem] px-[.55rem] py-[.38rem] border border-line-ctl rounded bg-white text-ink;
+    min-height: 2.05rem;
+  }
+  .btf select:focus, .btf input:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px theme(colors.brand.soft); }
+  .btf select:disabled, .btf input:disabled { @apply bg-page text-ink-3 cursor-not-allowed; }
+  .btf .hint { @apply text-[.76rem] text-ink-3; }
+
+  .btmiss { @apply px-[.8rem] py-[1rem] text-[.83rem] text-ink-3; }
+  .btmiss b { @apply text-ink; }
+  /* Their Reset sits under the groups with a rule above it and nothing beside
+     it, which is worth copying: it is the one control on the rail that undoes
+     every other control on the rail. */
+  .btreset { @apply px-[.8rem] py-[.7rem] border-t border-line; }
+  .btreset .embtn { @apply w-full justify-center border-brand text-brand-dark; }
+  .btreset .embtn:hover { @apply bg-brand-dark border-brand-dark text-white; }
+
+  .btmain { @apply bg-card border border-line rounded-md overflow-hidden min-w-0 shadow-raise; }
+  .btmain > header {
+    @apply flex flex-wrap gap-y-[.5rem] gap-x-[.7rem] items-center px-[.9rem] py-[.65rem] border-b border-line;
+  }
+  .btmain > header b { @apply font-display text-[.98rem] font-bold; }
+  .btacts { @apply ml-auto flex flex-wrap gap-[.4rem] items-center; }
+  .btbody { @apply px-[.9rem] py-[.9rem]; }
+  .btout  { @apply flex flex-col gap-[.7rem]; }
+
+  /* Their empty state, drawing and all. Kept quiet — .28 like Salary Master's,
+     because it is the one part of the screen with nothing to say. */
+  .btnone { @apply flex flex-col items-center gap-[.3rem] px-4 py-[2.6rem] text-center; }
+  .btnone .art { @apply text-line-2 opacity-[.75] mb-[.9rem]; }
+  .btnone > b { @apply font-display text-[.95rem] text-ink-2; }
+  .btnone > span { @apply text-[.85rem] text-ink-3; }
+  .btnone > span b { @apply text-ink-2 font-semibold; }
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive.
+
+   Outside @layer so these are never dropped along with an unused component
+   class, and so they win over the definitions above without needing !important.
+
+   Four widths, each a real device rather than a round number: a laptop at 1100,
+   a split window or small tablet at 900, a phone in landscape at 720, and a
+   small phone at 420.
+
+   **The rule throughout is that the page itself never scrolls sideways.** Wide
+   things — the muster grid, the report tables, the approval queue — scroll
+   inside their own `.scroll` box instead. That is deliberate and not a
+   compromise: a muster row that wraps is a row nobody can read across, and this
+   is a screen people read across.
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .reqx { grid-template-columns: auto 1fr; }
+
+  /* Create Employee drops from three fields a row to two. The measured spans go
+     with it — Factor HR's narrow Title only means anything next to the two wide
+     boxes it shares a row with, and a 3-of-24 box on a tablet is a control about
+     eight characters wide. So the copy holds at the width it was measured at,
+     and below that the form is a form. */
+  .wizform .wizf { grid-column: span 12; }
+  /* Drop the times column first. It is the one a reader can reconstruct from
+     the row below it; the person and the reason cannot be. */
+  .req  { grid-template-columns: minmax(140px, 180px) 1fr auto; }
+}
+
+@media (max-width: 900px) {
+  /* The type scale steps back down as the screen narrows. 17px is right for a
+     desk monitor read at arm's length and wrong for a tablet held at reading
+     distance, where the same size costs a column off every report toolbar. */
+  html { font-size: 16.4px; }
+
+  .shell   { grid-template-columns: 5.4rem 1fr; }
+  .req     { grid-template-columns: 1fr; }
+
+  .content { padding-left: .9rem; padding-right: .9rem; }
+  .topbar, .subbar { padding-left: .9rem; padding-right: .9rem; }
+
+  /* Label above control rather than beside it. Two columns at this width leaves
+     the control about nine characters wide, and a date range does not fit in
+     nine characters. */
+  .repgrid { grid-template-columns: 1fr; }
+  .repgrid > label { text-align: left; }
+  .repgrid > label.off { text-align: left; }
+  /* One column, and the age box goes under the fields rather than beside them.
+     Scrolling is expected here; a 21rem sidebar at this width is not. */
+  .reptop { grid-template-columns: 1fr; }
+  .repside { @apply items-stretch; }
+  .repgrid > .ctl, .repgrid > .ctl.pair { grid-column: span 1; }
+
+  /* Bank Transfer's rail goes above its preview rather than beside it. It stays
+     a rail rather than becoming a strip: its groups are shut by default, so
+     stacked they cost three rows above the panel and not thirty. */
+  .btsplit { grid-template-columns: 1fr; }
+
+  /* The profile's pane list turns into one scrolling strip, the way .subbar
+     already does. Thirteen rows stacked above the fields is thirteen rows
+     between the reader and what they opened the record for. */
+  .probody-grid { grid-template-columns: 1fr; }
+  .protabs { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
+  .protabs::-webkit-scrollbar { display: none; }
+  .protab { flex: 0 0 auto; border-bottom: 0; border-right: 1px solid theme(colors.rule); }
+  .protab:last-child { border-right: 0; }
+  /* No room to indent inside a scrolling strip, so the wash carries the
+     nesting on its own and the caret keeps pointing at what it opens. */
+  .protab.pchild { padding-left: .75rem; }
+}
+
+@media (max-width: 720px) {
+  html { font-size: 16px; }
+
+  /* One field a row, and the stepper's labels shrink rather than wrap into
+     three lines and push the form off the fold. The circles stay their size:
+     they are the touch target. */
+  .wizform .wizf { grid-column: span 24; }
+  .wizsteps { padding-left: .5rem; padding-right: .5rem; }
+  .wizlab   { font-size: .74rem; }
+  .wizsteps li::before { margin-right: .95rem; }
+  .wizsteps li::after  { margin-left: .95rem; }
+  /* The footer stops being a row with something pushed to the right of it: at
+     this width Back, the desk link and Create do not fit on one line, and a
+     wrapped row leaves the primary button in the middle of the card. */
+  .wizacts .wizgrow { flex-basis: 100%; order: -1; }
+  .wizacts .btn { flex: 1 1 auto; }
+
+  /* The rail becomes a bar along the bottom of the screen.
+     Bottom rather than top because it is the part of a phone a thumb reaches
+     without regripping, and this is the control people press most. */
+  :root { --manna-bar: 3.9rem; }
+
+  .shell { grid-template-columns: 1fr; }
+  .side {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    /* An explicit height, not `auto`. A fixed box with `top:auto; bottom:0` and
+       an auto height is ambiguous enough that Chrome stretches it from its
+       static position instead of shrink-wrapping — measured at 549px tall on a
+       667px screen, i.e. the whole page. Stating the height removes the
+       question, and `.main` below reserves exactly this much. */
+    height: calc(var(--manna-bar) + env(safe-area-inset-bottom));
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 0 env(safe-area-inset-bottom) 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-top: 1px solid rgba(255, 255, 255, .09);
+    background: theme(colors.nav.2);
+    scrollbar-width: none;
+  }
+  .side::-webkit-scrollbar { display: none; }
+  .brand { display: none; }
+
+  /* The buttons live inside a <nav>, which is the only flex child of .side —
+     so making .side a row lays out that one element and leaves the nine buttons
+     stacked inside it. This is the rule that actually turns them into a bar.
+     (They stacked at x:0 without it, which an overflow check cannot catch:
+     nine items on top of each other are exactly as wide as one.) */
+  .side > nav {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .nav {
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: center;
+    padding: .5rem .7rem;
+    font-size: .66rem;
+    /* The active marker moves from the left edge to the top edge, because on a
+       bottom bar the left edge is between two items rather than beside one. */
+    border-left: 0;
+    border-top: 3px solid transparent;
+  }
+  .nav[aria-current="page"] { border-left: 0; border-top-color: theme(colors.brand.lift); }
+
+  /* So the last panel is not sitting underneath the bar. */
+  .main { padding-bottom: calc(var(--manna-bar) + env(safe-area-inset-bottom) + .4rem); }
+
+  .content { padding-left: .7rem; padding-right: .7rem; padding-top: .8rem; gap: .75rem; }
+  .topbar, .subbar { padding-left: .7rem; padding-right: .7rem; }
+  .topbar { column-gap: .7rem; }
+  /* 190px each is wider than the screen once there are two of them. */
+  .topbar select, .topbar input { min-width: 0; flex: 1 1 8rem; }
+  .topbar .me { order: 9; width: 100%; font-size: .78rem; }
+
+  /* Attendance has eight subtabs, and wrapped they take five rows — most of a
+     667px screen before a single panel. One scrolling row instead, which is the
+     same sideways gesture as the bar along the bottom, so it is learned once
+     rather than twice. */
+  .subbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .subbar::-webkit-scrollbar { display: none; }
+  .subtab { flex: 0 0 auto; padding: .6rem .62rem; font-size: .72rem; }
+
+  .tiles { grid-template-columns: repeat(auto-fit, minmax(min(118px, 46%), 1fr)); }
+  .links { grid-template-columns: 1fr; }
+
+  /* Every fixed minimum inside a form control, released. Each of these was
+     chosen to look right on a laptop and each one overflows a phone. */
+  .repform .wide,
+  .mbf .grow,
+  .iof .grow,
+  .qbar input[type=search] { min-width: 0; width: 100%; }
+  .repset { max-width: none; }
+  .repacts { justify-content: flex-start; }
+
+  /* Their report toolbars stack rather than sit in a row. */
+  .mbbar, .iotop, .ddabar { flex-direction: column; align-items: stretch; }
+  .mbbar .right, .iotop .right, .ddabar .right { margin-left: 0; }
+
+  .modal .box { width: min(100%, 32rem); }
+  .calmonth { min-width: 0; }
+}
+
+@media (max-width: 420px) {
+  html { font-size: 15.4px; }
+
+  /* A 1.7rem number beside a two-word label wraps the label onto three lines,
+     which reads worse than a slightly smaller number. */
+  .tile .n { font-size: 1.35rem; }
+  .tiles   { grid-template-columns: 1fr 1fr; }
+  .legend  { font-size: .76rem; }
+  .panel > header h3 { font-size: .88rem; }
+  .content { padding-left: .55rem; padding-right: .55rem; }
+
+  /* The avatar is the one thing on the header card that can be smaller without
+     anything becoming unreadable. */
+  .prohead { padding: .7rem; gap: .7rem; }
+  .proava  { width: 4rem; height: 4rem; font-size: 1.45rem; }
+  .proava .pen { display: none; }
+}
+
+/* Anything driven by a finger rather than a pointer gets the 44px floor, at
+   whatever width. `pointer: coarse` is the actual question — a touch laptop at
+   1400px has the same thumb as a phone does, and a width query never asks. */
+@media (pointer: coarse) {
+  .embtn, .btn, .gbtn, .tab, .subtab, .protab,
+  .qbar .icon, .fhview, .dtbar .pager button,
+  .embar select, .embar input, .qbar select, .qbar input,
+  .repform input, .repform select, .mbf select, .mbf input,
+  .iof input, .iof select, .ddabar select, .gfil select,
+  .btf input, .btf select, .btfind input {
+    min-height: 2.6rem;
+  }
+  /* One number, and every control on the wizard follows it — including the
+     checkbox's row, which grows while the tick itself does not. A 42px
+     checkbox is not a bigger target, it is a bigger checkbox. */
+  .wizform { --wctl: 2.6rem; }
+  /* The step circles are the one control on this page somebody presses with a
+     thumb mid-form, so they grow to the floor too. Width follows height, which
+     keeps them circles. */
+  .wizdot { min-width: 2.4rem; min-height: 2.4rem; }
+  .yn button { width: 2.4rem; height: 2.4rem; font-size: 1rem; }
+  .nav { min-height: 3.4rem; }
+  /* A 2.35rem row is a comfortable read and a poor target; on a touch screen
+     the report tables get the height instead. */
+  th, td { padding-top: .72rem; padding-bottom: .72rem; }
+}
+
+/* Somebody who has asked their system for less motion has asked for it here
+   too. The transitions above are decoration; nothing depends on them. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ecard:hover { transform: none; }
+}
+
+/* The profile is the one screen somebody prints — a personnel file is a thing
+   people hand across a desk. So the chrome, the pane list and every control
+   that does nothing on paper come off, and the record itself stays. */
+@media print {
+  .side, .topbar, .subbar, .protabs, .proacts, .proico, .prochoose, .legend button { display: none; }
+  .shell { grid-template-columns: 1fr; min-height: 0; }
+  .probody-grid { grid-template-columns: 1fr; }
+  .content { padding: 0; }
+  .prohead, .procard, .panel, .ecard, .legend, .emhead, .embar, .qbar, .person, .regwho, .letter {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}

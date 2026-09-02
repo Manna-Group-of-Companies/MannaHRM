@@ -3,6 +3,16 @@
 Written because the question was asked directly and deserves a plain answer
 rather than a design principle.
 
+> **Read this one first, and know that the answer is currently "no rule".** The
+> `manna_hr` app this document argues for was removed on 31 August 2026, when
+> the repo was converted to one language. The rules themselves survive as
+> `client/src/lib/rules.js` and `client/src/lib/geo.js` and are tested by `npm test` — but
+> they run in a browser, which is exactly the arrangement §1 below explains is
+> not enforcement. Nothing writes attendance unattended today, so nothing is
+> being decided wrongly; the moment something does, one of the options in §4 has
+> to be chosen first.
+
+
 ---
 
 ## 1. What a "rule in the app" actually is
