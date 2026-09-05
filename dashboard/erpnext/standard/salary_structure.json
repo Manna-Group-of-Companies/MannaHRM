@@ -1,0 +1,78 @@
+{
+  "doctype": "DocType",
+  "name": "Salary Structure",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 1,
+  "autoname": "Prompt",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "company",
+    "currency",
+    "payroll_frequency",
+    "is_active",
+    "salary_slip_based_on_timesheet",
+    "earnings",
+    "deductions"
+  ],
+  "fields": [
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Data",
+      "default": "INR"
+    },
+    {
+      "fieldname": "payroll_frequency",
+      "label": "Payroll Frequency",
+      "fieldtype": "Data",
+      "default": "Monthly"
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Is Active",
+      "fieldtype": "Select",
+      "options": "Yes\nNo",
+      "default": "Yes"
+    },
+    {
+      "fieldname": "salary_slip_based_on_timesheet",
+      "label": "Salary Slip Based On Timesheet",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "earnings",
+      "label": "Earnings",
+      "fieldtype": "Table",
+      "options": "Salary Structure Earnings",
+      "default": ""
+    },
+    {
+      "fieldname": "deductions",
+      "label": "Deductions",
+      "fieldtype": "Table",
+      "options": "Salary Structure Deductions",
+      "default": ""
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

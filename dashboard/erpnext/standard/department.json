@@ -1,0 +1,51 @@
+{
+  "doctype": "DocType",
+  "name": "Department",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "Prompt",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "department_name",
+    "company",
+    "disabled",
+    "parent_department"
+  ],
+  "fields": [
+    {
+      "fieldname": "department_name",
+      "label": "Department Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "disabled",
+      "label": "Disabled",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "parent_department",
+      "label": "Parent Department",
+      "fieldtype": "Data"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

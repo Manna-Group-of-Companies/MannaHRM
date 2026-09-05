@@ -1,0 +1,82 @@
+{
+  "doctype": "DocType",
+  "name": "Salary Structure Assignment",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 1,
+  "autoname": "HR-SSA-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee",
+    "employee_name",
+    "salary_structure",
+    "from_date",
+    "company",
+    "currency",
+    "base",
+    "variable"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "salary_structure",
+      "label": "Salary Structure",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "from_date",
+      "label": "From Date",
+      "fieldtype": "Date",
+      "search_index": 1
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "currency",
+      "label": "Currency",
+      "fieldtype": "Data",
+      "default": "INR"
+    },
+    {
+      "fieldname": "base",
+      "label": "Base",
+      "fieldtype": "Float",
+      "default": "0"
+    },
+    {
+      "fieldname": "variable",
+      "label": "Variable",
+      "fieldtype": "Float",
+      "default": "0"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

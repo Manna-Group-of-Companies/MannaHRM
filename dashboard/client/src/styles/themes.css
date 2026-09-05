@@ -1,0 +1,390 @@
+/* ---------------------------------------------------------------------------
+   The palettes, and the only place a colour value is written down.
+
+   `tailwind.config.js` no longer holds hex codes. It holds the *names* — the
+   roles, and the note explaining what each role is for — and every one of them
+   resolves to a custom property defined here. So a new look is a block in this
+   file rather than an edit to the config, and the four hundred class names
+   across the app never move.
+
+   **Channels, not colours.** Each token is three numbers, `234 242 253`, and
+   the config wraps them as `rgb(var(--brand-soft) / <alpha-value>)`. That is
+   what keeps Tailwind's opacity modifiers working — `bg-brand-soft/60` and
+   `text-bad/70` are both used, and a token holding a finished `rgb(...)` string
+   would silently drop the `/60`.
+
+   The consequence, and it is the one trap here: **`theme(colors.x)` cannot be
+   used in hand-written CSS any more.** It expands to the raw template with
+   `<alpha-value>` still in it, which is not a colour. Write `rgb(var(--x))`
+   instead — every such site in `index.css` has already been converted.
+
+   ---------------------------------------------------------------------------
+   Adding a palette
+
+   Copy a block, change the numbers, and give it a `data-theme` name. Nothing
+   else in the app needs to know it exists. Then check it: `npm run contrast`
+   walks every pairing these screens actually put together — text on each of the
+   four surfaces, status text on its own wash, white on each filled button, the
+   control edge, the rail marker — and refuses anything under AA. A palette that
+   has not been through it is a palette that fails on one screen nobody opened.
+   --------------------------------------------------------------------------- */
+
+/* ===========================================================================
+   HARBOUR — blue and white. The default, and unchanged.
+
+   Asked for on 29 Aug 2026, replacing the orange and charcoal that came off the
+   Manna logo. Worth writing down that it *was* the logo's palette, because the
+   next person to open this file will otherwise reintroduce it from the
+   letterhead — and see EMBER below, which is that palette brought back
+   deliberately rather than by accident.
+   =========================================================================== */
+:root,
+[data-theme="harbour"] {
+  /* `deep` is for text on `soft`; `tint` is for a border on it. `dark` is the
+     one that works both ways — text on white and white on it are the same
+     ratio — so it is the fill of every primary button and the colour of every
+     selected-tab label. `lift` is the only one for dark chrome. */
+  --brand:        44 111 209;
+  --brand-dark:   23 95 196;
+  --brand-deep:   14 63 134;
+  --brand-soft:   234 242 253;
+  --brand-tint:   195 218 247;
+  --brand-lift:   91 155 238;
+
+  --char:         22 35 58;
+  --nav:          27 43 71;
+  --nav-2:        19 32 56;
+  --nav-3:        38 58 92;
+  --nav-ink:      185 199 221;
+
+  --page:         243 246 250;
+  --card:         255 255 255;
+  --wash:         248 250 253;
+  --rule:         238 242 248;
+
+  /* `line` and `2` divide things; `ctl` is the edge of a control somebody has
+     to find before they can use it, and that is a different job with a
+     different bar — 3:1, per WCAG 1.4.11. Dividers stay quiet; controls get
+     the contrast. */
+  --line:         224 231 241;
+  --line-2:       199 210 226;
+  --line-ctl:     124 138 163;
+
+  /* `ink-3` names every micro-label, column head and count in the app, so it is
+     the neutral most at risk of being chosen for looks. Every step clears
+     4.5:1 on white, on `wash`, on `page` and on `rule`. */
+  --ink:          20 29 43;
+  --ink-2:        70 84 104;
+  --ink-3:        95 108 130;
+
+  --accent:       21 91 181;
+  --accent-wash:  234 242 253;
+
+  --live:         21 115 63;
+  --live-dark:    25 100 62;
+  --live-wash:    225 242 232;
+
+  /* "Partial" is the brand on purpose — work in progress is the most common
+     state on this page, and it is the one that should look like the product. */
+  --part:         21 91 181;
+  --part-wash:    234 242 253;
+
+  --bad:          176 42 33;
+  --bad-wash:     251 232 230;
+  --bad-tint:     240 207 203;
+  --bad-deep:     124 36 29;
+  --bad-faint:    253 246 245;
+
+  --skip:         95 108 130;
+  --skip-wash:    237 241 247;
+
+  /* `rest` — the week-off bar on the Employees calendar, and the only token
+     added for one control. It is here rather than reusing `skip` because that
+     bar sits beside the filled `brand-dark` working day and has to read as a
+     different *kind* of day, not a quieter one: Factor HR paints the two
+     orange and blue, and a grey chip next to a blue block reads as a disabled
+     blue block.
+
+     **The hue is per palette rather than "orange everywhere."** Orange against
+     Harbour's blue, Graphite's teal and Iris's violet is the far side of the
+     wheel from the working day, which is the whole job. In Ember the brand
+     *is* burnt orange, so the working day is already orange there and a second
+     orange would be two blocks nobody can tell apart — that palette takes the
+     other end instead. The semantics travel; the hue does what each palette
+     needs. White on it is checked by `npm run contrast` on all four. */
+  --rest:         180 83 9;
+
+  /* Factor HR's own blue, and only the "All" dot on a status filter wears it. */
+  --info:         46 107 209;
+
+  /* The empty half of a coverage bar. A fill, not a border, so it is allowed to
+     be quiet — the filled half carries the reading. */
+  --track:        227 233 242;
+
+  /* The fill Factor HR puts behind a box whose form wants an answer in it — the
+     pale yellow on Schedule Report's Name, Subject and Email To. A *fill*, not
+     a border: it has to read as "this one is waiting" across a form of a dozen
+     boxes without competing with `bad`, which is the colour of something that
+     is actually wrong. Ink sits on it, so it is a surface and `npm run
+     contrast` checks it as one. */
+  --need:         253 250 224;
+
+  /* The connection dots in the top bar. These sit on dark chrome, so they are
+     the bright end of each hue rather than the `live` / `bad` tokens, which are
+     chosen to be read on white. They move with the chrome, which is why they
+     are tokens rather than the literals they used to be. */
+  --beacon:       152 165 186;
+  --beacon-live:  87 214 140;
+  --beacon-bad:   255 138 126;
+}
+
+/* ===========================================================================
+   GRAPHITE — near-monochrome slate, with teal as the only accent.
+
+   The blue in HARBOUR does two jobs: it is the brand *and* it is the chrome,
+   which is why that palette needed `lift` invented for the rail — a blue marker
+   on a blue bar had nowhere to go. This one splits them. The chrome is a
+   neutral graphite that never competes, and the one saturated colour in the
+   interface is the thing you are meant to press.
+
+   The practical effect on a dense screen: status reads louder. Green, red and
+   teal are the only hues present, so a red cell is the only red thing in view
+   rather than one colour among several.
+   =========================================================================== */
+[data-theme="graphite"] {
+  --brand:        13 148 136;
+  --brand-dark:   15 118 110;
+  --brand-deep:   17 94 89;
+  --brand-soft:   240 253 250;
+  --brand-tint:   153 246 228;
+  --brand-lift:   45 212 191;
+
+  --char:         17 24 39;
+  --nav:          31 41 55;
+  --nav-2:        17 24 39;
+  --nav-3:        55 65 81;
+  --nav-ink:      209 213 219;
+
+  --page:         244 245 247;
+  --card:         255 255 255;
+  --wash:         250 251 252;
+  --rule:         241 243 245;
+
+  --line:         229 231 235;
+  --line-2:       209 213 219;
+  --line-ctl:     107 114 128;
+
+  /* Darker than the grey this palette started from. `#6B7280` is the obvious
+     slate for a micro-label and it is 4.43:1 on `page` — under AA on the
+     surface most of the app's labels actually sit on. */
+  --ink:          17 24 39;
+  --ink-2:        75 85 99;
+  --ink-3:        103 110 124;
+
+  --accent:       15 118 110;
+  --accent-wash:  240 253 250;
+
+  --live:         4 120 87;
+  --live-dark:    3 99 73;
+  --live-wash:    236 253 245;
+
+  --part:         15 118 110;
+  --part-wash:    240 253 250;
+
+  --bad:          185 28 28;
+  --bad-wash:     254 242 242;
+  --bad-tint:     252 165 165;
+  --bad-deep:     127 29 29;
+  --bad-faint:    254 247 247;
+
+  --skip:         103 110 124;
+  --skip-wash:    245 246 248;
+
+  --rest:         180 83 9;
+
+  --info:         14 165 233;
+  --track:        229 231 235;
+
+  /* See HARBOUR. */
+  --need:         252 251 226;
+
+  --beacon:       156 163 175;
+  --beacon-live:  52 211 153;
+  --beacon-bad:   252 165 165;
+}
+
+/* ===========================================================================
+   EMBER — the warm charcoal and burnt orange the app started in.
+
+   This is the logo's palette brought back on purpose, and the reason it was
+   dropped is worth stating rather than rediscovering: **the Manna orange cannot
+   be an interactive colour.** `#EF6C29` is 3.1:1 on white — fine for a
+   logotype, which WCAG exempts, and not fine for a button somebody has to read
+   the label on. So the brand ramp here is burnt orange, several steps down from
+   the mark, and the mark keeps its own token (`manna`) and its own value.
+
+   The chrome is a warm stone rather than the blue-black of the other two, so
+   the neutrals carry a little red — a cool grey against a warm brand reads as
+   dirty, which is the same finding that turned HARBOUR's neutrals cool.
+   =========================================================================== */
+[data-theme="ember"] {
+  --brand:        194 65 12;
+  --brand-dark:   154 52 18;
+  --brand-deep:   124 45 18;
+  --brand-soft:   255 247 237;
+  --brand-tint:   254 215 170;
+  --brand-lift:   251 146 60;
+
+  --char:         28 25 23;
+  --nav:          41 37 36;
+  --nav-2:        28 25 23;
+  --nav-3:        68 64 60;
+  --nav-ink:      214 211 209;
+
+  --page:         250 249 247;
+  --card:         255 255 255;
+  --wash:         253 252 251;
+  --rule:         245 243 241;
+
+  --line:         231 229 228;
+  --line-2:       214 211 209;
+  --line-ctl:     120 113 108;
+
+  --ink:          28 25 23;
+  --ink-2:        87 83 78;
+  --ink-3:        115 108 103;
+
+  --accent:       154 52 18;
+  --accent-wash:  255 247 237;
+
+  /* Darker than the green the other two use. Against a warm page a mid green
+     loses half a point of contrast, and this one has to clear AA on `rule`. */
+  --live:         19 105 47;
+  --live-dark:    15 87 38;
+  --live-wash:    240 253 244;
+
+  --part:         154 52 18;
+  --part-wash:    255 247 237;
+
+  /* Red on an orange app is the one pairing this palette has to be careful
+     about: it is the nearest hue to the brand, and it is the one that means
+     something has gone wrong. Kept a full step darker and colder than `brand`
+     so the two never read as the same state. */
+  --bad:          185 28 28;
+  --bad-wash:     254 242 242;
+  --bad-tint:     252 165 165;
+  --bad-deep:     127 29 29;
+  --bad-faint:    254 247 247;
+
+  --skip:         115 108 103;
+  --skip-wash:    247 246 245;
+
+  --rest:         30 78 140;
+
+  /* Factor HR's blue, which is a literal copy of theirs and does not move with
+     the theme — on this palette it is also the only cool colour in the app,
+     which is exactly what makes their "All" dot legible here. */
+  --info:         46 107 209;
+  --track:        231 229 228;
+
+  /* See HARBOUR. */
+  --need:         253 247 216;
+
+  --beacon:       168 162 158;
+  --beacon-live:  74 222 128;
+  --beacon-bad:   252 165 165;
+}
+
+/* ===========================================================================
+   IRIS — indigo-violet on a plum-tinted stone.
+
+   The fourth, and it exists because the first three left one gap: HARBOUR and
+   GRAPHITE are both cool and both put a blue-green on the chrome, EMBER is the
+   warm one, and none of them is a *quiet* saturated palette. This one is
+   violet, which is the only strongly-coloured hue left that none of the status
+   tokens use — green means live, red means wrong, and Factor HR's blue means
+   theirs. A violet control cannot be mistaken for a state.
+
+   Two things it forced, both worth writing down:
+
+   1. **`info` had to stay blue and had to stay far from `brand`.** On HARBOUR
+      the trap was that Factor's blue and the app's blue read as the same
+      colour; here they are two different hues and the "All" dot separates on
+      its own. It is still the literal copy of theirs — see the comment on
+      EMBER's — and it is still the only cool accent on the screen.
+   2. **The neutrals carry violet, not grey.** Same finding as the other two,
+      third time round: a neutral grey beside a saturated brand reads as dirty,
+      so `page`, `wash`, `rule` and both ramps are pulled a step toward the
+      brand's hue. `ink-3` is the one that had to be watched — it is every
+      micro-label in the app, and a violet grey loses contrast faster than a
+      blue one on a lavender `page`.
+   =========================================================================== */
+[data-theme="iris"] {
+  /* `lift` is violet-400 and, like every other palette's, is for the dark
+     chrome only: on white it is 2.4:1 and fails everything. */
+  --brand:        109 40 217;
+  --brand-dark:   91 33 182;
+  --brand-deep:   76 29 149;
+  --brand-soft:   245 243 255;
+  --brand-tint:   221 214 254;
+  --brand-lift:   167 139 250;
+
+  /* A plum charcoal rather than a blue-black. Same reasoning as EMBER's warm
+     stone, mirrored: the chrome takes the brand's hue so the rail and the
+     buttons on it belong to the same family. */
+  --char:         30 27 46;
+  --nav:          42 37 64;
+  --nav-2:        30 26 46;
+  --nav-3:        61 54 89;
+  --nav-ink:      201 195 218;
+
+  --page:         245 244 249;
+  --card:         255 255 255;
+  --wash:         250 249 252;
+  --rule:         241 239 247;
+
+  --line:         229 226 239;
+  --line-2:       207 202 223;
+  --line-ctl:     124 117 149;
+
+  --ink:          27 24 48;
+  --ink-2:        74 68 98;
+  --ink-3:        98 92 124;
+
+  --accent:       91 33 182;
+  --accent-wash:  245 243 255;
+
+  /* A shade darker than HARBOUR's green: the page here is lavender, and a mid
+     green on a violet-tinted surface reads a half point lower than the same
+     green on a blue-tinted one. */
+  --live:         21 112 63;
+  --live-dark:    19 96 55;
+  --live-wash:    228 244 234;
+
+  --part:         91 33 182;
+  --part-wash:    245 243 255;
+
+  /* Unchanged from HARBOUR. Red is the furthest hue from violet in this app and
+     needed no adjustment to stay unmistakably "wrong" beside the brand — which
+     is the one thing EMBER had to work for. */
+  --bad:          176 42 33;
+  --bad-wash:     251 232 230;
+  --bad-tint:     240 207 203;
+  --bad-deep:     124 36 29;
+  --bad-faint:    253 246 245;
+
+  --skip:         98 92 124;
+  --skip-wash:    237 235 243;
+
+  --rest:         180 83 9;
+
+  --info:         46 107 209;
+  --track:        227 223 240;
+
+  /* See HARBOUR. */
+  --need:         252 250 227;
+
+  --beacon:       158 152 176;
+  --beacon-live:  87 214 140;
+  --beacon-bad:   255 138 126;
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_pan_no",
+    "dt": "Employee",
+    "fieldname": "custom_pan_no",
+    "label": "PAN No",
+    "fieldtype": "Data",
+    "insert_after": "employee_number",
+    "module": "Manna HR"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_nationality",
+    "dt": "Employee",
+    "fieldname": "custom_nationality",
+    "label": "Nationality",
+    "fieldtype": "Data",
+    "insert_after": "date_of_birth",
+    "module": "Manna HR"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_confirmation_date",
+    "dt": "Employee",
+    "fieldname": "custom_confirmation_date",
+    "label": "Confirmation Date",
+    "fieldtype": "Date",
+    "insert_after": "final_confirmation_date",
+    "module": "Manna HR"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_father_name",
+    "dt": "Employee",
+    "fieldname": "custom_father_name",
+    "label": "Father's Name",
+    "fieldtype": "Data",
+    "insert_after": "custom_nationality",
+    "module": "Manna HR"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_mother_name",
+    "dt": "Employee",
+    "fieldname": "custom_mother_name",
+    "label": "Mother's Name",
+    "fieldtype": "Data",
+    "insert_after": "custom_father_name",
+    "module": "Manna HR"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_spouse_name",
+    "dt": "Employee",
+    "fieldname": "custom_spouse_name",
+    "label": "Spouse's Name",
+    "fieldtype": "Data",
+    "insert_after": "custom_mother_name",
+    "module": "Manna HR"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_religion",
+    "dt": "Employee",
+    "fieldname": "custom_religion",
+    "label": "Religion",
+    "fieldtype": "Data",
+    "insert_after": "custom_spouse_name",
+    "module": "Manna HR"
+  },
+  {
+    "doctype": "Custom Field",
+    "name": "Employee-custom_allow_remote_punch",
+    "dt": "Employee",
+    "fieldname": "custom_allow_remote_punch",
+    "label": "Punch From Anywhere",
+    "fieldtype": "Check",
+    "insert_after": "attendance_device_id",
+    "module": "Manna HR"
+  }
+]

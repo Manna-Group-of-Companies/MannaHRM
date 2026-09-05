@@ -1,0 +1,70 @@
+{
+  "doctype": "DocType",
+  "name": "Asset Movement",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 1,
+  "autoname": "ACC-ASM-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "transaction_date",
+    "purpose",
+    "company",
+    "asset",
+    "from_employee",
+    "to_employee",
+    "reference_name"
+  ],
+  "fields": [
+    {
+      "fieldname": "transaction_date",
+      "label": "Transaction Date",
+      "fieldtype": "Date",
+      "search_index": 1
+    },
+    {
+      "fieldname": "purpose",
+      "label": "Purpose",
+      "fieldtype": "Select",
+      "options": "Issue\nReceipt\nTransfer"
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "asset",
+      "label": "Asset",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "from_employee",
+      "label": "From Employee",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "to_employee",
+      "label": "To Employee",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "reference_name",
+      "label": "Reference Name",
+      "fieldtype": "Data"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

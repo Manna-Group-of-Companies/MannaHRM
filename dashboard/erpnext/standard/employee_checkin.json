@@ -1,0 +1,72 @@
+{
+  "doctype": "DocType",
+  "name": "Employee Checkin",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "EMP-CKIN-.########",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee",
+    "employee_name",
+    "time",
+    "log_type",
+    "device_id",
+    "skip_auto_attendance",
+    "shift"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "time",
+      "label": "Time",
+      "fieldtype": "Datetime",
+      "search_index": 1
+    },
+    {
+      "fieldname": "log_type",
+      "label": "Log Type",
+      "fieldtype": "Select",
+      "options": "IN\nOUT"
+    },
+    {
+      "fieldname": "device_id",
+      "label": "Device Id",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "skip_auto_attendance",
+      "label": "Skip Auto Attendance",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "shift",
+      "label": "Shift",
+      "fieldtype": "Data"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

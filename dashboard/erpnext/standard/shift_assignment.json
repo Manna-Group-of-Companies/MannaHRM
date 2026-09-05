@@ -1,0 +1,76 @@
+{
+  "doctype": "DocType",
+  "name": "Shift Assignment",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 1,
+  "autoname": "HR-SHA-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee",
+    "employee_name",
+    "shift_type",
+    "start_date",
+    "end_date",
+    "company",
+    "department",
+    "status"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "shift_type",
+      "label": "Shift Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "start_date",
+      "label": "Start Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "end_date",
+      "label": "End Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "department",
+      "label": "Department",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Data",
+      "default": "Active"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "doctype": "DocType",
+  "name": "Attendance Regularization",
+  "module": "Manna HR",
+  "custom": 1,
+  "is_submittable": 0,
+  "autoname": "HR-AREG-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee",
+    "employee_name",
+    "company",
+    "attendance_date",
+    "requested_in",
+    "requested_out",
+    "reason",
+    "status",
+    "approver_type",
+    "decided_by",
+    "decided_on",
+    "decision_note"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "attendance_date",
+      "label": "Attendance Date",
+      "fieldtype": "Date",
+      "search_index": 1
+    },
+    {
+      "fieldname": "requested_in",
+      "label": "Requested In",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "requested_out",
+      "label": "Requested Out",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "reason",
+      "label": "Reason",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Pending Approval\nApproved\nRejected\nCancelled",
+      "default": "Pending Approval",
+      "search_index": 1
+    },
+    {
+      "fieldname": "approver_type",
+      "label": "Approver Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "decided_by",
+      "label": "Decided By",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "decided_on",
+      "label": "Decided On",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "decision_note",
+      "label": "Decision Note",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

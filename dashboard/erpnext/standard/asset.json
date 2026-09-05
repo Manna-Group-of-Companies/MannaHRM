@@ -1,0 +1,108 @@
+{
+  "doctype": "DocType",
+  "name": "Asset",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 1,
+  "autoname": "ACC-ASS-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "asset_name",
+    "item_code",
+    "asset_category",
+    "custodian",
+    "location",
+    "purchase_date",
+    "gross_purchase_amount",
+    "status",
+    "company",
+    "asset_quantity",
+    "warranty_expiry_date",
+    "supplier",
+    "serial_no"
+  ],
+  "fields": [
+    {
+      "fieldname": "asset_name",
+      "label": "Asset Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "item_code",
+      "label": "Item Code",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "asset_category",
+      "label": "Asset Category",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custodian",
+      "label": "Custodian",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "location",
+      "label": "Location",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "purchase_date",
+      "label": "Purchase Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "gross_purchase_amount",
+      "label": "Gross Purchase Amount",
+      "fieldtype": "Float",
+      "default": "0"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Data",
+      "default": "In Use"
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "asset_quantity",
+      "label": "Asset Quantity",
+      "fieldtype": "Int",
+      "default": "1"
+    },
+    {
+      "fieldname": "warranty_expiry_date",
+      "label": "Warranty Expiry Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "supplier",
+      "label": "Supplier",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "serial_no",
+      "label": "Serial No",
+      "fieldtype": "Data"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

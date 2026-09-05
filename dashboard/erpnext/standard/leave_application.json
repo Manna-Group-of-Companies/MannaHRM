@@ -1,0 +1,124 @@
+{
+  "doctype": "DocType",
+  "name": "Leave Application",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 1,
+  "autoname": "HR-LAP-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee",
+    "employee_name",
+    "company",
+    "leave_type",
+    "from_date",
+    "to_date",
+    "half_day",
+    "half_day_date",
+    "total_leave_days",
+    "leave_balance",
+    "leave_approver",
+    "leave_approver_name",
+    "posting_date",
+    "status",
+    "description"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "leave_type",
+      "label": "Leave Type",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "from_date",
+      "label": "From Date",
+      "fieldtype": "Date",
+      "search_index": 1
+    },
+    {
+      "fieldname": "to_date",
+      "label": "To Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "half_day",
+      "label": "Half Day",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "half_day_date",
+      "label": "Half Day Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "total_leave_days",
+      "label": "Total Leave Days",
+      "fieldtype": "Float",
+      "default": "0"
+    },
+    {
+      "fieldname": "leave_balance",
+      "label": "Leave Balance",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "leave_approver",
+      "label": "Leave Approver",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "leave_approver_name",
+      "label": "Leave Approver Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "posting_date",
+      "label": "Posting Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Open\nApproved\nRejected\nCancelled",
+      "default": "Open",
+      "search_index": 1
+    },
+    {
+      "fieldname": "description",
+      "label": "Description",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

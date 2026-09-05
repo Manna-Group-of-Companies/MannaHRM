@@ -1,0 +1,60 @@
+{
+  "doctype": "DocType",
+  "name": "Leave Type",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "Prompt",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "leave_type_name",
+    "max_leaves_allowed",
+    "is_lwp",
+    "is_carry_forward",
+    "include_holiday"
+  ],
+  "fields": [
+    {
+      "fieldname": "leave_type_name",
+      "label": "Leave Type Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "max_leaves_allowed",
+      "label": "Max Leaves Allowed",
+      "fieldtype": "Int",
+      "default": "0"
+    },
+    {
+      "fieldname": "is_lwp",
+      "label": "Is Lwp",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "is_carry_forward",
+      "label": "Is Carry Forward",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "include_holiday",
+      "label": "Include Holiday",
+      "fieldtype": "Check",
+      "default": "0"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "doctype": "DocType",
+  "name": "Asset Category",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "field:asset_category_name",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "asset_category_name"
+  ],
+  "fields": [
+    {
+      "fieldname": "asset_category_name",
+      "label": "Asset Category Name",
+      "fieldtype": "Data",
+      "reqd": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

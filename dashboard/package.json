@@ -1,0 +1,28 @@
+{
+  "name": "manna-hrm",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Manna HR — a React client over an Express/MongoDB API. Two workspaces, one origin.",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @manna/hrm-server",
+    "dev:client": "npm run dev --workspace @manna/hrm-client",
+    "build": "npm run build --workspace @manna/hrm-client && npm run build --workspace @manna/hrm-server",
+    "start": "npm run start --workspace @manna/hrm-server",
+    "seed": "npm run seed --workspace @manna/hrm-server",
+    "typecheck": "npm run typecheck --workspace @manna/hrm-server",
+    "erpnext": "npm run erpnext --workspace @manna/hrm-server",
+    "erpnext:push": "npm run erpnext:push --workspace @manna/hrm-server"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.21.5": true
+  }
+}

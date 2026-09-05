@@ -1,0 +1,52 @@
+{
+  "doctype": "DocType",
+  "name": "Company",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "Prompt",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "abbr",
+    "default_holiday_list",
+    "default_currency",
+    "country"
+  ],
+  "fields": [
+    {
+      "fieldname": "abbr",
+      "label": "Abbr",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "default_holiday_list",
+      "label": "Default Holiday List",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "default_currency",
+      "label": "Default Currency",
+      "fieldtype": "Data",
+      "default": "INR"
+    },
+    {
+      "fieldname": "country",
+      "label": "Country",
+      "fieldtype": "Data",
+      "default": "India"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

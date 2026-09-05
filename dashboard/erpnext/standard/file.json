@@ -1,0 +1,88 @@
+{
+  "doctype": "DocType",
+  "name": "File",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "Prompt",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "file_name",
+    "file_url",
+    "file_type",
+    "file_size",
+    "is_private",
+    "attached_to_doctype",
+    "attached_to_name",
+    "attached_to_field",
+    "folder"
+  ],
+  "fields": [
+    {
+      "fieldname": "file_name",
+      "label": "File Name",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "file_url",
+      "label": "File Url",
+      "fieldtype": "Data",
+      "reqd": 1
+    },
+    {
+      "fieldname": "file_type",
+      "label": "File Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "file_size",
+      "label": "File Size",
+      "fieldtype": "Int",
+      "default": "0"
+    },
+    {
+      "fieldname": "is_private",
+      "label": "Is Private",
+      "fieldtype": "Check",
+      "default": "1"
+    },
+    {
+      "fieldname": "attached_to_doctype",
+      "label": "Attached To Doctype",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "attached_to_name",
+      "label": "Attached To Name",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "attached_to_field",
+      "label": "Attached To Field",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "folder",
+      "label": "Folder",
+      "fieldtype": "Data",
+      "default": "Home/Attachments"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

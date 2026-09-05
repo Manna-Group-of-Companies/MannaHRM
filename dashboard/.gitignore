@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+*.local
+
+# Document scans — the bytes behind a `File` row. Written by the seed and,
+# one day, by an upload. Somebody's paperwork does not belong in a repo.
+files/

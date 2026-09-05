@@ -1,0 +1,77 @@
+{
+  "doctype": "DocType",
+  "name": "Employee Letter",
+  "module": "Manna HR",
+  "custom": 1,
+  "is_submittable": 0,
+  "autoname": "HR-LTR-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee",
+    "employee_name",
+    "letter_type",
+    "letter_date",
+    "letter_number",
+    "reference_number",
+    "remarks",
+    "body"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "letter_type",
+      "label": "Letter Type",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "letter_date",
+      "label": "Letter Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "letter_number",
+      "label": "Letter Number",
+      "fieldtype": "Int",
+      "search_index": 1
+    },
+    {
+      "fieldname": "reference_number",
+      "label": "Reference Number",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "remarks",
+      "label": "Remarks",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "body",
+      "label": "Body",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

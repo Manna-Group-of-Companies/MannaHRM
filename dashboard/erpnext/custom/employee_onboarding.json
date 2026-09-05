@@ -1,0 +1,141 @@
+{
+  "doctype": "DocType",
+  "name": "Employee Onboarding",
+  "module": "Manna HR",
+  "custom": 1,
+  "is_submittable": 1,
+  "autoname": "HR-ONB-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee_name",
+    "salutation",
+    "first_name",
+    "last_name",
+    "employee_number",
+    "employee_code_series",
+    "date_of_birth",
+    "date_of_joining",
+    "cell_number",
+    "personal_email",
+    "company",
+    "department",
+    "designation",
+    "employee_grade",
+    "job_applicant",
+    "boarding_begins_on",
+    "boarding_status",
+    "employee"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "salutation",
+      "label": "Salutation",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "first_name",
+      "label": "First Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "last_name",
+      "label": "Last Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "employee_number",
+      "label": "Employee Number",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_code_series",
+      "label": "Employee Code Series",
+      "fieldtype": "Data",
+      "default": "Manual Entry"
+    },
+    {
+      "fieldname": "date_of_birth",
+      "label": "Date Of Birth",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "date_of_joining",
+      "label": "Date Of Joining",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "cell_number",
+      "label": "Cell Number",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "personal_email",
+      "label": "Personal Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "department",
+      "label": "Department",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "designation",
+      "label": "Designation",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "employee_grade",
+      "label": "Employee Grade",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "job_applicant",
+      "label": "Job Applicant",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "boarding_begins_on",
+      "label": "Boarding Begins On",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "boarding_status",
+      "label": "Boarding Status",
+      "fieldtype": "Select",
+      "options": "Pending\nIn Process\nCompleted",
+      "default": "Pending",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "search_index": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

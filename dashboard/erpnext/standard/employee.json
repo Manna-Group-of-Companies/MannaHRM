@@ -1,0 +1,525 @@
+{
+  "doctype": "DocType",
+  "name": "Employee",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "HR-EMP-.#####",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee_number",
+    "employee_name",
+    "first_name",
+    "middle_name",
+    "last_name",
+    "salutation",
+    "gender",
+    "date_of_birth",
+    "blood_group",
+    "marital_status",
+    "image",
+    "status",
+    "company",
+    "department",
+    "designation",
+    "branch",
+    "grade",
+    "employment_type",
+    "date_of_joining",
+    "scheduled_confirmation_date",
+    "final_confirmation_date",
+    "custom_confirmation_date",
+    "contract_end_date",
+    "notice_number_of_days",
+    "date_of_retirement",
+    "reports_to",
+    "leave_approver",
+    "payroll_cost_center",
+    "job_applicant",
+    "user_id",
+    "attendance_device_id",
+    "default_shift",
+    "holiday_list",
+    "custom_allow_remote_punch",
+    "cell_number",
+    "personal_email",
+    "company_email",
+    "prefered_email",
+    "prefered_contact_email",
+    "current_address",
+    "permanent_address",
+    "current_accommodation_type",
+    "permanent_accommodation_type",
+    "person_to_be_contacted",
+    "relation",
+    "emergency_phone_number",
+    "custom_father_name",
+    "custom_mother_name",
+    "custom_spouse_name",
+    "custom_nationality",
+    "custom_religion",
+    "family_background",
+    "health_details",
+    "bio",
+    "pan_number",
+    "custom_pan_no",
+    "passport_number",
+    "valid_upto",
+    "date_of_issue",
+    "place_of_issue",
+    "custom_factor_hr_id",
+    "provident_fund_account",
+    "ctc",
+    "salary_currency",
+    "salary_mode",
+    "bank_name",
+    "bank_ac_no",
+    "iban",
+    "relieving_date",
+    "reason_for_leaving",
+    "resignation_letter_date",
+    "held_on",
+    "new_workplace",
+    "feedback",
+    "encashment_date",
+    "leave_encashed",
+    "employee_external_work_history",
+    "employee_education",
+    "employee_internal_work_history",
+    "unsubscribed"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee_number",
+      "label": "Employee Number",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "first_name",
+      "label": "First Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "middle_name",
+      "label": "Middle Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "last_name",
+      "label": "Last Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "salutation",
+      "label": "Salutation",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "gender",
+      "label": "Gender",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "date_of_birth",
+      "label": "Date Of Birth",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "blood_group",
+      "label": "Blood Group",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "marital_status",
+      "label": "Marital Status",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "image",
+      "label": "Image",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Data",
+      "default": "Active",
+      "search_index": 1
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "department",
+      "label": "Department",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "designation",
+      "label": "Designation",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "branch",
+      "label": "Branch",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "grade",
+      "label": "Grade",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "employment_type",
+      "label": "Employment Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "date_of_joining",
+      "label": "Date Of Joining",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "scheduled_confirmation_date",
+      "label": "Scheduled Confirmation Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "final_confirmation_date",
+      "label": "Final Confirmation Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "custom_confirmation_date",
+      "label": "Custom Confirmation Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "contract_end_date",
+      "label": "Contract End Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "notice_number_of_days",
+      "label": "Notice Number Of Days",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "date_of_retirement",
+      "label": "Date Of Retirement",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "reports_to",
+      "label": "Reports To",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "leave_approver",
+      "label": "Leave Approver",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "payroll_cost_center",
+      "label": "Payroll Cost Center",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "job_applicant",
+      "label": "Job Applicant",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "user_id",
+      "label": "User Id",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "attendance_device_id",
+      "label": "Attendance Device Id",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "default_shift",
+      "label": "Default Shift",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "holiday_list",
+      "label": "Holiday List",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_allow_remote_punch",
+      "label": "Custom Allow Remote Punch",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "cell_number",
+      "label": "Cell Number",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "personal_email",
+      "label": "Personal Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "company_email",
+      "label": "Company Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "prefered_email",
+      "label": "Prefered Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "prefered_contact_email",
+      "label": "Prefered Contact Email",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "current_address",
+      "label": "Current Address",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "permanent_address",
+      "label": "Permanent Address",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "current_accommodation_type",
+      "label": "Current Accommodation Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "permanent_accommodation_type",
+      "label": "Permanent Accommodation Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "person_to_be_contacted",
+      "label": "Person To Be Contacted",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "relation",
+      "label": "Relation",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "emergency_phone_number",
+      "label": "Emergency Phone Number",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_father_name",
+      "label": "Custom Father Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_mother_name",
+      "label": "Custom Mother Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_spouse_name",
+      "label": "Custom Spouse Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_nationality",
+      "label": "Custom Nationality",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_religion",
+      "label": "Custom Religion",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "family_background",
+      "label": "Family Background",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "health_details",
+      "label": "Health Details",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "bio",
+      "label": "Bio",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "pan_number",
+      "label": "Pan Number",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_pan_no",
+      "label": "Custom Pan No",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "passport_number",
+      "label": "Passport Number",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "valid_upto",
+      "label": "Valid Upto",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "date_of_issue",
+      "label": "Date Of Issue",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "place_of_issue",
+      "label": "Place Of Issue",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "custom_factor_hr_id",
+      "label": "Custom Factor Hr Id",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "provident_fund_account",
+      "label": "Provident Fund Account",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "ctc",
+      "label": "Ctc",
+      "fieldtype": "Float",
+      "default": "0"
+    },
+    {
+      "fieldname": "salary_currency",
+      "label": "Salary Currency",
+      "fieldtype": "Data",
+      "default": "INR"
+    },
+    {
+      "fieldname": "salary_mode",
+      "label": "Salary Mode",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "bank_name",
+      "label": "Bank Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "bank_ac_no",
+      "label": "Bank Ac No",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "iban",
+      "label": "Iban",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "relieving_date",
+      "label": "Relieving Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "reason_for_leaving",
+      "label": "Reason For Leaving",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "resignation_letter_date",
+      "label": "Resignation Letter Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "held_on",
+      "label": "Held On",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "new_workplace",
+      "label": "New Workplace",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "feedback",
+      "label": "Feedback",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "encashment_date",
+      "label": "Encashment Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "leave_encashed",
+      "label": "Leave Encashed",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "employee_external_work_history",
+      "label": "Employee External Work History",
+      "fieldtype": "Table",
+      "options": "Employee Employee External Work History",
+      "default": ""
+    },
+    {
+      "fieldname": "employee_education",
+      "label": "Employee Education",
+      "fieldtype": "Table",
+      "options": "Employee Employee Education",
+      "default": ""
+    },
+    {
+      "fieldname": "employee_internal_work_history",
+      "label": "Employee Internal Work History",
+      "fieldtype": "Table",
+      "options": "Employee Employee Internal Work History",
+      "default": ""
+    },
+    {
+      "fieldname": "unsubscribed",
+      "label": "Unsubscribed",
+      "fieldtype": "Check",
+      "default": "0"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

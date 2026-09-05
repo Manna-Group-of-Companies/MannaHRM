@@ -1,0 +1,79 @@
+{
+  "doctype": "DocType",
+  "name": "Shift Type",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "Prompt",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "start_time",
+    "end_time",
+    "holiday_list",
+    "enable_auto_attendance",
+    "begin_check_in_before_shift_start_time",
+    "allow_check_out_after_shift_end_time",
+    "late_entry_grace_period",
+    "early_exit_grace_period"
+  ],
+  "fields": [
+    {
+      "fieldname": "start_time",
+      "label": "Start Time",
+      "fieldtype": "Time"
+    },
+    {
+      "fieldname": "end_time",
+      "label": "End Time",
+      "fieldtype": "Time"
+    },
+    {
+      "fieldname": "holiday_list",
+      "label": "Holiday List",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "enable_auto_attendance",
+      "label": "Enable Auto Attendance",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "begin_check_in_before_shift_start_time",
+      "label": "Begin Check In Before Shift Start Time",
+      "fieldtype": "Int",
+      "default": "60"
+    },
+    {
+      "fieldname": "allow_check_out_after_shift_end_time",
+      "label": "Allow Check Out After Shift End Time",
+      "fieldtype": "Int",
+      "default": "60"
+    },
+    {
+      "fieldname": "late_entry_grace_period",
+      "label": "Late Entry Grace Period",
+      "fieldtype": "Int",
+      "default": "0"
+    },
+    {
+      "fieldname": "early_exit_grace_period",
+      "label": "Early Exit Grace Period",
+      "fieldtype": "Int",
+      "default": "0"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "doctype": "DocType",
+  "name": "Attendance",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 1,
+  "autoname": "HR-ATT-.########",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "employee",
+    "employee_name",
+    "attendance_date",
+    "status",
+    "company",
+    "shift",
+    "leave_type",
+    "in_time",
+    "out_time",
+    "working_hours",
+    "late_entry",
+    "early_exit"
+  ],
+  "fields": [
+    {
+      "fieldname": "employee",
+      "label": "Employee",
+      "fieldtype": "Data",
+      "search_index": 1
+    },
+    {
+      "fieldname": "employee_name",
+      "label": "Employee Name",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "attendance_date",
+      "label": "Attendance Date",
+      "fieldtype": "Date",
+      "search_index": 1
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "Present\nAbsent\nOn Leave\nHalf Day\nWork From Home",
+      "search_index": 1
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "shift",
+      "label": "Shift",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "leave_type",
+      "label": "Leave Type",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "in_time",
+      "label": "In Time",
+      "fieldtype": "Time"
+    },
+    {
+      "fieldname": "out_time",
+      "label": "Out Time",
+      "fieldtype": "Time"
+    },
+    {
+      "fieldname": "working_hours",
+      "label": "Working Hours",
+      "fieldtype": "Int"
+    },
+    {
+      "fieldname": "late_entry",
+      "label": "Late Entry",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "early_exit",
+      "label": "Early Exit",
+      "fieldtype": "Check",
+      "default": "0"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}

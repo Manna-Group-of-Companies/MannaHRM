@@ -1,0 +1,66 @@
+{
+  "doctype": "DocType",
+  "name": "Salary Component",
+  "module": "Manna HR",
+  "custom": 0,
+  "is_submittable": 0,
+  "autoname": "field:salary_component",
+  "istable": 0,
+  "editable_grid": 0,
+  "engine": "InnoDB",
+  "field_order": [
+    "salary_component",
+    "salary_component_abbr",
+    "type",
+    "do_not_include_in_total",
+    "amount_based_on_formula",
+    "formula"
+  ],
+  "fields": [
+    {
+      "fieldname": "salary_component",
+      "label": "Salary Component",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "salary_component_abbr",
+      "label": "Salary Component Abbr",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "type",
+      "label": "Type",
+      "fieldtype": "Select",
+      "options": "Earning\nDeduction",
+      "reqd": 1
+    },
+    {
+      "fieldname": "do_not_include_in_total",
+      "label": "Do Not Include In Total",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "amount_based_on_formula",
+      "label": "Amount Based On Formula",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "formula",
+      "label": "Formula",
+      "fieldtype": "Data"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    }
+  ]
+}
