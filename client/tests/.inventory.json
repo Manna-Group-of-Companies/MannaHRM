@@ -1,0 +1,5078 @@
+[
+ {
+  "page": "dashboard/approvals",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select everything shown"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Bulk action"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search this queue"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "How many activities"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Grouping"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select everything shown"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Bulk action"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search this queue"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "How many activities"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Grouping"
+ },
+ {
+  "page": "dashboard/approvals",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select this request"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select every letter on this page"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Rows per page"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Page number"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select every letter on this page"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select Anand Raghavan"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Rows per page"
+ },
+ {
+  "page": "onboard/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Page number"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Code"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Name"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Asset Type"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Detail"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Quantity"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Rate"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Qty On Hand"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Value"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Warranty Date"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Purchase Date"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Serial Number"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Vendor Name"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Code"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Name"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Asset Type"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Detail"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Quantity"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Rate"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Qty On Hand"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Value"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Warranty Date"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Purchase Date"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Serial Number"
+ },
+ {
+  "page": "onboard/assets",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Vendor Name"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Asset Status"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Asset Type"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Assets"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Serial Number"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Assign Units"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Assign Date"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Valid Till"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Return Unit"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Returned On"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Lost Units"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Lost On"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Recovery Amount"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Remarks"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Assets Detail"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "empty",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Assets Code"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Asset Status"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Asset Type"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Assets"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Serial Number"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Assign Units"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Assign Date"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Valid Till"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Return Unit"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Returned On"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Lost Units"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Lost On"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Recovery Amount"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Remarks"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Assets Detail"
+ },
+ {
+  "page": "onboard/assignment",
+  "mode": "loaded",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 0,
+  "readonly": 1,
+  "label": "Assets Code"
+ },
+ {
+  "page": "employees/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employees"
+ },
+ {
+  "page": "employees/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Department"
+ },
+ {
+  "page": "employees/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employees"
+ },
+ {
+  "page": "employees/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Department"
+ },
+ {
+  "page": "employees/salary",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "employees/salary",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Inactive"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Suspended"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Left"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Factor HR splits Monthly from other payroll types. Nothing h"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "The dropdown has never been screenshotted open. An invented "
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Joining Date From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "ERPNext has no Active Date on Employee. What Factor HR dates"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Separated Date From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Birthday Date From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Not a field but a calculation: date of birth plus a retireme"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Reporting Manager:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "The nearest ERPNext field is leave_approver, which holds a U"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Never screenshotted open, and it appears to govern the As On"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Factor HR puts this next to Employee Data Option, which has "
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Age From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Age Till:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Age As On Date:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Category Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "PF / ESIC Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Salary Master Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Personal Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Skill Set Details"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Identity Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Bank Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Family Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Past History"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Show Categories As Per Joining Date"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Qualification Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Nominee Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Transfer / Promotion History"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Separation"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Inactive"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Suspended"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Left"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Factor HR splits Monthly from other payroll types. Nothing h"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "The dropdown has never been screenshotted open. An invented "
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Joining Date From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "ERPNext has no Active Date on Employee. What Factor HR dates"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Separated Date From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Birthday Date From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Not a field but a calculation: date of birth plus a retireme"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Reporting Manager:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "The nearest ERPNext field is leave_approver, which holds a U"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Never screenshotted open, and it appears to govern the As On"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Factor HR puts this next to Employee Data Option, which has "
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Age From:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Age Till:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Age As On Date:"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Category Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "PF / ESIC Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Salary Master Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Personal Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Skill Set Details"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Identity Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Bank Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Family Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Past History"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Show Categories As Per Joining Date"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Qualification Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Nominee Detail"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Transfer / Promotion History"
+ },
+ {
+  "page": "employees/detail",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Separation"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee Status:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active Date From:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Till:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "WEF:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "With Increment History"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Output Unit:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Based on Attendance Days"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Hide Wage Type Group"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Category Code In Place Of Description"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Display Group Wise Total"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Qualification"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Experience"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Rating"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee Status:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active Date From:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Till:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "WEF:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "With Increment History"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Output Unit:"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Based on Attendance Days"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Hide Wage Type Group"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Category Code In Place Of Description"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Display Group Wise Total"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Qualification"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Experience"
+ },
+ {
+  "page": "employees/ctc",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Rating"
+ },
+ {
+  "page": "employees/categories",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search category types"
+ },
+ {
+  "page": "employees/categories",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search category types"
+ },
+ {
+  "page": "employees/calendar",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Calendar Name:"
+ },
+ {
+  "page": "employees/calendar",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Default Calendar:"
+ },
+ {
+  "page": "employees/calendar",
+  "mode": "empty",
+  "tag": "input",
+  "type": "month",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Go To Month"
+ },
+ {
+  "page": "employees/calendar",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Calendar Name: Manna 2026"
+ },
+ {
+  "page": "employees/calendar",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 1,
+  "label": "Default Calendar:"
+ },
+ {
+  "page": "employees/calendar",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "month",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Go To Month"
+ },
+ {
+  "page": "employees/profile",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee — pick somebody —"
+ },
+ {
+  "page": "employees/profile",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee — pick somebody —Anand Raghavan (MR001)Priya Menon "
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Emp Code *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Machine Code"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Title"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "First Name *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Middle Name"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Last Name"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Gender *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Of Birth *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Short Name"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Emp Code *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Machine Code"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Title"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "First Name *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Middle Name"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Last Name"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Gender *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Of Birth *"
+ },
+ {
+  "page": "employees/new",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Short Name"
+ },
+ {
+  "page": "employees/import",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Select every candidate that can be pulled"
+ },
+ {
+  "page": "employees/import",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search candidates"
+ },
+ {
+  "page": "employees/import",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select every candidate that can be pulled"
+ },
+ {
+  "page": "employees/import",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search candidates"
+ },
+ {
+  "page": "employees/import",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select Deepa Krishnan"
+ },
+ {
+  "page": "attendance/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Attendance cycle"
+ },
+ {
+  "page": "attendance/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "attendance/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select categories"
+ },
+ {
+  "page": "attendance/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Attendance cycle"
+ },
+ {
+  "page": "attendance/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "attendance/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select categories"
+ },
+ {
+  "page": "attendance/submit",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Show 10 entries"
+ },
+ {
+  "page": "attendance/submit",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Search:"
+ },
+ {
+  "page": "attendance/submit",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Show 10 entries"
+ },
+ {
+  "page": "attendance/submit",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Search:"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From date"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "To date"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "input",
+  "type": "time",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From time"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "input",
+  "type": "time",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till time"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Selfie Images in Report"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From date"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "To date"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "time",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From time"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "time",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till time"
+ },
+ {
+  "page": "attendance/inout",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Selfie Images in Report"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Wise is one row per person per day. Month Wise rolls th"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "To"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Wise is one row per person per day. Month Wise rolls th"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From"
+ },
+ {
+  "page": "attendance/daily",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "To"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employeeevery employee"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee StatusActiveInactiveSuspendedLeftAll"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report period"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Range:"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "To date"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Day Status on Week Off/Holiday"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employeeevery employeeAnand Raghavan (MR001)Priya"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee StatusActiveInactiveSuspendedLeftAll"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report period"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date Range:"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "To date"
+ },
+ {
+  "page": "attendance/monthly",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Show Day Status on Week Off/Holiday"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date wise"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month wise"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Type:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee Status:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Output:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Display Employee Code"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Hide Header"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date wise"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month wise"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Type:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee Status:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Output:"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Display Employee Code"
+ },
+ {
+  "page": "attendance/statutory",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Hide Header"
+ },
+ {
+  "page": "attendance/shifts",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Entries per page"
+ },
+ {
+  "page": "attendance/shifts",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Master"
+ },
+ {
+  "page": "attendance/shifts",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search shifts"
+ },
+ {
+  "page": "attendance/shifts",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Entries per page"
+ },
+ {
+  "page": "attendance/shifts",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Master"
+ },
+ {
+  "page": "attendance/shifts",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search shifts"
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "One day, one value — the box above it."
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Remarks"
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "file",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "One day, one value — the box above it."
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Remarks"
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "file",
+  "disabled": 0,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "leave/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee status"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "As on date"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Leave type"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee status"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "As on date"
+ },
+ {
+  "page": "leave/balances",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Leave type"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Year"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payment Process"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payroll Type"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Day"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Year"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payment Process"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payroll Type"
+ },
+ {
+  "page": "payroll/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Day"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payroll Type"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Process For"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payslip Remarks:"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payroll Type"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Process For"
+ },
+ {
+  "page": "payroll/process",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Payslip Remarks:"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "How many to list"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date of Leaving Range"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Settlement Date Range"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Financial year"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select all shown"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date from"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date till"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Settlement status"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "How many to list"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date of Leaving Range"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "radio",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Settlement Date Range"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Financial year"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select all shown"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date from"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Date till"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Settlement status"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search"
+ },
+ {
+  "page": "payroll/fnf",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Select Sunitha Joseph"
+ },
+ {
+  "page": "payroll/itdec",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/itdec",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Select Options"
+ },
+ {
+  "page": "payroll/itdec",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/itdec",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Select Options"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search all filters"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll Type"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payment Date"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee Status"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Salary Mode"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Bank"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "File Format"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search all filters"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll Type"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payment Date"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee Status"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Salary Mode"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Bank"
+ },
+ {
+  "page": "payroll/bank",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "File Format"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "input",
+  "type": "month",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "input",
+  "type": "month",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Add an employee status"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Output Currency:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Output:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "With Logo"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "month",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "month",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Add an employee status"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Output Currency:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Output:"
+ },
+ {
+  "page": "payroll/bonus",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "With Logo"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee status"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Period type"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll type"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll year"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report output"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payslip format"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Generate report for employees without email"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Zero Value Employees"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include IT Statement"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee status"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Period type"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll type"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll year"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report output"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payslip format"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Generate report for employees without email"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Zero Value Employees"
+ },
+ {
+  "page": "payroll/payslip",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include IT Statement"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee status"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll type"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll year"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Output currency"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Group by"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee status"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll type"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll year"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Month"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Output currency"
+ },
+ {
+  "page": "payroll/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Group by"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payment Process:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Type:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll Type:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "State:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Inactive"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Suspended"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Left"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "GroupBy:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Output:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "With Logo"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Create Separate File For Each Group"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Zero Tax"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payment Process:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Type:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Year:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payroll Type:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "State:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Inactive"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Suspended"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Left"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "GroupBy:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Output:"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "With Logo"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Create Separate File For Each Group"
+ },
+ {
+  "page": "payroll/ptax",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Zero Tax"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan #:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Type:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Interest Type:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Amount Requested:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Sanctioned Amount:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Details of Purpose:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Date:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Deduction Start From:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payment Date:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Required For:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Status:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Account No:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Loan Completed"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Do not auto complete"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Completed On:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Rate (% a year):"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Term (months):"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Perquisite rate (%):"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan #:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Employee:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Type:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Interest Type:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Amount Requested:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Sanctioned Amount:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "textarea",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Details of Purpose:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Date:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Deduction Start From:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Payment Date:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Required For:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Status:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Account No:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Loan Completed"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Do not auto complete"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Loan Completed On:"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 1,
+  "readonly": 0,
+  "label": "Rate (% a year):"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Term (months):"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "number",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Perquisite rate (%):"
+ },
+ {
+  "page": "loans/overview",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 1,
+  "readonly": 0,
+  "label": ""
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Inactive"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Suspended"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Left"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From Date:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till Date:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Salary Advance"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Tour Advance"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Group By:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Type:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Exclude Zero Balance Loans"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Active"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Inactive"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Suspended"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Left"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "text",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Particular Employee:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From Date:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till Date:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Salary Advance"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Tour Advance"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter By:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Group By:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Report Type:"
+ },
+ {
+  "page": "loans/register",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Exclude Zero Balance Loans"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Add to Employee Status"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "empty",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From date"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "empty",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till date"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "empty",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Principal"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "empty",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Interest"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Add to Employee Status"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "search",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Search employee"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "From date"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "date",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Till date"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "loaded",
+  "tag": "select",
+  "type": "",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Filter by"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Principal"
+ },
+ {
+  "page": "loans/projection",
+  "mode": "loaded",
+  "tag": "input",
+  "type": "checkbox",
+  "disabled": 0,
+  "readonly": 0,
+  "label": "Include Interest"
+ }
+]

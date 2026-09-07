@@ -18,3 +18,9 @@ venv/
 data/**
 !data/**/
 !data/**/README.md
+
+# The dashboard. `.env` names the site and the desk; node_modules and dist are
+# both rebuilt by `npm install` and `npm run build`.
+node_modules/
+client/.env
+client/dist/

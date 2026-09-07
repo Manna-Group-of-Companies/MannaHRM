@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Manna HR">
+  <!-- The logotype, at the one size a tab renders it. The full MANNA wordmark
+       is unreadable at 16px, so this is the mark reduced to what survives: the
+       rounded outline and one orange M. #EF6C29 is the logotype's own orange
+       and is exempt from the contrast rules the rest of the palette keeps —
+       see the note in src/styles/themes.css. -->
+  <rect width="64" height="64" rx="14" fill="#0B1326"/>
+  <rect x="7.5" y="17.5" width="49" height="29" rx="14.5" fill="none" stroke="#EF6C29" stroke-width="3"/>
+  <text x="32" y="41.5" text-anchor="middle"
+        font-family="Archivo, 'Helvetica Neue', Arial, sans-serif"
+        font-size="21" font-weight="700" fill="#EF6C29">M</text>
+</svg>

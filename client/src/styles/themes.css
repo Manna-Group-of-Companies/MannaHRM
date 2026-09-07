@@ -1,0 +1,208 @@
+/* ---------------------------------------------------------------------------
+   The palette, and the only place a colour value is written down.
+
+   `tailwind.config.js` holds no hex codes. It holds the *names* — the roles,
+   and the note explaining what each role is for — and every one of them
+   resolves to a custom property defined here. So a restyle is this file rather
+   than four hundred class names across the app.
+
+   **Channels, not colours.** Each token is three numbers, `251 146 60`, and the
+   config wraps them as `rgb(var(--brand) / <alpha-value>)`. That is what keeps
+   Tailwind's opacity modifiers working — `bg-brand-soft/60` and `text-bad/70`
+   are both used, and a token holding a finished `rgb(...)` string would
+   silently drop the `/60`.
+
+   The consequence, and it is the one trap here: **`theme(colors.x)` cannot be
+   used in hand-written CSS.** It expands to the raw template with
+   `<alpha-value>` still in it, which is not a colour. Write `rgb(var(--x))`
+   instead.
+
+   ---------------------------------------------------------------------------
+   One palette, dark, and no switch
+
+   MANNA on dark surfaces is the whole of it, as of 5 September 2026. There is
+   no `data-theme`, no `data-mode` and no picker: `:root` is the app.
+
+   It had two axes and lost both the same day. **Six palettes** — Cobalt,
+   Harbour, Graphite, Ember and Iris beside this one — and **a light mode**,
+   dropped in that order. What is worth keeping from that, because the next
+   person to want either will otherwise rediscover it:
+
+     A palette is a block here and *nothing else*. Every rule in `index.css`
+     names a role rather than a colour, so a second palette, or a light mode,
+     needs no change to any component, any class or any page.
+
+     To bring an axis back: copy this block to `[data-theme="whatever"]` or
+     `[data-mode="light"]`, change the numbers, and put it **after** this one —
+     `:root` matches `<html>` on every page and has the same specificity as any
+     attribute selector, so source order is the whole cascade here. This app
+     shipped for a week with a palette on the root, a picker ticking it, and
+     every button painted the palette declared underneath. Then `src/lib/` needs
+     something to write the attribute with; it had exactly that until this
+     change.
+
+   ---------------------------------------------------------------------------
+   The trap this palette was built around
+
+   A colour cannot be both body text on a dark card and a fill with white text
+   on it. Text on `#141922` needs a luminance of about .23 or better; white on a
+   fill needs it under .18. There is no value in both windows, so a token that
+   would do both jobs has to pick one.
+
+   Every such token picks **text**, and the handful of rules that filled with
+   one use the neighbouring fill step instead: `live` fills are `live-dark`,
+   `accent` fills are `brand-dark`, and `--bad-fill` exists beside `--bad` for
+   the one destructive button. `npm run contrast` knows which is which — see
+   `WHITE_ON` there — and will say so if a future edit puts one back.
+
+   ---------------------------------------------------------------------------
+   Checking it
+
+   `npm run contrast` walks every pairing these screens actually put together —
+   text on each of the four surfaces, status text on its own wash, white on each
+   filled button, the control edge, the rail marker, the chart hues — and
+   refuses anything under AA. A colour that has not been through it is a colour
+   that fails on one screen nobody opened.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* **Browser furniture, told once.** Scrollbars, native form controls, the
+     flash between navigations and the caret all follow this. Without it a dark
+     page keeps white scrollbars and white select popups, which is the single
+     most obvious tell of a dark theme bolted on afterwards. In CSS rather than
+     set from JavaScript, because it is now a fact about the app rather than a
+     preference anybody can change. */
+  color-scheme: dark;
+
+  /* ---- depth ----
+     A shadow on white is ink at 5% alpha; the same rule on `#0C0F15` is
+     invisible, and a card with no edge and no shadow stops reading as a card.
+     So these are a nearly opaque black *and* every surface keeps a hairline —
+     the lift comes from the surface step above as much as from the shadow.
+     Four steps and no more: a screen that needs a fifth is a screen with
+     something floating that should have been beside rather than above. */
+  --sh-raise:     0 1px 2px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .38);
+  --sh-lift:      0 2px 6px rgba(0, 0, 0, .55), 0 10px 24px rgba(0, 0, 0, .45);
+  --sh-pop:       0 8px 26px rgba(0, 0, 0, .62), 0 2px 6px rgba(0, 0, 0, .5);
+  --sh-modal:     0 28px 64px rgba(0, 0, 0, .72);
+
+  /* ---- the brand ----
+     The mark itself (`#EF6C29`) stays the logotype's and is not interactive —
+     3.1:1 on white, which WCAG exempts for a brand mark and does not exempt for
+     anything a person has to read. See `manna` in tailwind.config.js.
+
+     `soft` is the surface and `deep` is the text on it; `tint` is a border on
+     that surface. `dark` is the fill of every primary button and the one step
+     white text sits on. `lift` is for the dark chrome — the rail's marker. */
+  --brand:        251 146 60;
+  --brand-dark:   194 65 12;
+  --brand-deep:   253 186 116;
+  --brand-soft:   43 26 16;
+  --brand-tint:   124 45 18;
+  --brand-lift:   251 146 60;
+
+  /* ---- the chrome ---- */
+  --char:         6 9 14;
+  --nav:          13 17 24;
+  --nav-2:        9 12 18;
+  --nav-3:        27 33 45;
+  --nav-ink:      154 165 184;
+
+  /* ---- the surfaces ----
+     Four of them, and the gaps between them are what makes a card read as
+     raised — there is no white page to lift off. */
+  --page:         12 15 21;
+  --card:         20 25 34;
+  --wash:         26 32 42;
+  --rule:         33 40 52;
+
+  /* `line` and `2` divide things; `ctl` is the edge of a control somebody has
+     to find before they can use it, and that is a different job with a
+     different bar — 3:1, per WCAG 1.4.11. Dividers stay quiet; controls get the
+     contrast. */
+  --line:         42 50 64;
+  --line-2:       58 67 83;
+  --line-ctl:     122 134 152;
+
+  /* Not pure white. #FFF on a near-black surface haloes at small sizes, and
+     every label in this app is small. `ink-3` names every micro-label, column
+     head and count in the app, so it is the neutral most at risk of being
+     chosen for looks — every step clears 4.5:1 on all four surfaces. */
+  --ink:          232 236 243;
+  --ink-2:        180 190 205;
+  --ink-3:        141 152 170;
+
+  --accent:       251 146 60;
+  --accent-wash:  43 26 16;
+
+  --live:         74 222 128;
+  --live-dark:    21 128 61;
+  --live-wash:    18 42 30;
+
+  /* "Partial" is the brand on purpose — work in progress is the most common
+     state on this dashboard, and it is the one that should look like the
+     product. */
+  --part:         251 146 60;
+  --part-wash:    43 26 16;
+
+  /* Red on an orange app is the one pairing this palette has to be careful
+     about: it is the nearest hue to the brand, and it is the one that means
+     something has gone wrong. `bad` is the red somebody *reads* and `bad-fill`
+     is the one white text sits on — see the trap note above. */
+  --bad:          248 113 113;
+  --bad-fill:     185 28 28;
+  --bad-wash:     52 24 26;
+  --bad-tint:     127 45 45;
+  --bad-deep:     252 165 165;
+  --bad-faint:    38 20 22;
+
+  --skip:         154 165 184;
+  --skip-wash:    32 39 51;
+
+  /* `rest` — the week-off bar on the Employees calendar. It is a token of its
+     own because that bar sits beside the filled `brand-dark` working day and
+     has to read as a different *kind* of day, not a quieter one: a grey chip
+     next to an orange block reads as a disabled orange block. Blue is the far
+     side of the wheel from the working day, which is the whole job. White sits
+     on it, and `npm run contrast` checks that. */
+  --rest:         30 78 140;
+
+  /* Factor HR's own blue, and only the "All" dot on a status filter wears it.
+     It is also the only cool colour in the app, which is what makes their dot
+     legible here. */
+  --info:         96 165 250;
+
+  /* The empty half of a coverage bar. A fill, not a border, so it is allowed to
+     be quiet — the filled half carries the reading. */
+  --track:        44 53 68;
+
+  /* The fill Factor HR puts behind a box whose form wants an answer in it. A
+     *fill*, not a border: it has to read as "this one is waiting" across a form
+     of a dozen boxes without competing with `bad`, which is the colour of
+     something that is actually wrong. Ink sits on it, so it is a surface and
+     the checker treats it as one — which is what keeps it dark enough for
+     `ink-3` to clear AA on. */
+  --need:         48 40 14;
+
+  /* The connection dots on the rail. These sit on the darkest chrome there is,
+     so they are the bright end of each hue. */
+  --beacon:       138 150 172;
+  --beacon-live:  74 222 128;
+  --beacon-bad:   252 165 165;
+
+  /* **The chart hues, and the one set of colours that does not belong to the
+     brand.** A donut's slices have to be told apart from each other; a brand
+     has to be told apart from everything else. Those are different jobs, and
+     tying the first to the second is how a chart ends up saying something the
+     data does not — "still in" and "on leave" as two shades of the same orange.
+
+     Three, in a fixed order, and never cycled: a fourth category folds into the
+     ring's unfilled remainder (`track`) rather than inventing a hue. Run
+     through `dataviz/scripts/validate_palette.js` against `#141922` — lightness
+     band, chroma floor, adjacent-pair separation under deutan/protan/tritan,
+     and 3:1 on the surface they are drawn on. `npm run contrast` keeps the last
+     of those honest. */
+  --chart-1:      14 163 114;
+  --chart-2:      59 130 246;
+  --chart-3:      199 122 11;
+}
