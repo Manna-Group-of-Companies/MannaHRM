@@ -636,14 +636,6 @@ function PslOut({ s }) {
 				)}
 			</Gap>
 
-			<Gap>
-				<b>Payment days, Gross, Deductions and Net are blank, and that is the report.</b> All four come
-				from a salary structure and a payroll run: <code>Salary Structure</code>,{" "}
-				<code>Salary Structure Assignment</code>, <code>Salary Slip</code>. None is read by this
-				dashboard and the site holds none of them, so there are two separate reasons and fixing one
-				would not be enough. <b>CTC is real</b> — read off <code>Employee</code> — and it is an annual
-				cost, not a month's pay; nothing here divides it by twelve and calls the answer a payslip.
-			</Gap>
 		</>
 	);
 }

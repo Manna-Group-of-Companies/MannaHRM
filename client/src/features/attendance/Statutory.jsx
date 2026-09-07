@@ -373,25 +373,6 @@ function SrReport({ s }) {
 				<button className="btn ghost ml-auto" onClick={() => srExport(s)}>⬇ Export CSV</button>
 			</div>
 
-			<div className="my-[.6rem]">
-				<Gap>
-					<b>This is not their report.</b> Nobody has opened Report Type, so what Factor HR files from
-					this menu is unknown and is not reproduced here. What is shown instead is the readiness check
-					underneath any monthly return: everybody in scope for {srPeriod(f)}, and which of the columns
-					such a return needs our site can actually put behind it.{" "}
-					{empty.length ? (
-						<>
-							The {empty.length} shaded column{empty.length === 1 ? " is" : "s are"} empty for every
-							person:{" "}
-							{empty.map((c, i) => (
-								<Fragment key={c[0]}>
-									{i ? ", " : ""}<code>{c[0]}</code>{c[3] ? ` (${c[3]})` : ""}
-								</Fragment>
-							))}.
-						</>
-					) : "Every column has something behind it."}
-				</Gap>
-			</div>
 
 			<Scroll>
 				<table className="sr" style={{ minWidth: 140 * cols.length }}>

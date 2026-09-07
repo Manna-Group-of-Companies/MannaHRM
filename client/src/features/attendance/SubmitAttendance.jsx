@@ -88,12 +88,6 @@ export default function SubmitAttendance() {
 					<Empty title="No Data Found">No submitted month here, and none there either.</Empty>
 				</div>
 
-				<div className="mt-[.7rem]">
-					<Gap>
-						Whether the monthly freeze is a control Manna actually wants, or one they have already
-						decided to live without.
-					</Gap>
-				</div>
 
 			</Panel>
 

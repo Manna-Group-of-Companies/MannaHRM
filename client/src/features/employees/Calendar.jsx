@@ -796,10 +796,7 @@ export default function Calendar() {
 					    the count in it is the site's and is the point. */}
 					{s.calMsg ? (
 						<div className="px-[.9rem] pt-[.6rem]">
-							{/* The `.gap` panel, not the `Gap` component: that one prefixes
-						    everything with "Missing vs Factor HR", which is what it is for
-						    and is not what a refusal from this site's own API is. */}
-						{s.calBad ? <div className="gap">{s.calMsg}</div> : <Note>{s.calMsg}</Note>}
+							{s.calBad ? <div className="gap">{s.calMsg}</div> : <Note>{s.calMsg}</Note>}
 						</div>
 					) : null}
 					<CalNameRow s={s} />
@@ -898,15 +895,7 @@ export default function Calendar() {
 										</Scroll>
 									</div>
 								</>
-							) : (
-								<div className="mt-[.7rem]">
-									<Gap>
-										Weekly offs only — <b>not one named holiday</b>. Factor HR’s calendar carries
-										the festival list, and a missing festival is a day the whole plant is marked
-										absent.
-									</Gap>
-								</div>
-							)}
+							) : null}
 						</Panel>
 					);
 				})}

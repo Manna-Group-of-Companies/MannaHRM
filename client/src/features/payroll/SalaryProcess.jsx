@@ -338,18 +338,6 @@ export default function SalaryProcess() {
 			<div className="mt-[1rem]">
 
 				<div className="mt-[.7rem]">
-					{att ? null : (
-						<Gap>
-							<b>There is no <code>Attendance</code> on this site at all</b>, and payment days are
-							computed from it. Until the shift job is generating attendance from punches, a
-							Payroll Entry has nothing to divide the month by — every slip it produced would be a
-							full month for everybody, including the people who were not there. This is the
-							blocker under this screen, and it is an attendance blocker rather than a payroll one.
-						</Gap>
-					)}
-				</div>
-
-				<div className="mt-[.7rem]">
 					{noList.length ? (
 						<Gap>
 							<b>{fmt(noList.length)} of {fmt(run.length)} people in this run have no{" "}
@@ -359,29 +347,6 @@ export default function SalaryProcess() {
 							on the site; what is missing is the assignment, not the list.
 						</Gap>
 					) : null}
-				</div>
-
-				{s.spLeftState === "absent" ? (
-					<div className="mt-[.7rem]">
-						<Gap>
-							<b><code>relieving_date</code> could not be read</b>, so the leavers half of their
-							first tile is a question mark rather than a number, and this run counts everybody
-							Active instead of everybody employed during the month. That loses the part-month
-							leavers — the people their &ldquo;incl. left&rdquo; is there for. It is the safe
-							direction to be wrong in on a screen that cannot pay anybody, and it is the wrong
-							one the day it can.
-						</Gap>
-					</div>
-				) : null}
-
-				<div className="mt-[.7rem]">
-					<Gap>
-						<b>Stop Salary and Stop Payment have no equivalent here.</b> Frappe HR ships no flag on{" "}
-						<code>Employee</code> or <code>Salary Slip</code> that holds one person out of a run,
-						and the two are not the same hold — one stops the salary, the other stops only the
-						payment of a slip that still generates. Both are a custom field plus a rule inside the
-						run, and both were zero in the capture, so nobody can say yet how often they are used.
-					</Gap>
 				</div>
 
 			</div>

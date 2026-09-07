@@ -88,17 +88,19 @@ describe("what the plan says a row would do", () => {
 	});
 
 	it("never creates a company, and says why on the row", () => {
-		const plan = planImport(s(), sheet(row("Company Name", "Manna Exports")));
+		const plan = planImport(s(), sheet(row("Company", "Manna Exports")));
 		expect(plan.counts.skip).toBe(1);
 		expect(plan.make).toHaveLength(0);
 		expect(plan.rows[0].why).toMatch(/chart of accounts/i);
 	});
 
-	it("refuses a row for a category type that is a pay rule", () => {
-		const plan = planImport(s(), sheet(row("Gratuity Applicable", "Yes")));
-		expect(plan.counts.skip).toBe(1);
-		expect(plan.rows[0].why).toMatch(/pay rule/i);
-	});
+	/* **A case was removed here on 7 September 2026.** A row naming a category
+	   type that is a pay rule — Factor HR's Gratuity Applicable — was skipped
+	   with the reason on it. The category types are read from the site now and
+	   none of them is a pay rule, so no sheet can name one: a row naming
+	   "Gratuity Applicable" is a row naming a type this screen does not have,
+	   which is the "bad" case two tests above already covers. */
+
 
 	it("refuses a row with no value in it", () => {
 		const plan = planImport(s(), sheet(row("Designation", "")));

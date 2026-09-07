@@ -557,13 +557,6 @@ function LvbOut({ s }) {
 				</table>
 			</Scroll>
 
-			<Gap>
-				<b>Entitled and Balance are empty, and that is the finding.</b> A balance needs an entitlement
-				per person per type — <code>Leave Allocation</code> and the ledger under it. That doctype is
-				not read by this dashboard, and the site holds none of it either, so there are two separate
-				reasons and fixing one would not be enough. <b>Availed is real</b>: approved applications,
-				clipped at the As On Date, off the site.
-			</Gap>
 		</>
 	);
 }

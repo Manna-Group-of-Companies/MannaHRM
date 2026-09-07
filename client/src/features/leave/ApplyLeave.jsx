@@ -4,8 +4,8 @@ import { loadLeaveFor } from "@/api/load";
 import { deskImport, deskNew } from "@/lib/desk";
 import { CAL_MONTHS } from "@/data/masters";
 import { DAY, dmy, fmt, monthCells, thisMonth, todayIso, tidyDept, ymd } from "@/lib/format";
-import { APPLY_FIELDS, LEAVE_HISTORY_COLS, LEAVE_VALUES, LV_LEGEND } from "@/data/leave";
-import { Desk, Empty, Html, Note, Panel, Scroll, SpecTable } from "@/components/ui";
+import { LEAVE_HISTORY_COLS, LEAVE_VALUES, LV_LEGEND } from "@/data/leave";
+import { Desk, Empty, Html, Note, Panel, Scroll } from "@/components/ui";
 import { scoped } from "@/lib/scope";
 
 /* Apply Leave, photographed 29 August 2026 — two columns, the application on
@@ -546,10 +546,6 @@ export default function ApplyLeave() {
 								+ "disagreement."}
 					</Empty>
 				)}
-			</Panel>
-
-			<Panel title="Apply Leave, field by field" cov="part" ico="🗂">
-				<SpecTable cols={["Field", "Type", "State", "Note"]} list={APPLY_FIELDS} />
 			</Panel>
 		</>
 	);

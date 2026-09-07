@@ -334,8 +334,9 @@ export const ASSET_FORM = [
 		why: "`asset_name`, the register's own first column." },
 	{ key: "asset_category", w: "lg", label: "Asset Type", state: "live", get: (a) => a.asset_category,
 		why: "`asset_category`. Theirs has an Add Asset Types link beside it, which is a master — so ours opens that master on the site." },
-	{ key: "detail", w: "lg", label: "Detail", state: "build", area: true,
-		why: "A free-text note about the asset. ERPNext's Asset has no such field under any name, so there is nothing to read and nowhere to put one without adding a field to the doctype." },
+	{ key: "custom_detail", w: "lg", label: "Detail", state: "live", area: true,
+		get: (a) => a.custom_detail,
+		why: "A free-text note about the asset. ERPNext's Asset has none under any name, which is why this was dead until `manna_hr` added `custom_detail` — see CUSTOM_FIELDS in manna_hr/install.py. Its own read tier, so a site without the app greys this box rather than five others." },
 	{ key: "asset_quantity", w: "sm", label: "Quantity", state: "stock", get: (a) => a.asset_quantity,
 		why: "ERPNext's `asset_quantity`. Stock on their doctype and now on ours; most assets are 1, a few were bought as a batch." },
 	{ key: "rate", w: "sm", label: "Rate", state: "stock",
@@ -366,6 +367,21 @@ export const ASSET_FORM = [
     the page and the panel under it cannot disagree about how many. */
 export const ASSET_FORM_GAPS = ASSET_FORM.filter((f) => f.state === "build").length;
 
+/** The asset types Factor HR classifies by, read off its Asset Type dropdown on
+    7 September 2026.
+
+    Four, and the whole list — which is worth knowing on its own, because it
+    says what the company actually hands out: a computer, a phone, the SIM in
+    it, and a car. **They are `Asset Category` records here**, and none of them
+    was on the site, so the Asset Type box on the handover form had nothing to
+    offer. Recorded here rather than created quietly: a master is a decision,
+    and the dialog on the Assets screen makes it with somebody's finger on it.
+
+    `Swift Car` is theirs, spelled theirs. It is a model rather than a category
+    and somebody may well want it to be `Car` — that is a conversation to have
+    before three hundred assets point at the string, not after. */
+export const FH_ASSET_TYPES = ["Computer", "Mobile Phone", "SIM Card", "Swift Car"];
+
 /** Which of the thirteen boxes can be typed into.
 
     **The site is what decides, not this list.** A control enforced in a browser
@@ -386,6 +402,11 @@ export const ASSET_WRITABLE = new Set([
 	"item_code", "asset_name", "asset_category", "asset_quantity",
 	"gross_purchase_amount", "warranty_expiry_date", "purchase_date",
 	"serial_no", "supplier",
+	// Ours. The form key is the doctype fieldname on this screen — the write
+	// loop sends `f.key` straight through — so the `custom_` prefix Frappe
+	// requires is carried here rather than mapped, which is one fewer place for
+	// a form key and a document key to be confused.
+	"custom_detail",
 ]);
 
 /* ---------------------------------------------------------------------------
@@ -419,41 +440,48 @@ export const ASSET_WRITABLE = new Set([
               same shape, and anybody planning to move this data needs to know
               that before the export rather than after it. */
 export const ASSIGN_FORM = [
-	{ key: "asset_status", label: "Asset Status", state: "live",
-		get: (c) => c.asset?.status,
-		why: "`status` on the asset — In Use, Available, Scrapped. A dropdown on their form; here it is what the register already says." },
-	{ key: "asset_type", label: "Asset Type", state: "live",
+	{ key: "asset_status", label: "Asset Status", state: "live", w: "status",
+		get: (c) => c.asn?.asset_status || c.asset?.status,
+		why: "A dropdown, as on their form, but it does not own the value: the counts below decide it and the form refuses a choice that disagrees with them. The two exceptions are the two no count can make — Scrapped, and Damaged Or Not Working — which is what the dropdown is really for. Their `Assigned` is our `In Use`." },
+	{ key: "asset_type", label: "Asset Type", state: "live", w: "type",
 		get: (c) => c.asset?.asset_category,
-		why: "`asset_category`, the same master Assets Details links to." },
-	{ key: "assets", label: "Assets", state: "live",
+		why: "`asset_category`, the same master Assets Details links to. Picking one here narrows the Assets dropdown under it, which is what it is for on their form too — a site with two hundred assets is not a dropdown anybody can use unfiltered." },
+	{ key: "assets", label: "Assets", state: "live", w: "asset",
 		get: (c) => c.asset?.asset_name,
-		why: "`asset_name`. Their third dropdown narrows to the type above it; ours is filled by picking a row from the table." },
-	{ key: "serial_no", label: "Serial Number", state: "stock",
-		get: (c) => c.asset?.serial_no,
+		why: "`asset_name`. Their third dropdown narrows to the type above it, and so does this one; picking a row from the table fills it too." },
+	{ key: "serial_no", label: "Serial Number", state: "stock", w: "text",
+		get: (c) => c.asn?.serial_number || c.asset?.serial_no,
 		why: "ERPNext's `serial_no` on Asset. Blank on about half of them, and that is a fact about the asset rather than a gap — a chair has no serial number." },
-	{ key: "assign_units", label: "Assign Units", state: "stock",
-		get: (c) => c.asset?.asset_quantity,
+	{ key: "assign_units", label: "Assign Units", state: "live", w: "int",
+		get: (c) => c.asn?.assign_units ?? c.asset?.asset_quantity,
 		why: "Read off `asset_quantity`, and it is not quite the same question. That is how many were capitalised together; theirs is how many of them went out with this person. ERPNext moves a whole Asset, so issuing 3 of a batch of 12 has nowhere to be recorded." },
-	{ key: "assign_date", label: "Assign Date", state: "live", kind: "date",
-		get: (c) => c.issue?.transaction_date,
+	{ key: "assign_date", label: "Assign Date", state: "live", kind: "date", w: "date",
+		get: (c) => c.asn?.assign_date || c.issue?.transaction_date,
 		why: "The `transaction_date` of the Asset Movement that issued it. Read live since 3 Sep 2026 — before that the movement list carried only a date and a purpose, which could not say whose." },
-	{ key: "valid_till", label: "Valid Till", state: "build", kind: "date",
-		why: "Nothing holds it. An ERPNext handover ends when a second movement brings the asset back, so there is no date set in advance to read — the difference between a log and a little contract." },
-	{ key: "return_unit", label: "Return Unit", state: "build",
-		why: "A return in ERPNext is a Receipt movement of the whole asset, not a count of units coming back. Same reason as Assign Units, one step later." },
-	{ key: "returned_on", label: "Returned On", state: "live", kind: "date",
-		get: (c) => c.receipt?.transaction_date,
+	{ key: "valid_till", label: "Valid Till", state: "live", kind: "date", w: "date",
+		get: (c) => c.asn?.valid_till,
+		why: "The date it was lent until. `Asset Movement` has no such field — a log ends when a second row brings the asset back — so this is one of the seven that only exist because `Asset Assignment` does." },
+	{ key: "return_unit", label: "Return Unit", state: "live", w: "int",
+		get: (c) => c.asn?.return_unit,
+		why: "How many came back. A Receipt movement returns the whole asset, so a count of units had nowhere to go before this doctype — and it is what makes Partly Returned a state rather than a guess." },
+	{ key: "returned_on", label: "Returned On", state: "live", kind: "date", w: "date",
+		get: (c) => c.asn?.returned_on || c.receipt?.transaction_date,
 		why: "The `transaction_date` of the Receipt movement that took it back, when there is one. Empty means it is still out — which is what the custodian on the asset says too." },
-	{ key: "lost_units", label: "Lost Units", state: "build",
-		why: "Nothing holds it. ERPNext writes off an asset by scrapping it, which is an accounting entry against the whole asset rather than a count against a person." },
-	{ key: "lost_on", label: "Lost On", state: "build", kind: "date",
-		why: "The date of that write-off is `disposal_date` on Asset, which is set by scrapping and not by anybody saying a laptop went missing. It is not on our Asset at all, so the box is drawn dead rather than filled from something adjacent." },
-	{ key: "recovery_amount", label: "Recovery Amount", state: "build",
-		why: "Money recovered from somebody who lost kit is a payroll deduction — a salary component on their next slip. It is not a field on any asset doctype, here or there, and putting a figure on this form would be the one number nobody could act on." },
-	{ key: "remarks", label: "Remarks", state: "build", area: true,
-		why: "Asset Movement has no remarks field. Frappe hangs Comments off any document instead, which is a different thing: a comment is signed and dated and cannot be edited into agreement later." },
-	{ key: "assets_detail", label: "Assets Detail", state: "build", area: true,
-		why: "The same box Assets Details greys out, for the same reason: a free-text note about the asset, which ERPNext's Asset has no field for under any name. Theirs is greyed on their own screen too." },
+	{ key: "lost_units", label: "Lost Units", state: "live", w: "int",
+		get: (c) => c.asn?.lost_units,
+		why: "How many did not come back. Scrapping is an accounting entry against the whole asset; this is a count against a person, and the two are not the same act." },
+	{ key: "lost_on", label: "Lost On", state: "live", kind: "date", w: "date",
+		get: (c) => c.asn?.lost_on,
+		why: "The day somebody said it was missing — which is not `disposal_date` on Asset, and never was: that one is set by scrapping, an accounting act that may happen months later or not at all." },
+	{ key: "recovery_amount", label: "Recovery Amount", state: "live", w: "money",
+		get: (c) => c.asn?.recovery_amount,
+		why: "The figure agreed with the person. It is recorded here and taken nowhere: a deduction is a salary component on their next slip, which is a separate and deliberate act. The form refuses an amount with no loss behind it." },
+	{ key: "remarks", label: "Remarks", state: "live", area: true, w: "text",
+		get: (c) => c.asn?.remarks,
+		why: "Why this handover happened, or what was unusual about it. `Asset Movement` has no such field; Frappe hangs Comments off a document instead, which is a different thing — a comment is signed and dated and cannot be edited into agreement later." },
+	{ key: "assets_detail", label: "Assets Detail", state: "live", area: true, w: "text",
+		get: (c) => c.asn?.assets_detail,
+		why: "A note about the thing itself — the dent it already had. Greyed on Factor HR's own form; live here, because a handover note about a damaged laptop belongs with the handover and ERPNext's Asset has no field for it under any name." },
 	{ key: "assets_code", label: "Assets Code", state: "live", area: true,
 		get: (c) => c.asset?.item_code || c.asset?.name,
 		why: "`item_code`, falling back to the asset's own name. Greyed on their form because the picker fills it rather than a typist; read-only here rather than greyed, because it holds a real value somebody may want to copy and a disabled box cannot be selected." },

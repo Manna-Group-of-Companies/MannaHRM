@@ -1,4 +1,4 @@
-import { FH_CATEGORY_TYPES } from "@/data/masters";
+import { SITE_CATEGORY_TYPES } from "@/data/masters";
 import { catValues, ctTypes } from "@/data/categorytype";
 import { download, toCsv } from "@/lib/csv";
 import { todayIso } from "@/lib/format";
@@ -54,12 +54,12 @@ const ALIAS = {
     behind them. Offered as the dialog's list when a file does not say which
     master its rows are for.
 
-    Off `FH_CATEGORY_TYPES` rather than `ctTypes`, and the difference is the
+    Off `SITE_CATEGORY_TYPES` rather than `ctTypes`, and the difference is the
     point — a category type created on this screen is a Custom Field, and its
     values are lines in that field's own options rather than documents. There is
     no record to create for one, which is why `CAT_MAKE` has no entry for it and
     why a row naming one is skipped with the reason on it. */
-export const catMasters = () => FH_CATEGORY_TYPES.filter((t) => t.dt);
+export const catMasters = () => SITE_CATEGORY_TYPES.filter((t) => t.dt);
 
 /** The company a name or an abbreviation refers to, or "" for neither.
 
@@ -203,8 +203,8 @@ function heldBy(s, t) {
       make   a value this site does not hold, in a master that can be written
              from here. The only kind that is sent anywhere.
       have   already on the site, under this name or its id. Skipped.
-      skip   a real type that cannot be written from here — Company, and the
-             two pay rules. Skipped with the reason on it.
+      skip   a real type that cannot be written from here — Company, and any
+             category created on this screen. Skipped with the reason on it.
       bad    the row itself is wrong: no value in it, or a type this screen
              does not know.
 
@@ -267,9 +267,13 @@ export function planImport(s, rows, only) {
 				+ "that field's own options rather than documents — so there is no record to create for "
 				+ "this row. Add the value on the field itself, which View Category opens.";
 		} else if (!t.dt) {
+			/* Nothing on this screen reaches here today: every type either has a
+			   doctype behind it or is a Custom Field, caught above. It is kept
+			   because the list is read from the site rather than written down, and a
+			   type with neither would otherwise fall through to `make` and be sent
+			   somewhere. Refusing costs a row; guessing costs a document. */
 			r.verdict = "skip";
-			r.why = "This one is a pay rule filed as a category over there and has no master here to "
-				+ "load a row into — see View Category for what it would have to be rebuilt as.";
+			r.why = "This category type has no master on the site to load a row into.";
 		} else if (CAT_NO_MAKE[t.dt]) {
 			r.verdict = "skip";
 			r.why = CAT_NO_MAKE[t.dt];

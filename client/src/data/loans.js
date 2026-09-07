@@ -48,17 +48,16 @@ export const REGISTER_COLS = [
    drift that would let the two forms disagree about who is in scope. `LOAN_BY`
    is further down, with the Register's own controls. */
 
-/** Their Employee Status box, as both screens found it: four values, and the
-    fourth is clipped at the edge of the control at "Tempo". It is recorded as
-    clipped rather than completed — `Employee.status` in ERPNext offers Active,
-    Inactive, Suspended and Left, and has nothing temporary on it, so guessing
-    the word would invent a status *and* a mapping for it. */
-export const LP_STATUS_SEEN = ["Active", "Inactive", "Suspended"];
-export const LP_STATUS_CLIPPED = "Tempo…";
+/** What can be filtered on: the four values `Employee.status` holds on this
+    site. Both loan screens tick all four by default, which filters nobody out —
+    the honest default for a page that cannot know which statuses a register is
+    wanted over, and it puts `Left` in front of somebody, which is the question
+    this module ends on. 344 people have left and nothing here says what happens
+    to a balance when they do.
 
-/** What can actually be filtered on — the site's own four. `Left` was in
-    neither box and is offered anyway: 344 people have left, and what happens to
-    a balance when somebody does is the open question §26 ends on. */
+    Their box was three visible values and a fourth clipped at the edge of the
+    control at "Tempo", and those three were the default here until 7 September
+    2026 — a default read off a photograph rather than off this site. */
 export const LP_STATUSES = ["Active", "Inactive", "Suspended", "Left"];
 
 /** The two loan types, ticked on both forms. Not a list of what Factor HR
@@ -167,13 +166,6 @@ export const LOAN_REPORT_TYPES = ["Month Wise Recovery"];
     here groups by. */
 export const LOAN_BY = [["", "(none)"], ["company", "Company"], ["department", "Department"],
   ["designation", "Designation"], ["grade", "Grade"], ["branch", "Branch"]];
-
-/** The two dates as they stood in the capture — the same window the projection
-    form defaulted to, which is why it is recorded once more here rather than
-    assumed to be a coincidence. Seventeen months, reaching back to the start of
-    the fiscal year before last. Nobody sets that default for something
-    recovered out of next month's pay. */
-export const LOAN_CAPTURE = { from: "2025-04-01", till: "2026-08-31" };
 
 
 /* ---------------------------------------------------------------------------

@@ -1,45 +1,34 @@
 import { set, useApp } from "@/store";
 import { dmy, fmt, tidyDept } from "@/lib/format";
-import { FH_SHIFT_ROWS, FH_SHIFT_SEEN } from "@/data/attendance";
 import { Desk, Empty, Gap, Scroll, Tile, Tiles } from "@/components/ui";
 import { deskNew, deskUrl } from "@/lib/desk";
-import { scoped } from "@/lib/scope";
+import { active, scoped } from "@/lib/scope";
 import ShiftWizard, { openShiftWizard } from "@/features/attendance/ShiftWizard";
 
-/* SHIFT & WORK PATTERN, photographed 28 August 2026 — Hi-Tech Pretreads only,
-   because the names are company-prefixed and this is one company's page.
+/* SHIFT & WORK PATTERN — Factor HR's screen, over what this site holds.
 
-   `cat` is their CATEGORY COUNT, `emp` their EMPLOYEE COUNT. Both are copied
-   exactly, and the second one is the finding: it is zero on every row of a
-   tenant whose own attendance export names a shift against all 160 people. So
-   the assignment is not stored against the person here — it comes down the
-   category, which is the master photographed one menu up.
+   This table used to list seven shifts of Hi-Tech Pretreads', transcribed off a
+   capture of their page, with a CATEGORY COUNT and an EMPLOYEE COUNT beside
+   each that were their numbers and could not be checked against anything. The
+   rows and both columns are gone. What is listed is `Shift Type` documents on
+   the site, and an empty table is the honest answer on a site that holds none —
+   which is the answer today, because `hrms` is not installed and the doctype is
+   not there to hold one. See docs/SITE_SURVEY.md. What those seven rows
+   actually established is in docs/FACTOHR.md §4a.
 
-   The last row is clipped by the bottom of the capture: the name is legible and
-   the two counts are not, so they are null and are drawn as such. A number
-   guessed off a half-visible row would be indistinguishable from one that was
-   read, and this table is the evidence for the paragraph above. */
+   EMPLOYEE COUNT is `default_shift` off the active employee list this dashboard
+   already has, so it costs no read. It is a fallback on the record and not a
+   roster: who is measured against which shift, between which dates, is `Shift
+   Assignment` — the Work Pattern half, read only when somebody asks for that
+   half, because the site has a daily compute limit. */
 
 /* A shift is a document on the site — `Shift Type` — so Add and the two row
-   actions open it there. The row actions can only do that for a shift that
-   exists on our side, and on a site with none of them yet that is every row;
-   they say which it is rather than looking broken.
+   actions open it there. Every row here is one, so neither action can be dead
+   any more: the case they used to guard against was a row we did not hold, and
+   there are none of those left.
 
    Work Pattern is the other half of their screen and has never been opened, so
-   that one control stays dead. Nothing is invented in its place. */
-const NOT_OURS = "This is Factor HR's shift, and no Shift Type of that name exists on our site yet — "
-	+ "which is what the count in the heading is about. Add it with + and this opens it.";
-
-/** A count that may not have been readable. Clipped is drawn as a dash with the
-    reason on it rather than as a zero — the two mean opposite things here. */
-function Num({ v }) {
-	if (v === null) {
-		return (
-			<td className="num clip" title="Clipped by the bottom of the capture — not read">—</td>
-		);
-	}
-	return <td className={"num" + (v ? "" : " zero")}>{v}</td>;
-}
+   what is under it is ours. Nothing is invented in its place. */
 
 /* ---------------------------------------------------------------------------
    Work Pattern — the other half of their screen, and the half nobody has ever
@@ -181,18 +170,26 @@ function ShiftPattern({ s }) {
 	const pattern = s.shMaster === "pattern";
 	const q = (s.shq || "").trim().toLowerCase();
 	const per = s.shper || 20;
-	const matched = q ? FH_SHIFT_ROWS.filter((r) => r.name.toLowerCase().includes(q)) : FH_SHIFT_ROWS;
+	const matched = q
+		? s.shiftTypes.filter((r) => (r.name || "").toLowerCase().includes(q))
+		: s.shiftTypes;
 	const rows = matched.slice(0, per);
-	/* Which of their shifts we actually hold. A name match is the only link there
-	   is between the two lists, and it is worth having: it turns "23 defined
-	   somewhere" into "this row, yes; that row, not yet". */
-	const ours = new Set(s.shiftTypes.map((x) => x.name));
+	/* How many people fall back to each shift, off the employee list that is
+	   already in hand. Scoped like every other page, so the number under a
+	   company selector is that company's, and `active` rather than `scoped`:
+	   somebody who has left still carries a default shift on their record, and
+	   counting them here would say a shift is worked by more people than turn up
+	   to it. 344 people have left this group. */
+	const byShift = {};
+	for (const e of active(s)) {
+		if (e.default_shift) byShift[e.default_shift] = (byShift[e.default_shift] || 0) + 1;
+	}
 
 	return (
 		<div className="fhcat">
 			<header>
 				<h3 className="caps">SHIFT &amp; WORK PATTERN</h3>
-				<span className="cov part">Their screen, one company</span>
+				<span className="cov part">Their screen, our data</span>
 				<span className="right">
 					{/* Add makes whichever master is being shown — the two halves of this
 					    screen are two doctypes, and one + that always made a Shift Type
@@ -234,13 +231,26 @@ function ShiftPattern({ s }) {
 				</label>
 			</div>
 
-			{pattern ? <WorkPattern s={s} /> : (
+			{/* The read that fills the table is part of the load in `api/load.js`, so
+			    it has answered by the time anybody is here: an empty list is the site
+			    saying it holds none, not a read that has not happened. The cause is not
+			    asserted — `hrms` being absent is the likely one and a session that may
+			    not read the doctype is another, and the two are not distinguishable
+			    from here. */}
+			{pattern ? <WorkPattern s={s} /> : !s.shiftTypes.length ? (
+				<Empty title="This site holds no shifts">
+					<code>Shift Type</code> came back empty. Until a shift exists there is nothing for a punch
+					to be measured against, so nothing generates attendance and every day reads as absence —
+					which makes this the first thing that has to change. The doctype arrives with
+					<code> hrms</code>, and docs/SITE_SURVEY.md records that as not installed.
+				</Empty>
+			) : (
 			<>
 			<Scroll>
 				<table>
 					<thead>
 						<tr>
-							{["NAME", "CATEGORY COUNT", "EMPLOYEE COUNT", "IS DEFAULT", "ACTION"].map((h, i) => (
+							{["NAME", "EMPLOYEE COUNT", "ACTION"].map((h, i) => (
 								<th key={h} className={i ? "num" : undefined}>
 									{h} <span className="sort">⇵</span>
 								</th>
@@ -249,32 +259,33 @@ function ShiftPattern({ s }) {
 					</thead>
 					<tbody>
 						{rows.map((r) => (
-							<tr key={r.name} className={r.clipped ? "clip" : undefined}>
+							<tr key={r.name}>
 								<td><span className="fhname">{r.name}</span></td>
-								<Num v={r.cat} />
-								<Num v={r.emp} />
-								<td className="num" title="Blank on every row seen: no shift here is the default one." />
+								{/* Their CATEGORY COUNT and IS DEFAULT columns are not drawn: a
+								    category is not how anybody is put on a shift here, and no
+								    field on Shift Type says one of them is the default. A column
+								    of dashes would read as data nobody has filled in. */}
+								<td className={"num" + (byShift[r.name] ? "" : " zero")}
+									title="Active employees whose own record names this as their default shift. A fallback, not a roster — Work Pattern is the roster.">
+									{fmt(byShift[r.name] || 0)}
+								</td>
 								<td className="act">
-									{/* ✎ was a link to the document on the site, and dead on the
-									    half of these rows the site has never held. It opens Factor
-									    HR's own three-step shift form now — photographed 4 Sep 2026,
-									    and live on every row, because the interesting one is exactly
-									    the row we do *not* hold: the wizard reads the site as it
-									    opens, and Save on a shift that is not there creates it with
-									    everything already filled in. See ShiftWizard.jsx.
+									{/* ✎ opens Factor HR's own three-step shift form — photographed
+									    4 Sep 2026 — over this document, so the window and its
+									    tolerances are read and shown in their layout rather than
+									    the desk's. See ShiftWizard.jsx.
 
-									    Delete is still the site's own, and is deliberately not one
-									    click from here: a shift removed under a roster is a day
-									    nobody is measured against. */}
+									    Delete is the site's own, and is deliberately not one click
+									    from here: a shift removed under a roster is a day nobody is
+									    measured against. */}
 									<button className="fhact on" aria-label="Edit"
 										title="Factor HR's shift form — a name and a kind, then the window and its tolerances, then grace timings. The document itself is made on the ERPNext site; nothing here writes."
 										onClick={() => openShiftWizard(r.name)}>
 										<svg viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16Z" /></svg>
 									</button>
-									<Desk className={ours.has(r.name) ? "fhact on" : "fhact"} label="Delete"
-										href={s.site && ours.has(r.name) && deskUrl(s.site, "Shift Type", r.name)}
-										title="Open this Shift Type on the ERPNext site, where Menu → Delete removes it."
-										dead={ours.has(r.name) ? undefined : NOT_OURS}>
+									<Desk className="fhact on" label="Delete"
+										href={s.site && deskUrl(s.site, "Shift Type", r.name)}
+										title="Open this Shift Type on the ERPNext site, where Menu → Delete removes it.">
 										<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
 									</Desk>
 								</td>
@@ -286,11 +297,9 @@ function ShiftPattern({ s }) {
 
 			<div className="fhfoot">
 				<span className="cnt">
-					{q || rows.length < matched.length
-						? `Showing ${rows.length} of ${matched.length} matching rows.`
-						: null}{" "}
-					At least {FH_SHIFT_SEEN} shifts for this one company. <b>The list is clipped</b>, so their
-					total is unknown and no count is claimed here.
+					{q && !matched.length
+						? `Nothing matches “${s.shq}”, out of ${fmt(s.shiftTypes.length)} on this site.`
+						: `Showing ${fmt(rows.length)} of ${fmt(matched.length)} shifts` + (q ? " matching." : " on this site.")}
 				</span>
 			</div>
 			</>
@@ -311,7 +320,12 @@ export default function Shifts() {
 		<>
 			<div className="legend">
 				<b className="font-display">Manage Shift</b>
-				<span className="cov none">{fmt(mine)} of 23 defined</span>
+				{/* Their 23 was a count off a screenshot of one company's page, and a
+				    denominator nothing here could ever reach. What is defined is what
+				    the site answered with. */}
+				<span className={"cov " + (mine ? "part" : "none")}>
+					{mine ? `${fmt(mine)} defined` : "none defined"}
+				</span>
 				<span>
 					Nothing can generate attendance until these are stated — a shift is what a punch is measured
 					against.

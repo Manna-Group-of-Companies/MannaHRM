@@ -1,11 +1,17 @@
+import { useEffect } from "react";
+
 import { patch, useApp } from "@/store";
 import { load } from "@/api/load";
 import { scoped } from "@/lib/scope";
-import { dmy, dmyTime, fmt, tidyDept } from "@/lib/format";
-import { deskImport, deskNew, deskUrl } from "@/lib/desk";
-import { ASSIGN_FORM, ASSIGN_FORM_GAPS } from "@/data/onboard";
+import { dmy, dmyTime, fmt, tidyDept, todayIso } from "@/lib/format";
+import { deskImport, deskUrl } from "@/lib/desk";
+import { ASSIGN_FORM } from "@/data/onboard";
 import { Desk, Empty, FieldChip, Scroll } from "@/components/ui";
+import { apiCreate } from "@/api/client";
+import { loadOnBoard } from "@/api/load";
+import { JUDGED, STATUSES, problems, statusFor } from "@/lib/assign";
 import { assetRows } from "@/features/onboard/shared";
+import { go } from "@/routes/router";
 import EmployeeList from "@/features/employees/EmployeeList";
 
 /* ---------------------------------------------------------------------------
@@ -130,20 +136,87 @@ function handover(s, assetName, emp) {
 	};
 }
 
+/** The doctype fieldname behind a box, where the two spell it differently.
+
+    Two of the fifteen do: their `Assets` is our `asset`, and their
+    `Serial Number` is `serial_number` rather than ERPNext's `serial_no`. Kept
+    in one place so a form key and a document key can never be confused at the
+    call site. */
+const DOC_FIELD = { assets: "asset", serial_no: "serial_number" };
+
+const docKey = (key) => DOC_FIELD[key] || key;
+
+/** Why a dropdown on this form is greyed. */
+const NOT_YET = "Pick somebody, or press New handover — this is a choice about a "
+	+ "handover being written, and reading one shows what it says instead.";
+
+/** A dropdown's options, with whatever it is *holding* guaranteed to be among
+    them.
+
+    A `<select>` whose value is not one of its options renders blank, and the
+    value here is not always one: Asset Status falls back to ERPNext's own
+    `Asset.status` — `Submitted`, `In Location`, `Partially Depreciated` — none
+    of which is a handover state. Showing the record's real word, even an
+    unexpected one, beats an empty box that reads as no data. */
+const opts = (list, held) =>
+	held && !list.includes(held) ? [held, ...list] : list;
+
+/** The way out of an empty Asset Type box.
+
+    Their form has an Add Asset Types link beside this dropdown; ours has the
+    same dialog, on the Assets screen, and it already knows which of Factor HR's
+    four are missing and offers them on one button. So this goes there and opens
+    it rather than growing a second copy of a master editor on a screen about
+    handovers — two dialogs writing the same doctype is two places to fix the
+    next rule about it.
+
+    The patch lands before the navigation so the page it moves to renders with
+    the dialog already open, rather than opening it in a second frame. */
+function AddTypes() {
+	return (
+		<button className="aflink" type="button"
+			title="The site's Asset Category master is empty, so this dropdown has nothing to offer. Opens Add Asset Types on Assets Details, where Factor HR's four can be added in one press."
+			onClick={() => {
+				patch("aform", { types: true });
+				go({ section: "onboard", subtab: "assets" });
+			}}>
+			Add Asset Types
+		</button>
+	);
+}
+
 /** One of their fifteen boxes.
 
-    A box whose field this side has not got is still drawn, at the width the
-    others are, and disabled with the reason on it — the same bargain the Assets
-    Details form makes one page over. Seven of these fifteen are in that state,
-    and that is the finding this screenshot produced. */
-function Field({ f, ctx, tier, moveTier }) {
-	const dead = f.state === "build";
+    **All fifteen have somewhere to live now.** Seven of them did not until
+    `Asset Assignment` existed — Valid Till, Return Unit, Lost Units, Lost On,
+    Recovery Amount, Remarks and Assets Detail — because an ERPNext handover is
+    a log and theirs is a little contract. See manna_hr/assets.py.
+
+    The box is a control while a handover is being typed and a statement while
+    one is being read, which is the same asymmetry Document Entry uses: a form
+    that looks editable over a saved record is a form somebody types into and
+    then wonders why nothing happened. */
+function Field({ f, ctx, tier, moveTier, edit, form, onSet, bad, assets, cats, catErr }) {
+	/* Typed here on a new handover. A box with no `w` is derived or read off the
+	   asset — Asset Status most of all, which is computed from the counts on
+	   every save rather than chosen, or the register would disagree with the
+	   arithmetic printed beside it. */
+	const typing = edit && !!f.w;
+
+	const dead = !typing && f.state === "build";
 	/* "Not read" is not the same claim as "empty", and only the tier can tell
 	   them apart. Two of these read off the Asset fields added on 3 Sep and two
 	   off the movement columns added the same day; a site answering the older
-	   shape of either comes back absent rather than blank. */
-	const unread = (f.state === "stock" && tier !== "full")
-		|| ((f.key === "assign_date" || f.key === "returned_on") && moveTier !== "full");
+	   shape of either comes back absent rather than blank.
+
+	   **It cannot apply to a box being typed into**, and that was a bug: a site
+	   whose Asset Movement answers the older shape disabled Assign Date and
+	   Returned On, and one whose Asset read fell back disabled Serial Number —
+	   on a *new* handover, where there is nothing to have failed to read. A
+	   disabled box on a form somebody is filling in is the caret-eating bug this
+	   repo has a rule about (CLAUDE.md §3). */
+	const unread = !typing && ((f.state === "stock" && tier !== "full")
+		|| ((f.key === "assign_date" || f.key === "returned_on") && moveTier !== "full"));
 	const raw = ctx.asset && f.get ? f.get(ctx) : undefined;
 	const value = raw == null || raw === ""
 		? ""
@@ -151,17 +224,106 @@ function Field({ f, ctx, tier, moveTier }) {
 			: typeof raw === "number" ? fmt(raw)
 				: String(raw);
 
+	const key = docKey(f.key);
+	const shown = typing ? (form[key] ?? "") : (unread ? "" : value);
+
 	return (
-		<div className={"fld" + (f.area ? " area" : "")}>
+		<div className={"fld" + (f.area ? " area" : "") + (typing ? " live" : "") + (bad ? " bad" : "")}>
 			<label className={dead || unread ? "off" : ""} htmlFor={"ag-" + f.key}>{f.label}</label>
-			{f.area ? (
-				<textarea id={"ag-" + f.key} rows={3} readOnly disabled={dead || unread}
-					value={dead || unread ? "" : value}
+			{f.w === "status" ? (
+				/* Their first dropdown, and the one with a rule behind it. Every
+				   option is offered, because a dropdown that hides the answer
+				   somebody is looking for reads as broken — but picking one that
+				   the counts contradict is refused by `problems` with both values
+				   named, rather than silently rewritten on save. See statusFor.
+
+				   **Drawn as a dropdown even when it cannot be used**, which is the
+				   one place this form departs from "controls while typing,
+				   statements while reading". On their screen this box has an arrow
+				   on it always, and a flat box where somebody is looking for a
+				   dropdown reads as a missing feature rather than as a form waiting
+				   for a person to be picked. Disabled rather than live, so it still
+				   cannot eat a keystroke it would discard. */
+				<select id={"ag-" + f.key} disabled={!typing}
+					value={typing ? (form.asset_status || "") : (shown || "")}
+					title={typing ? `${f.label} — ${f.why}` : NOT_YET}
+					onChange={typing ? (e) => onSet("asset_status", e.target.value) : undefined}>
+					<option value="">{typing ? "Let the counts decide" : ""}</option>
+					{opts(STATUSES, typing ? "" : shown).map((st) => (
+						<option key={st} value={st}>
+							{st}{typing && !JUDGED.includes(st) ? " — from the counts" : ""}
+						</option>
+					))}
+				</select>
+			) : f.w === "type" ? (
+				/* Their second. It narrows the one under it and is otherwise a fact
+				   about whatever asset ends up picked, so it is never sent as a
+				   contradiction: `setBox` clears the asset when the type moves away
+				   from under it.
+
+				   Free text only while typing on a site whose Asset Category master
+				   could not be *read* — a dropdown with no options is a box that
+				   cannot be filled at all. At rest it is their dropdown, holding
+				   whatever the record says.
+
+				   **An empty master is a different finding from a failed read**,
+				   and the difference is the whole reason this box looked broken:
+				   the site has the doctype and nothing in it, so the honest thing
+				   is to say so and offer the dialog that fills it rather than a
+				   free-text box that would write a category the site does not
+				   have. `asset_type` is a Link — a typed word with no record
+				   behind it is refused on save, which is a round trip to learn
+				   what this box could have said in the first place. */
+				catErr && typing ? (
+					<input id={"ag-" + f.key} type="text" value={form.asset_type || ""}
+						placeholder="Asset Category could not be read"
+						title={`${f.label} — ${f.why}`}
+						onChange={(e) => onSet("asset_type", e.target.value)} />
+				) : (
+					<span className="fldrow">
+						<select id={"ag-" + f.key} disabled={!typing || !cats.length}
+							value={typing ? (form.asset_type || "") : (shown || "")}
+							title={!cats.length
+								? "The site's Asset Category master is empty, so there is no type to narrow by. Add Asset Types fills it."
+								: typing ? `${f.label} — ${f.why}` : NOT_YET}
+							onChange={typing ? (e) => onSet("asset_type", e.target.value) : undefined}>
+							<option value="">
+								{!cats.length ? "No asset types on the site yet" : typing ? "All types" : ""}
+							</option>
+							{opts(cats, typing ? "" : shown).map((c) => <option key={c} value={c}>{c}</option>)}
+						</select>
+						{!cats.length && !catErr ? <AddTypes /> : null}
+					</span>
+				)
+			) : typing && f.w === "asset" ? (
+				/* Their third dropdown. It has to be a control here rather than a
+				   value read off the table: that table lists what this person is
+				   *already* holding, and a new handover is nearly always something
+				   they are not. */
+				<select id={"ag-" + f.key} value={form.asset || ""}
+					onChange={(e) => onSet("asset", e.target.value)}>
+					<option value="">Select asset</option>
+					{(assets || []).map((a) => (
+						<option key={a.name} value={a.name}>
+							{a.asset_name || a.name}{a.custodian ? " — out" : ""}
+						</option>
+					))}
+				</select>
+			) : f.area ? (
+				<textarea id={"ag-" + f.key} rows={3} readOnly={!typing} disabled={dead || unread}
+					value={shown}
+					placeholder={typing ? "" : undefined}
+					onChange={typing ? (e) => onSet(key, e.target.value) : undefined}
 					title={dead || unread ? f.why : `${f.label} — ${f.why}`} />
 			) : (
-				<input id={"ag-" + f.key} readOnly disabled={dead || unread}
-					value={unread ? "" : value}
+				<input id={"ag-" + f.key}
+					type={typing ? (f.w === "date" ? "date" : f.w === "int" || f.w === "money" ? "number" : "text") : "text"}
+					step={f.w === "money" ? "0.01" : undefined}
+					min={f.w === "int" || f.w === "money" ? "0" : undefined}
+					readOnly={!typing} disabled={dead || unread}
+					value={shown}
 					placeholder={unread ? "not read" : ""}
+					onChange={typing ? (e) => onSet(key, e.target.value) : undefined}
 					title={dead || unread ? f.why : `${f.label} — ${f.why}`} />
 			)}
 			<FieldChip state={unread ? "stock" : f.state} />
@@ -188,13 +350,163 @@ export default function AssignEntry() {
 	   the rows. */
 	const all = assetRows(s);
 	const held = emp ? all.filter((a) => a.custodian === emp.name) : [];
+
+	/* The Asset Type dropdown's options, and the Assets dropdown it narrows.
+
+	   From the `Asset Category` master, because that is the authority: a type
+	   nobody is holding yet is still a type somebody can hand out, and a list
+	   grown from the assets would be missing exactly the option needed for the
+	   first one.
+
+	   **An empty master and an unreadable one are different findings**, and only
+	   the second may be answered by borrowing the categories the assets name.
+	   `Asset.asset_category` is a Link, so on a site whose master reads fine an
+	   asset cannot carry a category the master lacks — which means an empty list
+	   there really does mean nothing to offer, and dressing it up with a
+	   fallback would hide the one thing the person needs to be told. */
+	const cats = (s.assetCats || []).length
+		? (s.assetCats || []).map((c) => c.asset_category_name || c.name).filter(Boolean)
+		: s.assetCatErr
+			? [...new Set(all.map((a) => a.asset_category).filter(Boolean))].sort()
+			: [];
+	const ofType = s.asg.form.asset_type
+		? all.filter((a) => a.asset_category === s.asg.form.asset_type)
+		: all;
 	const pages = Math.max(1, Math.ceil(held.length / PER));
 	const page = Math.min(Math.max(1, s.asg.page || 1), pages);
 	const shown = held.slice((page - 1) * PER, page * PER);
 	const first = held.length ? (page - 1) * PER + 1 : 0;
 
 	const picked = (s.asg.pick && held.find((a) => a.name === s.asg.pick)) || null;
-	const ctx = { asset: picked, ...handover(s, picked?.name, emp?.name) };
+
+	/* The handover *contract* for the asset on screen, where one has been
+	   written. The movement pair is still read alongside it — the log says when
+	   the thing physically moved, this says what was agreed — and the form
+	   prefers the contract for every box both of them could fill. */
+	const asn = picked && emp
+		? (s.assignments || []).find((a) => a.asset === picked.name && a.employee === emp.name) || null
+		: null;
+	const ctx = { asset: picked, asn, ...handover(s, picked?.name, emp?.name) };
+
+	/* **The form is live as soon as somebody is picked**, unless a saved row from
+	   the table is being looked at. It used to wait for the New handover button,
+	   which meant the ordinary thing — pick a person, start typing — silently
+	   discarded every keystroke. A form that takes the caret and does nothing is
+	   the failure this repo keeps a test suite for (CLAUDE.md §3); a button in
+	   front of it is the same failure with an extra step.
+
+	   **`assignErr` is deliberately not part of this.** It was, and that was the
+	   same bug wearing a different hat: on a site without the doctype the read
+	   fails, and the whole form went read-only — so the page answered "the site
+	   has nothing to write to" by looking broken. A failed *read* must never
+	   decide whether a *form* accepts typing. The refusal belongs on Save, where
+	   it can be read, and it is on the button and in the panel underneath. */
+	const editing = !!emp && (s.asg.new || !picked);
+	/* The same arithmetic the server runs, so a box can be named before the
+	   round trip rather than after it. The site decides — see lib/assign.js. */
+	const said = editing ? problems(s.asg.form) : [];
+	const badBoxes = new Set(
+		said.flatMap((w) => [
+			w.includes("Assign Units") ? "assign_units" : "",
+			w.includes("Return Unit") ? "return_unit" : "",
+			w.includes("Returned On") ? "returned_on" : "",
+			w.includes("Lost Units") ? "lost_units" : "",
+			w.includes("Lost On") ? "lost_on" : "",
+			w.includes("Recovery Amount") ? "recovery_amount" : "",
+			w.includes("Valid Till") ? "valid_till" : "",
+			w.includes("Asset Status") ? "asset_status" : "",
+			w.includes("went out") ? "return_unit" : "",
+		].filter(Boolean)),
+	);
+
+	const setBox = (key, value) => {
+		const next = { ...s.asg.form, [key]: value };
+		/* Picking the asset fills the three boxes that are facts about the thing
+		   rather than about the handover. Only when they are empty: somebody who
+		   has corrected a serial number should not lose it to a re-pick. */
+		if (key === "asset") {
+			const a = all.find((x) => x.name === value);
+			if (a) {
+				if (!next.serial_number) next.serial_number = a.serial_no || "";
+				if (!next.assets_code) next.assets_code = a.item_code || a.name;
+				if (!next.asset_type) next.asset_type = a.asset_category || "";
+			}
+		}
+		/* Narrowing the type out from under a picked asset drops the asset, and
+		   deliberately: the alternative is a form whose Assets box shows nothing
+		   (it is no longer in the narrowed list) while still holding a value that
+		   would be saved — a box that lies about what it will write is worse than
+		   one that empties in front of somebody. */
+		if (key === "asset_type" && next.asset) {
+			const a = all.find((x) => x.name === next.asset);
+			if (value && a && a.asset_category !== value) {
+				next.asset = "";
+				next.serial_number = "";
+				next.assets_code = "";
+			}
+		}
+		patch("asg", { form: next, err: "", said: "" });
+	};
+
+	/* Seed the boxes the moment the form goes live, however it got there — the
+	   button, or simply picking somebody. Without this the first keystroke lands
+	   in a form with no employee on it and the site refuses the save. */
+	useEffect(() => {
+		if (!editing) return;
+		if (s.asg.form.employee === emp.name) return;
+		patch("asg", {
+			form: {
+				employee: emp.name,
+				asset: picked ? picked.name : "",
+				serial_number: picked ? picked.serial_no || "" : "",
+				assets_code: picked ? picked.item_code || picked.name : "",
+				asset_type: picked ? picked.asset_category || "" : "",
+				assign_units: 1,
+				assign_date: todayIso(),
+			},
+			err: "", said: "",
+		});
+	}, [editing, emp, picked, s.asg.form.employee]);
+
+	/** Their New. Seeded with the asset already picked, if one is, because the
+	    commonest handover is the one somebody is looking at. */
+	function startHandover() {
+		patch("asg", {
+			new: true, err: "", said: "",
+			form: {
+				employee: emp.name,
+				asset: picked ? picked.name : "",
+				serial_number: picked ? picked.serial_no || "" : "",
+				assets_code: picked ? picked.item_code || picked.name : "",
+				asset_type: picked ? picked.asset_category || "" : "",
+				assign_units: 1,
+				assign_date: todayIso(),
+			},
+		});
+	}
+
+	async function saveHandover() {
+		patch("asg", { busy: true, err: "", said: "" });
+		try {
+			/* Sent as the person types them, minus the empty ones: a Date field
+			   given "" is refused by Frappe, where an absent one is simply unset —
+			   the same rule every other write on this dashboard follows. */
+			const doc = {};
+			for (const [k, v] of Object.entries(s.asg.form)) {
+				if (v !== "" && v != null) doc[k] = v;
+			}
+			await apiCreate("Asset Assignment", doc);
+			/* Re-read rather than pushed into the list here: `asset_status` is
+			   computed on the server and the code and type are filled from the
+			   asset there, so a row assembled in the browser would be missing
+			   exactly the fields the register shows. */
+			await loadOnBoard();
+			patch("asg", { new: false, form: {}, said: "Handover saved." });
+		} catch (e) {
+			patch("asg", { err: String(e.message || e).slice(0, 240) });
+		}
+		patch("asg", { busy: false });
+	}
 
 	return (
 		<div className="fhscreen asgscreen">
@@ -387,40 +699,94 @@ export default function AssignEntry() {
 			<div className="asgform">
 				<div className="asgrid">
 					{ASSIGN_FORM.map((f) => (
-						<Field key={f.key} f={f} ctx={ctx} tier={s.assetTier} moveTier={s.moveTier} />
+						<Field key={f.key} f={f} ctx={ctx} tier={s.assetTier} moveTier={s.moveTier}
+							edit={editing} form={s.asg.form} onSet={setBox} assets={ofType} cats={cats}
+							catErr={s.assetCatErr}
+							bad={editing && badBoxes.has(docKey(f.key))} />
 					))}
 				</div>
 
+				{editing && said.length ? (
+					<div className="asgbad" role="alert">
+						<b>This handover does not add up.</b>
+						<ul>{said.map((w) => <li key={w}>{w}</li>)}</ul>
+					</div>
+				) : null}
+
+				{s.asg.err ? (
+					<div className="asgbad" role="alert">
+						<b>The site refused it.</b> {s.asg.err}
+					</div>
+				) : null}
+
 				<div className="asgact">
-					{/* Their Save writes the handover. Ours opens the document that *is*
-					    the handover on the site — an Asset Movement, which is what moves a
-					    custodian there — because this dashboard reads, and a button that
-					    looked like it saved would be the one lie on the page. */}
-					<Desk className="embtn pri" label="Save"
-						href={s.site && deskNew(s.site, "Asset Movement")}
-						title="A handover is an Asset Movement on the ERPNext site: it names the asset, who it goes to and when, and moves the custodian when it is submitted. This opens a blank one there — nothing on this dashboard writes.">
-						Save
-					</Desk>
-					<button className="embtn" disabled={!picked}
-						title={picked
-							? "Empty the boxes. Nothing is saved and nothing is lost — every one of them is read from the record."
-							: "The boxes are already empty."}
-						onClick={() => patch("asg", { pick: "" })}>
-						Cancel
-					</button>
-					<span className="who">
-						{picked ? (
-							<>Showing <b>{picked.asset_name || picked.name}</b>{" "}
-								<span className="mono">{picked.name}</span></>
-						) : (
-							<span className="muted">
-								{emp
-									? "No handover picked — the eye in the Action column fills these boxes."
-									: "Nobody is picked, so there is nothing to fill these from."}
+					{editing ? (
+						<>
+							{/* Their Save, and it writes now. `Asset Assignment` holds the
+							    seven boxes an Asset Movement has nowhere for, and the same
+							    arithmetic runs again on the server — this check is here to
+							    name the box before the round trip, not instead of it. */}
+							<button className="embtn pri" onClick={saveHandover}
+								disabled={s.asg.busy || said.length > 0 || !!s.assignErr}
+								title={s.assignErr
+									? "The site has no Asset Assignment doctype, so there is nowhere to write this. Everything typed stays on screen."
+									: said.length
+										? "Every complaint above has to be answered first — the site refuses the same ones."
+										: "Write this handover to the site as an Asset Assignment."}>
+								{s.asg.busy ? "Saving…" : "Save"}
+							</button>
+							<button className="embtn" disabled={s.asg.busy}
+								title="Throw the handover away. A half-typed one for this person is not a draft for the next."
+								onClick={() => patch("asg", { new: false, form: {}, err: "", said: "" })}>
+								Cancel
+							</button>
+							<span className="who">
+								Handing <b>{s.asg.form.assign_units || 0}</b> to{" "}
+								<b>{emp ? emp.employee_name : "nobody"}</b> —{" "}
+								<span className="mono">{statusFor(s.asg.form)}</span>
 							</span>
-						)}
-					</span>
+						</>
+					) : (
+						<>
+							<button className="embtn pri" disabled={!emp || !!s.assignErr}
+								title={!emp
+									? "Pick somebody first — a handover is a thing given to a person."
+									: s.assignErr
+										? "The site has no Asset Assignment doctype, so there is nowhere to write one."
+										: "Type a new handover: what went out, how many, until when."}
+								onClick={startHandover}>
+								New handover
+							</button>
+							<button className="embtn" disabled={!picked}
+								title={picked
+									? "Empty the boxes. Nothing is saved and nothing is lost — every one of them is read from the record."
+									: "The boxes are already empty."}
+								onClick={() => patch("asg", { pick: "" })}>
+								Cancel
+							</button>
+							<span className="who">
+								{s.asg.said ? <b className="ok">{s.asg.said}</b> : picked ? (
+									<>Showing <b>{picked.asset_name || picked.name}</b>{" "}
+										<span className="mono">{picked.name}</span></>
+								) : (
+									<span className="muted">
+										{emp
+											? "No handover picked — the eye in the Action column fills these boxes."
+											: "Nobody is picked, so there is nothing to fill these from."}
+									</span>
+								)}
+							</span>
+						</>
+					)}
 				</div>
+
+				{s.assignErr ? (
+					<div className="asgbad mt-[.6rem]">
+						<b>Asset Assignment could not be read.</b> {s.assignErr} Handovers cannot be written
+						until the <span className="mono">manna_hr</span> app is installed on the site — which
+						is a different thing from this person having been given nothing.
+					</div>
+				) : null}
 			</div>
 
 			{emp && !held.length ? (

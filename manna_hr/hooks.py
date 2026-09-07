@@ -43,11 +43,20 @@ permission_query_conditions = {
 	# off somebody's attendance does not make those yours to read, so an
 	# approver sees their reports' corrections and not their reports' letters.
 	"Employee Letter": "manna_hr.permissions.letter_query",
+	# A document register is a list of passport, visa and residence-card
+	# numbers. The doctype grants `read` to `Employee` so a person can see their
+	# own file; without this line that is everybody's file.
+	"Employee Document": "manna_hr.permissions.document_query",
+	# A handover row carries a recovery amount — a sum somebody is being asked
+	# to pay. Same reason again, one notch sharper.
+	"Asset Assignment": "manna_hr.permissions.assignment_query",
 }
 
 has_permission = {
 	"Attendance Regularization": "manna_hr.permissions.regularization_has_permission",
 	"Employee Letter": "manna_hr.permissions.letter_has_permission",
+	"Employee Document": "manna_hr.permissions.document_has_permission",
+	"Asset Assignment": "manna_hr.permissions.assignment_has_permission",
 }
 
 # ------------------------------------------------------------------ fixtures ---
@@ -62,12 +71,19 @@ fixtures = [
 				"name",
 				"in",
 				[
+					"Employee-custom_hr_section",
 					"Employee-custom_work_location",
 					"Employee-custom_allow_remote_punch",
 					"Employee-custom_factor_hr_id",
-					"Employee Checkin-custom_distance_metres",
-					"Employee Checkin-custom_geofence_result",
-					"Employee Checkin-custom_source",
+					"Employee-custom_personal_section",
+					"Employee-custom_nationality",
+					"Employee-custom_father_name",
+					"Employee-custom_mother_name",
+					"Employee-custom_spouse_name",
+					"Employee-custom_column_break_personal",
+					"Employee-custom_religion",
+					"Employee-custom_pan_no",
+					"Employee-custom_confirmation_date",
 					# The candidate's own details, on hrms' `Employee Onboarding`
 					# rather than on a doctype of ours shadowing it — see
 					# CUSTOM_FIELDS in install.py.
@@ -81,6 +97,12 @@ fixtures = [
 					"Employee Onboarding-custom_date_of_birth",
 					"Employee Onboarding-custom_cell_number",
 					"Employee Onboarding-custom_personal_email",
+					"Employee Checkin-custom_source",
+					"Employee Checkin-custom_geofence_result",
+					"Employee Checkin-custom_distance_metres",
+					# The one box Assets Details draws dead. Assets Assignment's
+					# seven are fields on the `Asset Assignment` doctype instead.
+					"Asset-custom_detail",
 				],
 			]
 		],
@@ -112,6 +134,11 @@ scheduler_events = {
 		"manna_hr.regularization.complete_applied",
 	],
 	"daily": [
+		# `Employee Document.status` is stored so the expiry watch can be a list
+		# filter rather than arithmetic that only runs when somebody opens a
+		# screen. The price of storing it is that a visa which ran out at
+		# midnight still reads Valid until something re-reads the date.
+		"manna_hr.onboard.refresh_document_status",
 		# The bridge is a process on somebody's shelf. When it dies it does so
 		# quietly, and a silent bridge is indistinguishable from a workforce
 		# that stopped coming in until payroll runs.

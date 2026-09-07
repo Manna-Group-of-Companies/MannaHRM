@@ -475,20 +475,6 @@ function PtReport({ s }) {
 				<button className="btn ghost ml-auto" onClick={() => ptExport(s)}>⬇ Export CSV</button>
 			</div>
 
-			<div className="my-[.6rem]">
-				<Gap>
-					<b>This is not their statement.</b> A Professional Tax statement is a list of people, the
-					state each is taxed in, and the rupees deducted from each in the period. This site holds
-					the people. It holds no state, no registration and no deduction, so what is drawn is the
-					readiness check underneath the return rather than the return.{" "}
-					The {empty.length} shaded columns are empty for everybody:{" "}
-					{empty.map((c, i) => (
-						<Fragment key={c[0]}>
-							{i ? ", " : ""}<code>{c[0]}</code>{c[3] ? ` (${c[3]})` : ""}
-						</Fragment>
-					))}.
-				</Gap>
-			</div>
 
 			<Scroll>
 				<table className="sr" style={{ minWidth: 140 * cols.length }}>

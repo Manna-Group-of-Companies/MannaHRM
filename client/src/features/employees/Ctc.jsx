@@ -173,16 +173,6 @@ function CtcReport() {
 				<button className="btn ghost ml-auto" onClick={exportCsv}>⬇ Export CSV</button>
 			</div>
 
-			{!div && (
-				<div className="my-[.6rem]">
-					<Gap>
-						<b>A daily rate cannot be computed here.</b> It needs the attendance-day divisor — 26
-						days, calendar days or working days — which is the same unstated policy that{" "}
-						<em>Based on Attendance Days</em> asks for. The column is left empty rather than filled
-						with a guess: this number is somebody’s pay.
-					</Gap>
-				</div>
-			)}
 
 			<Scroll>
 				<table className="ctc" style={{ minWidth: 900 }}>

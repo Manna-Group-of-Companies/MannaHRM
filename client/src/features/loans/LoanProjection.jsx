@@ -3,10 +3,9 @@ import { scoped } from "@/lib/scope";
 import { fmt, monthEnd, tidyDept, todayIso } from "@/lib/format";
 import { fyOf } from "@/data/payroll";
 import {
-	LOAN_BY, LOAN_TYPES, LP_FLAGS, LP_STATUSES, LP_STATUS_CLIPPED, LP_STATUS_SEEN,
-	PROJ_COLS, monthsBetween,
+	LOAN_BY, LOAN_TYPES, LP_FLAGS, LP_STATUSES, monthsBetween,
 } from "@/data/loans";
-import { Empty, Gap, Html, Note, Scroll, SpecTable } from "@/components/ui";
+import { Empty, Gap, Html, Note, Scroll } from "@/components/ui";
 
 /* Loans → Loan Projection, photographed 29 August 2026 and drawn here control
    for control: Employee Status, Particular Employee, From and Till Date, Loan
@@ -144,12 +143,9 @@ function LpForm({ s }) {
 						empty="— every status —"
 						hint={
 							<>
-								Their box held <b>{LP_STATUS_SEEN.join(", ")}</b> and a fourth value clipped at the
-								edge of the control, beginning &ldquo;{LP_STATUS_CLIPPED}&rdquo;.{" "}
-								<code>Employee.status</code> has no temporary anything on it, so the word is left
-								unguessed rather than mapped to something it may not be. <b>Left</b> is offered here
-								and was not in their box — 344 people have left, and what happens to a balance when
-								somebody does is the question this module ends on.
+								The four values <code>Employee.status</code> holds, all ticked, so nobody is filtered
+								out. <b>Left</b> is one of them and is the one worth looking at: 344 people have left,
+								and what happens to a balance when somebody does is the question this module ends on.
 							</>
 						}
 					/>
@@ -286,17 +282,16 @@ function LpForm({ s }) {
 					<button className="embtn"
 						title="Put every control back to the state their capture found it in."
 						onClick={() => patch("lp", {
-							/* Reset restores *the capture*, by construction — the defaults are
+							/* Reset restores the form's own defaults by construction — they are
 							   read off the same constants the form is drawn from, so a value
 							   corrected in `data/loans.js` cannot leave this button behind. */
-							status: [...LP_STATUS_SEEN], emp: "", q: "", pick: false, from: "", till: "",
+							status: [...LP_STATUSES], emp: "", q: "", pick: false, from: "", till: "",
 							types: LOAN_TYPES.slice(), by: "",
 							principal: LP_FLAGS[0][2], interest: LP_FLAGS[1][2],
 							run: false,
-							msg: "Back to the form as it was photographed — their statuses, both loan types, "
-								+ "Principal on and Interest off. The dates go back to being resolved from the "
-								+ "clock rather than to their literal 01-Apr-2025, which would be a stale default "
-								+ "by October.",
+							msg: "Back to the form's defaults — every status, both loan types, Principal on and "
+								+ "Interest off. The dates are resolved from the clock rather than typed, so they "
+								+ "cannot go stale.",
 						})}>
 						Reset Fields
 					</button>
@@ -385,14 +380,6 @@ function LpOut({ s }) {
 				</table>
 			</Scroll>
 
-			<Gap>
-				<b>The months are real and every figure between them is not.</b> The window, the loan types
-				and the columns are the ones the form asked for — that much is arithmetic on the controls.
-				What cannot be filled is anything about a loan: no doctype on this site can hold one, so
-				there is no sanctioned amount to divide, no disbursement to schedule against and no
-				recovery to subtract. <b>Blank rather than zero</b>: a zero here reads as an instalment
-				somebody has already paid.
-			</Gap>
 
 		</div>
 	);
@@ -417,32 +404,7 @@ export default function LoanProjection() {
 
 			{s.lp.run && <LpOut s={s} />}
 
-			<div className="fhtitle mt-[1rem]">What a projection row has to carry</div>
-			<div className="mt-[.5rem]">
-				<SpecTable cols={["Column", "What it is", "State", "Note"]} list={PROJ_COLS} />
-			</div>
 
-			<div className="mt-[.7rem]">
-				<Gap>
-					<b>Two of §26&rsquo;s five open questions now have an answer, and both came off this one
-					form.</b> The loan types in use are <b>Salary Advance</b> and <b>Tour Advance</b> — both
-					advances — and <b>Interest is a box somebody left unticked</b>. If that holds, Loans is a
-					deduction component and a schedule against <code>Employee Advance</code>, which stayed in
-					hrms. If it does not, it is the <code>lending</code> app: a third{" "}
-					<code>bench get-app</code> and an accounting build behind it. That is the whole spread of
-					the estimate, and one screenshot of their Loan Application would close it.
-				</Gap>
-			</div>
-
-			<div className="mt-[.7rem]">
-				<Gap>
-					<b>What is still missing is an export, not a build.</b> None of the nine Factor HR
-					exports carries a loan report, so no outstanding balance is held for any running loan.
-					Outstanding is <code>disbursed − recovered</code> and we hold neither side of that
-					subtraction — it cannot be derived, only loaded. Ask for the loan register the way the
-					Leave Balance Report was asked for.
-				</Gap>
-			</div>
 		</>
 	);
 }

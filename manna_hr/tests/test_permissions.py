@@ -150,3 +150,38 @@ def test_the_letter_clause_names_the_letter_table():
 	assert sql_condition((CLERK,), table="`tabEmployee Letter`") == (
 		f"`tabEmployee Letter`.`employee` in ('{CLERK}')"
 	)
+
+
+# ---------------------------------------------------- the document register ---
+
+
+def test_an_approver_does_not_see_their_reports_documents():
+	"""Signing off attendance does not make somebody's passport yours to read.
+
+	`regularization_query` passes an approver's `reports`; `document_query`
+	passes `[]`. The two lines look almost identical in `permissions.py` and
+	mean opposite things, so this is the test that says why they must not be
+	tidied into one.
+	"""
+	as_corrections = visible_employees(["Manna Attendance Approver"], BOSS, [CLERK, FITTER])
+	as_documents = visible_employees(["Manna Attendance Approver"], BOSS, [])
+
+	assert CLERK in as_corrections
+	assert as_documents == (BOSS,)
+
+
+def test_a_document_reader_this_module_cannot_place_sees_nothing():
+	# Frappe reads an empty condition as "no restriction". A person with no
+	# Employee record must produce a condition matching no rows, not every row.
+	condition = sql_condition(set(), table="`tabEmployee Document`")
+	assert condition
+	assert condition.replace(" ", "") == "1=0"
+
+
+def test_the_document_condition_names_the_document_table():
+	# A condition built for one table and applied to another is a silent
+	# SQL error at read time, on a query nobody runs until somebody opens
+	# the register.
+	condition = sql_condition({BOSS}, table="`tabEmployee Document`")
+	assert "`tabEmployee Document`.`employee`" in condition
+	assert BOSS in condition

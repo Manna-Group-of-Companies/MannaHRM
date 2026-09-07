@@ -299,28 +299,7 @@ export default function ITDeclarations() {
 
 			<div className="mt-[1rem]">
 
-				<div className="mt-[.7rem]">
-					<Gap>
-						<b>TOTAL INVESTMENT is a sum, and the things it sums do not exist yet.</b> A
-						declaration on our side is a parent document with a child row per exemption category,
-						each pointing at an <code>Employee Tax Exemption Sub Category</code> — 80C, 80D, the
-						HRA heads — and the total is the sum of those rows. Those masters have to be created
-						before anybody can declare anything. The mechanism ships and the master does not,
-						which is the same shape as the Prof. Tax slab finding one tab over.
-					</Gap>
-				</div>
 
-				<div className="mt-[.7rem]">
-					<Gap>
-						<b>Which tax regime the group is on decides whether this screen matters at all.</b> A
-						declaration only buys anything under the old regime; the new one trades nearly all of
-						these exemptions for lower rates. Frappe HR carries that as a flag on{" "}
-						<code>Income Tax Slab</code> and a slab chosen per person on their Salary Structure
-						Assignment — so it is one master and one field, not a build. But it is a decision
-						nobody has made, and it comes before the collection exercise rather than after it:
-						there is no point chasing 80C proofs from people who are on the new regime.
-					</Gap>
-				</div>
 
 				<Cols>
 					<PanPanel s={s} />

@@ -108,3 +108,162 @@ def is_within_punch_window(minute, opens, closes):
 	regularization queue is where a human looks.
 	"""
 	return opens <= minute <= closes
+
+
+# ------------------------------------------------------- document expiry ---
+
+DOC_VALID = "Valid"
+DOC_EXPIRING = "Expiring"
+DOC_EXPIRED = "Expired"
+DOC_NO_EXPIRY = "No Expiry"
+
+#: What a type that says nothing gets. Thirty days is long enough to book an
+#: appointment and short enough that the list is not everybody, all the time.
+DEFAULT_WARN_DAYS = 30
+
+
+def document_status(valid_upto, on, has_expiry=True, warn_days=DEFAULT_WARN_DAYS):
+	"""Where one document stands on the day `on`.
+
+	`valid_upto` and `on` are `datetime.date`. Returns `(status, days_to_expiry)`
+	with `days_to_expiry` None when there is no date to count to.
+
+	Three decisions worth stating, because they are the ones somebody will
+	disagree with later:
+
+	**The expiry day itself is still valid.** A visa valid upto the 30th is
+	valid on the 30th. Counting it as expired would send somebody home a day
+	early, and the register exists to prevent the opposite mistake.
+
+	**A type with no expiry is `No Expiry`, not `Valid`.** They read the same on
+	a screen and behave differently in a report: `Valid` is a claim that
+	somebody checked a date, and a PAN card has no date to check. Reporting it
+	as valid would put it in the same bucket as a passport somebody has actually
+	looked at this year.
+
+	**A missing date on a type that has expiries is `Expiring`, not `Valid`.**
+	This is the one that rounds against the file rather than against the person.
+	An unfinished record is not evidence of a valid document, and the cost of
+	the two mistakes is not symmetric: a document wrongly listed as expiring
+	costs somebody a minute to check, and a visa wrongly listed as valid costs a
+	person their shift and the company a fine.
+	"""
+	if not has_expiry:
+		return DOC_NO_EXPIRY, None
+
+	if not valid_upto:
+		return DOC_EXPIRING, None
+
+	days = (valid_upto - on).days
+
+	if days < 0:
+		return DOC_EXPIRED, days
+	if days <= (warn_days if warn_days and warn_days > 0 else DEFAULT_WARN_DAYS):
+		return DOC_EXPIRING, days
+	return DOC_VALID, days
+
+
+# ---------------------------------------------------- asset handover state ---
+
+ASN_ASSIGNED = "Assigned"
+ASN_PART_RETURNED = "Partly Returned"
+ASN_RETURNED = "Returned"
+ASN_PART_LOST = "Partly Lost"
+ASN_LOST = "Lost"
+
+#: The two a person picks, because no count can produce them.
+#:
+#: Everything above is arithmetic — how many went out, how many came back, how
+#: many did not. These two are judgments about the *thing*: a laptop returned
+#: with a dead screen came back on every count there is, and is still not
+#: something to hand to the next person. The counts cannot say that, which is
+#: why Factor HR's Asset Status dropdown carries them and why ours does too.
+ASN_SCRAPPED = "Scrapped"
+ASN_DAMAGED = "Damaged Or Not Working"
+ASN_JUDGED = (ASN_SCRAPPED, ASN_DAMAGED)
+
+#: Every word the field may hold, in the order the dropdown offers them.
+ASN_STATUSES = (ASN_ASSIGNED, ASN_PART_RETURNED, ASN_RETURNED, ASN_PART_LOST,
+                ASN_LOST, ASN_SCRAPPED, ASN_DAMAGED)
+
+
+def assignment_status(assign_units, return_unit=0, lost_units=0, chosen=""):
+	"""Where one handover stands, from the three counts alone.
+
+	`chosen` is what somebody picked in the dropdown, and it is honoured for
+	exactly the two states in `ASN_JUDGED` and ignored for every other. Anything
+	else picked there is not silently overruled either — `assignment_status_problem`
+	refuses the save and names both words, because somebody who sets Returned on
+	a row where nothing came back has either mis-picked or forgotten to fill
+	Return Unit, and quietly rewriting the box answers neither question.
+
+	`AssignEntry.jsx` says this is "computed from the counts on every save
+	rather than chosen, or the register would disagree with the arithmetic
+	printed beside it". This is that arithmetic, and it is here rather than in
+	the controller so it can be argued about without a site.
+
+	The order of the tests is the whole content of the rule, because a handover
+	can be two of these at once — two returned, one lost, none outstanding — and
+	one field has to pick a word. It picks the one somebody has to act on:
+
+	1. nothing is coming back                       -> Lost
+	2. everything is accounted for, some of it lost -> Partly Lost
+	3. everything is accounted for, none lost       -> Returned
+	4. nothing has come back yet                    -> Assigned
+	5. something is lost and something is still out -> Partly Lost
+	6. otherwise                                    -> Partly Returned
+
+	**Loss outranks return throughout.** A person needs to be told about the
+	laptop that is gone before the two that came back, and a status that led
+	with the good news would bury it.
+	"""
+	if chosen in ASN_JUDGED:
+		return chosen
+
+	out = int(assign_units or 0)
+	back = int(return_unit or 0)
+	gone = int(lost_units or 0)
+
+	if out <= 0:
+		return ""
+	if gone >= out:
+		return ASN_LOST
+	if back + gone >= out:
+		return ASN_RETURNED if gone == 0 else ASN_PART_LOST
+	if back + gone == 0:
+		return ASN_ASSIGNED
+	if gone > 0:
+		return ASN_PART_LOST
+	return ASN_PART_RETURNED
+
+
+def assignment_status_problem(chosen, assign_units, return_unit=0, lost_units=0):
+	"""What is wrong with the status somebody picked, as a sentence. `""` if fine.
+
+	A sentence rather than a bool because it is shown to the person who picked
+	it, and it has to name both words or it is telling them they are wrong
+	without saying what right would be.
+	"""
+	if not chosen or chosen in ASN_JUDGED:
+		return ""
+	if chosen not in ASN_STATUSES:
+		return "{0} is not one of the states a handover can be in.".format(chosen)
+
+	counted = assignment_status(assign_units, return_unit, lost_units)
+	if counted and chosen != counted:
+		return "Asset Status says {0}, but the counts under it make it {1}.".format(chosen, counted)
+	return ""
+
+
+def assignment_is_open(status):
+	"""Is any of this handover still out with the person?
+
+	What decides whether the asset may be issued to somebody else, and what
+	`assets.py` checks before it lets a second handover be written.
+
+	`Damaged Or Not Working` is open and `Scrapped` is not, which is the whole
+	difference between the two: broken kit is still in somebody's drawer, so it
+	cannot be issued to anybody else and a Valid Till that has gone by is still
+	overdue. Scrapped kit is gone.
+	"""
+	return status in (ASN_ASSIGNED, ASN_PART_RETURNED, ASN_PART_LOST, ASN_DAMAGED)

@@ -479,7 +479,11 @@ const initial = {
 	   what the empty values mean, so a tab left open overnight does not sit on
 	   yesterday's range. */
 	lreg: {
-		status: ["Active", "Inactive", "Suspended"], emp: "", pick: false, from: "", till: "",
+		/* Every status ticked, which filters nobody out. Their capture had three
+		   of the four and a fourth clipped off the edge of the control, and that
+		   was the default here until it was pointed out that it was a default read
+		   off a photograph. See LP_STATUSES. */
+		status: ["Active", "Inactive", "Suspended", "Left"], emp: "", pick: false, from: "", till: "",
 		types: ["Salary Advance", "Tour Advance"], by: "", gby: "",
 		type: "Month Wise Recovery", zero: false,
 	},
@@ -491,20 +495,18 @@ const initial = {
 	/* Loans → Loan Projection, control for control off the capture of 29 Aug
 	   2026 — the first Loans screen anybody has seen past the menu.
 
-	   Their defaults are kept as theirs, with two exceptions that are said out
-	   loud on the form. `status` drops the fourth value in their box, which is
-	   clipped at the control's edge at "Tempo" and has no counterpart on
-	   `Employee.status`. `from` and `till` are empty rather than their literal
-	   01-Apr-2025 / 31-Aug-2026: a date typed into a page in August 2026 is a
-	   stale default by October. Empty resolves at render to the payroll year's
-	   April and the end of this month — still a window that opens in the past,
-	   which is the finding their dates carry.
+	   The layout is theirs; the values in it are this site's. `status` is the
+	   four `Employee.status` holds, all ticked, so nobody is filtered out — their
+	   three-plus-a-clipped-fourth was the default here until 7 September 2026,
+	   and a default read off a photograph is a decision nobody made. `from` and
+	   `till` are empty rather than a literal 01-Apr-2025 / 31-Aug-2026: a date
+	   typed into a page in August 2026 is a stale default by October. Empty
+	   resolves at render to the payroll year's April and the end of this month.
 
-	   `types` starts with both of theirs ticked because both were ticked, and
-	   the two names are the best evidence anybody here holds about whether Manna
-	   lends or only advances. */
+	   `types` starts with both ticked because those two names are the best
+	   evidence anybody here holds about whether Manna lends or only advances. */
 	lp: {
-		status: ["Active", "Inactive", "Suspended"], emp: "", q: "", pick: false,
+		status: ["Active", "Inactive", "Suspended", "Left"], emp: "", q: "", pick: false,
 		from: "", till: "", types: ["Salary Advance", "Tour Advance"], by: "",
 		principal: true, interest: false,
 		run: false, msg: "",
@@ -783,6 +785,10 @@ const initial = {
 	fileErr: "",
 	assets: [],
 	assetMoves: [],
+	/* `Asset Assignment` — ours, and the only place the seven boxes Factor HR's
+	   form has and an Asset Movement does not can live. See manna_hr/assets.py. */
+	assignments: [],
+	assignErr: "",
 	assetErr: "",
 	/** The Asset Type master, and why the read failing is worth keeping apart
 	    from it being empty: a site with no categories is a site where nobody has
@@ -858,7 +864,13 @@ const initial = {
 	   is in the boxes underneath — their form fills from the row you act on, and
 	   so does this one. Picking a different person clears both, because a row
 	   number means nothing against somebody else's list. */
-	asg: { emp: "", q: "", status: "", menu: false, list: false, page: 1, pick: "" },
+	asg: { emp: "", q: "", status: "", menu: false, list: false, page: 1, pick: "",
+		/* The handover being typed. `new` is the form's mode: their Save writes a
+		   document now, so the boxes are read-only while a row from the table is
+		   being looked at and live while one is being made. `form` is emptied by
+		   Cancel rather than kept, because a half-typed handover for one person is
+		   not a draft for the next one. */
+		new: false, form: {}, busy: false, err: "", said: "" },
 
 	/** The letter being merged on On Board → Create Letter / Form. */
 	letterType: "",
@@ -877,7 +889,7 @@ const initial = {
 	   column boxes, and `f` is what is in them. `show` is the letter whose
 	   stored text is open, which is the one row action here that reads a
 	   document rather than opening one on the site. */
-	llist: { q: "", page: 1, size: 10, sel: [], filt: false, f: {}, show: "", body: "", err: "", bulk: false, dl: false, push: false, mail: false },
+	llist: { q: "", page: 1, size: 10, sel: [], filt: false, f: {}, show: "", body: "", err: "", edit: "", bulk: false, dl: false, push: false, mail: false },
 
 	/* ---------------------------------------------------------------------
 	   Employee Master → ⋯ → Import From Onboarding, at /employees/import.

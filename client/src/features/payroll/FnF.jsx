@@ -4,9 +4,9 @@ import { loadSeparations } from "@/api/load";
 import { dmy, fmt, initials, tidyDept, ymd } from "@/lib/format";
 import { download, toCsv } from "@/lib/csv";
 import { deskImport, deskUrl } from "@/lib/desk";
-import { Desk, Empty, Html, Note, SpecTable, panelProps, tabProps } from "@/components/ui";
+import { Desk, Empty, Html, Note, panelProps, tabProps } from "@/components/ui";
 import { openEmployee } from "@/features/employees/openEmployee";
-import { FH_FNF_FIELDS, FH_FNF_STAGES, FH_FNF_TABS, FH_FNF_WAITING } from "@/data/payroll";
+import { FH_FNF_STAGES, FH_FNF_TABS, FH_FNF_WAITING } from "@/data/payroll";
 import { PayLegend, scopeSaid } from "./shared";
 
 /* Factor HR's FNF & Separation screen, photographed 29 August 2026: three
@@ -507,10 +507,6 @@ export default function FnF() {
 							</>
 						)}
 
-						<SpecTable
-							cols={["Their column", "Where it would come from", "State", "Note"]}
-							list={FH_FNF_FIELDS}
-						/>
 					</div>
 				)}
 			</div>

@@ -5,7 +5,7 @@ import { otherCols } from "@/features/approvals/OtherGrid";
 import { scoped } from "@/lib/scope";
 import { APPROVALS, QBULK, QGROUPS, QSCOPES, READ_ONLY } from "@/data/approvals";
 
-import { Empty, Html, Modal, Note, Panel, Scroll, SpecTable, panelProps, tabProps } from "@/components/ui";
+import { Empty, Html, Modal, Note, Panel, Scroll, panelProps, tabProps } from "@/components/ui";
 
 import OtherGrid from "./OtherGrid";
 import RequestRow from "./RequestCards";
@@ -271,35 +271,6 @@ function Dialogs({ t, shown }) {
 	);
 }
 
-/** The field list is the deliverable on a queue that is not built. */
-function ReqSpec({ t }) {
-	return (
-		<>
-			<div className="mt-[1rem]">
-				<Panel title={`${t.l} — what a request carries`} cov={t.cov} ico={t.ico}>
-					<SpecTable cols={["Field", "Type", "State", "Note"]} list={t.fields} />
-				</Panel>
-			</div>
-
-			{t.tools && (
-				<div className="mt-[1rem]">
-					<Panel title={`${t.l} — what the queue does`} cov="part" ico="🧰">
-						<SpecTable cols={["Control", "Where it sits", "State", "Note"]} list={t.tools} />
-					</Panel>
-				</div>
-			)}
-
-			{t.extra && (
-				<div className="mt-[1rem]">
-					<Panel title={t.extra.title} cov="none" ico={t.extra.ico || "❓"}>
-						<SpecTable cols={["Request", "What it would carry", "State", "Note"]} list={t.extra.rows} />
-					</Panel>
-				</div>
-			)}
-		</>
-	);
-}
-
 export default function Approvals() {
 	const s = useApp();
 	const t = queueOf(s.apptab);
@@ -335,7 +306,6 @@ export default function Approvals() {
 				<div className="flex flex-col gap-[1.1rem] min-w-0" {...panelProps("appqueue", "apptab-" + s.apptab)}>
 					<OtherGrid t={t} />
 					<Dialogs t={t} shown={otherRows(s, t, otherCols(s))} />
-					<ReqSpec t={t} />
 				</div>
 			</>
 		);
@@ -383,7 +353,6 @@ export default function Approvals() {
 			)}
 
 			<Dialogs t={t} shown={shown} />
-			<ReqSpec t={t} />
 			</div>
 
 		</>

@@ -198,3 +198,69 @@ def letter_has_permission(doc, ptype=None, user=None):
 	if visible is UNRESTRICTED:
 		return True
 	return bool(doc) and doc.get("employee") in visible
+
+
+# ---------------------------------------------------------------- documents ---
+
+DOCUMENT_DOCTYPE = "Employee Document"
+
+
+def document_query(user=None):
+	"""`permission_query_conditions` for `Employee Document`.
+
+	**This is the one that would have leaked worst.** Before the register
+	existed a passport number was a field on `Employee`, and Frappe's own
+	Employee permissions decided who saw it. Moving documents into rows of their
+	own moved them out from under that, and the doctype grants `read` to
+	`Employee` so a person can see their own file — which without this reads as
+	*everybody's* file. A hundred and thirty-nine passport numbers, every visa,
+	every residence card, listed to anyone with a login.
+
+	Same shape as letters, and for a sharper version of the same reason: an
+	approver signs off attendance, and that does not make somebody's passport
+	theirs to read. HR sees all; everybody else sees their own.
+	"""
+	roles, employee, _reports = _context(user)
+	return sql_condition(
+		visible_employees(roles, employee, []),
+		table=f"`tab{DOCUMENT_DOCTYPE}`",
+	)
+
+
+def document_has_permission(doc, ptype=None, user=None):
+	"""The same rule for one document, so a hidden row is not an open URL."""
+	roles, employee, _reports = _context(user)
+	visible = visible_employees(roles, employee, [])
+	if visible is UNRESTRICTED:
+		return True
+	return bool(doc) and doc.get("employee") in visible
+
+
+# -------------------------------------------------------------- assignments ---
+
+ASSIGNMENT_DOCTYPE = "Asset Assignment"
+
+
+def assignment_query(user=None):
+	"""`permission_query_conditions` for `Asset Assignment`.
+
+	Same shape as letters and documents, and the reason is narrower than either:
+	a handover row carries a recovery amount, which is a sum of money somebody
+	is being asked to pay. `Employee` holds `read` on the doctype so a person
+	can see what is out in their own name; without this line that is what
+	everybody owes, listed to anyone with a login.
+	"""
+	roles, employee, _reports = _context(user)
+	return sql_condition(
+		visible_employees(roles, employee, []),
+		table=f"`tab{ASSIGNMENT_DOCTYPE}`",
+	)
+
+
+def assignment_has_permission(doc, ptype=None, user=None):
+	"""The same rule for one handover, so a hidden row is not an open URL."""
+	roles, employee, _reports = _context(user)
+	visible = visible_employees(roles, employee, [])
+	if visible is UNRESTRICTED:
+		return True
+	return bool(doc) and doc.get("employee") in visible

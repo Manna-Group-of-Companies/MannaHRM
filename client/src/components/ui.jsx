@@ -48,12 +48,15 @@ export function Tile({ k, n, cls, s }) {
 export const Tiles = ({ children }) => <div className="tiles">{children}</div>;
 export const Cols = ({ children }) => <div className="cols">{children}</div>;
 
-/** A finding against Factor HR: something that exists there and not here. */
-export const Gap = ({ children }) => (
-	<div className="gap">
-		<b>Missing vs Factor HR.</b> {children}
-	</div>
-);
+/** A finding worth reading before the number above it is trusted: a read the
+    site refused, a field nobody has filled, a count that is short.
+
+    **It carried a `Missing vs Factor HR.` label and no longer does.** That was
+    written for a build being compared screen by screen against the system it
+    replaces, and it is the wrong heading on the only ones left — a refused read
+    and "22 people have no shift" are facts about this site, not about Factor
+    HR. The comparison blocks it used to head have been removed. */
+export const Gap = ({ children }) => <div className="gap">{children}</div>;
 
 export const Note = ({ children, className }) => (
 	<div className={"note" + (className ? " " + className : "")}>{children}</div>
@@ -105,47 +108,6 @@ export function Bars({ pairs }) {
 export function FieldChip({ state }) {
 	const [cov, label] = FSTATE[state] || FSTATE.build;
 	return <span className={"cov " + cov}>{label}</span>;
-}
-
-/* The field list is the deliverable on a page that is not built, so it is
-   rendered the same way everywhere — the approval queues, and the four On Board
-   pages that have nothing behind them. A field that is live on one screen and
-   missing on another should be visible as exactly that.
-
-   The first two columns are HTML rather than text: these are hand-written lists
-   in `src/data/`, and several of them need an arrow or a <code> span. */
-export function SpecTable({ cols, list }) {
-	return (
-		<Scroll>
-			<table style={{ minWidth: 820 }}>
-				<thead>
-					<tr>
-						{cols.map((c) => (
-							<th key={c}>{c}</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{list.map((f, i) => (
-						<tr key={f[0] + i}>
-							<td>
-								<Html html={f[0]} />
-							</td>
-							<td className="muted" style={{ whiteSpace: "normal" }}>
-								<Html html={f[1]} />
-							</td>
-							<td>
-								<FieldChip state={f[2]} />
-							</td>
-							<td className="muted" style={{ whiteSpace: "normal", minWidth: 280 }}>
-								<Html html={f[3] || ""} />
-							</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
-		</Scroll>
-	);
 }
 
 /** The four-state key that heads a module page. */

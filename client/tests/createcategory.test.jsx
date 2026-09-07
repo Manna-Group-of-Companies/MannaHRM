@@ -161,7 +161,7 @@ describe("+ Add creates the category type", () => {
 });
 
 describe("the new category on the screen", () => {
-	it("is a row of Category Type, after Factor HR's own", async () => {
+	it("is a row of Category Type, after the masters the site ships with", async () => {
 		rowsAfter = [CF()];
 		const view = draw();
 		fill(view);
@@ -169,7 +169,7 @@ describe("the new category on the screen", () => {
 
 		const names = [...view.container.querySelectorAll("tbody tr td:nth-child(2)")]
 			.map((td) => td.textContent);
-		expect(names[0]).toContain("Company Name");
+		expect(names[0]).toContain("Company");
 		expect(names[names.length - 1]).toContain("Shift Group");
 	});
 

@@ -1,5 +1,6 @@
 import BulkLetter from "@/features/onboard/BulkLetter";
 import DownloadLetters from "@/features/onboard/DownloadLetters";
+import EditLetter from "@/features/onboard/EditLetter";
 import EmailLetters from "@/features/onboard/EmailLetters";
 import PushLetters from "@/features/onboard/PushLetters";
 import { Desk, Empty, Modal, Scroll } from "@/components/ui";
@@ -392,11 +393,16 @@ export default function CreateLetters({ onCreate }) {
 										onClick={() => void openLetter(l.name)}>
 										<Ic d={D.eye} />
 									</button>
-									<Desk className="fhact on" label="Edit"
-										href={s.site && deskUrl(s.site, "Employee Letter", l.name)}
-										title="Open this letter on the ERPNext site, where it can be changed. Nothing on this dashboard writes.">
+									{/* Their pencil, and it stays on this page now. It was a link to
+									    the desk from when nothing here wrote anything; this register
+									    issues letters, so sending somebody to a second application to
+									    fix a remark was the odd one out. See EditLetter.jsx for what
+									    it will and will not change. */}
+									<button className="fhact on" aria-label="Edit"
+										title="Change this letter here — its date, number, reference, remarks and the stored text. The employee and the type are fixed: both decide the merged text on the document."
+										onClick={() => patch("llist", { edit: l.name })}>
 										<Ic d={D.pencil} />
-									</Desk>
+									</button>
 									<span className="fhact" role="img" aria-label="More, not available here"
 										title={DOTS_DEAD}>
 										<Ic d={D.dots} />
@@ -479,6 +485,10 @@ export default function CreateLetters({ onCreate }) {
 					onClose={() => patch("llist", { show: "", body: "", err: "" })}
 				/>
 			) : null}
+
+			{s.llist.edit
+				? <EditLetter name={s.llist.edit} onClose={() => patch("llist", { edit: "" })} />
+				: null}
 
 			{s.llist.bulk ? <BulkLetter onClose={() => patch("llist", { bulk: false })} /> : null}
 			{s.llist.dl ? <DownloadLetters onClose={() => patch("llist", { dl: false })} /> : null}

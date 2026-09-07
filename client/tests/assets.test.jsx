@@ -3,7 +3,7 @@ import { act, render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 
 import AssetEntry from "@/features/onboard/AssetEntry";
-import { store, set, resetStore } from "@/store";
+import { store, set, getState, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 
 /* ---------------------------------------------------------------------------
@@ -178,5 +178,68 @@ describe("the form says why it is not taking typing", () => {
 		const resting = boxes(view).filter((el) => !el.disabled);
 		expect(resting.length).toBeGreaterThan(0);
 		expect(resting.every((el) => el.readOnly)).toBe(true);
+	});
+});
+
+/* ---------------------------------------------------------------------------
+   Add Asset Types, and Factor HR's four.
+
+   The Asset Type box on the handover form reads `Asset Category`, which is
+   stock ERPNext and starts empty — so on a site where nobody has filled it that
+   box has nothing to offer. Their four are recorded in data/onboard.js and
+   seeded by manna_hr/install.py; this is the way onto a site the app is not
+   installed on, which is every site today.
+   --------------------------------------------------------------------------- */
+describe("Add Asset Types", () => {
+	const open = () => {
+		const view = render(<Provider store={store}><AssetEntry /></Provider>);
+		act(() => { screen.getByText("Add Asset Types").click(); });
+		return view;
+	};
+
+	const act_button = (act_) => document.querySelector(`button[data-act="${act_}"]`);
+
+	const blanks = () =>
+		[...document.querySelectorAll(".attnew .attname")].map((b) => b.value);
+
+	it("fills the blank rows with the types the site has not got", () => {
+		set({ assetCats: [] });
+		open();
+
+		act(() => { act_button("factohr").click(); });
+		expect(blanks()).toEqual(["Computer", "Mobile Phone", "SIM Card", "Swift Car"]);
+	});
+
+	it("writes nothing on its own — Save is where a master is made", () => {
+		set({ assetCats: [] });
+		open();
+
+		act(() => { act_button("factohr").click(); });
+		expect(getState().assetCats).toEqual([]);
+		expect(act_button("save").disabled).toBe(false);
+	});
+
+	it("offers only the ones missing, so pressing it twice cannot clash", () => {
+		set({
+			assetCats: [
+				{ name: "Computer", asset_category_name: "Computer", creation: "2025-01-01 00:00:00" },
+				{ name: "SIM Card", asset_category_name: "SIM Card", creation: "2025-01-01 00:00:00" },
+			],
+		});
+		open();
+
+		act(() => { act_button("factohr").click(); });
+		expect(blanks()).toEqual(["Mobile Phone", "Swift Car", "", ""]);
+	});
+
+	it("goes dead once every one of them is on the master", () => {
+		set({
+			assetCats: ["Computer", "Mobile Phone", "SIM Card", "Swift Car"].map((n) => (
+				{ name: n, asset_category_name: n, creation: "2025-01-01 00:00:00" }
+			)),
+		});
+		open();
+
+		expect(act_button("factohr").disabled).toBe(true);
 	});
 });

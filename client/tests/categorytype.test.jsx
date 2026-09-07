@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 
 import Categories from "@/features/employees/Categories";
 import { store, set, getState, resetStore } from "@/store";
-import { FH_CATEGORY_TYPES } from "@/data/masters";
+import { SITE_CATEGORY_TYPES } from "@/data/masters";
 import { CT_RCD, ctSeed } from "@/data/categorytype";
 import { loadedState } from "./fixture";
 
@@ -25,8 +25,22 @@ import { loadedState } from "./fixture";
    until somebody notices half the company is filed under the other one.
    --------------------------------------------------------------------------- */
 
-const COMPANY = FH_CATEGORY_TYPES.find((t) => t.dt === "Company");
-const RULE = FH_CATEGORY_TYPES.find((t) => !t.field);
+const COMPANY = SITE_CATEGORY_TYPES.find((t) => t.dt === "Company");
+
+/** A category created on this screen, with no values on it yet — the one row
+    that can still draw an empty Custom Field table. It replaced Factor HR's
+    Gratuity Applicable here, which drew one for a different reason: it read
+    onto nothing at all, and it was a row transcribed off a screenshot rather
+    than anything this site held. */
+const EMPTY_CF = {
+	name: "Employee-custom_cat_shift_group",
+	fieldname: "custom_cat_shift_group",
+	label: "Shift Group",
+	fieldtype: "Select",
+	options: "",
+	reqd: 0, hidden: 0, in_standard_filter: 1,
+	description: "", creation: "2026-09-05 10:00:00",
+};
 
 const draw = () => render(<Provider store={store}><Categories /></Provider>);
 
@@ -110,7 +124,8 @@ describe("the Custom Field table", () => {
 	});
 
 	it("says so in words when there is nothing behind the category", () => {
-		const { container } = open("view", RULE.name);
+		act(() => set({ empFields: [EMPTY_CF] }));
+		const { container } = open("view", EMPTY_CF.label);
 		expect(container.querySelector(".ctnone").textContent).toContain("No Custom Field Available");
 	});
 
@@ -157,15 +172,13 @@ describe("what Save opens", () => {
 		expect(save.getAttribute("href")).not.toContain("custom-field");
 	});
 
-	it("refuses, with the reason, for a category that reads onto nothing", () => {
-		act(() => set({ site: "https://site.example" }));
-		const { container } = open("edit", RULE.name);
-		const save = [...container.querySelectorAll(".modal .foot a, .modal .foot button")]
-			.find((el) => el.textContent.trim() === "Save");
-		expect(save.tagName).toBe("BUTTON");
-		expect(save.disabled).toBe(true);
-		expect(save.getAttribute("title")).toContain("reads onto no field");
-	});
+	/* **Two cases were removed here on 7 September 2026.** Save had a second
+	   destination — a refusal, for a category type that reads onto no field on
+	   this side — and the only two rows ever in that state were Factor HR's
+	   Gratuity Applicable and LWF Applicable, transcribed off a screenshot of
+	   their master. The rows are read from the site now, every one of them is a
+	   field on Employee, and a branch nothing can reach is a branch no test can
+	   defend. See SITE_CATEGORY_TYPES. */
 
 	it("carries every answer with nowhere to land into the description, and shows it first", () => {
 		const { container } = open("edit", COMPANY.name);

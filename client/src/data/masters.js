@@ -2,10 +2,11 @@
     doctype of its own on our side.
 
     Nothing renders this today — the per-field cards it drew under Categories
-    were dropped, because FH_CATEGORY_TYPES below already says the same thing a
-    row at a time. Kept because the mapping itself is the finding: which of the
-    five groupings ERPNext holds as a master of its own, and which are only a
-    field on Employee with no list behind them. */
+    were dropped, because SITE_CATEGORY_TYPES below says the same thing a row at
+    a time for the three that have a master. Kept because the rest of the
+    mapping is still the finding: grade, branch and employment type are fields
+    on Employee here with no list this dashboard reads, so they are not offered
+    as category types rather than offered empty. */
 export const CATEGORY_FIELDS = [
   ["department",      "Department",      "departments",  "🏢", true],
   ["designation",     "Designation",     "designations", "🎓", true],
@@ -14,68 +15,46 @@ export const CATEGORY_FIELDS = [
   ["employment_type", "Employment type", null,           "📄", false],
 ];
 
-/* Factor HR's Categories, photographed 28 August 2026 — and it is not the
-   screen the name suggested. Behind that menu item is `Category Type`: a
-   master of masters, eight rows, each holding its own value list behind a
-   View Category button — a second screen, photographed 29 August 2026: a plain
-   Code / Description / Status list with its own toolbar and pager. Two things
-   follow from that, and FACTOHR_SCREENS §9 guessed both of them wrong.
+/* The category types this site holds.
 
-   It is not one Worker / Staff / Contract list, so there is no single field to
-   map it onto. And two of the five rows visible are not groupings at all —
-   Gratuity Applicable and LWF Applicable are statutory pay treatment, filed in
-   the same table as Department and maintained by whoever maintains
-   departments. ERPNext has neither as a category, so neither imports onto a
-   field; both have to be rebuilt as rules.
+   Behind Factor HR's Categories menu is `Category Type`: a master of masters,
+   eight rows, each with its own value list. Five of those eight were once
+   transcribed here off a screenshot of theirs, with the value lists that had
+   been photographed. They are gone. Two of the five — Gratuity Applicable and
+   LWF Applicable — were never groupings at all but statutory pay treatment
+   filed in a screen shaped for lists, and they have to be rebuilt as rules
+   rather than imported onto a field; that finding lives in docs/FACTOHR.md now,
+   which is where a fact about the system being replaced belongs. A row on a
+   screen is a claim that something exists, and these three do.
 
-   `field` is the ERPNext field the type reads onto, or null where nothing on
-   our side answers it at all. */
+   What is left is the masters ERPNext holds that group an employee, and every
+   value under one of them is read off the site — see `catValues`. Categories
+   created from this dashboard are `Custom Field`s on Employee and join this
+   list at `ctTypes`, read from the site like the rest.
+
+   `field` is the Employee field the type reads onto, `dt` the doctype holding
+   its values, and `count` which dashboard count answers it. */
 
 /**
  * @typedef {Object} CategoryType
  * @property {string} name
  * @property {string} code
- * @property {string|null} field the ERPNext field it reads onto, or null
- * @property {string} [dt] the doctype holding those values on our side — what
- *   Add and Edit open. Absent where the type is a pay rule rather than a list.
+ * @property {string|null} field the Employee field it reads onto
+ * @property {string} [dt] the doctype holding those values — what Add and Edit open
  * @property {string} [count] which dashboard count answers it
  * @property {string} ico
- * @property {string} [maps] how it maps onto our side — HTML, hand-written here
- * @property {string} [why] why it exists over there, where nothing here answers it
- * @property {string} [miss] what has never been seen, and would settle it
- * @property {string} [hint] what it would have to be rebuilt as here
+ * @property {string} [maps] how it reads onto Employee — HTML, hand-written here
  */
 
 /** @type {CategoryType[]} */
-export const FH_CATEGORY_TYPES = [
-  {name:"Company Name", dt:"Company", code:"", field:"company", count:"companies", ico:"🏭",
-   maps:'<code>Employee.company</code>, with a real <code>Company</code> doctype behind it',
-   /* Photographed 29 August 2026 — the first View Category anybody has opened,
-      and it settles what that button does: a second screen, not an expansion.
-      Their own pager says 6 entries; page 1 held these five, and the sixth has
-      still not been seen. Kept as evidence rather than as a count, because the
-      gap between their six and ours is the only thing this screen is for. */
-   seen:["HI-TECH PRETREADS", "HI-TECH RUBBER INDUSTRIES", "MANNA GROUP H-QTRS",
-         "MANNA RUBBER PRODUCTS PVT.LTD.", "MANNA TREADS PVT.LTD"],
-   theirs:6},
-  {name:"Department", dt:"Department", code:"P001", field:"department", count:"departments", ico:"🏢",
+export const SITE_CATEGORY_TYPES = [
+  {name:"Company", dt:"Company", code:"", field:"company", count:"companies", ico:"🏭",
+   maps:'<code>Employee.company</code>, with a real <code>Company</code> doctype behind it'},
+  {name:"Department", dt:"Department", code:"", field:"department", count:"departments", ico:"🏢",
    maps:'<code>Employee.department</code>'},
   {name:"Designation", dt:"Designation", code:"", field:"designation", count:"designations", ico:"🎓",
    maps:'<code>Employee.designation</code>'},
-  {name:"Gratuity Applicable", code:"", field:null, ico:"🏦",
-   why:'Whether gratuity applies to a person. In Factor HR that is a <b>category</b> — set from this screen, by whoever maintains departments.',
-   miss:'The list behind it: who is marked applicable, and on what rule. One View Category click in their tenant, and it has not been taken.',
-   hint:'ERPNext has no such flag on <code>Employee</code>. hrms carries gratuity as a <code>Gratuity Rule</code> — a service threshold and a per-year entitlement — plus a payroll component. <b>So this does not import onto a field.</b> It has to be read as a rule and rebuilt as one, and the list of who is marked applicable is how you check the rule was written right.'},
-  {name:"LWF Applicable", code:"", field:null, ico:"🏦",
-   why:'Labour Welfare Fund, per person. A state levy, so the rate and how often it is deducted depend on where the employer is registered — which is why it is a flag on the person rather than one setting for the group.',
-   miss:'Who is marked applicable, and which states are involved.',
-   hint:'ERPNext handles LWF as a <b>salary component with its own condition</b>, not as a category, so again there is no field to import onto. Worth pinning down before payroll rather than after: one deduction row applied group-wide is wrong for somebody the moment two companies sit in two states.'},
 ];
-/* Page 1 of 2. The count is theirs, read off the screen, and the gap between
-   the two numbers is the point — see the panel below. */
-
-export const FH_CAT_SEEN = 5;
-export const FH_CAT_TOTAL = 8;
 
 export const CAL_MONTHS = ["January","February","March","April","May","June","July",
                     "August","September","October","November","December"];

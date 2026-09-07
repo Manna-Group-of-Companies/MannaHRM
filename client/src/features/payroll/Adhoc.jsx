@@ -330,25 +330,7 @@ export default function Adhoc() {
 
 			<div className="mt-[1rem]">
 
-				<div className="mt-[.7rem]">
-					<Gap>
-						<b>Two of the rows under CTC Wise Input are not adhoc payments at all.</b> Gratuity is a
-						statutory payment on leaving, computed from service length by a Gratuity Rule, and
-						Health Insurance CTC is employer cost carried in the CTC rather than money that reaches
-						a bank account. Both are components of a salary structure on our side, not{" "}
-						<code>Additional Salary</code>. One screen there is three doctypes here, and the split
-						is not visible from the labels.
-					</Gap>
-				</div>
 
-				<div className="mt-[.7rem]">
-					<Gap>
-						<b>There is no approval on any of this.</b> Frappe HR ships no workflow on{" "}
-						<code>Additional Salary</code>, so whoever can create the doctype can pay somebody. A
-						Workflow plus a row on the approvals queue is about a day&rsquo;s work — but it is a
-						policy question first, and it is still open.
-					</Gap>
-				</div>
 
 				<div className="mt-[.7rem]">
 					<Empty title="No adhoc payments exist, for anybody">

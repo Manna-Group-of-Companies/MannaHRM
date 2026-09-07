@@ -156,6 +156,49 @@ punch away from a gate.
 
 ---
 
+## 4a. Two findings off their screens, kept here rather than in the client
+
+The dashboard used to carry rows transcribed off screenshots of Factor HR —
+shifts on Manage Shift, category types on Categories — so that the screens had
+something to draw. They were removed on 7 September 2026: every list in
+`client/` is read from the ERPNext site now, and a row on a screen is a claim
+that something exists. What those transcriptions actually established is worth
+keeping, and it is this.
+
+**Their shift assignment comes down the category, not off the person.** Their
+SHIFT & WORK PATTERN table, captured 28 August 2026 for Hi-Tech Pretreads,
+listed seven shifts with a CATEGORY COUNT and an EMPLOYEE COUNT against each.
+Every CATEGORY COUNT was non-zero — 12 against one production shift, 9 against
+the office one. **Every EMPLOYEE COUNT was zero**, on a tenant whose own
+attendance export names a shift against all 160 people. A count of zero on all
+seven, with the export disagreeing, does not read as nobody being rostered; it
+reads as the assignment being held somewhere other than against the person.
+
+That matters for the migration because ERPNext holds it the other way round.
+`Shift Assignment` is per employee and dated, and `Employee.default_shift` is a
+fallback on the record — there is nothing in between. So the shift roster does
+not come across as a mapping. It has to be **unfolded**: every person in a
+category, expanded into a dated assignment, on the day the category said so.
+
+**Two of their category types are pay rules, not groupings.** Their Category
+Type master is a master of masters, eight rows, five of them seen. Three are
+groupings ERPNext holds as masters of its own — Company, Department,
+Designation. The other two are **Gratuity Applicable** and **LWF Applicable**:
+statutory pay treatment, per person, filed in a screen shaped for lists and
+maintained by whoever maintains departments.
+
+Neither imports onto a field. ERPNext has no such flag on `Employee`. hrms
+carries gratuity as a `Gratuity Rule` — a service threshold and a per-year
+entitlement — plus a payroll component; and it handles the Labour Welfare Fund
+as a salary component with its own condition, which has to be per state, since
+the rate and the frequency follow where the employer is registered. Both have
+to be read as rules and rebuilt as rules, and **the list of who is marked
+applicable is how you check the rule was written right** — which makes it one of
+the exports worth asking for below. The remaining three category types have
+never been seen; page 2 of that master is one screenshot away.
+
+---
+
 ## 5. What still cannot be known without access
 
 The documentation describes what the product *can* do. None of it says what
@@ -165,6 +208,11 @@ to reproduce. Specifically:
 - Your actual attendance policies, per company — the real thresholds, grace
   periods, and forgiveness counts.
 - Your shift definitions, and which cross midnight.
+- **Which category each shift is against, and who is in each category** — the
+  roster itself, which §4a says is not held against the person over there.
+- **Who is marked Gratuity Applicable and who LWF Applicable**, and under which
+  state for the second. One View Category click each, and neither has been
+  taken.
 - Your leave types and their rules.
 - Your salary components and formulae.
 - Which of the licensed modules anybody actually uses. Paying for a chatbot is

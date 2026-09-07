@@ -5,10 +5,10 @@ import { deskImport, deskNew, deskUrl } from "@/lib/desk";
 import { CTC_BY } from "@/data/masters";
 import { CAT_GROUP_BY } from "@/data/attendance";
 import {
-	REGISTER_COLS, SREG_COLS, SREG_MASTER_COLS, SREG_OPTIONS, SREG_PAYROLL_TYPES,
+	SREG_COLS, SREG_MASTER_COLS, SREG_OPTIONS, SREG_PAYROLL_TYPES,
 	fyList, fyMonths, fyOf,
 } from "@/data/payroll";
-import { Desk, Empty, Gap, Html, Note, Scroll, SpecTable, panelProps, tabProps } from "@/components/ui";
+import { Desk, Empty, Gap, Html, Note, Scroll, panelProps, tabProps } from "@/components/ui";
 import { load } from "@/api/load";
 import { PayLegend } from "./shared";
 
@@ -507,14 +507,6 @@ function SregOut({ s }) {
 				</table>
 			</Scroll>
 
-			<Gap>
-				<b>Six columns are empty, and they are the six the register exists for.</b> Payment Days is
-				attendance — <code>Attendance</code> holds no rows on this site — and Gross, the deductions
-				and Net Pay are all arithmetic on it, off a <code>Salary Structure</code> nobody has built
-				and a <code>Salary Slip</code> this page is not allowed to read. Two independent reasons per
-				column, so fixing either alone would change nothing. <b>They are blank rather than zero</b>,
-				and the difference matters: a zero is a figure somebody can be paid.
-			</Gap>
 
 		</div>
 	);
@@ -534,21 +526,6 @@ export default function SalaryRegister() {
 
 			{s.sreg.run && <SregOut s={s} />}
 
-			<div className="fhtitle mt-[1rem]">What the register has to carry, column for column</div>
-			<div className="mt-[.5rem]">
-				<SpecTable cols={["Columns", "What it is", "State", "Note"]} list={REGISTER_COLS} />
-			</div>
-
-			<div className="mt-[.7rem]">
-				<Gap>
-					<b>This list is the acceptance test for E1.</b> Every row of it is a column their register
-					prints today, and stock <code>Salary Register</code> in Frappe HR produces most of them
-					the moment a salary structure exists — which is why the estimate for this screen is not
-					the screen. It is the structure behind it, and the attendance policy behind{" "}
-					<i>that</i>. Compare the two column for column when the file lands, before anybody agrees
-					a go-live date.
-				</Gap>
-			</div>
 		</>
 	);
 }

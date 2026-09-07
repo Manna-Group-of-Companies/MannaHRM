@@ -7,7 +7,7 @@ import { deskImport } from "@/lib/desk";
 import { load } from "@/api/load";
 import { useApp } from "@/store";
 import { CAT_MAKE, catMasters, planImport, writeCatTemplate } from "@/lib/catsheet";
-import { FH_CATEGORY_TYPES } from "@/data/masters";
+import { SITE_CATEGORY_TYPES } from "@/data/masters";
 
 /* ---------------------------------------------------------------------------
    **Data import from file**, off the ↑ on Employees → Categories.
@@ -85,7 +85,7 @@ export default function CategoryImport({ only, onClose }) {
 	const [err, setErr] = useState("");
 	const [said, setSaid] = useState("");
 
-	const chosen = only || FH_CATEGORY_TYPES.find((t) => t.name === pick) || null;
+	const chosen = only || SITE_CATEGORY_TYPES.find((t) => t.name === pick) || null;
 	const plan = planImport(s, up.sheet?.rows || [], chosen);
 	const ready = !busy && plan.make.length > 0;
 

@@ -1,7 +1,7 @@
 import { patch, useApp } from "@/store";
 import { scoped } from "@/lib/scope";
 import { fmt, tidyDept } from "@/lib/format";
-import { EMP_LIST_COLS, EMP_LIST_SIZE, FH_CATEGORY_TYPES } from "@/data/masters";
+import { EMP_LIST_COLS, EMP_LIST_SIZE, SITE_CATEGORY_TYPES } from "@/data/masters";
 
 /* Factor HR's List of Employees, photographed 31 August 2026 and drawn here
    control for control: three dropdowns across the top, nine columns with a sort
@@ -51,13 +51,14 @@ function asDate(iso) {
     and `cat` a value of it — which is what their pair does, one list narrowing
     the next.
 
-    Their own Category Type master holds eight rows and two of them are not
-    groupings at all: Gratuity Applicable and LWF Applicable are statutory pay
-    treatment, filed beside Department. Those have no field on our side to
-    filter by, so they are offered and disabled with the reason rather than
-    left out — the gap is the finding. See FH_CATEGORY_TYPES. */
+    The types offered are the masters this site holds, so each one has a field
+    on Employee to filter by — see SITE_CATEGORY_TYPES. Rows of theirs that
+    nothing here answers used to be offered disabled beside them; they are not
+    filters and they were never data, so this dropdown no longer carries them.
+    The `!t.field` branches below are kept because a category created on this
+    site can still arrive without one. */
 function Cats({ s, rows }) {
-	const types = FH_CATEGORY_TYPES;
+	const types = SITE_CATEGORY_TYPES;
 	const picked = types.find((t) => t.name === s.elist.type);
 	const values = picked?.field
 		? [...new Set(rows.map((e) => e[picked.field]).filter(Boolean))].sort()
@@ -120,7 +121,7 @@ const Sorter = ({ on, dir }) => (
 /** Everything the three dropdowns and the eight boxes leave. One pass, so a
     count in the footer cannot disagree with the rows above it. */
 function filtered(s, rows) {
-	const type = FH_CATEGORY_TYPES.find((t) => t.name === s.elist.type);
+	const type = SITE_CATEGORY_TYPES.find((t) => t.name === s.elist.type);
 	const f = s.elist.f;
 
 	let out = rows;

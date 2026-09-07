@@ -1,4 +1,4 @@
-import { FH_CATEGORY_TYPES } from "@/data/masters";
+import { SITE_CATEGORY_TYPES } from "@/data/masters";
 import { tidyDept } from "@/lib/format";
 
 /* ---------------------------------------------------------------------------
@@ -47,10 +47,10 @@ import { tidyDept } from "@/lib/format";
    dialog is worth having drawn even though half of it cannot be honoured.
    --------------------------------------------------------------------------- */
 
-/** Parent Category Type offers the eight this screen already lists — theirs is
-    a hierarchy over its own master, and the only master of category types
-    anywhere in this repo is the one FH_CATEGORY_TYPES records. */
-export const CT_PARENTS = FH_CATEGORY_TYPES.map((t) => t.name);
+/** Parent Category Type offers what this screen already lists — theirs is a
+    hierarchy over its own master, and the nearest thing to a master of category
+    types on this site is the masters that group an employee. */
+export const CT_PARENTS = SITE_CATEGORY_TYPES.map((t) => t.name);
 
 /** Their Is Visible box holds the word `true`.
 
@@ -467,14 +467,14 @@ export function ctFromField(cf) {
 	};
 }
 
-/** Every category type on the screen: theirs, then ours.
+/** Every category type on this site: the masters it ships with, then the ones
+    this screen created.
 
-    Theirs first because theirs is the master being replaced and the comparison
-    is what the screen is for. Ours after, oldest first — the order they were
-    created in, and the only order that does not move a row under somebody who
-    renames one. */
+    The masters first because they are the ones with a doctype behind them.
+    Ours after, oldest first — the order they were created in, and the only
+    order that does not move a row under somebody who renames one. */
 export function ctTypes(s) {
-	const theirs = FH_CATEGORY_TYPES.map((t) => ({ ...t, key: t.name }));
+	const theirs = SITE_CATEGORY_TYPES.map((t) => ({ ...t, key: t.name }));
 	const ours = (s.empFields || [])
 		.slice()
 		.sort((a, b) => String(a.creation || "").localeCompare(String(b.creation || "")))

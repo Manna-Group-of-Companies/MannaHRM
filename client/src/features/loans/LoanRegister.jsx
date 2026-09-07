@@ -1,11 +1,10 @@
 import { patch, set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { scoped } from "@/lib/scope";
-import { dmy, fmt, tidyDept, ymd } from "@/lib/format";
-import { Empty, Gap, Html, Note, Scroll, SpecTable } from "@/components/ui";
+import { fmt, tidyDept, ymd } from "@/lib/format";
+import { Empty, Gap, Html, Note, Scroll } from "@/components/ui";
 import {
-	LOAN_BY, LOAN_CAPTURE, LOAN_REPORT_TYPES, LOAN_TYPES, LP_STATUSES, LP_STATUS_CLIPPED,
-	LP_STATUS_SEEN, REGISTER_COLS, monthsBetween,
+	LOAN_BY, LOAN_REPORT_TYPES, LOAN_TYPES, LP_STATUSES, monthsBetween,
 } from "@/data/loans";
 
 /* Loans → Loan Register. Their criteria panel, photographed 29 Aug 2026 and
@@ -108,10 +107,11 @@ function LregForm({ s }) {
 		if (k === "reset") {
 			return set({
 				lreg: {
-					status: [...LP_STATUS_SEEN], emp: "", pick: false, from: "", till: "",
+					status: [...LP_STATUSES], emp: "", pick: false, from: "", till: "",
 					types: [...LOAN_TYPES], by: "", gby: "", type: LOAN_REPORT_TYPES[0], zero: false,
 				},
-				lregRun: false, lregMsg: "Fields reset — back to the values their capture held.",
+				lregRun: false, lregMsg: "Fields reset — every status, both loan types, and the dates back to "
+					+ "being resolved from the clock.",
 			});
 		}
 		if (k === "close") return go({ lregRun: false, lregMsg: "", subtab: "all" });
@@ -133,8 +133,7 @@ function LregForm({ s }) {
 						</label>
 					))}
 					<span className="hint">
-						theirs read <b>Active, Inactive, Suspended, {LP_STATUS_CLIPPED}</b> and was cut off
-						there — and this site has no status starting "Tempo"
+						the four values <code>Employee.status</code> holds — all ticked, so nobody is filtered out
 					</span>
 				</span>
 
@@ -172,7 +171,7 @@ function LregForm({ s }) {
 					<input id="lregfrom" type="date" value={from}
 						onChange={(e) => stale({ from: e.target.value })} />
 					<span className="hint">
-						theirs read {dmy(LOAN_CAPTURE.from)} — the start of the fiscal year before last
+						empty resolves to the start of the payroll year before this one
 					</span>
 				</span>
 
@@ -181,7 +180,7 @@ function LregForm({ s }) {
 					<input id="lregtill" type="date" value={till}
 						onChange={(e) => stale({ till: e.target.value })} />
 					<span className="hint">
-						theirs read {dmy(LOAN_CAPTURE.till)} — the end of the month it was taken in
+						empty resolves to the end of this month, off the clock
 					</span>
 				</span>
 
@@ -338,14 +337,6 @@ function LregOut({ s }) {
 				</table>
 			</Scroll>
 
-			<Gap>
-				<b>Every cell is empty and the months are real.</b> The columns come off the date range on the
-				form, so the grid is the size their report would be — {fmt(months.length)} months across{" "}
-				{cols.length === 1 ? "one loan type" : `${cols.length} loan types`}. What cannot be put in it
-				is a recovery: an advance is recovered by a payroll deduction, no payroll doctype is read by
-				this dashboard, and this site holds no advance to recover in the first place. Those are two
-				separate reasons and fixing one would not be enough.
-			</Gap>
 
 			{breakKey ? (
 				<>
@@ -367,20 +358,9 @@ function LregOut({ s }) {
 							</tbody>
 						</table>
 					</Scroll>
-					<Gap>
-						These two controls are meant to section the recovery grid. With no recovery to section
-						they section the population it would have been recovered <em>from</em>, which is the one
-						thing under this form that is read off the site. Both are shown when both are set,
-						outer first, the way the other reports here stack them.
-					</Gap>
 				</>
 			) : null}
 
-			<div className="fhtitle mt-[.5rem]">What the register needs, column by column</div>
-			<SpecTable
-				cols={["Column", "Where it would come from", "State", "Note"]}
-				list={REGISTER_COLS}
-			/>
 		</>
 	);
 }

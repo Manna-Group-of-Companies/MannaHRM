@@ -460,15 +460,37 @@ export async function loadOnBoard() {
 	const AST_REG = ["name", "asset_name", "item_code", "asset_category", "company", "status",
 		"docstatus", "location", "custodian", "purchase_date", "gross_purchase_amount"];
 	const AST_STD = ["name", "asset_name", "asset_category", "company", "status", "docstatus"];
-	const assets = await listAll("Asset", AST_FULL).catch(() => null);
-	if (assets) {
-		set({ assets, assetTier: "full", assetErr: "" });
+	/* Ours, on top of ERPNext's. `custom_detail` is the Detail box, dead until
+	   `manna_hr` added the field — ERPNext's Asset has no free-text note under
+	   any name.
+
+	   **A step above AST_FULL rather than a sixteenth entry on it.** Folding it
+	   in would mean a site without `manna_hr` failing the long read and dropping
+	   to AST_REG, which marks Quantity, Rate, Warranty Date, Serial Number and
+	   Vendor Name "not read" — five boxes greyed because one custom field is
+	   missing. Same shape as EMP_FULL over EMP_STD above, for the same reason.
+
+	   The tier stays `full` either way, because every other box on the form asks
+	   `assetTier === "full"` to tell "not read" from "empty" and the answer for
+	   those fifteen is the same. `assetDetail` is the sixteenth's own answer. */
+	const AST_OURS = AST_FULL.concat(["custom_detail"]);
+	const ours = await listAll("Asset", AST_OURS).catch(() => null);
+	if (ours) {
+		set({ assets: ours, assetTier: "full", assetDetail: true, assetErr: "" });
 	} else {
-		await listAll("Asset", AST_REG)
-			.then((r) => set({ assets: r, assetTier: "register", assetErr: "" }))
-			.catch(() => listAll("Asset", AST_STD)
-				.then((r) => set({ assets: r, assetTier: "standard", assetErr: "" })))
-			.catch((e) => set({ assets: [], assetTier: "", assetErr: String(e.message || e).slice(0, 160) }));
+		const assets = await listAll("Asset", AST_FULL).catch(() => null);
+		if (assets) {
+			set({ assets, assetTier: "full", assetDetail: false, assetErr: "" });
+		} else {
+			await listAll("Asset", AST_REG)
+				.then((r) => set({ assets: r, assetTier: "register", assetDetail: false, assetErr: "" }))
+				.catch(() => listAll("Asset", AST_STD)
+					.then((r) => set({ assets: r, assetTier: "standard", assetDetail: false, assetErr: "" })))
+				.catch((e) => set({
+					assets: [], assetTier: "", assetDetail: false,
+					assetErr: String(e.message || e).slice(0, 160),
+				}));
+		}
 	}
 
 	/* The three columns that say *what* moved and *who* to, added 3 Sep 2026 for
@@ -493,8 +515,27 @@ export async function loadOnBoard() {
 			.catch(() => set({ assetMoves: [], moveTier: "" }));
 	}
 
+	/* Ours. Absent on a site that has not had `manna_hr` installed, and that is
+	   a different finding from a site with no handovers on it — so the refusal
+	   is kept rather than folded into an empty list, and the form says which of
+	   the two happened before it offers to write one. */
+	await listAll("Asset Assignment", ASSIGN_FIELDS)
+		.then((r) => set({ assignments: r, assignErr: "" }))
+		.catch((e) => set({
+			assignments: [],
+			assignErr: String(e.message || e).slice(0, 160),
+		}));
+
 	set({ onboardBusy: false });
 }
+
+/** Every column the assignment form and its register draw. One list rather than
+    a long one and a short one: the doctype is ours, so a site either has all of
+    these or has no such doctype at all. */
+const ASSIGN_FIELDS = ["name", "employee", "employee_name", "company", "asset", "asset_type",
+	"asset_status", "serial_number", "assign_units", "assign_date", "valid_till",
+	"return_unit", "returned_on", "lost_units", "lost_on", "recovery_amount",
+	"remarks", "assets_detail", "assets_code"];
 
 /* ---------------------------------------------------------------------------
    Import employee(s) from onboarding — its own read.

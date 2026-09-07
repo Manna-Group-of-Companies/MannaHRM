@@ -528,24 +528,6 @@ export default function SalaryRevision({ emp }) {
 			{/* Two clicks, because there is no undo behind this one and no save in
 			    front of it: what is typed on this form exists nowhere else. */}
 
-			<div className="mt-[1rem]">
-				<Gap>
-					<b>
-						{SAL_REV_ODD.length} of these {SAL_REV_FIELDS} rows are not a salary component at all.
-					</b>{" "}
-					Three are totals sitting among the inputs that make them — CTC TOTAL, MONTHLY GROSS, NET
-					PAY CTC. Two are gratuity, which hrms derives from a rule and length of service rather
-					than holding as a figure. TDS comes off a slab and a declaration. LEAVE ENCASHMENT is a
-					document of its own. BONUS PROVISION is a journal entry rather than pay. And MPF
-					CONTRIBUTION MANUAL is not resolvable from the capture at all. Two more <em>are</em>{" "}
-					components but are filed in the wrong group: EMPLOYEE ESI CTC and EMPLOYEE PF CTC come
-					out of the employee&rsquo;s pay, under a heading reading COMPANY CONTRIBUTION — so that
-					group&rsquo;s total is not employer cost. <b>A migration that maps this table row-for-row
-					onto components gets all {SAL_REV_ODD.length + 2} wrong.</b> Hover any row&rsquo;s grey
-					line for which it is.
-				</Gap>
-
-			</div>
 		</div>
 	);
 }

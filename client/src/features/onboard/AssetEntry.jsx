@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { ASSET_FORM, ASSET_FORM_GAPS, ASSET_WRITABLE } from "@/data/onboard";
+import { ASSET_FORM, ASSET_FORM_GAPS, ASSET_WRITABLE, FH_ASSET_TYPES } from "@/data/onboard";
 import { Desk, Empty, FieldChip, Modal, Scroll } from "@/components/ui";
 import { assetRows } from "@/features/onboard/shared";
 import { dmy, fmt } from "@/lib/format";
@@ -171,8 +171,26 @@ function Field({ f, asset, tier, edit, making, draft, onType }) {
 				{/* Attachment is a Browse button and nothing else on their form —
 				    no box beside it — so it is one here too. */}
 				{f.key === "attachment" ? null : f.area ? (
-					<textarea id={"af-" + f.key} rows={3} readOnly disabled value=""
-						className={"w" + (f.w || "lg")} data-state={state} title={f.why} />
+					/* The long boxes. This branch was `readOnly disabled value=""`
+					   outright, which was right while the only one of them was
+					   Detail and Detail had no field behind it. It has one now
+					   (`custom_detail`), so the box follows the same three rules
+					   the inputs below do rather than a fourth of its own — a
+					   textarea hard-coded empty over a field that holds a value is
+					   the caret-eating bug CLAUDE.md §3 is about, one element to
+					   the left. */
+					<textarea
+						id={"af-" + f.key}
+						rows={3}
+						className={"w" + (f.w || "lg")}
+						readOnly={!typeable}
+						disabled={dead || unread}
+						data-state={state}
+						value={typeable ? typed : unread ? "" : value}
+						placeholder={typeable ? "" : hint}
+						onChange={typeable ? (e) => onType(f.key, e.target.value) : undefined}
+						title={why}
+					/>
 				) : (
 					<input
 						id={"af-" + f.key}
@@ -404,6 +422,12 @@ function AddTypesDialog({ s, onClose }) {
 		cats.some((c) => c.name.toLowerCase() === t.toLowerCase())
 		|| adding.findIndex((o) => o.toLowerCase() === t.toLowerCase()) !== i);
 
+	/* Factor HR's four, less whatever is already here — matched case-insensitively
+	   for the same reason `clash` is: the master refuses a second `computer` next
+	   to `Computer`, and offering to add one would be offering to fail. */
+	const fhMissing = FH_ASSET_TYPES.filter(
+		(t) => !cats.some((c) => c.name.toLowerCase() === t.toLowerCase()));
+
 	const canSave = adding.length > 0 && clash.length === 0;
 	const canDelete = ticked.length > 0 && ticked.every((n) => !used[n]);
 
@@ -455,6 +479,22 @@ function AddTypesDialog({ s, onClose }) {
 							: "Type a name into one of the blank rows."}
 					onClick={() => void save()}>
 					<Ic d={D.sv} /> {busy ? "Saving…" : "Save"}
+				</button>
+				{/* Factor HR's own four, typed into the blank rows rather than written.
+
+				    The Asset Type box on the handover form reads this master, and on a
+				    site where nobody has filled it that box has nothing to offer — which
+				    is the state every site is in until somebody does this once. It fills
+				    the rows and stops: creating four masters is a decision, and Save is
+				    where decisions on this dialog are made. Only the missing ones, so
+				    pressing it twice cannot produce the clash it would then complain
+				    about. */}
+				<button className="embtn" data-act="factohr" disabled={busy || !fhMissing.length}
+					title={fhMissing.length
+						? `Fill the blank rows with Factor HR's types — ${fhMissing.join(", ")}. Nothing is written until Save.`
+						: "Every type Factor HR classifies by is already on this master."}
+					onClick={() => setMade(Array(BLANKS).fill("").map((_, i) => fhMissing[i] || ""))}>
+					<Ic d={D.nu} /> Factor HR&rsquo;s four
 				</button>
 				<button className="embtn" data-act="delete" disabled={busy || !canDelete}
 					title={!ticked.length

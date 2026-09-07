@@ -525,19 +525,6 @@ function BonOut({ s }) {
 				<button className="btn ghost ml-auto" onClick={() => bonDeliver(s, "Excel")}>⬇ Export CSV</button>
 			</div>
 
-			<div className="my-[.6rem]">
-				<Gap>
-					<b>Every number here is a floor, for three separate reasons.</b> Eligibility is tested on{" "}
-					<code>ctc</code> &divide; 12, because no basic-plus-DA figure exists on this site and CTC is
-					always the larger of the two — so <b>Yes</b> is certain, <b>No</b> is certain, and{" "}
-					<b>Unknown</b> is somebody whose CTC is over the ceiling but whose wage may not be. The
-					bonus is computed on ₹{fmt(BONUS_ACT.basis)} where sec 12 says ₹{fmt(BONUS_ACT.basis)}{" "}
-					<em>or the minimum wage, whichever is higher</em>, and no minimum wage notification is held
-					anywhere here. And the thirty-day test is made on days in service, because there are{" "}
-					<b>no Attendance rows on this site</b> — days in service can only exceed days worked, so it
-					rules somebody out and never in.
-				</Gap>
-			</div>
 
 			<Scroll>
 				{/* `io` for the two heading levels — a `sec` above a `grp` — which is

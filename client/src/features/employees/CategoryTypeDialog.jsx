@@ -185,15 +185,19 @@ export default function CategoryTypeDialog({ onClose }) {
 	const values = c.custom.map((v) => v.trim()).filter(Boolean);
 	const description = describe(f, c.rcd);
 
-	/* The two destinations, and only one of them can be right — see the note at
-	   the top of this file. A category type that reads onto a field is edited
-	   through Customize Form; one that reads onto nothing has no field to
-	   customise, and creating one would be + Add's job rather than Edit's. */
+	/* Where Save goes. A category type is a field on `Employee` — one of the
+	   masters it ships with, or a Custom Field this screen created — so its
+	   properties are Customize Form's to change, never + Add's: creating one
+	   would put a second `department` on Employee beside the one already there,
+	   which imports and reads as a real field right up until somebody notices
+	   half the company is filed under the other one.
+
+	   The refusal that used to sit here, for a category type reading onto no
+	   field at all, went with the two rows that were ever in that state — Factor
+	   HR's Gratuity Applicable and LWF Applicable, transcribed off a screenshot
+	   and never anything this site held. Every row on the screen now comes from
+	   the site and every one of them has a field. */
 	const href = t.field && s.site ? deskCustomize(s.site, "Employee") : "";
-	const dead = t.field
-		? undefined
-		: `${t.name} reads onto no field on this side — it is a pay rule filed as a category over `
-			+ "there, so there is no field whose properties this could change. See View Category.";
 
 	const grid = CT_FORM.filter((r) => r.where === "grid");
 	const checks = CT_FORM.filter((r) => r.where === "check");
@@ -369,7 +373,7 @@ export default function CategoryTypeDialog({ onClose }) {
 					Edit
 				</button>
 			) : (
-				<Desk className="btn tpl" href={href} dead={dead}
+				<Desk className="btn tpl" href={href}
 					title="Opens Frappe's Customize Form for Employee on the site, where a field's label, prompt, mandatory, hidden and filter properties are set.">
 					Save
 				</Desk>

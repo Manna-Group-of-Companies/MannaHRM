@@ -5,9 +5,9 @@ import { dmy, fmt, tidyDept, todayIso, ymd } from "@/lib/format";
 import { download, toCsv } from "@/lib/csv";
 import { deskUrl } from "@/lib/desk";
 import {
-	LOAN_FIELDS, LOAN_INTEREST, LOAN_SCHED_COLS, LOAN_TABS, LOAN_TYPES, PERK_EXEMPT,
+	LOAN_INTEREST, LOAN_SCHED_COLS, LOAN_TABS, LOAN_TYPES, PERK_EXEMPT,
 } from "@/data/loans";
-import { Desk, Empty, Gap, Html, Note, Scroll, SpecTable, panelProps, tabProps } from "@/components/ui";
+import { Desk, Empty, Gap, Html, Note, Scroll, panelProps, tabProps } from "@/components/ui";
 
 /* Loans → Loan Application, photographed 29 August 2026 and drawn here control
    for control: the three buttons and Data Import on the bar, their five tabs,
@@ -396,15 +396,6 @@ function OurBox({ s }) {
 				</span>
 			</div>
 
-			<div className="mt-[.8rem]">
-				<Gap>
-					<b>Rate and term are not on their Loan Application at all</b>, which is not an omission:
-					they belong to the loan <em>type</em>, and the type is the one field on that form shaded
-					mandatory alongside the employee. ERPNext keeps them in the same place —{" "}
-					<code>Loan Product</code> — so this is a rare case where the two systems already agree
-					about where a number lives, and the migration is a master rather than a mapping.
-				</Gap>
-			</div>
 		</div>
 	);
 }
@@ -503,28 +494,6 @@ function Sched({ s }) {
 				</table>
 			</Scroll>
 
-			{sch ? (
-				<div className="mt-[.7rem]">
-
-					<Gap>
-						<b>
-							{sch.exempt
-								? `Nil, because the loan is ₹${fmt(PERK_EXEMPT)} or less.`
-								: sch.perkRate
-									? `The perquisite over this schedule is ${amt(sch.totals.perkAmt)}.`
-									: "The perquisite is not computed, because no rate has been given."}
-						</b>{" "}
-						Under sec 17(2)(viii) and Rule 3(7)(i) a loan given interest-free or under the notified
-						rate is a taxable perquisite in the employee's hands: valued at the State Bank rate on
-						the first day of the year, applied to the maximum outstanding balance each month, less
-						any interest actually charged. It is exempt in two cases only — an aggregate at or under
-						₹{fmt(PERK_EXEMPT)}, and treatment of a specified disease, which is what{" "}
-						<b>Loan Required For</b> on their form decides.{" "}
-						<b>Nothing in hrms or in the lending app computes this</b>, and an interest-free advance
-						of ₹50,000 is not a kindness with no paperwork — it is salary, and it is TDS.
-					</Gap>
-				</div>
-			) : null}
 		</>
 	);
 }
@@ -602,7 +571,6 @@ export default function LoanApplication() {
 								Only the tab label has been seen. What follows is a reading of what that name has to
 								mean here, not a copy of their screen.
 							</Empty>
-							<Gap><Html html={tab[3]} /></Gap>
 						</>
 					)}
 				</div>
@@ -610,49 +578,6 @@ export default function LoanApplication() {
 				{f.msg ? <Note><Html html={f.msg} /></Note> : null}
 			</div>
 
-			<div className="mt-[1rem]">
-				<Gap>
-					<b>The form carries a whole lending product; the two loan types in use are advances.</b>{" "}
-					Interest Type, an amortization schedule, a balance split into principal and interest, and
-					four perquisite columns — against a Projection screen next door run over{" "}
-					<em>Salary Advance</em> and <em>Tour Advance</em> with Include Interest unticked. So the
-					machinery is the vendor's and what Manna uses is some subset of it. That is still the open
-					question from §26, and it is worth asking precisely, because the answer is a{" "}
-					<b>setting</b> over there and an <b>app</b> over here: <code>Employee Advance</code> ships
-					with hrms, and interest with a ledger behind it is the separate <code>lending</code> app.
-				</Gap>
-
-				<div className="mt-[.7rem]">
-					<Gap>
-						<b>Sanctioning happens on this form.</b> Amount Requested and Sanctioned Amount are two
-						fields on one screen with Loan Status beside them, and none of the seven approval queues
-						is a loan. §26 inferred that from the menu; the form confirms it. Whoever can open this
-						screen can sanction — which is a policy question before it is a build, and it is the same
-						question <code>Additional Salary</code> raises under Payroll.
-					</Gap>
-				</div>
-
-				<div className="mt-[.7rem]">
-					<Gap>
-						<b>Four of the five tabs are the recovery lifecycle</b>, and every one of them is a way
-						for the schedule and the payslip to stop agreeing: a repayment outside payroll, a
-						deduction inside it, a hold, and an instalment typed by hand. They exist over there
-						because over there they happen. Any of the four can leave a balance that is neither what
-						the schedule says nor what has been recovered — which is exactly the number §26 says
-						cannot be derived and has to be loaded.
-					</Gap>
-				</div>
-			</div>
-
-			<div className="fhtitle mt-[1rem]">Their form, field by field</div>
-			<div className="mt-[.6rem]">
-				<SpecTable
-					cols={["Field", "What would stand behind it", "State", "Why it is not just a copy"]}
-					list={LOAN_FIELDS.map((r) => [
-						r[1] ? `${r[0]} <b title="Shaded yellow on their form">*</b>` : r[0], r[2], r[3], r[4],
-					])}
-				/>
-			</div>
 
 			<div className="mt-[.7rem] text-right">
 				<Desk href={s.site && deskUrl(s.site, "Employee Advance")} label="Employee Advance list"

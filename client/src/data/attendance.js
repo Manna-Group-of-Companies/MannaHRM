@@ -198,30 +198,18 @@ export const SR_COLS = [
   ["Employer PF / ESI","gap", null, "payroll not started"],
 ];
 
-/**
- * One row of their SHIFT & WORK PATTERN table. `cat` and `emp` are null on the
- * row their capture clipped.
- * @typedef {Object} ShiftRow
- * @property {string} name
- * @property {number|null} cat
- * @property {number|null} emp
- * @property {boolean} [clipped]
- */
+/* Seven rows of Factor HR's SHIFT & WORK PATTERN table stood here, transcribed
+   off a capture of one company's page on 28 August 2026, with a CATEGORY COUNT
+   and an EMPLOYEE COUNT against each. Manage Shift drew them as its table.
 
-/** @type {ShiftRow[]} */
-export const FH_SHIFT_ROWS = [
-  {name:"Hi-Tech Pretreads-Accountant",                cat:0,  emp:0},
-  {name:"Hi-Tech Pretreads-Cook shift",                cat:1,  emp:0},
-  {name:"Hi-Tech Pretreads-House Keeping",             cat:0,  emp:0},
-  {name:"Hi-Tech Pretreads-Office shift",              cat:9,  emp:0},
-  {name:"Hi-Tech Pretreads-Other location",            cat:8,  emp:0},
-  {name:"Hi-Tech Pretreads-Production shift-12Hrs-1",  cat:12, emp:0},
-  {name:"Hi-Tech Pretreads-Production shift-12Hrs-2",  cat:null, emp:null, clipped:true},
-];
-/* Their own list length is off the bottom of the capture, so this page says
-   "at least" and never a total. */
-
-export const FH_SHIFT_SEEN = FH_SHIFT_ROWS.length;
+   They were removed on 7 September 2026: the shifts on that screen are the
+   site's own `Shift Type` documents now, and a name on a list is a claim that
+   something exists. The finding those rows carried is worth keeping and does
+   not belong in a table — every EMPLOYEE COUNT read zero on a tenant whose own
+   attendance export names a shift against all 160 people, so over there the
+   assignment comes down the category rather than off the person. It is written
+   up in docs/FACTOHR.md, which is where a fact about the system being replaced
+   belongs. */
 /* Today's punches, newest last, for whichever company is selected up top.
    Employee Checkin is one table for both streams, which is why this list needs
    no union and no flag: a punch is a punch, and where it came from is a

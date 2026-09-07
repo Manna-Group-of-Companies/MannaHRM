@@ -1,7 +1,7 @@
 import { fmt, tally, tidyDept } from "@/lib/format";
 import { Fragment, useEffect, useRef } from "react";
 import {
-	CAT_IMPORT_WHY, CAT_TEMPLATE_WHY, FH_CATEGORY_TYPES, FH_CAT_SEEN, FH_CAT_TOTAL, IMPORT_MENU,
+	CAT_IMPORT_WHY, CAT_TEMPLATE_WHY, IMPORT_MENU, SITE_CATEGORY_TYPES,
 } from "@/data/masters";
 import { Bars, Desk, Empty, Gap, Html, ImportMenu, Note, Scroll } from "@/components/ui";
 
@@ -19,8 +19,13 @@ import CategoryTypeDialog from "@/features/employees/CategoryTypeDialog";
 
 /* Factor HR's Categories, photographed 28 August 2026 — and it is not the
    screen the name suggested. Behind that menu item is `Category Type`: a master
-   of masters, eight rows, each holding its own value list behind a View
-   Category button.
+   of masters, each row holding its own value list behind a View Category
+   button.
+
+   The rows here are this site's: the masters that group an employee, and the
+   Custom Fields this screen has created. Five of Factor HR's eight were once
+   listed alongside them, transcribed off a screenshot — see
+   SITE_CATEGORY_TYPES for what went and why.
 
    The controls divide three ways, and the division is the point. Search, View
    Category and Refresh act on what is on this page, so they work here. Add,
@@ -32,15 +37,13 @@ import CategoryTypeDialog from "@/features/employees/CategoryTypeDialog";
    two without one are not lists at all; they are pay rules, which is the whole
    finding of this screen. */
 
-const DEL_DEAD = "There is no Category Type on our side to delete — those eight rows are Factor HR's own master. "
-	+ "What each maps to here is a field on Employee, or a rule, and deleting the doctype behind one is a different act entirely.";
-
-const NO_MASTER = "This one has no master on our side to open: it is statutory pay treatment filed as a category over there, "
-	+ "and a rule here. View Category says what it would have to be rebuilt as.";
+const DEL_DEAD = "There is no Category Type doctype here to delete a row from — each of these is a master of its own, "
+	+ "or a Custom Field on Employee, and deleting the thing behind one is a different act entirely. Every employee "
+	+ "filed under it would lose the field, not just the value.";
 
 /** `catfile` when the picker was opened from the list header rather than from
     one master's drill. Not a category type's key and it cannot be: a key is
-    either one of Factor HR's eight names or the document name of a Custom
+    either one of the site's master names or the document name of a Custom
     Field, and neither is a star. */
 const ALL = "*";
 
@@ -80,11 +83,17 @@ const Act = ({ d, l, why }) => (
     template whose columns differ from what the reader accepts is the one bug
     this arrangement must not have.
 
-    Both items go dead on a drill with no values to hold — the two pay rules —
-    and say why rather than being left off. There is nothing there to write a
-    template from and nothing to load a row into. */
+    Both items go dead on a drill with nothing behind it to hold values, and say
+    why rather than being left off: there is nothing there to write a template
+    from and nothing to load a row into. No category type on this site is in
+    that state today — every one has a master or is a Custom Field — and the
+    check stays because the list is read from the site rather than written down
+    here. */
 const CatImport = ({ s, only }) => {
-	const dead = only && !only.dt && !only.cf ? NO_MASTER : "";
+	const dead = only && !only.dt && !only.cf
+		? "This category type has no master on the site behind it, so there is nothing to write a "
+			+ "template from and nothing to load a row into."
+		: "";
 	return (
 		<ImportMenu
 			open={s.catimp}
@@ -117,20 +126,20 @@ const CatImport = ({ s, only }) => {
 
     **the values are not this screen's finding.** They are on the site already,
     on `Company`, `Department` and `Designation`, where they are maintained —
-    and every count this page is actually for is the row itself: which of
-    Factor HR's eight category types has a field on this side, which has a
-    master, and which two are pay rules filed in a screen shaped for lists. The
-    ⓘ on each row says all of that about the row it is on.
+    and what this page is actually for is the row itself: which field on
+    Employee a category reads onto, and what holds its values. The ⓘ on each row
+    says that about the row it is on.
 
     The values that *are* worth reconciling — their list against ours, name by
     name — went with it, and if that comparison is wanted again it belongs on a
-    screen of its own rather than nested two levels inside this one. */
+    screen of its own rather than nested two levels inside this one, and against
+    an export of theirs rather than against a list typed in here. */
 function FhCategoryType({ s }) {
 	/* Theirs and ours in one list — see `ctTypes`. Opened on `key` rather than on
 	   the name, because a category somebody creates here could be labelled
 	   "Department" and there is a row called that already. */
 	const types = ctTypes(s);
-	const ours = types.length - FH_CATEGORY_TYPES.length;
+	const ours = types.length - SITE_CATEGORY_TYPES.length;
 	const q = (s.catq || "").trim().toLowerCase();
 	const rows = q
 		? types.filter((t) => (t.name + " " + t.code).toLowerCase().includes(q))
@@ -179,8 +188,8 @@ function FhCategoryType({ s }) {
 
 			{/* **An empty list of ours means three things, and this says which.**
 			    `Custom Field` is System Manager's doctype to read as well as to write,
-			    so a perfectly good HR User session sees Factor HR's eight rows and none
-			    of the ones this screen created — which without this line reads as
+			    so a perfectly good HR User session sees the three masters and none of
+			    the categories this screen created — which without this line reads as
 			    "nobody has ever added one", and sends somebody off to add a second copy
 			    of a category that already exists. */}
 			{s.empFieldsState === "denied" || s.empFieldsState === "bad" ? (
@@ -188,10 +197,10 @@ function FhCategoryType({ s }) {
 					<Gap>
 						{s.empFieldsState === "denied"
 							? "Your session may not read Custom Field, which is System Manager's doctype — so any "
-								+ "category type created from this screen is missing from the list below. The rows that "
-								+ "are here are Factor HR's own master, held in this app."
-							: "The site could not be asked which category types it holds, so the list below is Factor "
-								+ "HR's own and nothing of ours. ↻ reads again."}
+								+ "category type created from this screen is missing from the list below. What is left is "
+								+ "the masters the site ships with."
+							: "The site could not be asked which categories have been created on it, so the list below "
+								+ "is the masters it ships with and nothing else. ↻ reads again."}
 					</Gap>
 				</div>
 			) : null}
@@ -252,35 +261,18 @@ function FhCategoryType({ s }) {
 
 			<div className="fhfoot">
 				<span className="cnt">
-					{/* Their count and ours, added but not merged. Their eight is a number
-					    off a photograph of another system and ours is a read of this one;
-					    printing one total would make the second look as certain as the
-					    first, or the first as live as the second. */}
+					{/* One count, because there is now only one kind of row: what the site
+					    holds. Their eight — five transcribed off a screenshot, three never
+					    seen — used to be added to ours here, and no arithmetic makes a
+					    photograph and a read into one number. */}
 					{q
-						? `Showing ${rows.length} of the ${FH_CAT_SEEN + ours} known here`
-						: `Showing 1 to ${FH_CAT_SEEN + ours} of ${FH_CAT_TOTAL + ours} entries`}
-					{ours ? ` — ${FH_CAT_SEEN} of theirs, ${ours} created here` : ""}
+						? `Showing ${fmt(rows.length)} of ${fmt(types.length)} category types`
+						: `Showing ${fmt(types.length)} category types on this site`}
+					{ours ? ` — ${fmt(types.length - ours)} masters, ${fmt(ours)} created here` : ""}
 				</span>
-				<span className="fhpage">
-					{/* Page 1 is the only page there is here, so back is nowhere.
-					    The reason is on all four rather than on the two that face
-					    the missing page, because a control with no explanation
-					    reads as broken next to three that have one. */}
-					<button className="embtn" disabled title="This is page 1 — there is nothing behind it.">First</button>
-					<button className="embtn" disabled title="This is page 1 — there is nothing behind it.">Previous</button>
-					<span className="cnt">Page 1 of 2</span>
-					{/* The pager is drawn dead rather than dropped. "1 to 5 of 8" is the
-					    shortest way to say that three category types exist and that
-					    nobody here knows what they are. */}
-					<button className="embtn" disabled
-						title="Page 2 has not been screenshotted. Three more category types are on it and none of them is known here.">
-						Next
-					</button>
-					<button className="embtn" disabled
-						title="Page 2 has not been screenshotted. Three more category types are on it and none of them is known here.">
-						Last
-					</button>
-				</span>
+				{/* Their pager was drawn dead with "Page 1 of 2" on it, which was true of
+				    their screen and is not of this one. This list is what the site
+				    answered with and it is all on one page. */}
 			</div>
 
 			{/* Their Create Category Type. Rendered here rather than beside the
@@ -326,8 +318,8 @@ export default function Categories() {
 				<b className="font-display">Categories</b>
 				<span className="cov part">Their screen, our data</span>
 				<span>
-					Factor HR’s <b>Category Type</b> master as photographed, read against the{" "}
-					{fmt(a.length)} active people on our side.
+					Factor HR’s <b>Category Type</b> screen, over the masters this site holds — read
+					against the {fmt(a.length)} active people on it.
 				</span>
 			</div>
 

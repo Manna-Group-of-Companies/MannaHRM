@@ -724,16 +724,6 @@ function IoReport({ s }) {
 				<span className="ml-auto"><IoExport s={s} /></span>
 			</div>
 
-			{f.selfie && (
-				<div className="my-[.6rem]">
-					<Gap>
-						<b>Show Selfie Images has nothing to show.</b> Nothing in Frappe HR captures a photo on
-						punch, so the column is present and empty rather than absent. Their mobile export carried{" "}
-						<b>35 images for 34 punches</b> at roughly 14 KB each — on the order of <b>5 MB a day</b> at
-						160 people, which is a storage decision as much as a feature.
-					</Gap>
-				</div>
-			)}
 
 			<Scroll style={{ marginTop: ".6rem" }}>
 				<table className="io" style={{ minWidth: 980 }}>

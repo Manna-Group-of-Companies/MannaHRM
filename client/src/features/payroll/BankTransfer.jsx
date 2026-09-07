@@ -6,11 +6,11 @@ import { scoped } from "@/lib/scope";
 import { dmy, fmt, tidyDept, todayIso } from "@/lib/format";
 import { CTC_BY } from "@/data/masters";
 import {
-	BT_ACTIONS, BT_FILE_COLS, BT_GROUPS, BT_MODES, BT_TABS,
+	BT_ACTIONS, BT_GROUPS, BT_MODES, BT_TABS,
 	SREG_PAYROLL_TYPES, fyList, fyMonths, fyOf,
 } from "@/data/payroll";
 import {
-	Empty, Gap, Html, Note, Scroll, SpecTable, Tile, Tiles, panelProps, tabProps,
+	Empty, Gap, Html, Note, Scroll, Tile, Tiles, panelProps, tabProps,
 } from "@/components/ui";
 
 import { PayLegend } from "./shared";
@@ -384,15 +384,6 @@ function BtOut({ s }) {
 				</table>
 			</Scroll>
 
-			<Gap>
-				<b>The Amount column is the payment file, and it is empty for two reasons at once.</b> No
-				payroll doctype is read by this dashboard, and no <code>Salary Slip</code> has ever
-				been generated on this site — so fixing either alone would still leave it blank. It is
-				blank rather than nought on purpose: a nought is a figure somebody can be paid.
-				{" "}<b>The IFSC column is worse</b>, because it is not a missing figure but a missing
-				field, and the values behind it live only in Factor HR. Ask for them in the same export as
-				E1.
-			</Gap>
 
 		</div>
 	);
@@ -408,16 +399,6 @@ const BtHeld = () => (
 			later&rdquo;. So this tab is empty here for a reason that no amount of reading would change.
 		</Empty>
 
-		<Gap>
-			<b>This is a cutover question before it is a build question.</b> Anybody whose salary is held
-			in Factor HR on the day the group moves is money that has to land somewhere on this side, and
-			today there is nowhere. Two things have to be known before a date is agreed: whether anybody
-			is currently held, and what the hold is for — a disciplinary matter, an unreturned asset, a
-			disputed final settlement. The first is one question to HR. The second decides whether this is
-			a custom field on <code>Employee</code>, a rule inside the payroll run, or a document of its
-			own with an approval on it. See the stop-salary tile on Salary Process, which is the same gap
-			seen from the other side, and docs/OPEN_QUESTIONS.md.
-		</Gap>
 	</>
 );
 
@@ -498,21 +479,6 @@ export default function BankTransfer() {
 				{f.msg ? <Note><Html html={f.msg} /></Note> : null}
 			</div>
 
-			<div className="fhtitle mt-[1rem]">What a payment file has to carry, line for line</div>
-			<div className="mt-[.5rem]">
-				<SpecTable cols={["Column", "What it is", "State", "Note"]} list={BT_FILE_COLS} />
-			</div>
-
-			<div className="mt-[.7rem]">
-				<Gap>
-					<b>Three of these nine can be filled today and one of the six that cannot is a missing
-					field rather than a missing figure.</b> That one is the IFSC, and it is the item to move
-					on: a figure arrives the day payroll runs, whereas a field has to be added, then filled
-					160 times from an export only Factor HR holds, then checked — because a wrong branch
-					code is a payment that bounces a week later, after everybody has been told they were
-					paid. Ask for it with E1, not after it.
-				</Gap>
-			</div>
 		</>
 	);
 }

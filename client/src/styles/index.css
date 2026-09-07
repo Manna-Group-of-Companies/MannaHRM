@@ -1950,6 +1950,31 @@
   }
   .lettab .fhpage input:focus { @apply outline-none border-brand; box-shadow: 0 0 0 2px rgb(var(--brand-soft)); }
 
+  /* ---- Assets Assignment, once the form writes ------------------------
+     Their fifteen boxes are read-only over a saved handover and live while one
+     is being typed — the same asymmetry Document Entry uses, because a form
+     that looks editable over a saved record is one somebody types into and then
+     wonders why nothing happened. See features/onboard/AssignEntry.jsx. */
+  .asgform .fld.live input, .asgform .fld.live textarea {
+    @apply bg-card text-ink cursor-text;
+  }
+  .asgform .fld.live input:focus, .asgform .fld.live textarea:focus {
+    @apply outline-none border-brand; box-shadow: 0 0 0 3px rgb(var(--brand-soft));
+  }
+  /* A box a complaint names. The complaint itself is written out under the
+     grid — a red edge alone says something is wrong and not what. */
+  .asgform .fld.bad input, .asgform .fld.bad textarea, .asgform .fld.bad select {
+    @apply border-bad;
+  }
+  .asgform .fld.bad > label { @apply text-bad-deep; }
+
+  .asgbad {
+    @apply text-fine text-bad-deep bg-bad-wash border border-bad/30 rounded-md
+           px-[.9rem] py-[.6rem] mt-[.8rem] leading-[1.5];
+  }
+  .asgbad ul { @apply list-disc pl-[1.1rem] mt-[.3rem] flex flex-col gap-[.15rem]; }
+  .asgact .who .ok { @apply text-live-dark; }
+
   /* ---- Create New Letter, the form their blue button opens --------------
      Photographed 4 Sep 2026. See features/onboard/NewLetter.jsx.
 
@@ -1977,6 +2002,65 @@
     @apply text-left font-semibold text-fine text-ink bg-wash px-[.8rem] py-[.55rem] border-b border-line;
   }
   .letnew .letcf td.none { @apply text-fine text-ink-3 px-[.8rem] py-[.55rem] border-0 italic; }
+
+  /* ---- Edit Letter, theirs, opened by the pencil ----------------------
+     Photographed 7 Sep 2026. Three across at the top — Letter Number and
+     Letter Type as values rather than boxes, Letter Date beside them — then
+     Employee and Reference Number, then Remarks across two, then their Custom
+     Fields table. See features/onboard/EditLetter.jsx.
+
+     Its own grid rather than `.lvform`: theirs is a fixed three columns with
+     the label above each control in sentence case, where `.lvform` fits as
+     many 15rem columns as will go and upper-cases its labels. */
+  .letedit { @apply flex flex-col gap-[1rem]; }
+  .letegrid {
+    @apply grid gap-x-[1.4rem] gap-y-[.9rem];
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  }
+  .letef { @apply flex flex-col gap-[.3rem] min-w-0; }
+  .letef.wide { grid-column: 1 / -1; max-width: 34rem; }
+  .letef > .lab { @apply text-fine font-semibold text-ink; }
+  .letef .wizreq { @apply text-bad font-normal; }
+  /* A field of theirs that is a value and not a control. Set on the line the
+     box would have been on, so the row does not read as a field somebody
+     forgot to draw — the same bargain `.letdash` makes on the new-letter
+     form. */
+  .letef > .val { @apply text-read text-ink leading-[2.25rem]; }
+  .letef > .val.emp { @apply font-mono text-fine; }
+  .letef > .val .muted { @apply text-ink-3 not-italic; }
+  .letef input, .letef textarea {
+    @apply font-body text-read px-[.6rem] py-[.45rem] border border-line-ctl rounded
+           bg-card text-ink w-full;
+  }
+  .letef textarea { @apply resize-y leading-[1.5]; }
+  .letef input:focus, .letef textarea:focus {
+    @apply outline-none border-brand; box-shadow: 0 0 0 3px rgb(var(--brand-soft));
+  }
+  .letef input[disabled], .letef textarea[disabled] { @apply bg-wash text-ink-3; }
+
+  /* Their Custom Fields table, and here it has rows in it: the tokens this
+     letter type's template could not fill from the record. */
+  .letedit .letcf { @apply border border-line rounded overflow-hidden; max-width: 40rem; }
+  .letedit .letcf table { @apply w-full min-w-0 m-0; }
+  .letedit .letcf th {
+    @apply text-left font-semibold text-fine text-ink bg-wash px-[.8rem] py-[.55rem] border-b border-line;
+  }
+  .letedit .letcf td { @apply px-[.8rem] py-[.45rem] border-b border-line align-middle; }
+  .letedit .letcf tr:last-child td { @apply border-b-0; }
+  .letedit .letcf td.none { @apply text-fine text-ink-3 italic border-b-0; }
+  /* The token as the template writes it. Coloured because it is a name from
+     the letter rather than a label somebody chose — the same reading their
+     capture gives it. */
+  .letedit .letcf td.tok { @apply font-mono text-fine text-brand-deep; }
+  .letedit .letcf td.tok.done { @apply text-live-dark; }
+  .letedit .letcf input {
+    @apply font-body text-read px-[.55rem] py-[.35rem] border border-line-ctl rounded
+           bg-card text-ink w-full;
+  }
+  .letedit .letcf input:focus {
+    @apply outline-none border-brand; box-shadow: 0 0 0 3px rgb(var(--brand-soft));
+  }
+  .letedit .cfnote { @apply text-mini text-ink-3 px-[.8rem] py-[.5rem] bg-wash border-t border-line; }
   /* ---- Their layout and their sizes, off the 3 Sep 2026 photograph ------
      Their register is three bands on the page's own grey, not one bordered
      box: the title bar is a card, the table is a second card under it with air
@@ -2647,12 +2731,26 @@
     @apply font-mono text-micro tracking-[.08em] uppercase text-ink-2 font-semibold;
   }
   .asgrid > .fld > label.off { @apply text-ink-3; }
-  .asgform input, .asgform textarea {
+  /* `select` is in here with the rest of them deliberately. Three of these
+     boxes are dropdowns — Asset Status, Asset Type and Assets — and a native
+     select beside a styled input is a control that reads as belonging to a
+     different form. Same border, same height, same type. */
+  .asgform input, .asgform textarea, .asgform select {
     @apply font-body text-read px-[.6rem] py-[.35rem] border border-line-ctl rounded bg-card text-ink
            min-w-0 w-full;
     min-height: 2.1rem;
   }
   .asgform textarea { @apply resize-none leading-[1.4]; }
+  .asgform select:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px rgb(var(--brand-soft)); }
+  /* A greyed dropdown still has to read as a dropdown: on their screen this box
+     has an arrow on it whether or not a handover is being written, and a flat
+     grey box reads as a missing feature rather than as a form waiting for
+     somebody to be picked. */
+  .asgform select:disabled { @apply bg-page text-ink-3 cursor-not-allowed; }
+  /* Asset Type and the way out of an empty one, on a single row. */
+  .asgform .fldrow { @apply flex items-center gap-[.45rem] min-w-0; }
+  .asgform .fldrow > select { @apply flex-1; }
+  .asgform .fldrow > .aflink { @apply shrink-0 text-fine whitespace-nowrap; }
   /* Read-only is not disabled, the same bargain the Assets Details form makes:
      a live box holds a real value somebody may want to copy, and a disabled
      input cannot be selected. Only the boxes with nothing behind them are
