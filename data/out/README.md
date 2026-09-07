@@ -166,4 +166,4 @@ Regenerate with `python tools/build_shift_template.py`.
 | **`default_shift` per employee** | the shifts existing first |
 | **Leave Allocation** | balances from Factor HR, as at a stated date. No leave type has an annual entitlement yet, so nobody has a balance |
 | **Work Location** | GPS coordinates per gate, captured standing at the gate rather than from a map pin |
-| **The bridge** | make, model and IP of each fingerprint machine |
+| **The bridge** | ~~make, model and IP of each fingerprint machine~~ — the first one arrived 7 Sep 2026 and has been read: Identix K90+ID at `192.168.1.40`, ZK protocol, 438 users, 79,250 punches back to Jul 2023. See [../devices/README.md](../devices/README.md). Still waiting on **what to call it** (`device_id` is permanent) and on the other locations' machines |

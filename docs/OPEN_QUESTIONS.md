@@ -80,17 +80,42 @@ It is the same company as **Manna Treads**, and is not created separately. The
 
 ### About the machines — decides whether the biometric leg is a week or a month
 
-- Make and model of every fingerprint machine, per location.
-- Whether each speaks the ZK protocol. ZKTeco, eSSL and most Indian clones do.
+**One of them is answered, as of 7 September 2026.** Manna Rubber Products'
+machine — Identix K90+ID at `192.168.1.40` — has been read end to end: it
+speaks ZK, needs no comm key, reports direction, and is holding 79,250 punches
+back to July 2023. Everything read off it, and what it settles, is in
+[../data/devices/README.md](../data/devices/README.md). So the biometric leg is
+a week *for this location*; the questions below are now about the others.
+
+- Make and model of every **other** fingerprint machine, per location — the
+  same three columns of the client-details table.
+- Whether each speaks the ZK protocol. ZKTeco, eSSL and most Indian clones do,
+  and Identix does, so the odds on the rest are good.
 - IP address, port and comm key for each.
 - Whether each is configured to send a punch direction (IN/OUT) or not.
 - Whether there is an always-on machine at each site, or a VPN reaching them.
+- **What each machine is called.** `device_id` is written onto every punch
+  forever and cannot be renamed without orphaning the ones already posted, so
+  `BIO-MRP-GATE1` has to be decided by somebody who knows which door it is on.
 
 ### About the group
 
+- **Who are the 220 people punching at Manna Rubber Products whom no HR system
+  knows?** Read off the machine on 7 September 2026 and new since this document
+  was written: 308 people punch at that one gate, and only 71 of them reach an
+  employee record. Factor HR's master held 160 active people *group-wide*, so
+  these were never in it either. Contract labour on a separate register, or a
+  workforce nobody has tracked in an HR system at all — the answer changes the
+  headcount, the plan, and what payroll covers. Evidence in
+  [../data/devices/README.md](../data/devices/README.md).
+- **How is a machine user id kept unique across gates?**
+  `Employee.attendance_device_id` is one field with no column saying which
+  machine, and the gates each number their users from 1. Two employees already
+  hold `8` and `08`. This has to be settled before a second machine is bridged.
 - The list of companies, and which are **real employers** rather than trading
   names. An employee belongs to one Company and it follows them into payroll.
-- Total headcount, per company. It decides the Frappe Cloud plan.
+- Total headcount, per company. It decides the Frappe Cloud plan — and see the
+  first question above, which may change it by more than a factor of two.
 - How many people will use the **phone app**. Only they need a `User` record;
   a worker punching on a machine needs none.
 - Whether payroll moves to ERPNext too, or stays in Factor HR for now.
