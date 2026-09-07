@@ -1,0 +1,23 @@
+{
+ "absolute_value": 0,
+ "align_labels_right": 0,
+ "creation": "2026-09-05 00:00:00.000000",
+ "custom_format": 1,
+ "disabled": 0,
+ "doc_type": "Attendance Regularization",
+ "docstatus": 0,
+ "doctype": "Print Format",
+ "font_size": 0,
+ "html": "<div class=\"print-heading\">\n\t<h2>Attendance Correction</h2>\n\t<h4>{{ doc.name }}</h4>\n</div>\n\n<table class=\"table table-bordered\">\n\t<tbody>\n\t\t<tr>\n\t\t\t<td style=\"width:32%\"><b>{{ _(\"Employee\") }}</b></td>\n\t\t\t<td>{{ doc.employee_name or \"\" }} &mdash; {{ doc.employee }}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Company\") }}</b></td>\n\t\t\t<td>{{ doc.company or \"\" }}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Day corrected\") }}</b></td>\n\t\t\t<td>{{ frappe.utils.formatdate(doc.attendance_date) }}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Punch in\") }}</b></td>\n\t\t\t<td>{% if doc.requested_in %}{{ frappe.utils.format_datetime(doc.requested_in) }}{% else %}<i>{{ _(\"not corrected\") }}</i>{% endif %}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Punch out\") }}</b></td>\n\t\t\t<td>{% if doc.requested_out %}{{ frappe.utils.format_datetime(doc.requested_out) }}{% else %}<i>{{ _(\"not corrected\") }}</i>{% endif %}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Reason given\") }}</b></td>\n\t\t\t<td>{{ doc.reason or \"\" }}</td>\n\t\t</tr>\n\t</tbody>\n</table>\n\n<h5>{{ _(\"Decision\") }}</h5>\n<table class=\"table table-bordered\">\n\t<tbody>\n\t\t<tr>\n\t\t\t<td style=\"width:32%\"><b>{{ _(\"Status\") }}</b></td>\n\t\t\t<td><b>{{ _(doc.status) }}</b></td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Routed to\") }}</b></td>\n\t\t\t<td>{{ _(doc.approver_type or \"\") }}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Decided by\") }}</b></td>\n\t\t\t<td>{{ doc.decided_by or \"\" }}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Decided on\") }}</b></td>\n\t\t\t<td>{% if doc.decided_on %}{{ frappe.utils.format_datetime(doc.decided_on) }}{% endif %}</td>\n\t\t</tr>\n\t\t<tr>\n\t\t\t<td><b>{{ _(\"Note\") }}</b></td>\n\t\t\t<td>{{ doc.decision_note or \"\" }}</td>\n\t\t</tr>\n\t</tbody>\n</table>\n\n{% if doc.status == \"Approved\" %}\n\t<p class=\"text-muted small\">\n\t\t{{ _(\"Approved means the missing punches were recorded. The day is rebuilt from them by the shift job, and this becomes Completed once it has.\") }}\n\t</p>\n{% elif doc.status == \"Completed\" %}\n\t<p class=\"text-muted small\">\n\t\t{{ _(\"The punches were recorded and the day has been rebuilt from them.\") }}\n\t</p>\n{% endif %}\n\n<p class=\"text-muted small\">\n\t{{ _(\"This correction changes attendance, which decides pay. Printed\") }}\n\t{{ frappe.utils.format_datetime(frappe.utils.now()) }}.\n</p>\n",
+ "idx": 0,
+ "line_breaks": 0,
+ "modified": "2026-09-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Attendance Regularization Decision",
+ "owner": "Administrator",
+ "print_format_builder": 0,
+ "print_format_type": "Jinja",
+ "show_section_headings": 0,
+ "standard": "Yes"
+}

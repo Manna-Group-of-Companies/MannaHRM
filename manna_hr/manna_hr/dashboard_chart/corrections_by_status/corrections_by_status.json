@@ -1,0 +1,23 @@
+{
+ "creation": "2026-09-05 00:00:00.000000",
+ "modified": "2026-09-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "owner": "Administrator",
+ "docstatus": 0,
+ "idx": 0,
+ "module": "Manna HR",
+ "is_standard": 1,
+ "doctype": "Dashboard Chart",
+ "name": "Corrections By Status",
+ "chart_name": "Corrections By Status",
+ "chart_type": "Group By",
+ "document_type": "Attendance Regularization",
+ "group_by_type": "Count",
+ "group_by_based_on": "status",
+ "filters_json": "[]",
+ "dynamic_filters_json": "[]",
+ "type": "Donut",
+ "timeseries": 0,
+ "is_public": 1,
+ "number_of_groups": 0
+}

@@ -38,7 +38,11 @@ exists — a private bench is not a preference here.
 | Path | What |
 |---|---|
 | `manna_hr/` | The Frappe app. Installed onto the site. |
+| `client/` | The React HR dashboard. **ERPNext is its server** — see `client/README.md` |
 | `manna_hr/rules.py` | Pure rules — no `frappe` import. Testable without a bench. |
+| `manna_hr/permissions.py` | Who sees whose corrections and letters. The row-level half of the security model |
+| `manna_hr/workflow.py` | The approval workflow, as data. Installed from code, not a fixture |
+| `manna_hr/letters.py` | The letter merge, ported from `client/src/lib/letter.js` |
 | `manna_hr/geo.py` | Distance arithmetic, ported from the sales app's `proximity.dart` |
 | `manna_hr/checkin.py` | The punch validation. The backstop. |
 | `bridge/` | The on-premise agent that reads the fingerprint machines |
@@ -59,12 +63,34 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ## 3. Tests
 
 ```bash
-python -m pytest manna_hr/tests -q        # 17 tests, no bench needed
+python -m pytest manna_hr/tests -q        # 76 tests, no bench needed
+cd client && npm test                     # 569 tests, jsdom
+cd client && npm run contrast             # the palette, every pairing, AA
+cd client && npm run shots                # the app in a real browser, photographed
 ```
 
-They cover `rules.py` and `geo.py` only, and that is the point: anything that
-can be a pure function should be one, so the rule can be argued about without a
-site. Anything needing `frappe` gets a bench test later.
+The Python ones cover `rules.py`, `geo.py`, the approval workflow's tables, the
+permission rule and the letter merge,
+and that is the point: anything that can be a pure function or a pure value
+should be one, so the rule can be argued about without a site. `workflow.py`
+keeps its `import frappe` inside the two functions that touch a site for exactly
+this reason. Anything needing a live `frappe` gets a bench test later.
+
+The client's cover every page rendering twice — empty and against a small site
+with gaps in it — the URL grammar round-tripping for every address, the chrome
+(the rail, the header, and the two preferences that outlive a tab), the
+dashboard's arithmetic, and that every input box on every screen actually
+accepts typing. That last one exists
+because a controlled React input with no working `onChange` looks live, takes
+the caret, and silently discards every keystroke; nobody reports it as a bug,
+they report that the form did not save.
+
+`npm run shots` is the one that needs a browser: it renders every module signed
+in, against a stubbed site, at three widths, and fails if a page throws, the
+document scrolls sideways, or the palette resolves to something other than
+itself. jsdom has no layout engine, so a rail overlapping the page and a token
+overridden by a stray rule both pass `npm test` and are obvious the moment
+somebody looks.
 
 **Tests state the rule in their name.** `test_a_punch_beats_an_approved_leave_record`,
 not `test_status_1`. When one fails at midnight, the name is what tells the
@@ -114,6 +140,17 @@ last copy of a punch that failed to deliver.
 mobile punch** — geofenced, and refused, because no fingerprint machine sends a
 coordinate. Renaming a device in `bridge/config.toml` breaks its punches.
 
+**A permission that only filters lists is not a permission.** Frappe asks twice
+— `permission_query_conditions` for a list and `has_permission` for one document
+— and a doctype with only the first has a list that hides a row and a URL that
+still opens it, which reads as private and is not. Both are in
+`manna_hr/permissions.py`; add both or neither.
+
+**An empty permission condition means *everybody*, not nobody.** Frappe reads
+`""` as "no restriction". So the difference between a reader who sees nothing
+and one who sees the whole group is one falsy check — which is why
+`sql_condition` returns `"1 = 0"` and why there is a test named after it.
+
 **Frappe replaces rather than merges permissions.** The moment one
 `Custom DocPerm` row exists for a doctype, the standard rows stop applying. If
 you add one, copy all the standard rows across in the same transaction.
@@ -156,8 +193,11 @@ existing `Attendance Log` history should be migrated is still open.
 
 - **Nothing has been applied to the live site.** Everything here is a scaffold.
 - **No bench tests.** Only the pure rules are covered.
-- **No phone app and no dashboard yet.** The dashboard is mostly a repoint of
-  `SALES_DASHBOARD/client/src/features/hr/`.
+- **No phone app.** The dashboard is in `client/` and runs against the live
+  site; it reads almost everything and writes very little — see its README.
+- **Where the dashboard is served in production is undecided.** It routes on the
+  path, so whatever serves it must answer every unmatched path with
+  `index.html`. `npm run dev` proxies to the site; nothing else is set up.
 - **Device clock drift is not handled.** These machines drift by minutes a
   month, and a gate running eight minutes fast makes everybody there late.
 - **Leave, payroll and shift rosters are untouched** — attendance first.

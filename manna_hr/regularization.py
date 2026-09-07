@@ -16,9 +16,16 @@ import frappe
 from frappe import _
 from frappe.utils import get_datetime, getdate, now_datetime
 
-STATUS_PENDING = "Pending Approval"
-STATUS_APPROVED = "Approved"
-STATUS_REJECTED = "Rejected"
+# The workflow owns these — manna_hr/workflow.py is where the transitions
+# between them are, and this module imports the names rather than restating
+# them so the two cannot drift into disagreeing about a spelling.
+from manna_hr.workflow import (  # noqa: E402  (kept beside the constants it re-exports)
+	STATUS_APPROVED,
+	STATUS_COMPLETED,
+	STATUS_DRAFT,
+	STATUS_PENDING,
+	STATUS_REJECTED,
+)
 
 
 def on_update(doc, method=None):
@@ -127,3 +134,73 @@ def approver_type_for(employee):
 	"""
 	reports_to = frappe.db.get_value("Employee", employee, "reports_to")
 	return "Reporting Manager" if reports_to else "HR"
+
+
+# --------------------------------------------------------------- completion ---
+
+
+def complete_applied():
+	"""Move approved corrections to `Completed` once the day has been rebuilt.
+
+	**Approving does not fix the day, and this is the job that notices when it
+	finally is.** `apply` writes the missing `Employee Checkin` rows and cancels
+	whatever `Attendance` the shift job had already generated; the day is not
+	actually corrected until that job next runs and builds a new row from the
+	punches. Between the two, the request says Approved and the report still
+	says Absent — which is the gap that produces "I approved that on Tuesday,
+	why is he still down as absent?", and it is the reason `Completed` is a
+	state rather than a synonym for Approved.
+
+	So: a submitted `Attendance` row exists for that person and day, created
+	after the decision. The `creation` test is what stops this passing on the
+	very row `apply` cancelled — a cancelled document keeps its name and its
+	creation time, and `docstatus` is the only thing that distinguishes it.
+
+	Scheduled hourly rather than every ten minutes. The shift job it is waiting
+	on is itself scheduled, so a tighter loop only spends the site's daily
+	compute allowance re-asking a question whose answer cannot have changed —
+	see docs/OPEN_QUESTIONS.md §0.
+	"""
+	pending = frappe.get_all(
+		"Attendance Regularization",
+		filters={"status": STATUS_APPROVED},
+		fields=["name", "employee", "attendance_date", "decided_on"],
+	)
+
+	done = 0
+	for row in pending:
+		if not _day_rebuilt(row):
+			continue
+		# `db_set` rather than a workflow action: this is a system transition
+		# with no person behind it, so there is nobody for `allow_self_approval`
+		# or a role check to be about. The workflow still offers HR Manager the
+		# same move by hand, for when this job has not run.
+		frappe.db.set_value("Attendance Regularization", row.name, "status", STATUS_COMPLETED)
+		done += 1
+
+	if done:
+		frappe.db.commit()
+	return done
+
+
+def _day_rebuilt(row):
+	"""Is there a live `Attendance` for this day, made after the decision?"""
+	if not row.get("decided_on"):
+		# Decided before this field was being written, or set by hand. The
+		# honest answer is "cannot tell", and leaving it Approved is the safe
+		# way to be wrong: a record that should say Completed and says Approved
+		# is a cosmetic fault, and the other way round is a report claiming a
+		# day was fixed when it was not.
+		return False
+
+	return bool(
+		frappe.db.exists(
+			"Attendance",
+			{
+				"employee": row.employee,
+				"attendance_date": getdate(row.attendance_date),
+				"docstatus": 1,
+				"creation": (">", row.decided_on),
+			},
+		)
+	)

@@ -1,1 +1,2 @@
 # Each line is a patch. Format: manna_hr.patches.<name>
+manna_hr.patches.install_regularization_workflow

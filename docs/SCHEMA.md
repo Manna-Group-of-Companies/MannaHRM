@@ -90,7 +90,7 @@ widened to any employee.
 | `requested_in` | Datetime | Either may be blank — a missed punch-out is the common case |
 | `requested_out` | Datetime | |
 | `reason` | Small Text | Required |
-| `status` | Select | `Pending Approval` / `Approved` / `Rejected` |
+| `status` | Select | `Draft` / `Pending Approval` / `Approved` / `Rejected` / `Completed` — driven by a Workflow, see below |
 | `approver_type` | Select | `Reporting Manager` / `HR` |
 | `decided_by` | Link to User | |
 | `decided_on` | Datetime | |
@@ -105,6 +105,84 @@ punch that was missing now exists, and says who put it there.
 manager's to decide and a manager's own correction goes to HR — an approver must
 not sign off their own attendance. Same rule here, resolved from
 `Employee.reports_to`.
+
+#### The approval workflow
+
+`manna_hr/workflow.py` — installed from `after_install` and re-applied by
+`manna_hr.patches.install_regularization_workflow` on every `bench migrate`.
+Not a fixture: fixture files import in filesystem order, and a Workflow whose
+transitions link to a Role that does not exist yet fails on a broken link rather
+than on the missing role.
+
+```
+  Draft ──Submit──► Pending Approval ──Approve──► Approved ──► Completed
+    ▲                    │      │                              (scheduled)
+    └────Withdraw────────┘      └──Reject──► Rejected ──Reopen──┐
+                                                    └───────────┘
+```
+
+| | |
+|---|---|
+| **Draft** | With the person writing it. New — `status` used to default to `Pending Approval`, so a half-typed correction landed in an approver's queue the moment it was saved |
+| **Pending Approval** | In the queue the dashboard reads (`status = "Pending Approval"`) |
+| **Approved** | Decided. `on_update` has written the missing `Employee Checkin` rows |
+| **Rejected** | Decided no, with a note shown back. Reopenable by `HR Manager` — a rejection is somebody's pay and must not be final because an approver misread the date |
+| **Completed** | The shift job has rebuilt `Attendance` from those punches. Set by `regularization.complete_applied`, hourly |
+
+**`Approved` is not `Completed`, and the gap is why both exist.** Approving
+writes punches; the day is not corrected until the shift job next runs. Between
+the two the request says Approved and the report still says Absent, which is
+exactly the argument the two states exist to end.
+
+**Routing is enforced by the workflow, not merely recorded.** A
+`Manna Attendance Approver` may only decide requests where
+`approver_type == "Reporting Manager"`; an `HR User` only where it is `"HR"`.
+`HR Manager` carries no condition — routing is data and data gets edited, and a
+workflow with no way out of a badly routed request is one people work around by
+editing the table. Every deciding transition has `allow_self_approval` off,
+which is Frappe's guard against approving a request you raised;
+`_guard_self_approval` stays as well and catches the other case — a request
+raised *about* the approver by somebody else.
+
+### `Letter Type`
+
+Factor HR's letter formats. ERPNext has no letter master at all — its
+`Letter Head` is stationery, not a document type.
+
+| Fieldname | Type | Notes |
+|---|---|---|
+| `letter_type_name` | Data | The name, and the id. Renames are off — every letter issued names it by this string |
+| `category` | Data | Onboarding / Exit / Statutory. Free text: the list is theirs and is still being read off their screens |
+| `is_active` | Check | Retire rather than delete. A letter whose type has vanished is a letter nobody can explain |
+| `body` | Text Editor | The template, with `{Tokens}` where a value goes |
+| `fields_used` | Small Text | Read-only, worked out from `body` on save. A fact about the text, not a second place to state one |
+
+### `Employee Letter`
+
+One issued letter.
+
+| Fieldname | Type | Notes |
+|---|---|---|
+| `employee` | Link to Employee | |
+| `letter_type` | Link to Letter Type | |
+| `letter_date` | Date | |
+| `letter_number` | Int | Their running number — what is on the paper and what somebody quotes back |
+| `reference_number` | Data | |
+| `body` | Text Editor | **The merged text, as it went out** |
+| `remarks` | Small Text | Ours, not theirs |
+
+**`body` is a snapshot, not a view.** It is merged and stored by
+`before_insert` (`manna_hr/letters.py`), and never re-merged when the letter is
+opened. Bulk generation used to store nothing and re-render from the template
+every time, which meant a letter issued in March said something different in
+June if the person's designation had changed. An issued letter is a statement
+somebody was given on a date.
+
+`manna_hr/letters.py` is a port of `client/src/lib/letter.js` and the two have
+to agree — the browser renders the preview, the server stores what was issued,
+and a token that resolves in one and not the other is a letter somebody rings up
+about. The grammar, the key and the `[[Token]]` miss are covered in
+`tests/test_letters.py`.
 
 ---
 
@@ -176,3 +254,24 @@ Decide this per device, once, and write down which it is.
 permission and every HR list narrows automatically. An `HR User` with no Company
 permission sees everything — the default is open, so an omission is a leak
 rather than a lockout, and it will not announce itself.
+
+### Row-level scoping — `manna_hr/permissions.py`
+
+The table above described `Manna Attendance Approver` as seeing "their reports
+only" for some time before anything enforced it. The role had `read` and `write`
+on `Attendance Regularization` and nothing narrowing which rows, so a supervisor
+at one company could list and decide every correction in the group. Closed by
+`permission_query_conditions` and `has_permission` — **both**, because Frappe
+asks the question twice and a system with only the first has a list that hides a
+row and a URL that still opens it.
+
+| Doctype | Who sees what |
+|---|---|
+| `Attendance Regularization` | HR sees all. An approver sees their direct reports and themselves. Everybody else sees their own |
+| `Employee Letter` | HR sees all. Everybody else sees their own — **an approver does not see their reports' letters**, because a letter can carry a salary or a reason for leaving and signing off somebody's attendance does not make those yours to read |
+
+**This is the one place in the app that rounds towards refusing.** Everywhere
+else a doubtful case is let through, because refusing somebody who did turn up
+costs them a day's pay (CLAUDE.md §4). Here a reader the module cannot place
+sees nothing, because a row wrongly hidden costs somebody a phone call and a row
+wrongly shown cannot be taken back.

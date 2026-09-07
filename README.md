@@ -10,6 +10,7 @@ one attendance record per person per day.
 | Directory | What it is |
 |---|---|
 | `manna_hr/` | The Frappe custom app — server-side rules. This is the backstop. |
+| `client/` | The React HR dashboard. Talks to the ERPNext site, as the signed-in user |
 | `bridge/` | The on-premise agent that pulls fingerprint punches off the machines |
 | `shared/fixtures/` | Rule cases both the server and any client must agree on |
 | `docs/` | Setup runbook, schema, migration, and what Factor HR does today |

@@ -7,6 +7,9 @@ between benches will run it again. Nothing here may assume it is the first time.
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+from manna_hr.notifications import ensure_notifications
+from manna_hr.workflow import ensure_workflow
+
 CUSTOM_FIELDS = {
 	"Employee": [
 		{
@@ -39,6 +42,90 @@ CUSTOM_FIELDS = {
 			"unique": 1,
 			"read_only": 1,
 			"description": "The id this person had in Factor HR. Kept for reconciliation during changeover.",
+		},
+	],
+	# hrms ships `Employee Onboarding` and this is **not** a second copy of it.
+	# Theirs is a checklist wrapper round a Job Applicant; what the dashboard's
+	# Import From Onboarding needs is the candidate's own details, so that
+	# pulling somebody can create an `Employee` without retyping a joining date
+	# that has already been agreed. Adding a doctype of the same name would
+	# break their onboarding outright; these are Custom Fields on theirs.
+	#
+	# **The `custom_` prefix is Frappe's rule, not a choice.** A field added to
+	# a doctype somebody else ships has to carry it, or the next version of that
+	# app can collide with it. The dashboard's screens have never known about
+	# the prefix and still do not — `loadCandidates` in client/src/api/load.js
+	# strips it on the way into the store, so the store keeps this app's
+	# vocabulary and the site keeps Frappe's.
+	"Employee Onboarding": [
+		{
+			"fieldname": "custom_candidate_section",
+			"label": "Candidate",
+			"fieldtype": "Section Break",
+			"insert_after": "employee_name",
+			"collapsible": 0,
+		},
+		{
+			"fieldname": "custom_salutation",
+			"label": "Salutation",
+			"fieldtype": "Link",
+			"options": "Salutation",
+			"insert_after": "custom_candidate_section",
+		},
+		{
+			"fieldname": "custom_first_name",
+			"label": "First Name",
+			"fieldtype": "Data",
+			"insert_after": "custom_salutation",
+			# `Employee.employee_name` is derived from the three name parts on
+			# validate, so a candidate carrying only a whole name produces an
+			# employee whose name has to be split by guesswork. Collected here
+			# instead, where somebody knows the answer.
+			"description": "Split out, because Employee derives its name from the parts rather than the whole.",
+		},
+		{
+			"fieldname": "custom_last_name",
+			"label": "Last Name",
+			"fieldtype": "Data",
+			"insert_after": "custom_first_name",
+		},
+		{
+			"fieldname": "custom_employee_number",
+			"label": "Employee Number",
+			"fieldtype": "Data",
+			"insert_after": "custom_last_name",
+			"description": "The machine code they will punch on. Agreed before they join, not after.",
+		},
+		{
+			"fieldname": "custom_employee_code_series",
+			"label": "Employee Code Series",
+			"fieldtype": "Data",
+			"insert_after": "custom_employee_number",
+		},
+		{
+			"fieldname": "custom_column_break_candidate",
+			"fieldtype": "Column Break",
+			"insert_after": "custom_employee_code_series",
+		},
+		{
+			"fieldname": "custom_date_of_birth",
+			"label": "Date Of Birth",
+			"fieldtype": "Date",
+			"insert_after": "custom_column_break_candidate",
+		},
+		{
+			"fieldname": "custom_cell_number",
+			"label": "Mobile",
+			"fieldtype": "Data",
+			"options": "Phone",
+			"insert_after": "custom_date_of_birth",
+		},
+		{
+			"fieldname": "custom_personal_email",
+			"label": "Personal Email",
+			"fieldtype": "Data",
+			"options": "Email",
+			"insert_after": "custom_cell_number",
 		},
 	],
 	"Employee Checkin": [
@@ -83,7 +170,11 @@ ROLES = [
 
 def after_install():
 	create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
+	# Before the workflow: its transitions hold a Link to `Role`, so installing
+	# it first fails on a link rather than on the role nobody created.
 	_create_roles()
+	ensure_workflow()
+	ensure_notifications()
 	_seed_settings()
 	frappe.db.commit()
 

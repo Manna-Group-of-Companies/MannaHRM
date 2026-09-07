@@ -68,16 +68,20 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Date",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
-   "default": "Pending Approval",
+   "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Pending Approval\nApproved\nRejected"
+   "options": "Draft\nPending Approval\nApproved\nRejected\nCompleted",
+   "description": "Driven by the Attendance Regularization Approval workflow — see manna_hr/workflow.py. Approved means the punches were written; Completed means the day was rebuilt from them.",
+   "in_preview": 1,
+   "search_index": 1
   },
   {
    "description": "A person's correction is their manager's to decide. A manager's own goes to HR, because an approver signing off their own attendance is not an approval.",
@@ -120,7 +124,7 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval:doc.status != 'Pending Approval'",
+   "depends_on": "eval:['Approved','Rejected','Completed'].includes(doc.status)",
    "fieldname": "section_decision",
    "fieldtype": "Section Break",
    "label": "Decision"
@@ -187,5 +191,9 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "track_changes": 1,
+ "title_field": "employee_name",
+ "show_title_field_in_link": 1,
+ "search_fields": "employee,employee_name,attendance_date,status",
+ "default_sort_field": "modified"
 }
