@@ -104,6 +104,39 @@ dashboard would take the long branch, get a column of blanks, and draw a Salary
 Master where every pay figure is empty, which is indistinguishable on screen
 from a site where nobody has been paid.
 
+**Employee Profile edits the record here now.** Every pencil on that page used
+to be a link to `…/app/employee/HR-EMP-…`, which answered "where do I change
+this" with "somewhere else" and left whoever followed it reading a Frappe form
+laid out nothing like the pane they had been looking at. It opens the boxes on
+the page instead. Four things follow, and each is in
+`lib/profedit.js` where it can be argued about without a browser.
+
+*One record, one Save.* The thirteen panes are one document, so the draft spans
+all of them and the bar above the pane carries a count — a change made on Salary
+is still pending while somebody is looking at Personal Details, and the count is
+the only thing on screen that says so. A Save per card would be thirteen writes
+to one record and thirteen chances for the ninth to be refused.
+
+*The write is a patch and never the document.* `patchFrom` reduces it to the
+fields that differ. A document sent back whole re-sends every column the read
+returned — including ones this reader may not write, so a corrected phone number
+is refused over a salary field nobody touched; and values that were current when
+the page loaded, so the second of two people saving quietly undoes the first
+everywhere they did not type.
+
+*A field the site has no column for gets no box at all.* This is what the
+screen's "not set" / "no such field here" distinction was always for: Frappe
+accepts a key its doctype has not got and drops it without a word, so a box for
+one would take a value, save, report success, and be gone on reload.
+
+*Nothing here is enforcement.* The write is made as the signed-in person under
+their own roles, so what may be changed is what the site says — a refusal
+arrives from there and is printed in its own words, because "a Link that names
+nothing" and "you may not write this record" are different things to do next.
+The record is then read back rather than patched locally: the site names the
+document, composes `employee_name` from the three name parts, resolves the
+fetch-froms, and normalises what it was sent.
+
 **One write on this dashboard changes the site's schema, and it is + Add on
 Employees → Categories.** A Factor HR *Category Type* is a Frappe `Custom Field`
 on Employee under another name — the mapping is at the top of

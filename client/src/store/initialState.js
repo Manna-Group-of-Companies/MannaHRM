@@ -125,6 +125,20 @@ const initial = {
 	/** Which of the sidebar's caret groups are open. Empty is Factor HR's own
 	    resting state — Personal Details is shut until somebody opens it. */
 	profopen: [],
+	/** Whether the profile is being edited. One flag for the whole record, not
+	    one per pane: the thirteen panes are one document, and a draft that
+	    emptied itself every time somebody looked at another pane would lose an
+	    edit to a click that reads as navigation. */
+	profedit: false,
+	/** Fieldname → what was typed, for the fields that differ from the record.
+	    A box typed back to what the site says drops out of here again, so the
+	    count on the bar is what Save would actually write. */
+	profdraft: {},
+	/** What the last save said. The site's own words on a refusal — a Link that
+	    names nothing, a permission — because those are the half of a failure
+	    somebody can act on. */
+	profmsg: "",
+	profsaving: false,
 
 	/* The calendar screen's own state: which month, which holiday list, which
 	   days have been expanded past "+ N more…", and the search box Factor HR

@@ -7,6 +7,10 @@ import { clock, dmy, filled, fmt, initials, tidyDept } from "@/lib/format";
 import { Fragment, useEffect, useState } from "react";
 
 import { Desk, Empty, Html, Scroll } from "@/components/ui";
+import { saveEmployee } from "@/api/employee";
+import {
+	CHOICES, LINK_LISTS, boxValue, changedCount, controlFor, patchFrom, whyNotEditable, withEdit,
+} from "@/lib/profedit";
 import { deskUrl } from "@/lib/desk";
 import People from "@/components/People";
 import { DATE_FIELD } from "@/data/employees";
@@ -54,10 +58,20 @@ function say(key, v) {
 	return String(v);
 }
 
-function Field({ doc, row, nulls }) {
+function Field({ doc, row, nulls, edit }) {
 	const [label, field, why] = row;
 	const got = pick(doc, field);
 	const long = got.key && PROFILE_LONG.has(got.key);
+
+	/* In edit mode a field is either a box or the same read-only line it always
+	   was, with the reason on it. **A field the site has no column for never
+	   gets a box**, and that is the whole reason this screen tells "not set"
+	   from "no such field here": Frappe accepts a key its doctype does not have
+	   and drops it, so the box would look saved and be gone on reload. */
+	if (edit) {
+		const kind = controlFor(got.key, got.how);
+		if (kind) return <EditField doc={doc} label={label} why={why} field={got.key} kind={kind} edit={edit} />;
+	}
 
 	/* Three states, and telling the last two apart is the point of the screen.
 	   *Not set* is the migration's finding — it loaded the master and not the
@@ -78,10 +92,103 @@ function Field({ doc, row, nulls }) {
 		hint = why || "ERPNext's Employee has no field by this name.";
 	}
 
+	/* Why there is no box here, for somebody looking for one.
+
+	   Only where the row does not already say it. "no such field here" is its
+	   own explanation and three of them in a header is three paragraphs saying
+	   the same thing — so `absent` keeps its line and carries the rest in the
+	   tooltip. What is written out is the case nothing on the row explains:
+	   a field that exists, holds a value, and still cannot be typed. */
+	const locked = edit ? whyNotEditable(got.key, got.how) : "";
+	const sayLocked = locked && got.how !== "absent";
+
 	return (
-		<div className={"profield" + (long ? " long" : "")}>
+		<div className={"profield" + (long ? " long" : "") + (locked ? " locked" : "")}>
 			<span className="k">{label}</span>
-			<span className={cls} title={hint}>{text}</span>
+			<span className={cls} title={locked || hint}>{text}</span>
+			{sayLocked && <span className="lockwhy">{locked}</span>}
+		</div>
+	);
+}
+
+/** One field as a box.
+
+    Built on `.lvf`, the form field the rest of the app uses, so a profile in
+    edit mode looks like Apply Leave rather than like a second design. The
+    marker beside the label is the only addition: thirteen panes are one
+    document and one Save, so a change made two panes ago has to be findable
+    without remembering where it was made. */
+function EditField({ doc, label, why, field, kind, edit }) {
+	const { draft, lists, onSet } = edit;
+	const changed = field in draft;
+	const value = changed ? draft[field] : boxValue(doc, field, kind);
+	const id = "pe-" + field;
+	const put = (v) => onSet(field, v);
+	const box = { id, value, onChange: (e) => put(e.target.value) };
+
+	let control;
+	if (kind === "check") {
+		control = (
+			<label className="onoff">
+				<input id={id} type="checkbox" checked={!!Number(value)}
+					onChange={(e) => put(e.target.checked ? 1 : 0)} />
+				<span>{Number(value) ? "Yes" : "No"}</span>
+			</label>
+		);
+	} else if (kind === "long") {
+		control = <textarea rows={3} {...box} />;
+	} else if (kind === "date") {
+		control = <input type="date" {...box} />;
+	} else if (kind === "number") {
+		control = <input type="number" {...box} />;
+	} else if (kind === "choice") {
+		control = (
+			<select {...box}>
+				{CHOICES[field].map((o) => <option key={o} value={o}>{o || "—"}</option>)}
+			</select>
+		);
+	} else if (kind === "employee") {
+		/* A real select, because the value is a record id and the screen shows a
+		   name. A box that took the name would post the name. */
+		control = (
+			<select {...box}>
+				<option value="">— nobody —</option>
+				{lists.employees.map((e) => (
+					<option key={e.name} value={e.name}>{e.employee_name || e.name}</option>
+				))}
+			</select>
+		);
+	} else if (kind === "link") {
+		/* A datalist and not a select: the list this dashboard holds is what one
+		   read returned, and a select built from it could not express a
+		   department that read did not include. The site refuses a Link that
+		   names nothing, which is where that belongs. */
+		const listId = "pel-" + field;
+		return (
+			<div className={"lvf pefield" + (changed ? " changed" : "")}>
+				<label className="lab" htmlFor={id}>
+					{label}{changed && <i className="dot" title="Changed, not yet saved" />}
+				</label>
+				<div className="ctl">
+					<input type="text" list={listId} {...box} />
+					<datalist id={listId}>
+						{(lists[LINK_LISTS[field]] || []).map((o) => <option key={o.name} value={o.name} />)}
+					</datalist>
+				</div>
+				<span className="hint">{why || <span className="fn">{field}</span>}</span>
+			</div>
+		);
+	} else {
+		control = <input type="text" {...box} />;
+	}
+
+	return (
+		<div className={"lvf pefield" + (PROFILE_LONG.has(field) ? " wide" : "") + (changed ? " changed" : "")}>
+			<label className="lab" htmlFor={id}>
+				{label}{changed && <i className="dot" title="Changed, not yet saved" />}
+			</label>
+			<div className="ctl">{control}</div>
+			<span className="hint">{why || <span className="fn">{field}</span>}</span>
 		</div>
 	);
 }
@@ -105,29 +212,69 @@ function Tab({ t, tab, child, assets }) {
 
 /** A pane's card: the heading Factor HR puts there, and its two icons.
 
-    `edit` is the record on the site, passed down rather than rebuilt per card:
-    every pencil on this page opens the same document, because the site puts all
-    thirteen panes on one form and a deep link per pane would break the first
-    time somebody rearranged it. */
-function Card({ title, children, onRefresh, edit }) {
+    **The pencil edits here now.** It used to open the record on the desk in
+    another tab, which answered "where do I change this" with "somewhere else" —
+    and left whoever followed it reading a Frappe form laid out nothing like the
+    pane they were looking at. It opens the boxes on this page instead.
+
+    One pencil, one edit mode, one Save. The thirteen panes are one document, so
+    a pencil per card that saved only its own card would be thirteen writes to
+    one record and thirteen chances for one of them to be refused halfway.
+
+    `deskHref` is the record on the site, still — the ✎ on the photograph and
+    History both go there, because a photograph is a crop-and-file form the site
+    already has and the timeline is a doctype nothing here reads. */
+function Card({ title, children, onRefresh, editing, onEdit, deskHref }) {
 	return (
-		<section className="procard">
+		<section className={"procard" + (editing ? " editing" : "")}>
 			<header>
 				<h3>{title}</h3>
 				<span className="proico">
-					{/* People are edited on the site, so the pencil goes there. */}
-					<Desk className="" href={edit} label="Edit on the site"
-						title="Edit this record on the ERPNext site — see app/README.md.">
-						✎
-					</Desk>
+					{!editing && (
+						<button title="Edit this record" aria-label="Edit this record" onClick={onEdit}>
+							✎
+						</button>
+					)}
 					<button title="Read this record from the site again" aria-label="Reload this record"
-						onClick={onRefresh}>
+						onClick={onRefresh} disabled={editing}>
 						↻
 					</button>
+					<Desk className="" href={deskHref} label="Open on the site"
+						title="Open this record on the ERPNext site — the whole form, including what this page does not draw.">
+						↗
+					</Desk>
 				</span>
 			</header>
 			<div className="probody">{children}</div>
 		</section>
+	);
+}
+
+/** The bar above the pane while the record is being edited.
+
+    Sticky, and it carries the count rather than a bare Save, because the count
+    is the only thing that says a change made on another pane is still waiting.
+    Somebody who edits Bank on the Salary pane, wanders to Personal Details and
+    presses Save should not be surprised by what goes. */
+function EditBar({ n, saving, msg, onSave, onCancel }) {
+	return (
+		<div className="probar" role="region" aria-label="Editing this record">
+			<b>Editing</b>
+			<span className={"pecount" + (n ? " hot" : "")}>
+				{n ? `${n} field${n === 1 ? "" : "s"} changed` : "nothing changed yet"}
+			</span>
+			{/* Said here rather than only in a tooltip: the write is made as the
+			    signed-in person, so what may be changed is what their roles say
+			    and a refusal will name the field. CLAUDE.md §1. */}
+			<span className="pewho">Saved to the site as you, on the site’s clock.</span>
+			<span className="right">
+				<button className="embtn" onClick={onCancel} disabled={saving}>Cancel</button>
+				<button className="embtn pri" onClick={onSave} disabled={saving || !n}>
+					{saving ? "Saving…" : "Save"}
+				</button>
+			</span>
+			{msg && <div className={"pemsg" + (msg.ok ? " ok" : " bad")}>{msg.text}</div>}
+		</div>
 	);
 }
 
@@ -421,7 +568,7 @@ function AssetsPane({ s, emp }) {
 	);
 }
 
-function Header({ doc, onRefresh, edit }) {
+function Header({ doc, onRefresh, deskHref, editing, edit, onEdit }) {
 	const nulls = keepsNulls(doc);
 	const on = doc.status === "Active";
 	const chip = (row) => {
@@ -437,7 +584,7 @@ function Header({ doc, onRefresh, edit }) {
 				    crop, a size and a default beside it — which is a form, and the
 				    site already has that form. So the ✎ opens it there rather than
 				    growing a second one here. */}
-				<Desk className="pen" href={edit} label="Add a photograph"
+				<Desk className="pen" href={deskHref} label="Add a photograph"
 					title="Attach a photograph on the ERPNext site, where the form that crops and files one already exists.">
 					✎
 				</Desk>
@@ -454,10 +601,16 @@ function Header({ doc, onRefresh, edit }) {
 							aria-label="Reload this record" onClick={onRefresh}>↻</button>
 						<button className="embtn" title="Print this profile" aria-label="Print"
 							onClick={() => window.print()}>🖨</button>
+						{/* The same edit mode the pencils open, reachable from the top —
+						    somebody who came here to change a phone number should not
+						    have to find the card it is on first. */}
+						{!editing && (
+							<button className="embtn" title="Edit this record" onClick={onEdit}>✎ Edit</button>
+						)}
 						{/* Who changed what lives on the Version doctype, which nothing
 						    here reads — but it is also the timeline at the foot of the
 						    record on the site, which is where this goes. */}
-						<Desk href={edit} title="Who changed what, on the ERPNext site — the timeline at the foot of the record, which nothing here reads.">
+						<Desk href={deskHref} title="Who changed what, on the ERPNext site — the timeline at the foot of the record, which nothing here reads.">
 							History
 						</Desk>
 					</span>
@@ -487,9 +640,9 @@ function Header({ doc, onRefresh, edit }) {
 					<span className={"prochip" + (doc.branch ? "" : " off")}>{doc.branch || "—"}</span>
 				</div>
 
-				<div className="prokeys">
+				<div className={"prokeys" + (editing ? " lvform" : "")}>
 					{PROFILE_HEAD.map((row) => (
-						<Field doc={doc} row={row} nulls={nulls} key={row[0]} />
+						<Field doc={doc} row={row} nulls={nulls} edit={edit} key={row[0]} />
 					))}
 				</div>
 			</div>
@@ -512,6 +665,49 @@ export default function EmployeeProfile() {
 	const refresh = () => {
 		if (picked) forgetEmployeeDoc(picked);
 	};
+
+	/* Leaving the record leaves the edit. A draft belongs to one document, and
+	   carrying it to the next person would put somebody's typing on somebody
+	   else's record — which is the one mistake on this page nothing downstream
+	   would catch, because both values are legal. */
+	useEffect(() => {
+		set({ profedit: false, profdraft: {}, profmsg: "", profsaving: false });
+	}, [picked]);
+
+	const startEdit = () => set({ profedit: true, profdraft: {}, profmsg: "" });
+	const cancelEdit = () => set({ profedit: false, profdraft: {}, profmsg: "" });
+
+	const onSet = (field, value) =>
+		set({ profdraft: withEdit(getState().empDoc[picked] || {}, getState().profdraft, field, value) });
+
+	async function save() {
+		const record = getState().empDoc[picked];
+		const patch = patchFrom(record, getState().profdraft);
+		if (!Object.keys(patch).length) return;
+
+		set({ profsaving: true, profmsg: "" });
+		const r = await saveEmployee(picked, patch);
+		if (!r.ok) {
+			/* The site's own words. A Link that names nothing, a mandatory field,
+			   a permission this reader has not got — every one of those is a
+			   different thing to do next, and a tidied "could not save" hides
+			   which. */
+			set({ profsaving: false, profmsg: { ok: false, text: `The site refused this: ${r.error}` } });
+			return;
+		}
+		/* Read the record back rather than patching the copy here. The site names
+		   the document, fills what it derives — `employee_name` from the three
+		   name parts, the fetch-froms — and normalises what it was sent, and a
+		   screen that keeps its own idea of the answer disagrees with the site by
+		   one character until somebody reloads. */
+		forgetEmployeeDoc(picked);
+		set({
+			profedit: false,
+			profdraft: {},
+			profsaving: false,
+			profmsg: { ok: true, text: `Saved. ${Object.keys(patch).length} field(s) written to the site.` },
+		});
+	}
 
 	const chooser = (
 		<label className="prochoose">
@@ -563,9 +759,30 @@ export default function EmployeeProfile() {
 	const pane = PROFILE_PANES[tab];
 	const nulls = keepsNulls(doc);
 	const assetsMine = s.onboardRead ? s.assets.filter((a) => a.custodian === picked).length : null;
-	/* The record on the site. Every control on this page that writes — the
-	   pencils, the photograph, History — opens this one document. */
-	const edit = s.site && picked ? deskUrl(s.site, "Employee", picked) : "";
+	/* The record on the site. The photograph, History and ↗ open this one
+	   document over there; everything this page writes, it writes itself. */
+	const deskHref = s.site && picked ? deskUrl(s.site, "Employee", picked) : "";
+
+	const editing = s.profedit;
+	/* The one object every box on the page reads. Assembled here so that a card
+	   deep in a pane needs no more of this component than "what did somebody
+	   type" and "tell me when they type". */
+	const edit = editing
+		? {
+			draft: s.profdraft,
+			onSet,
+			lists: {
+				employees: people,
+				companies: s.companies,
+				departments: s.departments,
+				designations: s.designations,
+				holidayLists: s.holidayLists,
+				shiftTypes: s.shiftTypes,
+			},
+		}
+		: null;
+	const changed = editing ? changedCount(doc, s.profdraft) : 0;
+	const card = { onRefresh: refresh, editing, onEdit: startEdit, deskHref };
 
 	return (
 		<>
@@ -584,7 +801,19 @@ export default function EmployeeProfile() {
 				<span className="right">{chooser}</span>
 			</div>
 
-			<Header doc={doc} onRefresh={refresh} edit={edit} />
+			<Header doc={doc} onRefresh={refresh} deskHref={deskHref}
+				editing={editing} edit={edit} onEdit={startEdit} />
+
+			{/* Outside the pane rather than inside it, because the draft is the
+			    whole record: switching panes while editing must not look like the
+			    edit ended. */}
+			{editing && (
+				<EditBar n={changed} saving={s.profsaving} msg={s.profmsg}
+					onSave={save} onCancel={cancelEdit} />
+			)}
+			{!editing && s.profmsg && s.profmsg.ok && (
+				<div className="probar done"><span className="pemsg ok">{s.profmsg.text}</span></div>
+			)}
 
 			<div className="probody-grid">
 				<nav className="protabs" aria-label="Profile sections">
@@ -628,10 +857,10 @@ export default function EmployeeProfile() {
 
 				<div className="propane">
 					{(pane.groups || []).map((g) => (
-						<Card key={g[0]} title={g[0]} onRefresh={refresh} edit={edit}>
-							<div className="profields">
+						<Card key={g[0]} title={g[0]} {...card}>
+							<div className={editing ? "lvform" : "profields"}>
 								{g[1].map((row) => (
-									<Field doc={doc} row={row} nulls={nulls} key={row[0]} />
+									<Field doc={doc} row={row} nulls={nulls} edit={edit} key={row[0]} />
 								))}
 							</div>
 							{tab === "attendance" && g === pane.groups[0] && (
@@ -641,20 +870,20 @@ export default function EmployeeProfile() {
 					))}
 
 					{(pane.tables || []).map((spec) => (
-						<Card key={spec[0]} title={spec[1]} onRefresh={refresh} edit={edit}>
+						<Card key={spec[0]} title={spec[1]} {...card}>
 							<ChildTable doc={doc} spec={spec} />
 						</Card>
 					))}
 
 					{tab === "assets" && (
-						<Card title="Assets" onRefresh={refresh} edit={edit}>
+						<Card title="Assets" {...card}>
 							<AssetsPane s={s} emp={picked} />
 						</Card>
 					)}
 
 					{tab === "all" && (
 						<>
-							<Card title="Every field on this record" onRefresh={refresh} edit={edit}>
+							<Card title="Every field on this record" {...card}>
 								<AllFields doc={doc} />
 							</Card>
 							{/* Every child table the document carries, including the two a
@@ -666,7 +895,7 @@ export default function EmployeeProfile() {
 								.filter(([, v]) => Array.isArray(v))
 								.map(([field, rows]) => (
 									<Card key={field} title={`${fieldLabel(field)} · ${fmt(rows.length)} rows`}
-										onRefresh={refresh} edit={edit}>
+										{...card}>
 										<AnyTable field={field} rows={rows} />
 									</Card>
 								))}

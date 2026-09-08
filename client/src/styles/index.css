@@ -313,11 +313,17 @@
   .shell[data-rail="slim"] .railconn > span:last-child { @apply sr-only; }
 
   /* ------------------------------------------------------- the header ---- */
-  .main   { @apply flex flex-col min-w-0; }
+  .main   {
+    @apply flex flex-col min-w-0;
+    /* The header's height, declared once. Anything else that sticks has to
+       clear it, and a second copy of this number is a bar that hides behind
+       the header the first time somebody changes one of them. */
+    --topbar-h: 3.5rem;
+  }
   .topbar {
     @apply sticky top-0 z-20 flex items-center gap-[.6rem] px-[1.1rem] py-[.45rem]
            bg-card text-ink border-b border-line;
-    min-height: 3.5rem;
+    min-height: var(--topbar-h);
   }
 
   /* Where you are, in two lines: the module over the page. It replaces the
@@ -4291,8 +4297,9 @@
   .procard > header h3 { @apply text-norm font-semibold; }
   .proico { @apply flex gap-[.1rem]; }
   .proico button { @apply w-[1.8rem] h-[1.8rem] rounded text-ink-3 text-fine leading-none; }
-  /* The pencil is an anchor now — it opens the record on the site — and an
-     anchor is not a button box, so it needs saying which way it centres. */
+  /* The ↗ is an anchor — it opens the record on the site — and an anchor is
+     not a button box, so it needs saying which way it centres. The pencil is a
+     button again: it opens the boxes on this page. */
   .proico a { @apply inline-flex items-center justify-center w-[1.8rem] h-[1.8rem] rounded text-ink-3 text-fine leading-none; }
   .proico button:hover:not([disabled]), .proico a:hover { @apply bg-wash text-ink; }
   .proico button[disabled] { @apply opacity-40 cursor-not-allowed; }
@@ -4339,6 +4346,62 @@
     @apply text-mini text-ink-2 bg-wash border border-line rounded-md px-[.9rem] py-[.7rem] leading-[1.5];
   }
   .pronote code { @apply font-mono text-micro; }
+
+  /* ---------------------------------------------- the profile, being edited --
+     The pencil on a card used to open the record on the desk. It opens these
+     boxes instead, and the whole record is one edit and one Save — thirteen
+     panes are one document, and a Save per card would be thirteen writes to one
+     record and thirteen chances for the ninth to be refused.
+
+     Which is why the bar is sticky and carries a count rather than a bare Save:
+     a change made on the Salary pane is still pending when somebody is looking
+     at Personal Details, and the count is the only thing on screen that says
+     so. */
+  .probar {
+    @apply sticky z-10 flex flex-wrap items-center gap-x-[.8rem] gap-y-[.4rem] mt-[1rem]
+           bg-card border border-brand-tint rounded-md px-[.9rem] py-[.6rem] text-fine shadow-raise;
+    /* Under the header, not behind it. `--topbar-h` is declared on `.main`;
+       `z-10` keeps it below the header's `z-20` so the two never overlap in
+       the wrong order while one is passing the other. */
+    top: calc(var(--topbar-h, 3.5rem) + .4rem);
+  }
+  .probar > b { @apply font-display text-norm text-brand-dark; }
+  .probar .right { @apply ml-auto flex gap-[.5rem]; }
+  .probar.done { @apply border-live/40; }
+  .pecount { @apply text-ink-3; }
+  .pecount.hot { @apply text-ink font-semibold; }
+  /* The write is made as the signed-in person, under their own roles — so a
+     refusal is the site's answer and names the field. Said on the bar because
+     it is what makes "why can I not change this" answerable. */
+  .pewho { @apply text-mini text-ink-3; }
+  .pemsg { @apply basis-full text-fine; }
+  .pemsg.ok  { @apply text-live; }
+  .pemsg.bad { @apply text-bad; overflow-wrap: anywhere; }
+
+  /* A card holding boxes rather than readings. The tint is faint on purpose:
+     the boxes already look like boxes, and a loud panel around every card turns
+     one edit into thirteen highlighted regions. */
+  .procard.editing { @apply border-brand-tint; }
+  .procard.editing > header { @apply bg-brand-soft/40; }
+
+  /* The boxes themselves are `.lvf`, the same field the rest of the app uses —
+     Apply Leave, the letter forms — so the profile in edit mode is not a second
+     design of the same control. Only the changed marker is new. */
+  .pefield .dot {
+    @apply inline-block w-[.4rem] h-[.4rem] rounded-full ml-[.35rem] align-middle;
+    background: rgb(var(--brand-dark));
+  }
+  .pefield.changed > .lab { @apply text-brand-dark; }
+  .pefield.changed input, .pefield.changed select, .pefield.changed textarea { @apply border-brand-tint; }
+  .pefield .hint .fn { @apply font-mono text-micro text-ink-3; }
+  .pefield .onoff { height: auto; }
+
+  /* A row with no box, in edit mode, and why. Nearly always the finding this
+     whole screen exists for — the site has no such column, so a box for it
+     would post a key Frappe accepts and drops, and the field would look saved
+     and be gone on reload. */
+  .profield.locked .v { @apply opacity-80; }
+  .lockwhy { @apply text-micro text-ink-3 italic leading-[1.4] mt-[.1rem]; }
 
   /* ------------------------------- payroll, the FNF & Separation screen ---- */
   /* Factor HR's three numbered stages, two filter bars and a card per person.

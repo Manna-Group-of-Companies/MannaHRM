@@ -230,7 +230,9 @@ existing `Attendance Log` history should be migrated is still open.
   `tools/check_schema.py` makes them, and needs credentials.
 - **No bench tests.** Only the pure rules are covered.
 - **No phone app.** The dashboard is in `client/` and runs against the live
-  site; it reads almost everything and writes very little — see its README.
+  site; it reads almost everything and writes a little — corrections, letters,
+  documents, asset handovers, the category master, and an Employee's own record
+  from Employee Profile. See its README.
 - **Where the dashboard is served in production is undecided.** It routes on the
   path, so whatever serves it must answer every unmatched path with
   `index.html`. `npm run dev` proxies to the site; nothing else is set up.
