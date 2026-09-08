@@ -82,7 +82,7 @@ export async function loadRegMonth(emp, ym, force) {
 	set({ regMonth: { ...cur, key, state: "loading", err: "" } });
 
 	const [from, to] = monthRange(ym);
-	const doctype = getState().regDoctype || "Attendance Regularization";
+	const doctype = getState().regDoctype || "Employee Attendance Regularization";
 
 	/** The long list, then the short one, then give up and say so. */
 	const read = (dt, long, short, filters) =>
@@ -190,7 +190,7 @@ export const stampFor = (iso, hm) => (hm ? `${iso} ${hm.length === 5 ? hm + ":00
 /** What the site's open state is called, under either doctype name. The two
     differ and the difference is not cosmetic — `regDoctype` decides which. */
 export const openStatusFor = (doctype) =>
-	(doctype === "Attendance Regularization" ? "Pending Approval" : "Initiated");
+	(doctype === "Employee Attendance Regularization" ? "Pending Approval" : "Initiated");
 
 /**
  * Create or update one day's correction, then read the month back.

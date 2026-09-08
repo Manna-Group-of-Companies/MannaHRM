@@ -63,9 +63,11 @@ const initial = {
 	   Category — that one lists them by name. */
 	departments: [],
 	designations: [],
-	/** Which of the two correction doctypes answered — it decides where a
-	    decision would later be written. See pendingRegularizations. */
-	regDoctype: "Attendance Regularization",
+	/** The correction doctype that answered, or "" when none did — it decides
+	    where a decision would later be written, and the desk links read it.
+	    `Attendance Regularization` (no prefix) is the sales system's and is
+	    never written to from here. See pendingRegularizations. */
+	regDoctype: "Employee Attendance Regularization",
 
 	/* ---- connection ---- */
 	conn: "connecting…",

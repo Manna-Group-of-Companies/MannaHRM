@@ -42,7 +42,7 @@ doc_events = {
 		# about to change.
 		"before_validate": "manna_hr.checkin.validate",
 	},
-	"Attendance Regularization": {
+	"Employee Attendance Regularization": {
 		"on_update": "manna_hr.regularization.on_update",
 	},
 }
@@ -61,7 +61,7 @@ doc_events = {
 # and decide every correction in the group. See manna_hr/permissions.py.
 
 permission_query_conditions = {
-	"Attendance Regularization": "manna_hr.permissions.regularization_query",
+	"Employee Attendance Regularization": "manna_hr.permissions.regularization_query",
 	# A letter can carry a salary, a warning or a reason for leaving. Signing
 	# off somebody's attendance does not make those yours to read, so an
 	# approver sees their reports' corrections and not their reports' letters.
@@ -73,13 +73,26 @@ permission_query_conditions = {
 	# A handover row carries a recovery amount — a sum somebody is being asked
 	# to pay. Same reason again, one notch sharper.
 	"Asset Assignment": "manna_hr.permissions.assignment_query",
+	# Four doctypes keyed to `employee` where the row is nobody's business but
+	# the person's and HR's — what they borrowed, what they answered, and what
+	# they asked to have corrected about themselves. Unlike corrections, the
+	# reporting manager gets no window: signing off somebody's attendance does
+	# not make their loan yours to read. See permissions.py.
+	"Employee Loan Application": "manna_hr.permissions.loan_application_query",
+	"Employee Loan Repayment": "manna_hr.permissions.loan_repayment_query",
+	"Employee Survey Response": "manna_hr.permissions.survey_response_query",
+	"Employee Profile Change Request": "manna_hr.permissions.profile_change_query",
 }
 
 has_permission = {
-	"Attendance Regularization": "manna_hr.permissions.regularization_has_permission",
+	"Employee Attendance Regularization": "manna_hr.permissions.regularization_has_permission",
 	"Employee Letter": "manna_hr.permissions.letter_has_permission",
 	"Employee Document": "manna_hr.permissions.document_has_permission",
 	"Asset Assignment": "manna_hr.permissions.assignment_has_permission",
+	"Employee Loan Application": "manna_hr.permissions.loan_application_has_permission",
+	"Employee Loan Repayment": "manna_hr.permissions.loan_repayment_has_permission",
+	"Employee Survey Response": "manna_hr.permissions.survey_response_has_permission",
+	"Employee Profile Change Request": "manna_hr.permissions.profile_change_has_permission",
 }
 
 # ------------------------------------------------------------------ fixtures ---

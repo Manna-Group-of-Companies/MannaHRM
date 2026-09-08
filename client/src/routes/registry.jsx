@@ -104,7 +104,7 @@ const TABS = {
 	   in its order. `overview` is Attendance Regularization because that is the
 	   first item on their menu and the one page here with a live queue behind
 	   it — so clicking Attendance in the nav lands on it. */
-	attendance: [["overview", "Attendance Regularization"], ["submit", "Submit Attendance"],
+	attendance: [["overview", "Employee Attendance Regularization"], ["submit", "Submit Attendance"],
 		["inout", "In Out Activities Report"], ["daily", "Daily Detail Attendance Report"],
 		["monthly", "Monthly Basic Attendance"], ["statutory", "Statutory Reports"],
 		["shifts", "Manage Shift"], ["all", "All"]],

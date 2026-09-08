@@ -3,6 +3,20 @@
 What `manna_hr` creates, what it expects from `hrms`, and the configuration
 values that decide behaviour. Field names here match the code exactly.
 
+**This file goes deep on five doctypes; [DOCTYPES.md](DOCTYPES.md) is the whole
+map.** Every page in the dashboard, the doctype behind it, and whether that
+doctype is stock or ours — twenty-one of ours in total, and the order they have
+to be installed in. Read that one first if the question is *what exists*; read
+this one if the question is *what a field means*.
+
+The ten not written up below — `Attendance Device`, `Employee Category Type` and
+its values, the four survey doctypes, the three loan ones, and
+`Employee Profile Change Request` — carry their reasoning as `description` on
+the fields themselves, which is where it shows up for the person filling the
+form in. `manna_hr/rules.py` holds the arithmetic and
+`manna_hr/tests/test_loans.py`, `test_survey.py` and `test_devices.py` state
+each rule as a sentence.
+
 ---
 
 ## 1. What comes from Frappe HR
@@ -24,7 +38,7 @@ which.
 **Never write `Attendance` directly.** It is generated from checkins by the
 shift job. A hand-written row is invisible to the thing that would have created
 it, and the two will disagree the moment anything is reprocessed. Corrections go
-through `Attendance Regularization` (below), which writes a checkin.
+through `Employee Attendance Regularization` (below), which writes a checkin.
 
 ### Standard fields we depend on
 
@@ -78,7 +92,7 @@ the doorway. A factory gate is a fixed, known point, so 300 m is right — but i
 is 300 and not 50 because a phone against a metal shed reads badly, and the
 failure that matters is refusing someone who did turn up.
 
-### `Attendance Regularization`
+### `Employee Attendance Regularization`
 
 A correction request. Carried over from the sales system, where it works, and
 widened to any employee.
@@ -259,7 +273,7 @@ rather than a lockout, and it will not announce itself.
 
 The table above described `Manna Attendance Approver` as seeing "their reports
 only" for some time before anything enforced it. The role had `read` and `write`
-on `Attendance Regularization` and nothing narrowing which rows, so a supervisor
+on `Employee Attendance Regularization` and nothing narrowing which rows, so a supervisor
 at one company could list and decide every correction in the group. Closed by
 `permission_query_conditions` and `has_permission` — **both**, because Frappe
 asks the question twice and a system with only the first has a list that hides a
@@ -267,7 +281,7 @@ row and a URL that still opens it.
 
 | Doctype | Who sees what |
 |---|---|
-| `Attendance Regularization` | HR sees all. An approver sees their direct reports and themselves. Everybody else sees their own |
+| `Employee Attendance Regularization` | HR sees all. An approver sees their direct reports and themselves. Everybody else sees their own |
 | `Employee Letter` | HR sees all. Everybody else sees their own — **an approver does not see their reports' letters**, because a letter can carry a salary or a reason for leaving and signing off somebody's attendance does not make those yours to read |
 
 **This is the one place in the app that rounds towards refusing.** Everywhere

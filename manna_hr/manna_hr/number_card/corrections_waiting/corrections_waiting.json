@@ -11,7 +11,7 @@
  "name": "Corrections Waiting",
  "label": "Corrections Waiting",
  "type": "Document Type",
- "document_type": "Attendance Regularization",
+ "document_type": "Employee Attendance Regularization",
  "function": "Count",
  "filters_json": "[[\"Attendance Regularization\", \"status\", \"in\", [\"Draft\", \"Pending Approval\"], false]]",
  "is_public": 1,

@@ -4,7 +4,15 @@ Manna HRM — group-wide attendance and HR for the Manna companies, on the
 ERPNext site at `mannarubber.m.frappe.cloud`. Replaces Factor HR.
 
 Read [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md) before starting anything.
-Three things are blocking as of 22 August 2026 and none of them is code.
+Three things are blocking as of 22 August 2026 and none of them is code — but
+one of them has since been answered: **Frappe HR is installed on the site.** The
+`HR` and `Payroll` modules are there, and so are the `HR Manager`, `HR User`,
+`Employee` and `Manna Attendance Approver` roles. Anything in the docs that
+plans around hrms being absent is stale.
+
+[docs/DOCTYPES.md](docs/DOCTYPES.md) is the map: every page in `client/`, the
+doctype behind it, and whether that doctype is stock or ours. Read it before
+adding a screen or a table — most of what looks missing is already in hrms.
 
 [docs/SITE_SURVEY.md](docs/SITE_SURVEY.md) is what the live site actually holds,
 read on 22 August 2026. Trust it over anything inferred from the sales repo.
@@ -40,6 +48,10 @@ exists — a private bench is not a preference here.
 | `manna_hr/` | The Frappe app. Installed onto the site. |
 | `client/` | The React HR dashboard. **ERPNext is its server** — see `client/README.md` |
 | `manna_hr/rules.py` | Pure rules — no `frappe` import. Testable without a bench. |
+| `manna_hr/manna_hr/doctype/` | The schema. 21 doctypes, 15 of them things a person opens |
+| `manna_hr/loans.py` | Staff loans — the parts that need a site. The arithmetic is in `rules.py` |
+| `tools/install_all.py` | Puts every doctype on the site over the REST API |
+| `tools/install_all.console.js` | The same thing, pasted into the site's own console. No API key |
 | `manna_hr/permissions.py` | Who sees whose corrections and letters. The row-level half of the security model |
 | `manna_hr/workflow.py` | The approval workflow, as data. Installed from code, not a fixture |
 | `manna_hr/letters.py` | The letter merge, ported from `client/src/lib/letter.js` |
@@ -63,7 +75,7 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ## 3. Tests
 
 ```bash
-python -m pytest manna_hr/tests -q        # 76 tests, no bench needed
+python -m pytest manna_hr/tests -q        # 478 tests, no bench needed
 cd client && npm test                     # 569 tests, jsdom
 cd client && npm run contrast             # the palette, every pairing, AA
 cd client && npm run shots                # the app in a real browser, photographed
@@ -121,6 +133,13 @@ this app and hrms does not reformat wholesale in the diff.
 
 Every one of these is either already paid for next door, or is a known sharp
 edge in hrms.
+
+**`Attendance Regularization` on this site is not ours.** It belongs to the
+sales system next door — module Selling, keyed to `Sales Person`, nine live rows,
+and using `Initiated` where this one uses `Pending Approval`. Ours is
+`Employee Attendance Regularization`, under that name in the repo as well as on
+the site. Writing to the short name puts an HR correction into a sales queue
+nobody reads. `test_doctypes.py` has a test named after this.
 
 **Never write `Attendance` directly.** It is generated from `Employee Checkin`
 by the shift job. A hand-written row is invisible to the thing that would have
@@ -191,7 +210,14 @@ existing `Attendance Log` history should be migrated is still open.
 
 ## 7. Known-incomplete
 
-- **Nothing has been applied to the live site.** Everything here is a scaffold.
+- **The schema is on the site as *custom* doctypes, not as an installed app.**
+  `custom: 1` is what lets them exist without developer mode, and the price is
+  that the site owns the definition rather than the repo, and **the controllers
+  do not run**. Nothing on the server yet derives a loan's outstanding balance,
+  refuses an over-recovery, or strips the name off an anonymous survey response.
+  Delete the custom doctypes before `bench install-app` — a standard doctype and
+  a custom one of the same name is a site that fails to migrate, and the error
+  names neither. See [docs/DOCTYPES.md](docs/DOCTYPES.md) §14.
 - **No bench tests.** Only the pure rules are covered.
 - **No phone app.** The dashboard is in `client/` and runs against the live
   site; it reads almost everything and writes very little — see its README.

@@ -267,3 +267,254 @@ def assignment_is_open(status):
 	overdue. Scrapped kit is gone.
 	"""
 	return status in (ASN_ASSIGNED, ASN_PART_RETURNED, ASN_PART_LOST, ASN_DAMAGED)
+
+
+# --------------------------------------------------------------------- loans ---
+#
+# A staff loan is four figures and a subtraction, and every one of the four is
+# recorded rather than inferred: what was sanctioned, what was actually paid
+# out, what was already owed the day this system took over, and what has been
+# recovered since. Deriving any of them from the others is what makes a register
+# that cannot be reconciled with the person's own recollection.
+
+LOAN_APPLIED = "Applied"
+LOAN_SANCTIONED = "Sanctioned"
+LOAN_DISBURSED = "Disbursed"
+LOAN_RUNNING = "Running"
+LOAN_CLOSED = "Closed"
+
+#: The two a person imposes. Applied is a loan not yet agreed; Closed is a
+#: decision to stop chasing one, which no arithmetic can reach on its own — a
+#: written-off loan still has money outstanding.
+LOAN_CHOSEN_ONLY = (LOAN_APPLIED, LOAN_CLOSED)
+
+
+def loan_outstanding(opening_balance=0, disbursed_amount=0, recovered_amount=0):
+	"""What is still owed.
+
+	Opening balance and disbursement are added, not chosen between: a loan
+	carried over from Factor HR and then topped up is both, and treating them as
+	alternatives silently forgives one of them.
+
+	Never negative. Over-recovery is a fact about the repayments — somebody paid
+	more than they owed — and it is reported by :func:`loan_overpaid`, not by an
+	outstanding figure below zero that then prints as a credit on a register
+	nobody reads that way.
+	"""
+	owed = _money(opening_balance) + _money(disbursed_amount) - _money(recovered_amount)
+	return owed if owed > 0 else 0.0
+
+
+def loan_overpaid(opening_balance=0, disbursed_amount=0, recovered_amount=0):
+	"""How much more than was owed has been recovered. Usually zero."""
+	over = _money(recovered_amount) - _money(opening_balance) - _money(disbursed_amount)
+	return over if over > 0 else 0.0
+
+
+def loan_status(sanctioned_amount=0, disbursed_amount=0, opening_balance=0,
+                recovered_amount=0, chosen=""):
+	"""Where a loan stands, from its figures and at most one word of judgment.
+
+	Sanctioned but not paid, paid but nothing recovered, recovering — the three
+	middle states are the figures and nothing else, because each of them is a
+	different answer to "does this person owe us money today" and getting it
+	from a dropdown means getting it wrong on the day somebody forgets.
+	"""
+	if chosen in LOAN_CHOSEN_ONLY:
+		return chosen
+
+	out = _money(disbursed_amount) + _money(opening_balance)
+	if not out:
+		return LOAN_SANCTIONED if _money(sanctioned_amount) else LOAN_APPLIED
+	if _money(recovered_amount) <= 0:
+		return LOAN_DISBURSED
+	return LOAN_RUNNING if loan_outstanding(opening_balance, disbursed_amount, recovered_amount) > 0 \
+		else LOAN_CLOSED
+
+
+def loan_status_problem(chosen, sanctioned_amount=0, disbursed_amount=0, opening_balance=0,
+                        recovered_amount=0):
+	"""Why a chosen status disagrees with the figures, or "" when it does not.
+
+	Refused rather than overwritten. Somebody picking `Closed` on a loan with
+	money still owed is either wrong or knows something the figures do not say,
+	and both of those deserve a sentence rather than a silent correction.
+	"""
+	if not chosen:
+		return ""
+	owed = loan_outstanding(opening_balance, disbursed_amount, recovered_amount)
+	if chosen == LOAN_APPLIED and (_money(disbursed_amount) or _money(recovered_amount)):
+		return "Applied, but money has already moved on this loan."
+	if chosen == LOAN_CLOSED and owed > 0:
+		return (
+			"Closed, but {0:.2f} is still outstanding. Record the last repayment, or say why it is "
+			"being written off in Remarks.".format(owed)
+		)
+	return ""
+
+
+def repayment_problem(amount, outstanding, allow_overpay=False):
+	"""Why one repayment cannot be recorded, or "" when it can."""
+	paid = _money(amount)
+	if paid <= 0:
+		return "A repayment has to be for more than nothing."
+	if not allow_overpay and paid > _money(outstanding):
+		return "That is more than the {0:.2f} still owed on this loan.".format(_money(outstanding))
+	return ""
+
+
+def instalment_status(total_amount, paid_amount=0):
+	"""Where one line of the repayment schedule stands."""
+	due = _money(total_amount)
+	paid = _money(paid_amount)
+	if paid <= 0:
+		return "Pending"
+	if paid + 0.005 < due:
+		return "Partly Paid"
+	return "Paid"
+
+
+def flat_schedule(principal, months, first_month, annual_rate=0):
+	"""A flat-rate repayment schedule, as plain dictionaries.
+
+	Flat rather than reducing-balance, because that is what these loans are:
+	the interest, when there is any, is agreed as a figure on the whole amount
+	at sanction and split evenly. A reducing-balance engine would produce
+	different numbers from the ones on the paper the person signed.
+
+	**The rounding goes into the last instalment.** Splitting 10,000 over three
+	months gives 3,333.33 twice and 3,333.34 once, and a schedule whose lines do
+	not add up to the loan is one payroll and the register argue about forever.
+
+	`first_month` is `YYYY-MM`. Returns [] for a loan with no term yet, which is
+	the normal state of a draft.
+	"""
+	principal = _money(principal)
+	months = int(months or 0)
+	if principal <= 0 or months <= 0 or not first_month:
+		return []
+
+	interest = round(principal * _money(annual_rate) / 100.0 * months / 12.0, 2)
+	total = round(principal + interest, 2)
+
+	per = round(total / months, 2)
+	principal_per = round(principal / months, 2)
+	interest_per = round(interest / months, 2)
+
+	rows = []
+	year, month = _split_month(first_month)
+	for i in range(months):
+		last = i == months - 1
+		row_total = round(total - per * (months - 1), 2) if last else per
+		row_principal = round(principal - principal_per * (months - 1), 2) if last else principal_per
+		rows.append(
+			{
+				"period": "{0:04d}-{1:02d}".format(year, month),
+				"principal_amount": row_principal,
+				"interest_amount": round(row_total - row_principal, 2) if last else interest_per,
+				"total_amount": row_total,
+				"paid_amount": 0.0,
+				"status": "Pending",
+			}
+		)
+		year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+	return rows
+
+
+def _split_month(period):
+	"""`YYYY-MM`, or a date that starts with one, into two integers."""
+	text = str(period)[:7]
+	year, _sep, month = text.partition("-")
+	return int(year), int(month)
+
+
+def _money(value):
+	"""Currency out of whatever Frappe handed over — None, "", Decimal, str."""
+	try:
+		return float(value or 0)
+	except (TypeError, ValueError):
+		return 0.0
+
+
+# ------------------------------------------------------------------ surveys ---
+
+
+def survey_is_open(status, on, start_date=None, end_date=None):
+	"""Whether a survey accepts an answer today.
+
+	The dates narrow `Open`; they never widen `Closed`. A survey somebody closed
+	early is closed, whatever its end date still says.
+	"""
+	if status != "Open":
+		return False
+	if start_date and str(on) < str(start_date):
+		return False
+	if end_date and str(on) > str(end_date):
+		return False
+	return True
+
+
+def survey_answer_problems(questions, answers):
+	"""Required questions with nothing against them.
+
+	Returns the question numbers, in order, so the message can name them. An
+	answer of `0` on a rating counts as answered — it is the lowest score, not a
+	blank — which is why this tests for None and empty string rather than
+	falsiness.
+	"""
+	given = {}
+	for a in answers or []:
+		no = _int(_get(a, "question_no"))
+		if _answered(_get(a, "answer")) or _answered(_get(a, "rating")):
+			given[no] = True
+
+	missing = []
+	for q in questions or []:
+		if _int(_get(q, "is_required")) and not given.get(_int(_get(q, "question_no"))):
+			missing.append(_int(_get(q, "question_no")))
+	return missing
+
+
+def _answered(value):
+	return value is not None and str(value).strip() != ""
+
+
+def _get(row, key):
+	return row.get(key) if isinstance(row, dict) else getattr(row, key, None)
+
+
+def _int(value):
+	try:
+		return int(value or 0)
+	except (TypeError, ValueError):
+		return 0
+
+
+# ------------------------------------------------------- attendance devices ---
+
+
+def device_is_trusted(device_id, prefix):
+	"""Whether a punch from this device skips the geofence.
+
+	The same test `checkin.py` makes, in one place so the device register and
+	the punch validator cannot disagree about what a machine is. An empty prefix
+	trusts nothing — the failure that matters is a phone punch treated as a
+	machine punch, not the other way round.
+	"""
+	if not prefix:
+		return False
+	return str(device_id or "").startswith(str(prefix))
+
+
+def device_is_silent(last_punch_at, now, silent_after_hours):
+	"""Whether a registered device has been quiet long enough to alert on.
+
+	Zero or blank hours means never alert on this one — right for a machine at a
+	yard that works one shift a week. A device that has never sent anything is
+	not silent: it is not commissioned, and alerting on it daily forever is how
+	people learn to ignore the alert.
+	"""
+	hours = _int(silent_after_hours)
+	if hours <= 0 or not last_punch_at:
+		return False
+	return (now - last_punch_at).total_seconds() > hours * 3600

@@ -4,7 +4,7 @@
 
 `docs/SCHEMA.md` §5 has said since it was written that
 `Manna Attendance Approver` sees "their reports only". It did not. The role had
-`read` and `write` on `Attendance Regularization` and nothing narrowing which
+`read` and `write` on `Employee Attendance Regularization` and nothing narrowing which
 rows, so a supervisor at one company could list — and decide — every correction
 in the group. Nothing announced it, which is the point CLAUDE.md §5 makes about
 per-company scoping and which turns out to apply to this role as well: an
@@ -37,7 +37,7 @@ outright — and neither does a bench script, which is what keeps
 `regularization.apply` able to write checkins for anybody.
 """
 
-DOCTYPE = "Attendance Regularization"
+DOCTYPE = "Employee Attendance Regularization"
 
 #: Roles that read the whole group. `HR Manager` is hrms' own and is the seat
 #: this system's escape hatch belongs to — somebody has to be able to unstick a
@@ -264,3 +264,71 @@ def assignment_has_permission(doc, ptype=None, user=None):
 	if visible is UNRESTRICTED:
 		return True
 	return bool(doc) and doc.get("employee") in visible
+
+
+# ------------------------------------------------------- own-record doctypes ---
+#
+# Four more rows keyed to `employee`, and one rule between them: a person sees
+# their own, HR sees everybody's, and nobody else sees anything. The reporting
+# manager is deliberately **not** given a window here the way they have one on
+# corrections — a loan, a survey answer and a request to correct a date of birth
+# are not their manager's business, and signing off somebody's attendance does
+# not make them so.
+#
+# `Employee Survey Response` is the sharpest of the four. On an anonymous survey
+# the `employee` column is empty, so `sql_condition` matches nothing and a
+# non-HR reader sees none of them — including their own. That is the right
+# answer: on an anonymous survey there is no "their own" to show, and a view
+# that could pick one out would be the anonymity gone.
+
+OWN_RECORD_DOCTYPES = (
+	"Employee Loan Application",
+	"Employee Loan Repayment",
+	"Employee Survey Response",
+	"Employee Profile Change Request",
+)
+
+
+def _own_record_query(doctype, user=None):
+	roles, employee, _reports = _context(user)
+	return sql_condition(visible_employees(roles, employee, []), table=f"`tab{doctype}`")
+
+
+def _own_record_has_permission(doc, user=None):
+	roles, employee, _reports = _context(user)
+	visible = visible_employees(roles, employee, [])
+	if visible is UNRESTRICTED:
+		return True
+	return bool(doc) and doc.get("employee") in visible
+
+
+def loan_application_query(user=None):
+	return _own_record_query("Employee Loan Application", user)
+
+
+def loan_application_has_permission(doc, ptype=None, user=None):
+	return _own_record_has_permission(doc, user)
+
+
+def loan_repayment_query(user=None):
+	return _own_record_query("Employee Loan Repayment", user)
+
+
+def loan_repayment_has_permission(doc, ptype=None, user=None):
+	return _own_record_has_permission(doc, user)
+
+
+def survey_response_query(user=None):
+	return _own_record_query("Employee Survey Response", user)
+
+
+def survey_response_has_permission(doc, ptype=None, user=None):
+	return _own_record_has_permission(doc, user)
+
+
+def profile_change_query(user=None):
+	return _own_record_query("Employee Profile Change Request", user)
+
+
+def profile_change_has_permission(doc, ptype=None, user=None):
+	return _own_record_has_permission(doc, user)

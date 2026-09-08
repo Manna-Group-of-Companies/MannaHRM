@@ -162,7 +162,7 @@ def complete_applied():
 	see docs/OPEN_QUESTIONS.md §0.
 	"""
 	pending = frappe.get_all(
-		"Attendance Regularization",
+		"Employee Attendance Regularization",
 		filters={"status": STATUS_APPROVED},
 		fields=["name", "employee", "attendance_date", "decided_on"],
 	)
@@ -175,7 +175,7 @@ def complete_applied():
 		# with no person behind it, so there is nobody for `allow_self_approval`
 		# or a role check to be about. The workflow still offers HR Manager the
 		# same move by hand, for when this job has not run.
-		frappe.db.set_value("Attendance Regularization", row.name, "status", STATUS_COMPLETED)
+		frappe.db.set_value("Employee Attendance Regularization", row.name, "status", STATUS_COMPLETED)
 		done += 1
 
 	if done:

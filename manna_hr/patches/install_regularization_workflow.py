@@ -34,7 +34,7 @@ def _settle_existing():
 	"""
 	known = {STATUS_DRAFT, STATUS_PENDING, "Approved", "Rejected", "Completed"}
 	stray = frappe.get_all(
-		"Attendance Regularization",
+		"Employee Attendance Regularization",
 		filters={"status": ("not in", list(known))},
 		fields=["name", "status"],
 	)

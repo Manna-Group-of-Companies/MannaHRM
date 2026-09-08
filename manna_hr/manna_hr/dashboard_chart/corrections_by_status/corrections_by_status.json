@@ -11,7 +11,7 @@
  "name": "Corrections By Status",
  "chart_name": "Corrections By Status",
  "chart_type": "Group By",
- "document_type": "Attendance Regularization",
+ "document_type": "Employee Attendance Regularization",
  "group_by_type": "Count",
  "group_by_based_on": "status",
  "filters_json": "[]",

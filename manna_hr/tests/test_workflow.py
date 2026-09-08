@@ -31,7 +31,7 @@ from manna_hr.workflow import (
 )
 
 APP = pathlib.Path(__file__).resolve().parents[1]
-DOCTYPE_JSON = APP / "manna_hr" / "doctype" / "attendance_regularization" / "attendance_regularization.json"
+DOCTYPE_JSON = APP / "manna_hr" / "doctype" / "employee_attendance_regularization" / "employee_attendance_regularization.json"
 
 STATE_NAMES = [state for state, _style, _edit in STATES]
 

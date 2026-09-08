@@ -83,7 +83,7 @@ def request_regularization(attendance_date, reason, requested_in=None, requested
 	employee = _my_employee()
 
 	if frappe.db.exists(
-		"Attendance Regularization",
+		"Employee Attendance Regularization",
 		{
 			"employee": employee,
 			"attendance_date": attendance_date,
@@ -100,7 +100,7 @@ def request_regularization(attendance_date, reason, requested_in=None, requested
 
 	doc = frappe.get_doc(
 		{
-			"doctype": "Attendance Regularization",
+			"doctype": "Employee Attendance Regularization",
 			"employee": employee,
 			"attendance_date": attendance_date,
 			"requested_in": requested_in,

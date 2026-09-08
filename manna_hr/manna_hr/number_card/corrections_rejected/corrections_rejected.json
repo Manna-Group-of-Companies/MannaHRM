@@ -11,7 +11,7 @@
  "name": "Corrections Rejected",
  "label": "Corrections Rejected",
  "type": "Document Type",
- "document_type": "Attendance Regularization",
+ "document_type": "Employee Attendance Regularization",
  "function": "Count",
  "filters_json": "[[\"Attendance Regularization\", \"status\", \"=\", \"Rejected\", false]]",
  "is_public": 1,

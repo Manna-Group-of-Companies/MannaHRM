@@ -27,3 +27,13 @@ data/**
 node_modules/
 client/.env
 client/dist/
+
+# **The built bundle is committed and the sourcemap is not.**
+#
+# `manna_hr/public/hr/` and `manna_hr/www/hr.html` are `npm run build`'s output,
+# and they are in the repo on purpose: `bench get-app` has to be able to serve
+# the dashboard on a site with no node on it. The sourcemap is the one piece
+# that is not needed to serve it — three and a half megabytes, larger than the
+# rest of the repo put together, and it publishes every source file and comment
+# at a URL anybody can read.
+manna_hr/public/**/*.map

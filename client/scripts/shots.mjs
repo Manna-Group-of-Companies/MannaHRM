@@ -135,7 +135,7 @@ const DATA = {
 		{ name: "Accountant" }, { name: "Storekeeper" }, { name: "Driver" }, { name: "Trainee" },
 	],
 	"Leave Application": LEAVE,
-	"Attendance Regularization": REGS,
+	"Employee Attendance Regularization": REGS,
 	"Letter Type": [
 		{ name: "Appointment Letter", category: "Onboarding", is_active: 1, fields_used: "" },
 		{ name: "Experience Letter", category: "Exit", is_active: 1, fields_used: "" },

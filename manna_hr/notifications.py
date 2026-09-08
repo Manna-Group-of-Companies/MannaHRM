@@ -35,7 +35,7 @@ NOTIFICATIONS = [
 		"subject": "Attendance correction waiting {0} days: {{ doc.employee_name }}".format(
 			STALE_AFTER_DAYS
 		),
-		"document_type": "Attendance Regularization",
+		"document_type": "Employee Attendance Regularization",
 		"event": "Days After",
 		"date_changed": "creation",
 		"days_in_advance": STALE_AFTER_DAYS,
@@ -51,7 +51,7 @@ NOTIFICATIONS = [
 	{
 		"name": "Manna: correction approved but the day was never rebuilt",
 		"subject": "Approved correction not applied: {{ doc.employee_name }}",
-		"document_type": "Attendance Regularization",
+		"document_type": "Employee Attendance Regularization",
 		"event": "Days After",
 		"date_changed": "decided_on",
 		"days_in_advance": 1,

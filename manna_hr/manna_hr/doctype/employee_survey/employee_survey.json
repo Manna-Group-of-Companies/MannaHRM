@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:survey_name",
+ "creation": "2026-09-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "survey_name",
+  "company",
+  "status",
+  "column_break_when",
+  "start_date",
+  "end_date",
+  "is_anonymous",
+  "section_break_audience",
+  "audience",
+  "audience_value",
+  "column_break_audience",
+  "introduction",
+  "section_break_questions",
+  "questions"
+ ],
+ "fields": [
+  {
+   "fieldname": "survey_name",
+   "fieldtype": "Data",
+   "label": "Survey",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nOpen\nClosed",
+   "default": "Draft",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Only `Open` accepts a response. Closing one does not delete anything — it stops the form and leaves the answers."
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Opens",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "Closes",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_anonymous",
+   "fieldtype": "Check",
+   "label": "Anonymous",
+   "default": "0",
+   "description": "**Decided once, before the first response, and never changed.** A survey that was anonymous and then is not exposes people who answered on the promise that it was. When set, a response is stored with no employee on it at all — not hidden, absent — so there is nothing to change your mind about later."
+  },
+  {
+   "fieldname": "section_break_audience",
+   "fieldtype": "Section Break",
+   "label": "Audience"
+  },
+  {
+   "fieldname": "audience",
+   "fieldtype": "Select",
+   "label": "Audience",
+   "options": "All Employees\nCompany\nDepartment\nDesignation\nBranch",
+   "default": "All Employees",
+   "reqd": 1
+  },
+  {
+   "fieldname": "audience_value",
+   "fieldtype": "Data",
+   "label": "Audience Value",
+   "description": "The department, designation or branch named above. Ignored for All Employees."
+  },
+  {
+   "fieldname": "column_break_audience",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "introduction",
+   "fieldtype": "Text Editor",
+   "label": "Introduction",
+   "description": "What people read before the first question. The place to say who sees the answers, which is the question every survey gets asked and few answer."
+  },
+  {
+   "fieldname": "section_break_questions",
+   "fieldtype": "Section Break",
+   "label": "Questions"
+  },
+  {
+   "fieldname": "questions",
+   "fieldtype": "Table",
+   "label": "Questions",
+   "options": "Employee Survey Question",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Employee Survey",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR User"
+  },
+  {
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "search_fields": "status,company",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "survey_name",
+ "track_changes": 1
+}

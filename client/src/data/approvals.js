@@ -77,7 +77,7 @@ export const APPROVALS = [
    ]},
 
   {k:"attendance", l:"Attendance", cov:"part", ico:"🕒", kind:"Time Correction",
-   src:"Attendance Regularization",
+   src:"Employee Attendance Regularization",
    tpl:["employee","attendance_date","requested_in","requested_out","reason",
         "approver_type","status"],
    empty:"No corrections raised here yet. Factor HR is holding 50.",

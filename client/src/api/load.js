@@ -36,54 +36,40 @@ export const LETTER_FIELDS = LETTER_FIELDS_MIN.concat([
 	"letter_number", "reference_number", "remarks",
 ]);
 
-/* The correction queue, under either name. Both reads now ask for the same
-   fields and the same open state, because both names mean the same doctype.
+/* The correction queue.
 
-   **On this site the short name is taken and it is not ours.** The sales system
-   next door (C:\SALES_DASHBOARD) owns `Attendance Regularization` — module
-   Selling, keyed to `Sales Person`, and carrying live rows. So on 7 September
-   2026 this app's doctype was installed as `Employee Attendance Regularization`
-   instead, with the schema in `manna_hr/manna_hr/doctype/attendance_regularization`.
-   The short name is still tried first, because a site without that collision
-   will answer it, and it is the name the app's files use.
+   **The short name on this site is taken, and it is not ours.** The sales
+   system next door (C:\SALES_DASHBOARD) owns `Attendance Regularization` —
+   module Selling, keyed to `Sales Person`, carrying live rows, and using
+   `Initiated` where this one uses `Pending Approval`. Writing to it would put
+   an HR correction into a sales queue nobody here reads.
 
-   The read below is what tells the two apart: theirs has no `employee`, so it
-   answers 417 and `listAll` hands back null. Neither failing is fatal — an
-   empty queue must not blank the rest of the dashboard. */
+   So this app's doctype is `Employee Attendance Regularization`, under that
+   name in the repo as well as on the site — there is no longer a short name to
+   try first and no guess about which one answered. `regDoctype` stays in the
+   store because the desk links and `openStatusFor` read it, and because a site
+   that has neither should say so rather than silently write somewhere.
+
+   A read that fails is not fatal: an empty queue must not blank the rest of the
+   dashboard. */
+export const REG_DOCTYPE = "Employee Attendance Regularization";
+
+const REG_FIELDS = [
+	"name", "employee", "employee_name", "company", "attendance_date", "requested_in", "requested_out",
+	"reason", "status", "approver_type", "decided_by", "decided_on", "decision_note",
+	"creation", "owner", "modified", "modified_by",
+];
+
 async function pendingRegularizations() {
-	const mine = await listAll(
-		"Attendance Regularization",
-		["name", "employee", "employee_name", "company", "attendance_date", "requested_in", "requested_out",
-			"reason", "status", "approver_type", "decided_by", "decided_on", "decision_note",
-			"creation", "owner", "modified", "modified_by"],
-		[["status", "=", "Pending Approval"]],
-	).catch(() => null);
+	/* `listAll` hands back `null` when the read was refused and `[]` when it
+	   succeeded and found nothing, and those are opposite findings — a site with
+	   this doctype and no open corrections is the normal state. Only the first
+	   means the doctype is not there. */
+	const rows = await listAll(REG_DOCTYPE, REG_FIELDS, [["status", "=", "Pending Approval"]])
+		.catch(() => null);
 
-	/* **Which name *answered*, not which name had rows.**
-
-	   `listAll` hands back `null` when the read was refused and `[]` when it
-	   succeeded and found nothing, and those are opposite findings: a site that
-	   has this doctype and no open corrections in it is the normal state, not a
-	   site running the other one. Testing `.length` here read every quiet
-	   Monday as "the doctype is called something else" and moved `regDoctype`
-	   to a name that may not exist — which was harmless while it only aimed a
-	   read that then failed quietly, and stopped being harmless the moment the
-	   roster's pencil started *creating* documents under it.
-
-	   The comment above this always said "which name answered". The code said
-	   "which name had rows". */
-	if (mine) {
-		set({ regDoctype: "Attendance Regularization" });
-		return mine;
-	}
-	set({ regDoctype: "Employee Attendance Regularization" });
-	return listAll(
-		"Employee Attendance Regularization",
-		["name", "employee", "employee_name", "company", "attendance_date", "requested_in", "requested_out",
-			"reason", "status", "approver_type", "decided_by", "decided_on", "decision_note",
-			"creation", "owner", "modified", "modified_by"],
-		[["status", "=", "Pending Approval"]],
-	).catch(() => mine || []);
+	set({ regDoctype: rows ? REG_DOCTYPE : "" });
+	return rows || [];
 }
 
 /* Holiday dates come one document at a time: the list endpoint returns names,

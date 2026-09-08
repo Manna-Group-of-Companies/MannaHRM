@@ -1,4 +1,4 @@
-"""The approval workflow for `Attendance Regularization`, as data.
+"""The approval workflow for `Employee Attendance Regularization`, as data.
 
 ## Why this is a Workflow and not five `if` statements
 
@@ -62,7 +62,7 @@ has this app installed will never run `after_install` again. Both call
 # CLAUDE.md §3: anything that can be a pure value should be one, because a rule
 # nobody can argue about without a site is a rule nobody argues about.
 
-DOCTYPE = "Attendance Regularization"
+DOCTYPE = "Employee Attendance Regularization"
 WORKFLOW_NAME = "Attendance Regularization Approval"
 
 #: The field the workflow drives. Deliberately the existing `status` rather than

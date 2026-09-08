@@ -9,9 +9,11 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
 
-# How long a device may say nothing before somebody is told. Long enough to
-# cover a lunch-hour gap at a small gate, short enough that a power cut is
-# noticed the same day.
+from manna_hr import rules
+
+# The fallback threshold, for a device that is not in the register or leaves
+# its own blank. Long enough to cover a lunch-hour gap at a small gate, short
+# enough that a power cut is noticed the same day.
 SILENT_DEVICE_HOURS = 14
 
 # How far back to look for a device that used to report. A machine that has been
@@ -61,7 +63,7 @@ def flag_open_shifts():
 def _already_regularized(employee, on_date):
 	return bool(
 		frappe.db.exists(
-			"Attendance Regularization",
+			"Employee Attendance Regularization",
 			{
 				"employee": employee,
 				"attendance_date": on_date,
@@ -77,38 +79,74 @@ def alert_on_silent_devices():
 	The bridge is a process on a shelf in a factory. When it dies it does so
 	without telling anybody, and its silence is indistinguishable from a shift
 	that nobody worked. This is the only thing that tells them apart.
-	"""
-	cutoff = add_to_date(now_datetime(), hours=-SILENT_DEVICE_HOURS)
-	since = add_to_date(now_datetime(), days=-DEVICE_LOOKBACK_DAYS)
 
-	rows = frappe.db.sql(
-		"""
-		SELECT device_id, MAX(time) AS last_seen
-		FROM `tabEmployee Checkin`
-		WHERE device_id IS NOT NULL
-		  AND device_id != ''
-		  AND custom_source = 'biometric'
-		  AND time >= %(since)s
-		GROUP BY device_id
-		HAVING MAX(time) < %(cutoff)s
-		""",
-		{"since": since, "cutoff": cutoff},
-		as_dict=True,
+	**Registered devices are asked first.** `Attendance Device` carries a
+	per-device threshold, because a factory gate quiet for twelve hours is
+	broken and a yard that works one shift a week is not, and one number for
+	both means either missing the first or crying wolf about the second. A
+	machine sending punches under an id nobody has registered still raises the
+	alarm — on the default threshold — because an unregistered device is a gap
+	in the register rather than a device that does not matter.
+	"""
+	now = now_datetime()
+	since = add_to_date(now, days=-DEVICE_LOOKBACK_DAYS)
+
+	# What each device last sent, over the window worth looking at. One query;
+	# the judgment is applied per device afterwards, where the threshold is.
+	last = {
+		r.device_id: get_datetime(r.last_seen)
+		for r in frappe.db.sql(
+			"""
+			SELECT device_id, MAX(time) AS last_seen
+			FROM `tabEmployee Checkin`
+			WHERE device_id IS NOT NULL
+			  AND device_id != ''
+			  AND custom_source = 'biometric'
+			  AND time >= %(since)s
+			GROUP BY device_id
+			""",
+			{"since": since},
+			as_dict=True,
+		)
+	}
+
+	registered = frappe.get_all(
+		"Attendance Device",
+		filters={"is_active": 1},
+		fields=["name", "device_name", "device_id", "silent_after_hours"],
 	)
 
-	if not rows:
+	silent = []
+	for device in registered:
+		seen = last.get(device.device_id)
+		hours = device.silent_after_hours or SILENT_DEVICE_HOURS
+		if rules.device_is_silent(seen, now, hours):
+			silent.append((device.device_name or device.device_id, seen, hours))
+		# The register is also the health record, so it is written whether or
+		# not this device is in trouble — `last_punch_at` is what the next run
+		# and every report read.
+		if seen:
+			frappe.db.set_value("Attendance Device", device.name, "last_punch_at", seen,
+			                    update_modified=False)
+
+	known = {d.device_id for d in registered}
+	for device_id, seen in last.items():
+		if device_id in known:
+			continue
+		if rules.device_is_silent(seen, now, SILENT_DEVICE_HOURS):
+			silent.append((device_id + " " + _("(not registered)"), seen, SILENT_DEVICE_HOURS))
+
+	if not silent:
 		return
 
 	lines = [
-		_("{0} — last punch {1}").format(r.device_id, get_datetime(r.last_seen))
-		for r in rows
+		_("{0} — last punch {1}, silent for over {2}h").format(name, seen, hours)
+		for name, seen, hours in sorted(silent)
 	]
 	_notify_role(
 		"HR Manager",
-		subject=_("{0} attendance device(s) have gone quiet").format(len(rows)),
-		message=_(
-			"These fingerprint machines have sent nothing for over {0} hours:"
-		).format(SILENT_DEVICE_HOURS)
+		subject=_("{0} attendance device(s) have gone quiet").format(len(silent)),
+		message=_("These fingerprint machines have stopped sending punches:")
 		+ "\n\n"
 		+ "\n".join(lines)
 		+ "\n\n"

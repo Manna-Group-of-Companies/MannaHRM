@@ -11,7 +11,7 @@
  "name": "Approved Not Yet Applied",
  "label": "Approved Not Yet Applied",
  "type": "Document Type",
- "document_type": "Attendance Regularization",
+ "document_type": "Employee Attendance Regularization",
  "function": "Count",
  "filters_json": "[[\"Attendance Regularization\", \"status\", \"=\", \"Approved\", false]]",
  "is_public": 1,

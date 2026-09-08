@@ -1,1 +1,5 @@
-tests/.inventory.json
+# `npm run shots` writes this next to itself — every input on every page, as
+# the browser found them. It is a photograph of a run, not a fact about the
+# repo: it changes whenever a page does, and a diff of it says nothing anybody
+# reads. Regenerate it rather than committing one.
+.inventory.json

@@ -67,11 +67,11 @@ not join on a string match.
 Live and in use. Six reps had punched in on the morning of 22 August 2026 while
 this survey ran.
 
-| Doctype | Rows |
-|---|---|
-| `Attendance Log` | 114 |
-| `Attendance Regularization` | 9 |
-| `Leave Request` | 3 |
+| Doctype | Rows | |
+|---|---|---|
+| `Attendance Log` | 114 | |
+| `Attendance Regularization` | 9 | **The name is taken and it is not ours.** Keyed to `Sales Person`, open state `Initiated`. This app's queue is `Employee Attendance Regularization`. |
+| `Leave Request` | 3 | |
 
 `Attendance Log` fields: `attendance_date`, `sales_person`, `status`, `sb_in`,
 `punch_in_time`, `punch_in_latitude`, `punch_in_longitude`, `cb_out`,
@@ -193,3 +193,49 @@ is the one to refuse.
 - **The field-sales app is healthy.** Reps punched in this morning. The earlier
   concern that dead API credentials might have broken it was wrong — that key
   was a separate integration credential, not the one the app uses.
+
+
+---
+
+## 10. Re-read, 8 September 2026
+
+Read through the desk as `it@mannarubber.com`. Three things had changed since
+August and one of them undoes a plan.
+
+**Frappe HR is installed.** The `HR` and `Payroll` modules are on the site and
+so are `HR Manager`, `HR User`, `Employee` and `Manna Attendance Approver`.
+§3 above and `docs/OPEN_QUESTIONS.md` are written around its absence and are
+stale on that point. Everything that was blocked on "hrms is not installed" is
+not blocked.
+
+**The `Manna HR` module exists, with nine doctypes in it**, all custom:
+
+| Doctype | Rows |
+|---|---|
+| `Letter Type` | 15 |
+| `Employee Loan Type` | 2 |
+| `Employee Letter` | 1 |
+| `Employee Attendance Regularization` | 0 |
+| `Employee Loan Application` | 0 |
+| `Employee Loan Repayment` | 0 |
+| `Work Location` | 0 |
+| `Manna HR Settings` | single |
+| `Onboarding Candidate` | 0 |
+
+**The three loan doctypes were made on the site and were not in the repo.** The
+repo has since been changed to match them rather than the other way round — see
+`docs/DOCTYPES.md` §8. Their design is the better one: the application *is* the
+loan, carried from Applied to Closed by `loan_status`, with no second document
+to disagree with it. What the repo adds is the schedule, the four figures the
+register needs, and read-only permissions for `Employee` — the site's own
+definitions granted every employee `write`, `create` and `delete` on all three,
+which is anybody editing anybody's loan.
+
+**`Onboarding Candidate` is on the site and deliberately not in the repo.** This
+app puts the candidate's details on hrms' `Employee Onboarding` as custom fields
+instead, so that a candidate is not a second doctype shadowing `Employee`. It
+has no rows. Nothing here writes to it; it is left alone rather than deleted,
+because deleting a doctype somebody else made is not this repo's decision.
+
+**`Employee Document`, `Employee Document Type` and `Asset Assignment` are in
+the repo and not on the site.** They go up with `tools/install_all.py`.

@@ -1,0 +1,165 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:category_type_name",
+ "creation": "2026-09-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "category_type_name",
+  "category_code",
+  "custom_field",
+  "is_active",
+  "column_break_tree",
+  "parent_category_type",
+  "is_mandatory",
+  "show_in_filter",
+  "section_break_display",
+  "prompt_message",
+  "screen_priority",
+  "column_break_display",
+  "report_priority",
+  "report_display",
+  "section_break_values",
+  "values"
+ ],
+ "fields": [
+  {
+   "fieldname": "category_type_name",
+   "fieldtype": "Data",
+   "label": "Category Type",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Factor HR's Description — the label a person reads beside the box."
+  },
+  {
+   "fieldname": "category_code",
+   "fieldtype": "Data",
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Becomes the `Custom Field` fieldname on Employee, prefixed `custom_cat_` and lower-cased with underscores. Frappe reserves the unprefixed namespace for its own fields and a collision is the kind of mistake nobody finds until an upgrade."
+  },
+  {
+   "fieldname": "custom_field",
+   "fieldtype": "Data",
+   "label": "Custom Field",
+   "read_only": 1,
+   "description": "The `Custom Field` this type created on Employee, once it has. Read-only because the field is the thing that exists — this row records which one."
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_tree",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "parent_category_type",
+   "fieldtype": "Link",
+   "label": "Parent Category Type",
+   "options": "Employee Category Type",
+   "description": "Factor HR nests category types. Frappe has no hierarchy for custom fields — a field belongs to a doctype and sits after another field, and that is the whole of its structure. The nesting is held here so it is not lost, and it decides nothing on the site."
+  },
+  {
+   "fieldname": "is_mandatory",
+   "fieldtype": "Check",
+   "label": "Mandatory On Employee",
+   "default": "0",
+   "description": "Writes `Custom Field.reqd`. The site then refuses to save an Employee without it, which is what mandatory has to mean if it means anything."
+  },
+  {
+   "fieldname": "show_in_filter",
+   "fieldtype": "Check",
+   "label": "Show In Filters",
+   "default": "1"
+  },
+  {
+   "fieldname": "section_break_display",
+   "fieldtype": "Section Break",
+   "label": "Display"
+  },
+  {
+   "fieldname": "prompt_message",
+   "fieldtype": "Small Text",
+   "label": "Prompt Message",
+   "description": "`Custom Field.description` — the grey line under the box."
+  },
+  {
+   "fieldname": "screen_priority",
+   "fieldtype": "Int",
+   "label": "Screen Display Priority",
+   "description": "Factor HR orders the form by a number; Frappe answers with `insert_after`, a field name. The two do not convert, so this is carried as intent for whoever places the field."
+  },
+  {
+   "fieldname": "column_break_display",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "report_priority",
+   "fieldtype": "Int",
+   "label": "Report Display Priority"
+  },
+  {
+   "fieldname": "report_display",
+   "fieldtype": "Small Text",
+   "label": "Report Category Display",
+   "description": "Which of Factor HR's reports this printed on. Nothing on this side reads it: an ERPNext report prints the columns the report asks for. Kept so whoever builds those reports can read what was wanted."
+  },
+  {
+   "fieldname": "section_break_values",
+   "fieldtype": "Section Break",
+   "label": "Values"
+  },
+  {
+   "fieldname": "values",
+   "fieldtype": "Table",
+   "label": "Values",
+   "options": "Employee Category Value",
+   "description": "What this category may be set to. On the site these become the `options` lines of the Select field — which is why a value retired here must be deactivated rather than deleted: an Employee already carrying it would otherwise hold a value the field no longer offers."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Employee Category Type",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR User"
+  },
+  {
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "search_fields": "category_code,parent_category_type",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "category_type_name",
+ "track_changes": 1
+}

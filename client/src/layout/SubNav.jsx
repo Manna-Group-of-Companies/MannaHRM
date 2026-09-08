@@ -17,7 +17,7 @@ export default function SubNav() {
 
 	/* On a phone this strip is one scrolling row rather than five wrapped ones,
 	   which means the selected tab can sit off the right-hand edge — landing on
-	   Manage Shift and seeing "Attendance Regularization" highlighted nowhere is
+	   Manage Shift and seeing "Employee Attendance Regularization" highlighted nowhere is
 	   worse than the five rows were.
 
 	   `scrollLeft` rather than `scrollIntoView`, which also scrolls the page

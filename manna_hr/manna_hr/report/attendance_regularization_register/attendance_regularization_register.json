@@ -15,7 +15,7 @@
  "name": "Attendance Regularization Register",
  "owner": "Administrator",
  "prepared_report": 0,
- "ref_doctype": "Attendance Regularization",
+ "ref_doctype": "Employee Attendance Regularization",
  "report_name": "Attendance Regularization Register",
  "report_type": "Script Report",
  "roles": [

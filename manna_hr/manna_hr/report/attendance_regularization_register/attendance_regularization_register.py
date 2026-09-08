@@ -40,7 +40,7 @@ def execute(filters=None):
 def columns():
 	return [
 		{"label": _("Request"), "fieldname": "name", "fieldtype": "Link",
-			"options": "Attendance Regularization", "width": 150},
+			"options": "Employee Attendance Regularization", "width": 150},
 		{"label": _("Status"), "fieldname": "status", "fieldtype": "Data", "width": 130},
 		{"label": _("Waiting (days)"), "fieldname": "age_days", "fieldtype": "Int", "width": 110},
 		{"label": _("Employee"), "fieldname": "employee", "fieldtype": "Link",
@@ -74,7 +74,7 @@ def rows(filters):
 		where["attendance_date"] = ("between", [filters.from_date, filters.to_date])
 
 	records = frappe.get_all(
-		"Attendance Regularization",
+		"Employee Attendance Regularization",
 		filters=where,
 		fields=[
 			"name", "status", "employee", "employee_name", "company", "attendance_date",
