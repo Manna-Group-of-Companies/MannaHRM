@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "node:fs";
 import path from "node:path";
 
 /* ---------------------------------------------------------------------------
@@ -30,7 +31,52 @@ import path from "node:path";
 
 const HERE = import.meta.dirname;
 
-export default defineConfig(({ mode }) => {
+/* ---------------------------------------------------------------------------
+   Serving this from the site itself, which is the arrangement it is written
+   for: it makes the page and the API one origin for real and takes the dev
+   proxy above out of the picture entirely.
+
+   Frappe gives an app two places to put things, and this needs both, because
+   they answer two different questions:
+
+     `manna_hr/public/hr/`   the files, served at `/assets/manna_hr/hr/…`.
+                             That is what `base` has to be — every `<script>`
+                             and every font in the built HTML is fetched from
+                             there.
+     `manna_hr/www/hr.html`  the page, served at `/hr` and, with the
+                             `website_route_rules` entry in hooks.py, at every
+                             path under it. That is what `VITE_ROUTE_BASE` is,
+                             and it is a different string from `base` — the
+                             assets and the addresses do not live together.
+
+   Getting the two confused gives a page that loads and then 404s every script,
+   or one whose scripts load and whose deep links land on Frappe's own 404. Both
+   are one-line mistakes and neither looks like the other on screen, which is
+   why they are named apart here rather than derived from each other.
+   --------------------------------------------------------------------------- */
+const ASSETS_AT = "/assets/manna_hr/hr/";
+const APP_DIR = path.resolve(HERE, "../manna_hr");
+
+/** Copy the built `index.html` to `manna_hr/www/hr.html`, which is the file
+    Frappe actually serves.
+
+    A copy rather than a symlink or a build target: `www/` is Jinja's, and the
+    page it renders has to be the one Vite just wrote with this build's hashed
+    filenames in it. A stale `hr.html` beside a fresh `public/hr/` is a white
+    screen and a 404 for a script nobody deleted. */
+const publishPage = (outDir) => ({
+	name: "manna-publish-www-page",
+	closeBundle() {
+		const from = path.join(outDir, "index.html");
+		if (!fs.existsSync(from)) return;
+		const to = path.join(APP_DIR, "www", "hr.html");
+		fs.mkdirSync(path.dirname(to), { recursive: true });
+		fs.copyFileSync(from, to);
+		this.info(`www page → ${path.relative(path.resolve(HERE, ".."), to)}`);
+	},
+});
+
+export default defineConfig(({ command, mode }) => {
 	const env = loadEnv(mode, HERE, "");
 	const target = (env.ERP_URL || "https://mannarubber.m.frappe.cloud").replace(/\/+$/, "");
 	const origin = new URL(target).origin;
@@ -63,9 +109,18 @@ export default defineConfig(({ mode }) => {
 		},
 	};
 
+	/* Only on a build. `npm run dev` serves at the root off :5173, so a base
+	   here would make the dev server ask for its own modules under a prefix
+	   nothing answers on. */
+	const building = command === "build";
+	const outDir = building
+		? path.join(APP_DIR, "public", "hr")
+		: path.resolve(HERE, "dist");
+
 	return {
 		root: HERE,
-		plugins: [react()],
+		base: building ? ASSETS_AT : "/",
+		plugins: [react(), ...(building ? [publishPage(outDir)] : [])],
 		resolve: {
 			alias: { "@": path.resolve(HERE, "./src") },
 			extensions: [".mjs", ".js", ".jsx", ".json"],
@@ -85,16 +140,11 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		build: {
-			/* Plain `dist/`, and `base` left at `/` with it.
-
-			   **Where this gets served in production is still open**, and building
-			   to a prefix would decide it silently. The pages route on the path —
-			   `/employees/salary-master` is an address, see routes/router.js — so
-			   whatever serves this has to answer every unmatched path with
-			   `index.html`, and on a Frappe site that means a `website_route_rules`
-			   hook and a `base` to match. That is a change to `manna_hr/hooks.py`
-			   and to the router, not a line in this file. See client/README.md. */
-			outDir: path.resolve(HERE, "dist"),
+			/* Straight into the app, so `bench build` and a deploy carry it without
+			   anybody remembering to copy a directory. `emptyOutDir` is safe on
+			   this path because nothing but a build ever writes there — it is
+			   `manna_hr/public/hr`, not `manna_hr/public`. */
+			outDir,
 			emptyOutDir: true,
 			sourcemap: true,
 		},

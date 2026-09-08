@@ -1,5 +1,8 @@
-# Holds an API key that can write attendance for the whole group.
+# Both hold an API key that can write attendance for the whole group. The
+# runner carries it as an environment variable so the config stays readable by
+# whoever maintains the box; see bridge/run-bridge.example.bat.
 bridge/config.toml
+bridge/run-bridge.bat
 bridge/*.sqlite3
 bridge/*.log
 

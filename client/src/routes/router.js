@@ -25,10 +25,26 @@
  *
  * Deep links need one thing from whatever serves this bundle: any unmatched
  * path has to answer with `index.html`. Vite's dev server does it by default;
- * in production it is the one line of configuration this app asks for.
+ * in production it is the `website_route_rules` entry in `manna_hr/hooks.py`.
  *
  * The URL grammar itself is `paths.js`, which knows nothing about the browser
  * and is tested in `tests/paths.test.js`.
+ *
+ * ## Where the app is mounted
+ *
+ * On the site this bundle is served under a prefix — `/hr` — because the origin
+ * it shares with the API is the desk's, and `/employees` at the root of a
+ * Frappe site is a route Frappe may want for itself. The prefix is the boundary
+ * between the browser's idea of the address and this app's, so it is added and
+ * removed here and nowhere else: `paths.js` never sees it, every page is still
+ * written `/employees/salary-master`, and the 93 tests over that grammar do not
+ * know this exists.
+ *
+ * `VITE_ROUTE_BASE` names it. Empty in development, where Vite serves this at
+ * the root — which is why it has to be read rather than hard-coded, and why it
+ * is normalised here rather than trusted: a value of `/hr/`, `hr` or `/hr`
+ * should all mean the same thing, and the one that gets typed is whichever the
+ * person writing the `.env` reached for.
  */
 
 import { MODULES } from "@/routes/registry";
@@ -65,11 +81,35 @@ function knownPages() {
 	return known;
 }
 
-/** The path for a page. */
-export const pathFor = (section, subtab) => buildPath(section, subtab, knownPages());
+/** Where this app is mounted on the origin it shares with the site, with no
+    trailing slash — `/hr`, or `""` when it is served at the root. */
+export const MOUNT = String(import.meta.env.VITE_ROUTE_BASE || "")
+	.trim()
+	/* Both spellings of every value mean one thing: a leading slash is put on
+	   whether or not it was typed, and a trailing one is taken off. `/` alone
+	   falls out as `""`, which is the root and is what development wants. */
+	.replace(/^\/*/, "/")
+	.replace(/\/+$/, "");
 
-/** The page a path names. */
-export const routeFromPath = (pathname) => parsePath(pathname, knownPages());
+/** The path for a page, as the browser should see it. */
+export const pathFor = (section, subtab) => MOUNT + buildPath(section, subtab, knownPages());
+
+/** The page a path names, with the mount taken off first.
+
+    A path that is not under the mount at all still resolves rather than
+    erroring — `parsePath` falls back to the front page for anything it does not
+    recognise, and this site has no addresses worth telling somebody they got
+    wrong. */
+export const routeFromPath = (pathname) => parsePath(unmount(pathname), knownPages());
+
+/** `/hr/employees` → `/employees`. `/hr` → `/`, because the mount on its own is
+    the front page and not a section called nothing. */
+function unmount(pathname) {
+	const p = String(pathname || "/");
+	if (!MOUNT) return p;
+	if (p === MOUNT) return "/";
+	return p.startsWith(MOUNT + "/") ? p.slice(MOUNT.length) : p;
+}
 
 /**
  * The browser tab's title for a page.

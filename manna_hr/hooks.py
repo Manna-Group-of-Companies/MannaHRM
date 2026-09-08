@@ -9,6 +9,29 @@ app_license = "mit"
 # loudly here rather than at the first punch.
 required_apps = ["frappe/hrms"]
 
+# ------------------------------------------------------------------ website ---
+
+# **The dashboard, served by the site that is its API.**
+#
+# `client/` routes on the path — `/hr/employees/salary-master` is an address,
+# not a tab — so every path under the mount has to answer with the same page.
+# Without this rule only `/hr` itself works: a refresh on any other screen, and
+# every link anybody pastes to a colleague, lands on Frappe's own 404.
+#
+# `<path:app_path>` is Werkzeug's greedy segment, so one rule covers every depth
+# the router can produce. The page it routes to is `manna_hr/www/hr.html`, which
+# `npm run build` writes from the built `index.html` — see client/vite.config.js.
+#
+# This is also what makes the whole security model true rather than nearly true.
+# Served from here, the page and the API are one origin for real: the session
+# cookie travels, Frappe's CORS header never has to be widened, and what a
+# person may do is what their roles say. Served from anywhere else, every
+# request is refused before ERPNext sees it. See client/README.md.
+
+website_route_rules = [
+	{"from_route": "/hr/<path:app_path>", "to_route": "hr"},
+]
+
 # ---------------------------------------------------------------- documents ---
 
 doc_events = {
