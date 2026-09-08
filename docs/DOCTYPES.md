@@ -12,8 +12,15 @@ data and where that doctype comes from.
 | Column | Meaning |
 |---|---|
 | **stock** | Frappe HR or ERPNext already has it. We create nothing and must not shadow it. |
-| **ours** | `manna_hr` creates it. The JSON under `manna_hr/manna_hr/doctype/` is the definition. |
+| **ours** | Made for this project. It lives on the site — see §11. |
 | **derived** | No document of its own — a report or a count over rows that already exist. |
+
+> **The schema is on the site, not in this repo.** All twenty-one are on
+> `mannarubber.m.frappe.cloud` as custom doctypes in the `Manna HR` module, and
+> the site owns the definitions. There is no JSON here to read: what a field is
+> called and what it means is answered in Desk, or by
+> `python tools/export_from_site.py`, which pulls the definitions back down into
+> the app's layout. §11 and §14 say what follows from that.
 
 ---
 
@@ -185,10 +192,10 @@ exist.
 
 ## 11. The fifteen doctypes `manna_hr` owns
 
-Installed in this order — every doctype a `Link` or `Table` points at comes
-before it. `tools/install_all.py` works this out from the JSON rather than
-keeping a list, because a hand-kept list is wrong the first time somebody adds a
-field.
+All twenty-one are on the site. They were installed in the order below — every
+doctype a `Link` or `Table` points at before the doctype that points at it,
+because Frappe refuses a link to a doctype that is not there yet and the error
+names the field rather than the missing table.
 
 | # | Doctype | Kind | Links to |
 |---|---|---|---|
@@ -258,31 +265,56 @@ adding a doctype for it would mean a person existing twice. These ship as
 
 ---
 
-## 14. Putting them on the site
+## 14. Where the schema lives, and what that costs
+
+**The site is the source of truth.** Every doctype above was created on
+`mannarubber.m.frappe.cloud` as a *custom* doctype — `custom: 1` is what lets
+one be created at all on a site with no developer mode — and the definitions are
+not kept in this repo. Somebody can add a field in Desk this afternoon and
+nothing here has to be told.
+
+That is a deliberate choice, and it has three consequences worth stating plainly
+rather than discovering.
+
+**The controllers do not run.** A custom doctype is a table and a form; the
+`.py` beside it in `manna_hr/manna_hr/doctype/` is not part of it. So today
+nothing on the server derives a loan's outstanding balance, refuses an
+over-recovery, strips the name off an anonymous survey response, or turns away a
+device whose id would make every punch off it look like a phone. Those rules are
+written, tested and inert. **`CLAUDE.md` §1 says attendance is payroll and a rule
+enforced only in a client is a suggestion — that rule is currently suspended,
+and it is the largest open item in this project.**
+
+**Two checks that used to run on every commit now need credentials.** They read
+the JSON and there is none: that the workflow's five states match the `status`
+field exactly, and that every field the dashboard asks for is on the doctype.
+Both failures are silent on a live site. `python tools/check_schema.py` makes
+them against the site instead — run it after anybody edits a doctype in Desk.
+
+**Getting back is one command.** `python tools/export_from_site.py --apply`
+writes the definitions into `manna_hr/manna_hr/doctype/…` in the app's own
+layout. Do that before a proper install, and read the diff while you are there —
+it is the only way to see what somebody changed in Desk.
 
 ```bash
-export ERP_URL=https://mannarubber.m.frappe.cloud
-export ERP_KEY=...        # API Key    — Desk → User → Settings → API Access
-export ERP_SECRET=...     # API Secret — shown once, at generation
-
-python tools/install_all.py                  # says what it would do, writes nothing
-python tools/install_all.py --apply          # creates what is missing
-python tools/install_all.py --apply --update # and rewrites what is already there
-```
-
-**These arrive as custom doctypes, and that is a way in rather than the
-destination.** `custom: 1` is what lets them be created at all without developer
-mode, and the practical difference is that the site owns the definition rather
-than the repo — so the two can drift, and the controller beside the JSON does
-not run. Nothing on the server derives a loan's outstanding balance, refuses an
-over-recovery, or strips a name off an anonymous response until the app is
-properly installed:
-
-```bash
+python tools/export_from_site.py --apply     # schema back into the repo
+# then delete the custom doctypes on the site, and:
 bench get-app manna_hr https://github.com/Manna-Group-of-Companies/MannaHRM
 bench --site mannarubber.m.frappe.cloud install-app manna_hr
 ```
 
-**Delete the custom doctype before that happens.** A standard doctype and a
-custom one of the same name is a site that fails to migrate, and the error names
-neither.
+**Delete the custom doctypes before installing the app.** A standard doctype and
+a custom one of the same name is a site that fails to migrate, and the error
+names neither.
+
+## 15. The tools
+
+| | |
+|---|---|
+| `tools/export_from_site.py` | The site's definitions, back into the repo's JSON layout |
+| `tools/check_schema.py` | What the code assumes, checked against the site |
+
+`install_all.py`, `install_all.console.js` and `install_doctype.py` were how the
+doctypes got onto the site and have been removed. They read the repo's JSON,
+which no longer exists; keeping them would mean keeping a second, staler answer
+to what the schema is.

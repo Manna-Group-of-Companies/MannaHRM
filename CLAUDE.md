@@ -48,10 +48,10 @@ exists — a private bench is not a preference here.
 | `manna_hr/` | The Frappe app. Installed onto the site. |
 | `client/` | The React HR dashboard. **ERPNext is its server** — see `client/README.md` |
 | `manna_hr/rules.py` | Pure rules — no `frappe` import. Testable without a bench. |
-| `manna_hr/manna_hr/doctype/` | The schema. 21 doctypes, 15 of them things a person opens |
+| `manna_hr/manna_hr/doctype/` | Controllers only. **The schema lives on the site** — see docs/DOCTYPES.md §14 |
 | `manna_hr/loans.py` | Staff loans — the parts that need a site. The arithmetic is in `rules.py` |
-| `tools/install_all.py` | Puts every doctype on the site over the REST API |
-| `tools/install_all.console.js` | The same thing, pasted into the site's own console. No API key |
+| `tools/export_from_site.py` | The site's doctype definitions, back into the repo's JSON layout |
+| `tools/check_schema.py` | What the code assumes, checked against the live site |
 | `manna_hr/permissions.py` | Who sees whose corrections and letters. The row-level half of the security model |
 | `manna_hr/workflow.py` | The approval workflow, as data. Installed from code, not a fixture |
 | `manna_hr/letters.py` | The letter merge, ported from `client/src/lib/letter.js` |
@@ -75,7 +75,8 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ## 3. Tests
 
 ```bash
-python -m pytest manna_hr/tests -q        # 478 tests, no bench needed
+python -m pytest manna_hr/tests -q        # 134 tests, no bench needed
+python tools/check_schema.py              # the site, against what the code assumes
 cd client && npm test                     # 569 tests, jsdom
 cd client && npm run contrast             # the palette, every pairing, AA
 cd client && npm run shots                # the app in a real browser, photographed
@@ -139,7 +140,8 @@ sales system next door — module Selling, keyed to `Sales Person`, nine live ro
 and using `Initiated` where this one uses `Pending Approval`. Ours is
 `Employee Attendance Regularization`, under that name in the repo as well as on
 the site. Writing to the short name puts an HR correction into a sales queue
-nobody reads. `test_doctypes.py` has a test named after this.
+nobody reads. `tools/check_schema.py` refuses a site where the short name has
+drifted into our module or grown an `employee` field.
 
 **Never write `Attendance` directly.** It is generated from `Employee Checkin`
 by the shift job. A hand-written row is invisible to the thing that would have
@@ -210,14 +212,22 @@ existing `Attendance Log` history should be migrated is still open.
 
 ## 7. Known-incomplete
 
-- **The schema is on the site as *custom* doctypes, not as an installed app.**
+- **The schema is on the site as *custom* doctypes, and the repo has no copy.**
   `custom: 1` is what lets them exist without developer mode, and the price is
-  that the site owns the definition rather than the repo, and **the controllers
-  do not run**. Nothing on the server yet derives a loan's outstanding balance,
-  refuses an over-recovery, or strips the name off an anonymous survey response.
-  Delete the custom doctypes before `bench install-app` — a standard doctype and
-  a custom one of the same name is a site that fails to migrate, and the error
-  names neither. See [docs/DOCTYPES.md](docs/DOCTYPES.md) §14.
+  that the site owns the definitions and **the controllers do not run**. Nothing
+  on the server yet derives a loan's outstanding balance, refuses an
+  over-recovery, strips the name off an anonymous survey response, or turns away
+  a device whose id would make every punch off it look like a phone. §1 of this
+  file says a rule enforced only in a client is a suggestion; that rule is
+  currently suspended and it is the largest open item here.
+  `python tools/export_from_site.py --apply` brings the schema back, which is
+  the first step of a real install — then delete the custom doctypes, because a
+  standard doctype and a custom one of the same name is a site that fails to
+  migrate and the error names neither. See [docs/DOCTYPES.md](docs/DOCTYPES.md) §14.
+- **Two checks left the test suite with the JSON.** The workflow's states
+  against the `status` field, and the dashboard's field list against
+  `Asset Assignment`. Both failures are silent on a live site.
+  `tools/check_schema.py` makes them, and needs credentials.
 - **No bench tests.** Only the pure rules are covered.
 - **No phone app.** The dashboard is in `client/` and runs against the live
   site; it reads almost everything and writes very little — see its README.

@@ -237,5 +237,10 @@ instead, so that a candidate is not a second doctype shadowing `Employee`. It
 has no rows. Nothing here writes to it; it is left alone rather than deleted,
 because deleting a doctype somebody else made is not this repo's decision.
 
-**`Employee Document`, `Employee Document Type` and `Asset Assignment` are in
-the repo and not on the site.** They go up with `tools/install_all.py`.
+**All twenty-one are now on the site.** `Attendance Device`, the two category
+doctypes, the four survey ones, the loan repayment schedule, the profile-change
+pair, `Employee Document`, `Employee Document Type` and `Asset Assignment` were
+created on 8 September 2026 in the `Manna HR` module, as custom doctypes. The
+repo no longer keeps a copy of any of them — `tools/export_from_site.py` is the
+way back and `tools/check_schema.py` is what notices drift. See
+`docs/DOCTYPES.md` §14.

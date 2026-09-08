@@ -68,24 +68,26 @@ attendance are hrms' and are left alone; what `manna_hr` adds is the rest —
 corrections, letters, documents, asset handovers, staff loans, surveys, the
 category master, the device register and the settings.
 
+**They live on the site, not in this repo.** All twenty-one are on
+`mannarubber.m.frappe.cloud` as custom doctypes in the `Manna HR` module, and
+the site owns the definitions — there is no JSON here to read.
+
 ```bash
-python tools/install_all.py            # what it would do
-python tools/install_all.py --apply    # do it
+python tools/export_from_site.py --apply   # schema back into the repo, when you need it
+python tools/check_schema.py               # what the code assumes, checked against the site
 ```
 
-Or, with no Python and no API key: sign in to the site, open `/app`, and paste
-[tools/install_all.console.js](tools/install_all.console.js) into the browser
-console. Both are a **way in, not the destination** — they create custom
-doctypes, which the site owns and whose controllers do not run. The destination
-is `bench get-app` + `bench install-app`. See
-[docs/DOCTYPES.md](docs/DOCTYPES.md).
+A custom doctype is a table and a form: **the controllers beside them do not
+run**, so the rules in `manna_hr/` are written, tested and currently inert. That
+is the largest open item in this project — see
+[docs/DOCTYPES.md](docs/DOCTYPES.md) §14.
 
 ## Status
 
 Frappe HR **is** installed on the site — the `HR` and `Payroll` modules are
-there, and so are the roles. Nine of the twenty-one doctypes are on it as custom
-doctypes; the rest are in this repo and go up with the installer above. None of
-the server-side *rules* are live, because a custom doctype carries no controller.
+there, and so are the roles. All twenty-one doctypes are on it, as custom
+doctypes, and data saves into them. None of the server-side *rules* are live,
+because a custom doctype carries no controller.
 
 Read [docs/DOCTYPES.md](docs/DOCTYPES.md) §14 for what that means in practice,
 and [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md) for what is still needed

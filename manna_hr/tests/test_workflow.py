@@ -6,16 +6,20 @@ question somebody can answer by reading. That is the same bargain `rules.py`
 makes and for the same reason: a workflow you can only inspect by installing it
 is a workflow nobody inspects.
 
-**The one that earns its place most is `test_the_doctype_and_the_workflow_agree_on_the_states`.**
-The five states are written down twice — once in `workflow.py` and once as the
-`status` field's `options` in the doctype JSON — and they have to match exactly
-or a document lands in a state its own field cannot hold. Nothing at install
-time notices; the workflow saves, the field saves, and the failure is one
-approver seeing a blank status a week later.
-"""
+**Five tests used to live here and no longer can.** They read the doctype JSON
+and checked it against these tables — that the five states match the `status`
+field's `options` exactly, that a new correction defaults to Draft, and that
+every role a transition names can actually reach the doctype. The schema is now
+owned by the site rather than by this repo, so there is nothing here to read
+them from.
 
-import json
-import pathlib
+That check has not been dropped, it has moved to where the truth is:
+`python tools/check_schema.py` asks the site. **It needs credentials and it is
+not part of this suite**, which is the honest cost of the schema living on the
+site — the drift it catches is exactly the kind nothing notices at install time.
+The workflow saves, the field saves, and the failure is one approver seeing a
+blank status a week later.
+"""
 
 from manna_hr.workflow import (
 	DOCTYPE,
@@ -30,47 +34,7 @@ from manna_hr.workflow import (
 	roles_used,
 )
 
-APP = pathlib.Path(__file__).resolve().parents[1]
-DOCTYPE_JSON = APP / "manna_hr" / "doctype" / "employee_attendance_regularization" / "employee_attendance_regularization.json"
-
 STATE_NAMES = [state for state, _style, _edit in STATES]
-
-
-def _doctype():
-	return json.loads(DOCTYPE_JSON.read_text(encoding="utf-8"))
-
-
-def _field(fieldname):
-	return next(f for f in _doctype()["fields"] if f["fieldname"] == fieldname)
-
-
-# ------------------------------------------------------- the two definitions ---
-
-
-def test_the_doctype_and_the_workflow_agree_on_the_states():
-	assert _field(STATE_FIELD)["options"].split("\n") == STATE_NAMES
-
-
-def test_a_new_correction_starts_as_a_draft_rather_than_in_somebodys_queue():
-	# It used to default to Pending Approval, which put a half-typed request in
-	# front of an approver the moment it was saved.
-	assert _field(STATE_FIELD)["default"] == STATUS_DRAFT
-
-
-def test_the_workflow_drives_a_field_the_doctype_actually_has():
-	assert any(f["fieldname"] == STATE_FIELD for f in _doctype()["fields"])
-
-
-def test_the_doctype_is_the_one_the_workflow_names():
-	assert _doctype()["name"] == DOCTYPE
-
-
-def test_every_role_the_workflow_names_can_reach_the_doctype():
-	"""A transition allowed to a role with no permission on the doctype is an
-	action Frappe draws and then refuses — the worst shape of dead button,
-	because it looks like the person's fault."""
-	permitted = {p["role"] for p in _doctype()["permissions"]}
-	assert set(roles_used()) <= permitted, sorted(set(roles_used()) - permitted)
 
 
 # --------------------------------------------------------- the state machine ---
