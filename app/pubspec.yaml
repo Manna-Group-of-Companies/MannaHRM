@@ -1,0 +1,30 @@
+name: manna_hr_app
+description: "Manna HRM — punch in, punch out, and the month behind it."
+publish_to: 'none'
+
+# The site is the server (CLAUDE.md §1). There is no backend of ours between
+# this app and ERPNext, so the version here is only what the store shows.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.9
+  # The same three the field-sales app runs on, at the versions already in the
+  # bench's pub cache — this app is the second phone client against the same
+  # site and a different HTTP stack would be a second set of auth bugs.
+  dio: ^5.10.0
+  geolocator: ^14.0.3
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
