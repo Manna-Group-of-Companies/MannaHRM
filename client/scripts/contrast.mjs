@@ -29,13 +29,19 @@ const THEMES_CSS = path.resolve(HERE, "../src/styles/themes.css");
 
 /* ----------------------------------------------------------------- parsing */
 
-/** `:root { --brand: 251 146 60; ... }` → `{root: {brand: [...]}}`.
+/** `:root { --brand: 251 146 60; ... }` → `{root: {brand: [...]}, light: {...}}`.
 
-    One block, since 5 September 2026. It read six palettes across two modes
-    before that, and the shape of this function is the only thing that changed:
-    if a palette or a light mode comes back — see the note at the top of
-    themes.css — this is where the `[data-theme="…"]` / `[data-mode="…"]` half
-    of the selector goes, and every check below already runs per block. */
+    **Two blocks since 8 September 2026** — `:root`, which is dark, and
+    `[data-mode="light"]`. The note at the top of themes.css said this is where
+    the second half of the selector would go if a light mode came back; it did,
+    and this is it. Every check below already ran per block, so nothing else in
+    this file changed.
+
+    A light palette inherits nothing: `[data-mode="light"]` declares the same
+    token names over the top, so anything it omits keeps the dark value and
+    would fail here as a dark colour on a white card. That is the failure this
+    parser is shaped to catch, which is why the two blocks are kept apart rather
+    than merged. */
 function parseThemes(css) {
 	const out = {};
 	/* Comments out first. A `{` inside one would split a block in half, and the
@@ -47,8 +53,10 @@ function parseThemes(css) {
 	const block = /([^{}]+)\{([^{}]*)\}/g;
 	let m;
 	while ((m = block.exec(clean)) !== null) {
-		const isRoot = m[1].split(",").some((sel) => sel.trim() === ":root");
-		if (!isRoot || !m[2].includes("--")) continue;
+		const sels = m[1].split(",").map((sel) => sel.trim());
+		const which = sels.includes(":root") ? "root"
+			: sels.includes('[data-mode="light"]') ? "light" : "";
+		if (!which || !m[2].includes("--")) continue;
 
 		const tokens = {};
 		const decl = /--([a-z0-9-]+)\s*:\s*([0-9]{1,3})\s+([0-9]{1,3})\s+([0-9]{1,3})\s*;/g;
@@ -59,7 +67,7 @@ function parseThemes(css) {
 		/* A block with no colour channels in it must not register, or the shape
 		   check below reports the real one as carrying "extra" tokens. */
 		if (!Object.keys(tokens).length) continue;
-		out.root = { ...(out.root || {}), ...tokens };
+		out[which] = { ...(out[which] || {}), ...tokens };
 	}
 	return out;
 }

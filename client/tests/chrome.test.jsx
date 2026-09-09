@@ -212,7 +212,11 @@ describe("the header", () => {
 		   they overlap, and the one underneath is a menu you can see and cannot
 		   press. */
 		const { container, rerender } = draw(<TopBar />);
-		fireEvent.click(container.querySelectorAll(".tbicon")[0]);
+		/* The bell by what it is, not by where it sits. It was `.tbicon[0]` until
+		   the appearance switch landed beside it on 8 September 2026 and became
+		   the first one — a test that counts along a toolbar fails the next time
+		   anybody adds a button to it, and says nothing about what broke. */
+		fireEvent.click(container.querySelector('.tbicon[aria-haspopup="menu"]'));
 		expect(getState().tbnotif).toBe(true);
 
 		rerender(<Provider store={store}><TopBar /></Provider>);

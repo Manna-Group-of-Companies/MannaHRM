@@ -206,3 +206,130 @@
   --chart-2:      59 130 246;
   --chart-3:      199 122 11;
 }
+
+/* ---------------------------------------------------------------------------
+   Light, added 8 September 2026 — and the block above says exactly how.
+
+   **Why it came back.** The one palette above was the right call for a screen
+   somebody glances at; it is the wrong one for the screen HR has open from nine
+   to six in a room with a window behind them. Factor HR is light, so is every
+   other system these people use all day, and a dark app beside a light one is
+   the difference between reading and squinting. That is not a preference to
+   argue about — it is the room.
+
+   The mechanics are the ones documented above and nothing more: this is a block
+   of numbers, after `:root`, on an attribute. **No rule in `index.css` changed.**
+   Every one of them names a role rather than a colour, which is what makes a
+   second palette forty lines instead of a rewrite.
+
+   `lib/mode.js` writes the attribute. It defaults to whatever the operating
+   system asks for and remembers what the person picks, so somebody who has
+   never touched the control still gets the right one — and somebody who has
+   gets theirs on every screen and every reload.
+
+   **The trap from the block above is inverted here and just as sharp.** On dark,
+   a token cannot be both readable text and a fill with white on it, and every
+   token picks text. On light the opposite holds: `bad`, `live` and `accent`
+   have to be dark enough to *read* on white, which makes them dark enough for
+   white to sit on — so the `-dark` and `-fill` steps stay, and are the same
+   value or one step deeper. `npm run contrast` walks both palettes, so a value
+   that works on one and fails on the other is caught before anybody opens it.
+   --------------------------------------------------------------------------- */
+
+[data-mode="light"] {
+  /* Browser furniture follows, the same as above and for the same reason: a
+     light page with dark scrollbars and dark select popups is the tell of a
+     theme bolted on afterwards. */
+  color-scheme: light;
+
+  /* Ink at low alpha, which is what a shadow on white actually is. The dark
+     palette needs near-opaque black because there is no white to lift off;
+     here the surfaces do the lifting and the shadow only softens the edge. */
+  --sh-raise:     0 1px 2px rgba(15, 23, 42, .06), 0 1px 3px rgba(15, 23, 42, .07);
+  --sh-lift:      0 2px 6px rgba(15, 23, 42, .07), 0 10px 24px rgba(15, 23, 42, .08);
+  --sh-pop:       0 8px 26px rgba(15, 23, 42, .14), 0 2px 6px rgba(15, 23, 42, .08);
+  --sh-modal:     0 28px 64px rgba(15, 23, 42, .22);
+
+  /* ---- the brand ----
+     `brand` is the mark's own orange and stays it. `deep` is the step that has
+     to be *read* on `soft`, so it is the dark end here where it was the light
+     end above — the roles are identical and the direction is reversed. */
+  --brand:        234 88 12;
+  --brand-dark:   194 65 12;
+  --brand-deep:   124 45 18;
+  --brand-soft:   255 241 232;
+  --brand-tint:   254 215 190;
+  --brand-lift:   251 146 60;
+
+  /* ---- the chrome ----
+     **The rail stays dark, on purpose.** It is the thing you navigate by, and
+     an app whose menu changes colour with the page loses the one fixed edge a
+     reader steers along. The header was already the page's own material — see
+     the note at the top of the chrome block in index.css — so on light it needs
+     no special case at all. */
+  --char:         15 23 42;
+  --nav:          24 32 47;
+  --nav-2:        17 24 38;
+  --nav-3:        44 55 76;
+  --nav-ink:      165 176 194;
+
+  /* ---- the surfaces ----
+     `page` is not white and `card` is. That way a card lifts off the page with
+     no border needed, which is the same job the four dark steps do in reverse.
+     A pure-white page with white cards is a screen with no structure at all. */
+  --page:         246 247 250;
+  --card:         255 255 255;
+  --wash:         248 249 252;
+  --rule:         234 237 243;
+
+  --line:         224 228 236;
+  --line-2:       203 210 221;
+  --line-ctl:     126 136 152;
+
+  /* Not pure black, for the mirror of the reason above: #000 on white is harsh
+     at small sizes and every label here is small. Each step clears 4.5:1 on all
+     four surfaces. */
+  --ink:          23 32 47;
+  --ink-2:        71 85 105;
+  --ink-3:        92 108 131;
+
+  --accent:       191 62 9;
+  --accent-wash:  255 241 232;
+
+  --live:         16 123 56;
+  --live-dark:    21 128 61;
+  --live-wash:    236 253 243;
+
+  --part:         175 78 4;
+  --part-wash:    255 247 237;
+
+  --bad:          185 28 28;
+  --bad-fill:     185 28 28;
+  --bad-wash:     254 242 242;
+  --bad-tint:     252 205 205;
+  --bad-deep:     153 27 27;
+  --bad-faint:    254 249 249;
+
+  --skip:         92 108 131;
+  --skip-wash:    241 245 249;
+
+  --rest:         30 78 140;
+  --info:         29 78 216;
+
+  --track:        228 232 240;
+
+  /* Their "answer this" fill. Ink sits on it, so it stays a surface — pale
+     enough for `ink-3` to clear AA, warm enough not to read as an error. */
+  --need:         255 251 235;
+
+  --beacon:       148 163 184;
+  --beacon-live:  22 163 74;
+  --beacon-bad:   220 38 38;
+
+  /* Validated against `#FFFFFF` rather than `#141922`: the lightness band moves
+     with the surface, so these are the darker ends of the same three hues.
+     Same order, same rule, never cycled. */
+  --chart-1:      15 118 110;
+  --chart-2:      37 99 235;
+  --chart-3:      180 83 9;
+}

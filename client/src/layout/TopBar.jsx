@@ -12,6 +12,8 @@
 import { useApp, set } from "@/store";
 import { logout } from "@/api/client";
 import { MODULES } from "@/routes/registry";
+import { blueprintsFor } from "@/data/blueprints";
+import { modeIcon, modeLabel, nextMode, saveMode } from "@/lib/mode";
 import { initials } from "@/lib/format";
 import Link from "@/routes/Link";
 
@@ -65,10 +67,17 @@ function pending(s) {
 
 export default function TopBar() {
 	const s = useApp();
-	const { companies, company, q, user, section, subtab, drawer, tbnotif, tbme } = s;
+	const { companies, company, q, user, section, subtab, drawer, tbnotif, tbme, mode } = s;
 
 	const mod = MODULES[section];
-	const page = (mod?.tabs || []).find((t) => t[0] === subtab);
+	/* A page reached from a control rather than from the strip is not on
+	   `tabs`, so the header used to call all 106 blueprints "Overview" — which
+	   is both wrong and the same word on 106 different pages. Their own menu
+	   title is the answer, and it is the title the reader clicked. */
+	const page = (mod?.tabs || []).find((t) => t[0] === subtab)
+		|| (blueprintsFor(section).find((b) => b.slug === subtab)
+			? [subtab, blueprintsFor(section).find((b) => b.slug === subtab).title]
+			: null);
 	const waiting = pending(s);
 
 	const signOut = async () => {
@@ -130,6 +139,26 @@ export default function TopBar() {
 			</select>
 
 			<div className="tbacts">
+				{/* **One button, three states.** system → light → dark → system.
+
+				    Three radio buttons for a thing most people press once is three
+				    times the toolbar for the same answer, and the cycle starts at
+				    `system` so the first press goes to light — which is what
+				    somebody pressing it in a lit room wants.
+
+				    `system` is a real answer rather than the absence of one: it
+				    keeps following the machine, so an app opened at nine in a bright
+				    office is dark by seven without anybody asking. lib/mode.js. */}
+				<button
+					type="button"
+					className="tbicon tbmode"
+					aria-label={`Appearance: ${modeLabel(mode)}. Switch to ${modeLabel(nextMode(mode))}`}
+					title={`Appearance: ${modeLabel(mode)} — click for ${modeLabel(nextMode(mode))}`}
+					onClick={() => set({ mode: saveMode(nextMode(mode)) })}
+				>
+					<span aria-hidden="true">{modeIcon(mode)}</span>
+				</button>
+
 				<span className="empdrop">
 					<button
 						type="button"

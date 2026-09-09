@@ -198,7 +198,7 @@ function answer(url) {
 /** Every module, at the page worth photographing. `overview` is left off the
     path — see routes/paths.js. */
 const PAGES = [
-	["dashboard", "/dashboard", "the ten widgets"],
+	["dashboard", "/dashboard", "Factor HR's Start Up, panel for panel"],
 	["employees", "/employees", "Employee Master"],
 	["employee-profile", "/employees/profile", "one person's record"],
 	["attendance", "/attendance", "the correction queue"],
@@ -207,7 +207,17 @@ const PAGES = [
 	["payroll", "/payroll", "Salary Process"],
 	["onboard", "/onboard", "Create Letter"],
 	["approvals", "/dashboard/approvals", "the approval queues"],
+	["updates", "/dashboard/updates", "Product Updates — their third tab"],
 	["settings", "/settings", "what the site is set up for"],
+	["coverage", "/settings/coverage", "their 160 menu items against ours"],
+	["payroll-all", "/payroll/all", "Payroll — all of their menu"],
+	["msp", "/attendance/msp", "MSP — the punches somebody has to fix"],
+	["orgchart", "/employees/orgchart", "Organization Chart, off reports_to"],
+	["blueprint", "/attendance/manage-attendance-policy", "a blueprint — the biggest unbuilt item"],
+	["refused", "/attendance/online-attendance", "the one item that will not be built"],
+	["locations", "/attendance/locations", "Work Locations — new, edit, delete"],
+	["lettertypes", "/onboard/lettertypes", "Letter Types, managed here"],
+	["notices", "/dashboard/notices", "Announcements & CEO Speak — the composer"],
 ];
 
 /** Three real devices rather than three round numbers: a desk monitor, a
@@ -218,6 +228,11 @@ const SIZES = [
 	["desktop", 1440, 900],
 	["tablet", 820, 1180],
 	["phone", 390, 844],
+	/* The fourth is the third size again in the other palette — see SCHEME_FOR.
+	   A rule that resolves on one and not the other is invisible to `npm test`
+	   (jsdom has no cascade) and to `npm run contrast` (it reads the file, not
+	   the resolved value). A browser can see it, in one line. */
+	["desktop-dark", 1440, 900],
 ];
 
 /** What `--brand` has to resolve to.
@@ -234,7 +249,19 @@ const SIZES = [
     Read off themes.css by hand, deliberately: a checker that computed the
     expected value the same way the page does would agree with the page about
     anything. */
-const BRAND = "251 146 60";
+const BRAND = { dark: "251 146 60", light: "234 88 12" };
+
+/** Which palette each device pass is photographed in.
+
+    **Light is where most of the passes are, because light is what most people
+    see.** The default is `system`, browsers on a desk report light, and Factor
+    HR — the thing this is read beside — is light. Dark gets one desktop pass:
+    enough to catch a rule that only resolves on one of them, without doubling a
+    run that already takes two minutes.
+
+    Playwright's `colorScheme` is what drives it, so this exercises the same
+    path a real machine does rather than writing the attribute by hand. */
+const SCHEME_FOR = { desktop: "light", tablet: "light", phone: "light", "desktop-dark": "dark" };
 
 const mkdir = (d) => fs.mkdirSync(d, { recursive: true });
 
@@ -244,7 +271,11 @@ async function main() {
 	const failures = [];
 
 	for (const [device, width, height] of SIZES) {
-		const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+		const ctx = await browser.newContext({
+			viewport: { width, height },
+			deviceScaleFactor: 1,
+			colorScheme: SCHEME_FOR[device] || "light",
+		});
 
 		/* **`/api/method/` and `/api/resource/`, never `**\/api/**`.** The app's own
 		   source lives at `/src/api/client.js`, which a glob that loose matches —
@@ -317,10 +348,11 @@ async function main() {
 			   a rule added to one screen. */
 			const brand = await page.evaluate(() =>
 				getComputedStyle(document.documentElement).getPropertyValue("--brand").trim());
-			if (brand !== BRAND) {
+			const want = BRAND[SCHEME_FOR[device] || "light"];
+			if (brand !== want) {
 				failures.push(
-					`${device}${route}: --brand resolved to ${brand}, not ${BRAND}`
-					+ " — something is overriding :root",
+					`${device}${route}: --brand resolved to ${brand}, not ${want}`
+					+ " — something is overriding the palette block",
 				);
 			}
 		}

@@ -748,6 +748,183 @@
   .feed .what b { @apply font-semibold; }
   .feed .when { @apply font-mono text-micro tracking-[.04em] uppercase text-ink-3; }
 
+  /* The appearance switch. Deliberately quiet: it is a control most people
+     press once and then never look for again, so it sits with the other header
+     icons rather than announcing itself. */
+  .tbmode span { @apply text-read leading-none; }
+
+  /* ---- the Start Up toolbar ---- */
+  /* Their Active / InActive / All, their Search, their Expand and Collapse All,
+     in one bar above the headline counts. */
+  .startbar { @apply mb-[.9rem]; }
+  /* One control that happens to be three buttons — joined, so it reads as a
+     switch with one answer rather than three things that can all be on. */
+  .segs { @apply inline-flex; }
+  .segs .embtn { @apply rounded-none; }
+  .segs .embtn:first-child { @apply rounded-l; }
+  .segs .embtn:last-child { @apply rounded-r; }
+  .segs .embtn + .embtn { @apply -ml-px; }
+  .segs .embtn[aria-pressed="true"] { @apply relative z-[1]; }
+  .segs .n { @apply font-mono text-micro tabular-nums text-ink-3 ml-[.35rem]; }
+  .segs .embtn[aria-pressed="true"] .n { @apply text-brand-deep; }
+
+  /* A panel folded away. The header stays: collapsing is for getting past a
+     panel, not for losing it, and a reader who has collapsed nine of eleven
+     still needs to see which nine. */
+  .panel.shut > .body { display: none; }
+  .pfold {
+    @apply inline-flex items-center justify-center w-[1.2rem] h-[1.2rem] mr-[.15rem] rounded
+           text-ink-3 bg-transparent border-0 cursor-pointer leading-none;
+  }
+  .pfold:hover { @apply text-brand-deep bg-brand-soft; }
+
+  /* ---- Factor HR's own summary tiles ---- */
+  /* Six small counts in a row, which is how their attendance summary and their
+     payroll summary both read. Not `.tiles`: that one is two or three cards
+     with a sentence under each, and six of those is a panel nobody scans. The
+     whole point of this shape is that it is read left to right in one glance,
+     in their order. */
+  /* Six across where there is room, three across where there is not — never
+     five and a lonely sixth, which is what `auto-fit` gives on a panel just
+     wide enough. The count is the shape of the row: their six read as one line
+     of six or two lines of three, and a 5+1 reads as one that did not fit. */
+  .stiles {
+    @apply grid gap-[.4rem] mb-[.85rem];
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  @media (min-width: 60rem) {
+    .stiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  }
+  /* Four of them — Help Desk — halve rather than thirding. */
+  .stiles:has(> :nth-child(4):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (min-width: 60rem) {
+    .stiles:has(> :nth-child(4):last-child) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  .stiles:has(> :nth-child(5):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (min-width: 60rem) {
+    .stiles:has(> :nth-child(5):last-child) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
+  .stile {
+    @apply flex flex-col items-center gap-[.1rem] rounded-md border border-line bg-wash
+           px-[.25rem] py-[.55rem] text-center min-w-0;
+  }
+  .stile b { @apply font-display text-sub font-bold tabular-nums leading-none text-ink; }
+  .stile .sico { @apply text-read leading-none; }
+  /* Wrapping rather than truncating: "Salary Not Proceed" truncated is "Salary
+     Not…", which is a different tile. */
+  .stile .sk {
+    @apply font-mono text-micro font-semibold tracking-[.04em] uppercase text-ink-3 leading-tight
+           break-words hyphens-auto;
+  }
+  /* A bucket this dashboard will not claim a number for. Dashed, because a
+     solid tile reading "—" looks like a count that failed to load, and these
+     have not failed — nothing was asked. The `title` says which. */
+  .stile.off { @apply border-dashed; }
+  .stile.off b { @apply text-ink-3; }
+
+  /* ---- their Quick Links and Quick Reports ---- */
+  /* Two columns of plain links. `.links` next door is the same idea and is
+     already spoken for by Settings, where the rows are labelled pairs. */
+  .quicklist {
+    @apply grid gap-x-[.9rem] gap-y-[.3rem] m-0 p-0 list-none text-read;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  }
+  .quicklist a { @apply text-accent no-underline; }
+  .quicklist a:hover { @apply underline; }
+  /* A link of theirs with nowhere to go here. Struck through rather than
+     dropped: a row quietly missing from a list somebody is comparing against
+     theirs is the one gap this page exists to make visible. */
+  .quicklist .gone { @apply text-ink-3 line-through cursor-help; }
+
+  /* ---- Wish Celebration ---- */
+  .wishtabs { @apply flex flex-wrap gap-[.9rem] mb-[.7rem] text-mini text-ink-2; }
+  .wishtabs b { @apply font-display text-read font-bold text-ink tabular-nums mr-[.2rem]; }
+  .wishtabs .off { @apply text-ink-3 cursor-help; }
+  .wishtabs .off b { @apply text-ink-3; }
+  .wishlist { @apply flex flex-col m-0 p-0 list-none; }
+  .wishlist li {
+    @apply grid items-center gap-x-[.6rem] py-[.4rem];
+    grid-template-columns: auto 1fr auto;
+  }
+  .wishlist li + li { @apply border-t border-rule; }
+  .wishlist .av {
+    @apply inline-flex items-center justify-center w-[1.9rem] h-[1.9rem] rounded-full
+           font-mono text-micro font-semibold bg-brand-soft text-brand-deep;
+  }
+  .wishlist .who { @apply flex flex-col min-w-0; }
+  .wishlist .who b { @apply text-read text-ink truncate; }
+  .wishlist .who em { @apply not-italic text-micro text-ink-3 truncate; }
+  .wishlist .on { @apply font-mono text-micro tracking-[.04em] text-ink-2 whitespace-nowrap; }
+  /* A release note is one column, not three — it reuses `.wishlist` for the
+     ruled-list shape and nothing else. */
+  .wishlist li.upd { grid-template-columns: 1fr; @apply py-[.7rem]; }
+  .wishlist li.upd .who b { @apply font-display text-read whitespace-normal; }
+  .wishlist li.upd .who em { @apply mb-[.25rem]; }
+
+  /* ---- Factor HR's menu, item for item ---- */
+  /* Their own group heading inside the table, not a `<th>`: it names a section
+     of their menu rather than a column, and a second header row would make the
+     table look like it starts again every few lines. */
+  .grouprow td {
+    @apply font-mono text-micro font-semibold tracking-[.08em] uppercase text-ink-3 bg-wash
+           py-[.35rem];
+  }
+  /* This repo's own note under one of their items, told apart from their
+     description above it — the two are different voices and a reader deciding
+     what to build next needs to know which is which. */
+  .ournote {
+    @apply pl-[.5rem] border-l-2;
+    border-color: rgb(var(--brand)); color: rgb(var(--brand-deep));
+  }
+  /* A link inside one of these tables. The cell is otherwise plain text, so
+     without this the one thing on the row that can be clicked looks exactly
+     like the two things that cannot. */
+  .menutable a { @apply text-accent no-underline; }
+  .menutable a:hover { @apply underline; }
+  /* The link on a row that has no page doing the work. Not the accent — it goes
+     somewhere useful but it is not the thing the reader came for, and colouring
+     it the same as a built page would make a table of 66 rows look finished. */
+  .menutable a.notbuilt { @apply text-ink-3 italic; }
+  .menutable a.notbuilt:hover { @apply text-brand-deep; }
+
+  /* ---- the record form, generated from the doctype ---- */
+  /* Two columns where there is room, one where there is not. A form built from
+     a doctype has as many fields as the doctype has — thirty-five on the loan
+     application — and a single column of thirty-five is a dialog nobody reaches
+     the bottom of. */
+  .recform {
+    @apply grid gap-x-[1rem] gap-y-[.7rem] py-[.2rem];
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+  .rfield { @apply flex flex-col gap-[.25rem] min-w-0; }
+  /* A textarea gets the full width: wrapping prose into a 15rem column is how a
+     one-line address becomes four lines nobody can read. */
+  .rfield.wide { grid-column: 1 / -1; }
+  .rfield > .k { @apply font-mono text-micro font-semibold tracking-[.06em] uppercase text-ink-3; }
+  .rfield > .k .req { color: rgb(var(--bad)); }
+  .rfield input, .rfield select, .rfield textarea {
+    @apply text-read px-[.6rem] py-[.4rem] border border-line-ctl rounded bg-card text-ink w-full;
+    min-height: 2.1rem;
+  }
+  .rfield input[type="checkbox"] { @apply w-auto min-h-0 h-[1.1rem] self-start; }
+  .rfield input:hover, .rfield select:hover, .rfield textarea:hover { @apply border-brand; }
+  .rfield input[disabled], .rfield select[disabled], .rfield textarea[disabled] {
+    @apply opacity-[.55] cursor-not-allowed;
+  }
+  .rfield .ro { @apply text-read text-ink-2 py-[.4rem]; }
+  .rfield .hint { @apply text-fine text-ink-3; }
+  /* What changing this field costs. Not a colour on the box — the box is fine,
+     and it is the consequence that needs saying. */
+  .rfield .hint.warn {
+    @apply pl-[.5rem] border-l-2;
+    border-color: rgb(var(--chart-3)); color: rgb(var(--ink-2));
+  }
+
+  /* Their two row icons, kept on one line so a narrow table does not stack them
+     into a two-storey row. */
+  .rowacts { @apply whitespace-nowrap; }
+  .rowacts .embtn + .embtn { @apply ml-[.3rem]; }
+
   /* ---- a panel's own toolbar ---- */
   /* One row under a panel header for the control that changes what the panel is
      showing. It is not `.embar`: that is a page toolbar with a card of its own,
@@ -854,6 +1031,14 @@
   /* Their search box puts the magnifier on the right, not the left. */
   .embar .find.rev { @apply flex-row-reverse; }
 
+  /* A labelled control on a toolbar — the label beside the box rather than
+     above it, because these bars are one row and a stacked label doubles their
+     height for two words. Used by the report pages, which each draw exactly the
+     one control that changes their answer. */
+  .embar label.inline { @apply inline-flex items-center gap-[.4rem] text-mini text-ink-2; }
+  .embar label.inline > span { @apply whitespace-nowrap; }
+  .embar .grow { @apply ml-auto; }
+
   /* Every toolbar button in the app is this one. `min-height` rather than more
      padding, so an icon-only button and a worded one line up on the same bar
      and neither of them is a 24px target. */
@@ -867,6 +1052,15 @@
   .embtn:active:not([disabled]) { @apply bg-brand-tint; }
   .embtn[aria-pressed="true"]  { @apply bg-brand-soft border-brand text-brand-deep font-semibold; }
   .embtn[disabled]             { @apply opacity-[.45] cursor-not-allowed; }
+  /* A control that removes something. Outlined rather than filled: a solid red
+     button is the most eye-catching thing on a toolbar, and the most
+     eye-catching thing should not be the one that deletes. */
+  .embtn.bad {
+    border-color: rgb(var(--bad-tint)); color: rgb(var(--bad-deep));
+  }
+  .embtn.bad:hover:not([disabled]) {
+    border-color: rgb(var(--bad)); color: rgb(var(--bad-deep)); background: rgb(var(--bad-wash));
+  }
   .embtn.pri                   {
     @apply border-brand-dark text-white font-semibold shadow-raise;
     background: linear-gradient(180deg, rgb(var(--brand)), rgb(var(--brand-dark)));
@@ -1295,6 +1489,11 @@
     min-height: 2rem;
   }
   .fhcat th .sort { @apply text-ink-3 font-normal text-mini; }
+  /* Right-aligned counts, anywhere — Module coverage counts their menu against
+     ours in the same shape, and two figures a reader is subtracting have to
+     share an edge to be subtractable at a glance. */
+  th.num, td.num { @apply text-right; }
+  td.num { @apply font-mono tabular-nums; }
   .fhcat th.num, .fhcat td.num { @apply text-right; }
   .fhcat td.num { @apply font-mono tabular-nums; }
   .fhcat td.num.zero, .fhcat td.num.clip { @apply text-ink-3; }
