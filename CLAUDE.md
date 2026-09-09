@@ -18,9 +18,16 @@ adding a screen or a table — most of what looks missing is already in hrms.
 read on 22 August 2026. Trust it over anything inferred from the sales repo.
 
 [docs/FACTOHR.md](docs/FACTOHR.md) is what we are replacing and what it costs to
-match. Read it before estimating anything — about 70% of Factor HR is stock
-Frappe HR, and essentially all of the remaining 30% is one attendance policy
-engine that decides what people are paid.
+match. **Their whole menu was read off the tenant on 8 September 2026 — 160
+items, of which 41 open a page here.** It is in `client/src/data/factohr.js`,
+drawn on every module's All tab, and counted on Settings → Module coverage;
+[docs/FACTOHR_SCREENS.md](docs/FACTOHR_SCREENS.md) §7 says what it turned up.
+Read that before estimating anything, because every estimate made before it
+was measured against the handful of menus somebody had screenshotted. About 70%
+of Factor HR is stock Frappe HR, and essentially all of the remaining 30% is one
+attendance policy engine that decides what people are paid — it is one line on
+their Attendance menu, `Manage Attendance Policy`, and it is the largest single
+item on this project.
 
 ---
 
@@ -47,8 +54,10 @@ exists — a private bench is not a preference here.
 |---|---|
 | `manna_hr/` | The Frappe app. Installed onto the site. |
 | `client/` | The React HR dashboard. **ERPNext is its server** — see `client/README.md` |
+| `client/src/lib/write.js` | What the dashboard may create, change and delete — and the five doctypes it never writes |
+| `client/src/features/records/` | One form and one list, for every doctype this app installs |
 | `manna_hr/rules.py` | Pure rules — no `frappe` import. Testable without a bench. |
-| `manna_hr/manna_hr/doctype/` | Controllers only. **The schema lives on the site** — see docs/DOCTYPES.md §14 |
+| `manna_hr/manna_hr/doctype/` | The schema **and** its controllers. 21 doctypes; `client/scripts/schema.mjs` generates the client's copy from these |
 | `manna_hr/loans.py` | Staff loans — the parts that need a site. The arithmetic is in `rules.py` |
 | `tools/export_from_site.py` | The site's doctype definitions, back into the repo's JSON layout |
 | `tools/check_schema.py` | What the code assumes, checked against the live site |
@@ -57,11 +66,12 @@ exists — a private bench is not a preference here.
 | `manna_hr/letters.py` | The letter merge, ported from `client/src/lib/letter.js` |
 | `manna_hr/geo.py` | Distance arithmetic, ported from the sales app's `proximity.dart` |
 | `manna_hr/checkin.py` | The punch validation. The backstop. |
-| `bridge/` | The on-premise agent that reads the fingerprint machines |
+| `bridge/` | The on-premise agent. Reads the fingerprint machines, and listens for the ones that push (`--adms`) |
+| `app/` | The phone app. Punch in, punch out, the month, and the correction — see `app/README.md` |
 | `docs/` | Runbook, schema, migration, open questions |
 
 The repo root **is** the Frappe app root, so `bench get-app` works against it
-directly. `bridge/` and `docs/` ride along; the bench ignores them.
+directly. `app/`, `bridge/` and `docs/` ride along; the bench ignores them.
 
 ```bash
 bench get-app manna_hr https://github.com/Manna-Group-of-Companies/MannaHRM
@@ -75,11 +85,12 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ## 3. Tests
 
 ```bash
-python -m pytest manna_hr/tests -q        # 134 tests, no bench needed
+python -m pytest manna_hr/tests -q        # 513 tests, no bench needed
 python tools/check_schema.py              # the site, against what the code assumes
-cd client && npm test                     # 569 tests, jsdom
-cd client && npm run contrast             # the palette, every pairing, AA
-cd client && npm run shots                # the app in a real browser, photographed
+cd client && npm test                     # 2,516 tests, jsdom
+cd client && npm run contrast             # both palettes, every pairing, AA
+cd client && npm run shots                # the app in a real browser, light and dark
+cd app && flutter test                    # 48 tests, no site and no handset
 ```
 
 The Python ones cover `rules.py`, `geo.py`, the approval workflow's tables, the
@@ -99,9 +110,12 @@ the caret, and silently discards every keystroke; nobody reports it as a bug,
 they report that the form did not save.
 
 `npm run shots` is the one that needs a browser: it renders every module signed
-in, against a stubbed site, at three widths, and fails if a page throws, the
-document scrolls sideways, or the palette resolves to something other than
-itself. jsdom has no layout engine, so a rail overlapping the page and a token
+in, against a stubbed site, at three widths **and in both palettes**, and fails
+if a page throws, the document scrolls sideways, or the palette resolves to
+something other than itself. That last check is not theoretical — `:root` and an
+attribute selector have the same specificity, so a block declared in the wrong
+order silently wins, and this app once ran for a week painted by the palette
+underneath the one the picker was ticking. jsdom has no layout engine, so a rail overlapping the page and a token
 overridden by a stray rule both pass `npm test` and are obvious the moment
 somebody looks.
 
@@ -124,6 +138,12 @@ bias throughout this project is that *refusing somebody who did turn up is the
 expensive mistake*: it costs a person their day's pay and an argument with HR,
 while letting a doubtful punch through costs a flag on a report a human reads.
 So a punch that cannot be judged is recorded and marked, never refused.
+
+**Light and dark are one file of numbers.** Every rule in `client/src/styles/`
+names a role — `bg-card`, `text-ink-3` — and never a colour, which is what makes
+a second palette forty lines in `themes.css` instead of a rewrite. Adding one is
+a block after `:root`, and source order is the whole cascade there. `lib/mode.js`
+owns the preference; nothing else touches `localStorage` or the attribute.
 
 **Tabs, not spaces**, in Python — Frappe's house style, so a file moved between
 this app and hrms does not reformat wholesale in the diff.
@@ -155,7 +175,22 @@ first. Do not remove it.
 
 **The bridge must never clear a device's log.** `pyzk` offers
 `clear_attendance()` and every tutorial calls it. The device's memory is the
-last copy of a punch that failed to deliver.
+last copy of a punch that failed to deliver. The ADMS server has its own version
+of the same trap — `CLEAR LOG` down `/iclock/getrequest` — and answers `OK` and
+nothing else, forever.
+
+**On ADMS, an answer other than `OK` means "send those again".** So the queue
+write decides the reply and not the other way round. A server that acknowledges
+a post and then fails to store it has destroyed the last copy of those punches,
+which is `clear_attendance()` again wearing a different hat. See
+`bridge/mannabridge/adms.py`.
+
+**A ZK machine that was never set up for in/out reports `0` on every punch**,
+which is the same value as a genuine check-in and reads as a day on which
+nobody ever left. There is no way to tell the two apart from the data, so
+`report_direction` in `config.toml` is off by default and both routes honour it.
+A guessed direction is worse than none: a shift's pairing mode is right from
+nothing and cannot recover from a confident lie.
 
 **A `device_id` that does not start with the trusted prefix is treated as a
 mobile punch** — geofenced, and refused, because no fingerprint machine sends a
@@ -212,27 +247,51 @@ existing `Attendance Log` history should be migrated is still open.
 
 ## 7. Known-incomplete
 
-- **The schema is on the site as *custom* doctypes, and the repo has no copy.**
-  `custom: 1` is what lets them exist without developer mode, and the price is
-  that the site owns the definitions and **the controllers do not run**. Nothing
+- **The schema is in the repo again, and the site still holds it as *custom*
+  doctypes.** `manna_hr/manna_hr/doctype/*/*.json` came back on 8 September 2026
+  — all 21, with their controllers beside them — so a real `bench install-app`
+  now installs the definitions and runs the code. `client/scripts/schema.mjs`
+  reads the same files and generates `client/src/data/schema.js`, which is what
+  every create-and-edit form draws from: one schema, two consumers, and
+  `client/tests/schema.test.js` fails if they drift.
+
+  **What is still open is the site.** Its 21 are `custom: 1`, and a custom
+  doctype is a table and a form — the `.py` beside it is not part of it. Nothing
   on the server yet derives a loan's outstanding balance, refuses an
   over-recovery, strips the name off an anonymous survey response, or turns away
-  a device whose id would make every punch off it look like a phone. §1 of this
-  file says a rule enforced only in a client is a suggestion; that rule is
-  currently suspended and it is the largest open item here.
-  `python tools/export_from_site.py --apply` brings the schema back, which is
-  the first step of a real install — then delete the custom doctypes, because a
-  standard doctype and a custom one of the same name is a site that fails to
-  migrate and the error names neither. See [docs/DOCTYPES.md](docs/DOCTYPES.md) §14.
-- **Two checks left the test suite with the JSON.** The workflow's states
-  against the `status` field, and the dashboard's field list against
-  `Asset Assignment`. Both failures are silent on a live site.
-  `tools/check_schema.py` makes them, and needs credentials.
+  a device whose id would make every punch off it look like a phone. §1 says a
+  rule enforced only in a client is a suggestion; that rule is still suspended
+  there. The fix is an install, not a commit: install the app, then delete the
+  custom doctypes — a standard doctype and a custom one of the same name is a
+  site that fails to migrate and the error names neither. See
+  [docs/DOCTYPES.md](docs/DOCTYPES.md) §14.
+- **The checks that left the test suite with the JSON are back.**
+  `manna_hr/tests/test_doctypes.py` reads all 21 again, and the workflow and
+  onboarding tests read the fields they name. 478 Python tests.
+  `tools/check_schema.py` is still what compares the repo against the live site,
+  and still needs credentials.
 - **No bench tests.** Only the pure rules are covered.
-- **No phone app.** The dashboard is in `client/` and runs against the live
-  site; it reads almost everything and writes a little — corrections, letters,
-  documents, asset handovers, the category master, and an Employee's own record
-  from Employee Profile. See its README.
+- **The phone app is four screens, and the server rules behind it are not
+  running yet.** `app/` was built on 9 September 2026 — Flutter, Android, the
+  same dio-and-cookie shape as the field-sales app next door. It punches in and
+  out (`Employee Checkin`, with a coordinate and the site's own clock), draws
+  the month off `core/roster.dart`, and raises a correction on any day of it.
+  What it does *not* have behind it is `manna_hr/checkin.py`: those controllers
+  belong to doctypes the site still holds as `custom: 1`, so the punch window,
+  the geofence and the server clock are at present only what the app does —
+  which is the state §1 says a rule must never be left in. The fix is the
+  install above, not a commit. `flutter test` covers the rules that can be
+  argued about without a site: 48 tests, no bench and no handset.
+- **No leave or payroll on the phone.** The app reads leave to colour a day and
+  writes none of it.
+- **The dashboard is in `client/`** and runs against the live
+  site. It reads almost everything and, since 8 September 2026, **writes every
+  doctype this app installs**: all fifteen record doctypes have a page with
+  Factor HR's own control set on it — Add New, Search, Generate Report, and a
+  per-row edit and delete — drawn from the doctype JSON by
+  `client/src/features/records/`. What it will not write is in
+  `client/src/lib/write.js`, and `Attendance` is the entry that list exists for.
+  See its README.
 - **Where the dashboard is served in production is undecided.** It routes on the
   path, so whatever serves it must answer every unmatched path with
   `index.html`. `npm run dev` proxies to the site; nothing else is set up.

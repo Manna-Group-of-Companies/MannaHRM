@@ -118,6 +118,15 @@ a week *for this location*; the questions below are now about the others.
   first question above, which may change it by more than a factor of two.
 - How many people will use the **phone app**. Only they need a `User` record;
   a worker punching on a machine needs none.
+
+  **Sharper now that the app exists** (`app/`, built 9 September 2026): it finds
+  who you are by matching the signed-in user against `Employee.user_id`, and a
+  login with no such record can sign in and has nothing to punch against. The
+  app says so and names the fix rather than drawing an empty month — but the fix
+  is HR's, one record at a time. So the question is really two: how many people
+  get the app, and **who is going to set `user_id` on their Employee records**.
+  A licence question rides along with it, because a `User` on Frappe Cloud is
+  not free and 160 of them is a different plan.
 - Whether payroll moves to ERPNext too, or stays in Factor HR for now.
 
 ### About the rules

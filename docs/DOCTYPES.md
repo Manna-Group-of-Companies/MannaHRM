@@ -48,14 +48,23 @@ nothing.
 
 | Page | Doctype | |
 |---|---|---|
-| Start up | — | derived |
-| Engagement | `Employee Survey`, `Employee Survey Response` | ours |
+| Start Up | — | derived |
+| Product Updates | — | hand-written, `client/src/data/updates.js` |
 | Approvals — Leave | `Leave Application` | stock |
 | Approvals — Attendance | `Employee Attendance Regularization` | ours |
 | Approvals — Employee Profile | `Employee Profile Change Request` | ours |
 | Approvals — Onboarding | `Employee Onboarding` | stock |
 | Approvals — Transfer & Promotion | `Employee Promotion`, `Employee Transfer` | stock |
 | Approvals — Letter Assignment | `Employee Letter` | ours |
+
+**Engagement was a page and is not one now.** Factor HR's Welcome screen has
+three tabs and no Engagement among them — Mood Analysis, Wish Celebration, CEO
+Speak, Announcements and Important Files are all panels on Start Up itself. The
+stub page went on 8 Sep 2026 and its subject matter moved to the front page.
+`Employee Survey` and `Employee Survey Response` are untouched by that: they
+back the Survey module on the rail, which is where they always were.
+
+---
 
 ## 3. On Board
 
@@ -318,3 +327,79 @@ names neither.
 doctypes got onto the site and have been removed. They read the repo's JSON,
 which no longer exists; keeping them would mean keeping a second, staler answer
 to what the schema is.
+
+---
+
+## 15. The schema came back, 8 September 2026
+
+`manna_hr/manna_hr/doctype/*/*.json` is in the repo again — all 21 definitions,
+with their controllers beside them, restored from the commit that removed them.
+§14 above describes the state between 8 September and that restore; it is kept
+because the argument in it is still half true.
+
+**What changed and what did not.** A real `bench install-app` now installs the
+definitions *and* runs the code, which is what makes `rules.py`, `loans.py` and
+`checkin.py` more than tested-and-inert. What did not change is the live site:
+its 21 are still `custom: 1`, and a custom doctype is a table and a form with
+the `.py` beside it doing nothing. The fix there is an install, not a commit —
+and then a delete, because a standard doctype and a custom one of the same name
+is a site that fails to migrate with an error that names neither.
+
+**One schema, two consumers.** `client/scripts/schema.mjs` reads these same
+files and generates `client/src/data/schema.js`, which is what every create-and-
+edit form in the dashboard draws from. That is not a convenience: **Frappe
+accepts a key its doctype has not got and drops it without a word**, so a form
+built from a hand-kept field list takes a value, saves, reports success, and
+shows nothing on reload. `client/tests/schema.test.js` regenerates and compares,
+so a doctype edited without re-running the generator fails the suite rather than
+shipping a form that lies.
+
+### Where each doctype is managed
+
+Every one of the fifteen record doctypes has a page, on the module that owns it,
+with Factor HR's own control set — Add New, Search, Generate Report, and a
+per-row edit and delete. `client/src/data/manage.js` is the list.
+
+| Module | Page | Doctype |
+|---|---|---|
+| On Board | Letter Types | `Letter Type` |
+| On Board | Document Type | `Employee Document Type` |
+| On Board | Employee Documents | `Employee Document` |
+| On Board | Asset Assignment | `Asset Assignment` |
+| Employees | Category Types | `Employee Category Type` |
+| Employees | Profile Change Requests | `Employee Profile Change Request` |
+| Employees | Employee Letters | `Employee Letter` |
+| Attendance | Attendance Devices | `Attendance Device` |
+| Attendance | Work Locations | `Work Location` |
+| Attendance | Attendance Regularization | `Employee Attendance Regularization` |
+| Loans | Loan Types | `Employee Loan Type` |
+| Loans | Loan Applications | `Employee Loan Application` |
+| Loans | Loan Repayments | `Employee Loan Repayment` |
+| Survey | Surveys | `Employee Survey` |
+| Survey | Survey Responses | `Employee Survey Response` |
+
+Child tables and `Manna HR Settings` have no page of their own: a child row is
+created on the record that holds it, and a Single always exists.
+
+### What the dashboard will not write
+
+`client/src/lib/write.js`. Five doctypes are never written from a browser and
+five more are never deleted, and each entry says why on the screen rather than
+greying a button out — a disabled control reads as a permission the reader has
+not got, and every one of these is a decision about the record.
+
+**`Attendance` is the entry that list exists for.** It is generated from
+`Employee Checkin` by the shift job; a hand-written row is invisible to the
+thing that would have created it, and the two disagree the moment anything is
+reprocessed. Corrections write the missing *punch*. CLAUDE.md §5.
+
+Never deleted: `Employee Checkin` (a punch is evidence, and the machine's copy
+may already be gone), `Employee` (somebody who has left is `Left`), the loan
+application and its repayments (deleting a recovery makes the balance owed go
+up, silently, for a payment somebody made), and `Employee Letter` (a letter that
+was issued exists whether or not the row does).
+
+A submitted document is never edited or deleted either — that is Frappe's own
+rule, and cancel-and-amend is the answer, because a cancelled document is a
+record that somebody made a mistake and a deleted one is a hole where the
+evidence was.

@@ -37,3 +37,12 @@ client/dist/
 # rest of the repo put together, and it publishes every source file and comment
 # at a URL anybody can read.
 manna_hr/public/**/*.map
+
+# Bundles and scratch. `*.bundle` is how a batch of commits gets carried
+# between machines when neither can reach the other's remote — a transport,
+# not a source. `_claude/` and `Claude outputs/` are the staging area for the
+# same journey: copies of files that land in the tree properly, and
+# screenshots of them. Committing either duplicates the repo inside itself.
+*.bundle
+_claude/
+Claude outputs/
