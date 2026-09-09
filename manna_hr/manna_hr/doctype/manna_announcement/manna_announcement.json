@@ -1,0 +1,150 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2026-09-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "kind",
+  "title",
+  "column_break_who",
+  "company",
+  "published",
+  "section_when",
+  "from_date",
+  "column_break_when",
+  "to_date",
+  "section_body",
+  "body",
+  "section_by",
+  "posted_by",
+  "column_break_by",
+  "posted_on"
+ ],
+ "fields": [
+  {
+   "default": "MANNA-ANN-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "MANNA-ANN-.YYYY.-"
+  },
+  {
+   "default": "Announcement",
+   "description": "Factor HR draws these as two panels on its Welcome page — Announcements and CEO Speak — and they are the same shape: a title, a body, and a window during which the front page shows it. One doctype with a kind, rather than two doctypes differing in nothing.",
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Kind",
+   "options": "Announcement\nCEO Speak",
+   "reqd": 1
+  },
+  {
+   "description": "What the front page shows in the list. It is the whole of what most people will read, so it has to say the thing rather than introduce it.",
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_who",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Leave empty for the whole group. Set it and only that company's people see it — which is a permission, not a filter, so it is enforced on the server by manna_hr/permissions.py and not by the screen that draws the list.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "default": "0",
+   "description": "Off until somebody means it. A notice on everybody's front page is the one thing in this app that is read by people who did not go looking for it, so the default is that a draft stays a draft — Factor HR's own composer has Save as Draft beside Submit for the same reason.",
+   "fieldname": "published",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Published"
+  },
+  {
+   "fieldname": "section_when",
+   "fieldtype": "Section Break",
+   "label": "When it shows"
+  },
+  {
+   "description": "The first day it appears on the front page. Empty means from now.",
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From Date"
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The last day, inclusive. Empty means it stays until somebody unpublishes it — which is how a front page fills up with a notice about a fire drill in March.",
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
+  },
+  {
+   "fieldname": "section_body",
+   "fieldtype": "Section Break",
+   "label": "Notice"
+  },
+  {
+   "description": "The notice itself.",
+   "fieldname": "body",
+   "fieldtype": "Text Editor",
+   "label": "Body"
+  },
+  {
+   "fieldname": "section_by",
+   "fieldtype": "Section Break",
+   "label": "Who said it"
+  },
+  {
+   "description": "Whose name appears under it. For CEO Speak this is the point of the panel; for an ordinary announcement it is usually HR, and Frappe already records who created the record either way.",
+   "fieldname": "posted_by",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Posted By"
+  },
+  {
+   "fieldname": "column_break_by",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "posted_on",
+   "fieldtype": "Date",
+   "label": "Posted On"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Manna Announcement",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "HR Manager", "share": 1, "write": 1},
+  {"create": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "HR User", "share": 1, "write": 1},
+  {"read": 1, "role": "Manna Attendance Approver"},
+  {"read": 1, "role": "Employee"}
+ ],
+ "search_fields": "title,kind",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

@@ -490,6 +490,18 @@ def _int(value):
 		return 0
 
 
+def _flag(value):
+	"""A Frappe Check, however it arrived.
+
+	`0`, `"0"`, `""`, `None` and `False` are all off. **`"0"` is the one that
+	matters**: a checkbox read back off a form or out of JSON is a string, and
+	`bool("0")` is True — which would publish every draft notice ever saved.
+	"""
+	if value in (None, "", False, 0):
+		return False
+	return str(value).strip() not in ("0", "false", "False", "no", "No")
+
+
 # ------------------------------------------------------- attendance devices ---
 
 
@@ -518,3 +530,76 @@ def device_is_silent(last_punch_at, now, silent_after_hours):
 	if hours <= 0 or not last_punch_at:
 		return False
 	return (now - last_punch_at).total_seconds() > hours * 3600
+
+
+# ---------------------------------------------------------- announcements ---
+
+
+def announcement_is_live(row, on):
+	"""Whether the front page should be showing this notice on the day `on`.
+
+	Both ends inclusive: `to_date` is the last day it shows, not the first day
+	it stops. Off by one here takes a notice down the morning of the day it was
+	meant for, which is the one day it mattered.
+
+	Dates are compared as strings. `YYYY-MM-DD` sorts correctly as text and
+	carries no zone; parsed as an instant it becomes the previous day for
+	anybody reading it after half past five in Chennai.
+	"""
+	if not _flag(row.get("published")):
+		return False
+	on = str(on or "")[:10]
+	start = str(row.get("from_date") or "")[:10]
+	end = str(row.get("to_date") or "")[:10]
+	if start and on < start:
+		return False
+	if end and on > end:
+		return False
+	return True
+
+
+def announcement_problems(row):
+	"""What is wrong with this notice, in the words somebody has to act on.
+
+	**Publishing is the expensive direction here, so this refuses the save.**
+	Everything else in this app is opened by somebody who went looking for it; a
+	published notice appears in front of every employee who signs in. A wrong
+	one cannot be taken back from the people who have already read it, and the
+	cost of stopping somebody mid-typing is a minute.
+	"""
+	out = []
+	title = str(row.get("title") or "").strip()
+	if not title:
+		out.append("A notice needs a title — it is the whole of what most people will read.")
+
+	start = str(row.get("from_date") or "")[:10]
+	end = str(row.get("to_date") or "")[:10]
+	if start and end and end < start:
+		out.append(
+			f"The window ends before it begins ({start} to {end}), so this would never show."
+		)
+
+	if _flag(row.get("published")) and not str(row.get("body") or "").strip():
+		out.append(
+			"Published with an empty body. A title on everybody's front page with nothing "
+			"behind it reads as a system fault rather than as a notice."
+		)
+
+	kind = str(row.get("kind") or "")
+	if kind not in ("Announcement", "CEO Speak"):
+		out.append(f"{kind or 'Blank'} is not a kind of notice this app draws.")
+
+	return out
+
+
+def live_announcements(rows, on, kind=None):
+	"""The notices to draw today, newest window first.
+
+	Sorted by `from_date` rather than by when the record was made: a notice
+	written in March for a window in September belongs in September's order,
+	and creation order would bury it under everything written since.
+	"""
+	live = [r for r in rows or [] if announcement_is_live(r, on)]
+	if kind:
+		live = [r for r in live if str(r.get("kind") or "") == kind]
+	return sorted(live, key=lambda r: str(r.get("from_date") or ""), reverse=True)
