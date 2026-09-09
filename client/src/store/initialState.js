@@ -8,6 +8,7 @@ import { CT_BLANK, CT_DLG_BLANK } from "@/data/categorytype";
 import { EXP_BLANK } from "@/data/employees";
 import { CAL_NEW_BLANK } from "@/data/masters";
 import { storedRail } from "@/lib/rail";
+import { storedMode } from "@/lib/mode";
 
 /* ---------------------------------------------------------------------------
    The shape of the store, and the only place it is written down.
@@ -93,6 +94,11 @@ const initial = {
 	    the collapse control and the header's hamburger all read this one key,
 	    which is why it is here and not a `useState` in the shell. */
 	rail: storedRail(),
+	/** Light, dark, or whatever the machine asks for. Three states rather than
+	    two: `system` is a real answer and not the absence of one, and it keeps
+	    following the machine — so somebody who has never touched the control
+	    gets a light app at nine and a dark one at seven. See lib/mode.js. */
+	mode: storedMode(),
 
 	/** Whether the rail is open *over* the page, which is a different question
 	    from how wide it is and only has an answer below 900px — see the tablet

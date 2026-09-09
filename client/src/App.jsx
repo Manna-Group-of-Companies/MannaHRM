@@ -17,6 +17,7 @@ import Login from "@/features/auth/Login";
 import { loadAll } from "@/store/thunks";
 import { startRouter } from "@/routes/router";
 import AppShell from "@/layout/AppShell";
+import { watchSystem } from "@/lib/mode";
 
 export default function App() {
 	const dispatch = useDispatch();
@@ -24,6 +25,12 @@ export default function App() {
 	/* Before the first read, so a refresh on /attendance/shifts draws that page
 	   rather than drawing the Dashboard and then replacing it. */
 	useEffect(() => startRouter(), []);
+
+	/* Follow the machine while the appearance is `system`, and stop the moment
+	   somebody picks for themselves. Without this, a person who opened the app
+	   at four and is still on it at seven has a light app in a dark room — which
+	   is the exact complaint the palette exists to answer. */
+	useEffect(() => watchSystem(() => getState().mode, () => set({ mode: getState().mode })), []);
 
 	/* One read on open. Everything after it is a refresh somebody asked for.
 

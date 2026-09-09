@@ -20,11 +20,30 @@ export function Cov({ cov }) {
 	return <span className={"cov " + cov}>{COV_LABEL[cov]}</span>;
 }
 
-export function Panel({ title, cov, ico, children }) {
+/**
+ * One panel.
+ *
+ * `shut` and `onToggle` are optional and arrived with Factor HR's own Expand
+ * All / Collapse All, read off their Welcome page. A panel given neither is
+ * always open, which is every panel in this app that predates them — the
+ * control has to be absent rather than drawn dead, because a chevron that does
+ * nothing is the thing every dead button here was written to avoid.
+ *
+ * The header stays when the body is hidden: collapsing is for getting past a
+ * panel, not for losing it, and a reader who has collapsed nine of eleven still
+ * needs to see which nine.
+ */
+export function Panel({ title, cov, ico, shut, onToggle, children }) {
 	return (
-		<section className={"panel" + (cov === "none" || cov === "skip" ? " dim" : "")}>
+		<section className={"panel" + (cov === "none" || cov === "skip" ? " dim" : "") + (shut ? " shut" : "")}>
 			<header>
 				<h3>
+					{onToggle ? (
+						<button type="button" className="pfold" onClick={onToggle}
+							aria-expanded={!shut} aria-label={shut ? `Open ${title}` : `Collapse ${title}`}>
+							{shut ? "▸" : "▾"}
+						</button>
+					) : null}
 					<span className="ico">{ico || "▪"}</span>
 					{title}
 				</h3>

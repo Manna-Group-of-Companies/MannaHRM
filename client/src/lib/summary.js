@@ -104,3 +104,138 @@ export function mergeActivity(sources, limit = 9) {
 		.sort((a, b) => String(b.at).localeCompare(String(a.at)))
 		.slice(0, limit);
 }
+
+/**
+ * Factor HR's own six attendance buckets, for the Start Up page.
+ *
+ * Their Start Up screen — captured 8 September 2026 — counts the day as: Team
+ * Size, Total In, Not Yet In, Late-In, On Leave, Fut. Leave. Those are the
+ * words HR reads every morning, so they are the words this app uses, rather
+ * than a tidier set nobody at Manna has ever seen.
+ *
+ * **`late` is null and not zero, and that is the finding.** Late means "punched
+ * in after the shift began", and this dashboard does not hold shift start
+ * times — `Shift Type` is read for its names only. A zero there would read as
+ * "nobody was late", which on a factory of 160 is a claim, and a wrong one. So
+ * it is absent and the panel says what it would need.
+ *
+ * @param {object} today  what `attendanceToday` returned
+ * @param {number} headcount active employees in scope
+ * @param {number} future  people with leave that starts after today
+ */
+export function startupBuckets(today, headcount, future) {
+	return {
+		team: headcount,
+		in: today.present,
+		notIn: today.absent,
+		late: null,
+		leave: today.leave,
+		future: future,
+	};
+}
+
+/**
+ * People whose leave has not started yet — Factor HR's "Fut. Leave".
+ *
+ * Distinct people, not applications, for the same reason `attendanceToday`
+ * counts people: one person with two approved trips is one person, and a count
+ * of rows drifts past the headcount.
+ *
+ * Compared as strings. `from_date` is `YYYY-MM-DD` with no time and no zone;
+ * parsed as an instant it becomes the previous day for anyone reading it after
+ * half past five in Chennai.
+ */
+export function futureLeave(leaveRows, today) {
+	const who = new Set();
+	for (const r of leaveRows || []) {
+		if (r.from_date && String(r.from_date) > today) who.add(r.employee);
+	}
+	return who.size;
+}
+
+/**
+ * Birthdays and work anniversaries in a window — Factor HR's Wish Celebration.
+ *
+ * **The year is thrown away and the day is kept.** A birthday recurs; the
+ * stored date does not. So the comparison is on `MM-DD`, which is also why the
+ * window has to be given as a list of days rather than a range — a window that
+ * crosses the new year is two ranges, and every off-by-one in this kind of code
+ * lives exactly there.
+ *
+ * `kind` is what is being celebrated, because their panel counts the three
+ * separately and shows them on separate tabs. Marriage is theirs and not ours:
+ * ERPNext's Employee has no wedding date under any name, so nothing here can
+ * produce one.
+ *
+ * @param {Array}  rows      employees
+ * @param {string} today     `YYYY-MM-DD`
+ * @param {number} days      how far ahead to look, today included
+ */
+export function celebrations(rows, today, days = 30) {
+	const wanted = new Map();
+	const start = new Date(today + "T00:00:00Z");
+	for (let i = 0; i < days; i++) {
+		const d = new Date(start.getTime() + i * 86400000);
+		wanted.set(d.toISOString().slice(5, 10), i);
+	}
+
+	const out = [];
+	for (const e of rows || []) {
+		for (const [field, kind] of [["date_of_birth", "birthday"], ["date_of_joining", "work"]]) {
+			const on = e[field];
+			if (!on) continue;
+			const md = String(on).slice(5, 10);
+			if (!wanted.has(md)) continue;
+			/* A work anniversary on the day somebody joined is not an
+			   anniversary, it is their first day — and wishing a new starter a
+			   happy first year is the kind of mistake people remember. */
+			if (kind === "work" && String(on).slice(0, 4) === today.slice(0, 4)) continue;
+			out.push({
+				name: e.name,
+				employee_name: e.employee_name,
+				department: e.department,
+				designation: e.designation,
+				kind,
+				on: md,
+				inDays: wanted.get(md),
+				years: kind === "work" ? Number(today.slice(0, 4)) - Number(String(on).slice(0, 4)) : null,
+			});
+		}
+	}
+	return out.sort((a, b) => a.inDays - b.inDays || (a.employee_name || "").localeCompare(b.employee_name || ""));
+}
+
+/* ---------------------------------------------------------------------------
+   Factor HR's Welcome page carries its own controls, not just its own panels.
+   Read off the page on 8 September 2026: Active / InActive / All above the
+   headline counts, a Search inside the attendance summary, Expand All and
+   Collapse All over the panels, and a composer behind Announcements and CEO
+   Speak. What follows is the arithmetic behind the first two.
+   --------------------------------------------------------------------------- */
+
+/** Their Active / InActive / All switch, as a filter over the employee list.
+
+    `InActive` is everybody not Active — Inactive, Suspended and Left together —
+    because that is what their own tab counts, and splitting it into three here
+    would make the two screens disagree by exactly the suspended. */
+export function byStanding(rows, standing) {
+	if (standing === "active") return (rows || []).filter((e) => e.status === "Active");
+	if (standing === "inactive") return (rows || []).filter((e) => e.status !== "Active");
+	return [...(rows || [])];
+}
+
+/**
+ * Their Search, inside the day's attendance list.
+ *
+ * Matches the columns a reader can see — name, code, department, designation —
+ * because the column somebody is searching by is the one in front of them. Not
+ * the record id: nobody types `HR-EMP-00042`, and matching it would make a
+ * search for "42" return a person called nothing like it.
+ */
+export function findPeople(rows, q) {
+	const needle = String(q || "").trim().toLowerCase();
+	if (!needle) return [...(rows || [])];
+	return (rows || []).filter((e) => [
+		e.employee_name, e.employee_number, e.department, e.designation,
+	].join(" ").toLowerCase().includes(needle));
+}

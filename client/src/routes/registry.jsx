@@ -16,7 +16,11 @@ import { SECTIONS } from "@/data/sections";
 import { OVERVIEW, DEFAULT_SECTION } from "@/routes/paths";
 
 import Dashboard from "@/features/dashboard/Dashboard";
-import Engagement from "@/features/dashboard/Engagement";
+import Updates from "@/features/dashboard/Updates";
+import moduleAll from "@/features/shared/ModuleAll";
+import report from "@/features/reports/makeReport";
+import { blueprintPages } from "@/features/reports/makeBlueprint";
+import { managedPages, managedTabs } from "@/features/records/makeManaged";
 import Approvals from "@/features/approvals/Approvals";
 import LetterForm from "@/features/onboard/LetterForm";
 import Documents from "@/features/onboard/Documents";
@@ -39,10 +43,8 @@ import DailyDetail from "@/features/attendance/DailyDetail";
 import MonthlyBasic from "@/features/attendance/MonthlyBasic";
 import Statutory from "@/features/attendance/Statutory";
 import Shifts from "@/features/attendance/Shifts";
-import AttendanceAll from "@/features/attendance/AttendanceAll";
 import ApplyLeave from "@/features/leave/ApplyLeave";
 import LeaveBalances from "@/features/leave/LeaveBalances";
-import LeaveAll from "@/features/leave/LeaveAll";
 import Adhoc from "@/features/payroll/Adhoc";
 import SalaryProcess from "@/features/payroll/SalaryProcess";
 import FnF from "@/features/payroll/FnF";
@@ -55,7 +57,6 @@ import ProfTax from "@/features/payroll/ProfTax";
 import LoanApplication from "@/features/loans/LoanApplication";
 import LoanRegister from "@/features/loans/LoanRegister";
 import LoanProjection from "@/features/loans/LoanProjection";
-import LoansAll from "@/features/loans/LoansAll";
 import Survey from "@/features/simple/Survey";
 import Settings from "@/features/settings/Settings";
 import Coverage from "@/features/settings/Coverage";
@@ -82,9 +83,17 @@ import Coverage from "@/features/settings/Coverage";
    request nobody owns, and Apply Leave still offers it in place of the leave
    approver nobody has set. */
 const TABS = {
-	dashboard: [["overview", "Start up"], ["engagement", "Engagement"], ["approvals", "Approvals"]],
+	/* Factor HR's Welcome page has three tabs — Start Up, Approvals, Product
+	   Updates — and read on 8 September 2026 there is **no Engagement tab**.
+	   Mood Analysis, Wish Celebration, CEO Speak, Announcements and Important
+	   Files are all panels on Start Up itself. So the Engagement page here went
+	   and its contents moved onto the front page, which is where somebody
+	   comparing the two screens will look for them. */
+	dashboard: [["overview", "Start Up"], ["approvals", "Approvals"],
+		...managedTabs("dashboard"), ["updates", "Product Updates"]],
 	onboard: [["overview", "Create Letter / Form"], ["documents", "Document Entry"],
-		["assets", "Assets Details"], ["assignment", "Assets Assignment"]],
+		["assets", "Assets Details"], ["assignment", "Assets Assignment"],
+		...managedTabs("onboard"), ["all", "All"]],
 	/* Employees is Factor HR's own menu, in its order, and then Employee Profile
 	   appended — that one exists there as a *record page* reached by clicking
 	   somebody rather than as a menu item, which is how it is reached here too.
@@ -99,7 +108,12 @@ const TABS = {
 	   below are their menu items plus Employee Profile, and nothing invented. */
 	employees: [["overview", "Employee Master"], ["salary", "Salary Master"], ["detail", "Employee Detail"],
 		["ctc", "CTC / Earnings"], ["categories", "Categories"], ["calendar", "Calendar"],
-		["profile", "Employee Profile"]],
+		["profile", "Employee Profile"],
+		/* Five of their Employees reports, built 8 Sep 2026 off data the site
+		   already holds. Their menu titles, so the tab reads as theirs. */
+		["joining", "New Joining"], ["birthdays", "Employee Birthday"],
+		["directory", "Employees Directory"], ["weekoff", "Weekoff Holiday Report"],
+		["orgchart", "Organization Chart"], ...managedTabs("employees"), ["all", "All"]],
 	/* Factor HR's own Attendance menu, captured 28 Aug 2026, item for item and
 	   in its order. `overview` is Attendance Regularization because that is the
 	   first item on their menu and the one page here with a live queue behind
@@ -107,14 +121,19 @@ const TABS = {
 	attendance: [["overview", "Employee Attendance Regularization"], ["submit", "Submit Attendance"],
 		["inout", "In Out Activities Report"], ["daily", "Daily Detail Attendance Report"],
 		["monthly", "Monthly Basic Attendance"], ["statutory", "Statutory Reports"],
-		["shifts", "Manage Shift"], ["all", "All"]],
+		["shifts", "Manage Shift"],
+		["present", "Present Report"], ["absent", "Absent Report"], ["msp", "MSP Report"],
+		["iocount", "In / Out Count Report"], ["shiftrep", "Employee Shift Report"],
+		["headcount", "Head Count And Attendance"], ...managedTabs("attendance"), ["all", "All"]],
 	/* Factor HR's own Leave menu, captured 29 Aug 2026 — three items where
 	   Attendance has eight, which is the finding rather than a gap on our side.
 	   `overview` is Apply Leave because it is the first item on their menu, so
 	   clicking Leave in the nav lands on it. `all` has no menu item there and is
 	   appended rather than interleaved, so the first two still compare item for
 	   item. */
-	leave: [["overview", "Apply Leave"], ["balances", "Leave Balance Report"], ["all", "All"]],
+	leave: [["overview", "Apply Leave"], ["balances", "Leave Balance Report"],
+		["history", "Leave Application History"], ["pending", "Pending Leave Applications"],
+		["availed", "Leave Availed Detail"], ["monthly", "Leave Monthly Availed"], ["all", "All"]],
 	/* Factor HR's Payroll menu, captured 29 Aug 2026, in its order. The capture
 	   starts at Adhoc Payments/Deductions — whatever sits above it there has not
 	   been seen — so that is where this menu starts too, and `overview` is it:
@@ -126,12 +145,13 @@ const TABS = {
 	payroll: [["overview", "Adhoc Payments/Deductions"],
 		["process", "Salary Process"], ["fnf", "Final Settlement"], ["itdec", "IT Declarations"],
 		["bank", "Bank Transfer"], ["bonus", "Bonus Working Report"], ["payslip", "Salary Payslip"],
-		["register", "Salary Register"], ["ptax", "Prof. Tax Statement"]],
+		["register", "Salary Register"], ["ptax", "Prof. Tax Statement"], ["all", "All"]],
 	/* Captured 29 Aug 2026, the menu and nothing else. None of the four pages
 	   under it has been opened, and no doctype on this site can hold a loan, so
 	   each is a reading of what the name has to mean rather than a copy. */
 	loans: [["overview", "Loan Application"], ["register", "Loan Register"],
-		["projection", "Loan Projection"], ["all", "All"]],
+		["projection", "Loan Projection"], ...managedTabs("loans"), ["all", "All"]],
+	survey: [["overview", "Survey"], ...managedTabs("survey")],
 	settings: [["overview", "Setup readiness"], ["coverage", "Module coverage"]],
 };
 
@@ -139,26 +159,50 @@ const TABS = {
    as SUBTABS above and the two cannot drift apart unnoticed — a subtab with no
    page here falls back to the module's overview rather than blanking. */
 const PAGES = {
-	dashboard: { overview: Dashboard, engagement: Engagement, approvals: Approvals },
+	dashboard: { overview: Dashboard, approvals: Approvals, updates: Updates,
+		...managedPages("dashboard") },
 	/* `overview` is Create Letter / Form, the first tab: clicking On Board resets
-	   to the one page with real work on it. Candidate Master and All were
-	   dropped on 3 Sep 2026 — the first had no doctype behind it and the second
-	   was an index with nothing of its own to show. */
+	   to the one page with real work on it. Candidate Master was dropped on
+	   3 Sep 2026 — no doctype behind it — and is now a row on All rather than a
+	   page, which is where a decision like that belongs.
+
+	   **All came back on 8 Sep 2026, on every module, and it is a different
+	   page from the one that went.** The one that went said "the pages are on
+	   the bar above". This one is Factor HR's whole menu for the module, read
+	   off their tenant, with what answers each item here — 160 items against
+	   this app's 39 pages. See components/ModuleMenu.jsx. */
 	onboard: { overview: LetterForm, documents: Documents,
-		assets: Assets, assignment: AssetAssign },
+		assets: Assets, assignment: AssetAssign, all: moduleAll("onboard", "On Board"),
+		...managedPages("onboard"), ...blueprintPages("onboard") },
 	employees: { overview: EmployeeMaster, salary: SalaryMaster, detail: EmployeeDetail, ctc: Ctc,
 		categories: Categories, calendar: Calendar,
-		profile: EmployeeProfile, new: CreateEmployee, import: ImportOnboarding },
+		profile: EmployeeProfile, new: CreateEmployee, import: ImportOnboarding,
+		joining: report("employees", "joining"), birthdays: report("employees", "birthdays"),
+		directory: report("employees", "directory"), weekoff: report("employees", "weekoff"),
+		orgchart: report("employees", "orgchart"),
+		all: moduleAll("employees", "Employees"),
+		...managedPages("employees"), ...blueprintPages("employees") },
 	attendance: { overview: Regularization, submit: SubmitAttendance, inout: InOut,
 		daily: DailyDetail, monthly: MonthlyBasic, statutory: Statutory,
-		shifts: Shifts, all: AttendanceAll },
-	leave: { overview: ApplyLeave, balances: LeaveBalances, all: LeaveAll },
+		shifts: Shifts,
+		present: report("attendance", "present"), absent: report("attendance", "absent"),
+		msp: report("attendance", "msp"), iocount: report("attendance", "iocount"),
+		shiftrep: report("attendance", "shiftrep"), headcount: report("attendance", "headcount"),
+		all: moduleAll("attendance", "Attendance"),
+		...managedPages("attendance"), ...blueprintPages("attendance") },
+	leave: { overview: ApplyLeave, balances: LeaveBalances,
+		history: report("leave", "history"), pending: report("leave", "pending"),
+		availed: report("leave", "availed"), monthly: report("leave", "monthly"),
+		all: moduleAll("leave", "Leave"),
+		...blueprintPages("leave") },
 	payroll: { overview: Adhoc, process: SalaryProcess, fnf: FnF,
 		itdec: ITDeclarations, bank: BankTransfer, bonus: BonusReport, payslip: Payslip,
-		register: SalaryRegister, ptax: ProfTax },
+		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
+		...blueprintPages("payroll") },
 	loans: { overview: LoanApplication, register: LoanRegister,
-		projection: LoanProjection, all: LoansAll },
-	survey: { overview: Survey },
+		projection: LoanProjection, all: moduleAll("loans", "Loans"),
+		...managedPages("loans"), ...blueprintPages("loans") },
+	survey: { overview: Survey, ...managedPages("survey"), ...blueprintPages("survey") },
 	settings: { overview: Settings, coverage: Coverage },
 };
 /* A page opened from another page rather than from a menu.
