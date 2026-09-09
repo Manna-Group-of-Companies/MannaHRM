@@ -1,0 +1,317 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2026-09-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "employee",
+  "employee_name",
+  "company",
+  "column_break_who",
+  "loan_type",
+  "interest_type",
+  "loan_status",
+  "section_amounts",
+  "amount_requested",
+  "sanctioned_amount",
+  "disbursed_amount",
+  "opening_balance",
+  "column_break_amounts",
+  "loan_required_for",
+  "purpose_details",
+  "recovered_amount",
+  "outstanding_amount",
+  "section_dates",
+  "loan_date",
+  "deduction_start_from",
+  "column_break_dates",
+  "payment_date",
+  "loan_account_no",
+  "section_recovery",
+  "monthly_instalment",
+  "salary_component",
+  "column_break_recovery",
+  "repayment_schedule",
+  "section_close",
+  "loan_completed",
+  "do_not_auto_complete",
+  "column_break_close",
+  "loan_completed_on",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "HR-LOAN-.YYYY.-",
+   "default": "HR-LOAN-.YYYY.-"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "search_index": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "fetch_from": "employee.employee_name",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "employee.company",
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_who",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "loan_type",
+   "fieldtype": "Link",
+   "label": "Loan Type",
+   "options": "Employee Loan Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "interest_type",
+   "fieldtype": "Select",
+   "label": "Interest Type",
+   "options": "Interest free\nReducing balance\nFlat",
+   "fetch_from": "loan_type.interest_type",
+   "description": "Off the Loan Type master. The rate and the term are there too."
+  },
+  {
+   "fieldname": "loan_status",
+   "fieldtype": "Select",
+   "label": "Loan Status",
+   "options": "Applied\nSanctioned\nDisbursed\nRunning\nClosed",
+   "default": "Applied",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Applied and Closed are the two a person imposes. The three in between follow the figures — sanctioned but not paid, paid but nothing recovered, recovering — and a chosen state that disagrees with them is refused rather than overwritten. See manna_hr.rules.loan_status."
+  },
+  {
+   "fieldname": "section_amounts",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "amount_requested",
+   "fieldtype": "Currency",
+   "label": "Amount Requested",
+   "description": "Separate from Sanctioned on purpose: the difference between the two is the sanction."
+  },
+  {
+   "fieldname": "sanctioned_amount",
+   "fieldtype": "Currency",
+   "label": "Sanctioned Amount",
+   "in_list_view": 1,
+   "description": "What the schedule is computed on. Not the same as disbursed — a sanctioned loan never paid out must not show as owing."
+  },
+  {
+   "fieldname": "disbursed_amount",
+   "fieldtype": "Currency",
+   "label": "Disbursed Amount",
+   "description": "What actually left the account. Kept apart from the sanction because the gap between them is a loan that was agreed and not yet paid, and that gap is the one thing a register must not round away."
+  },
+  {
+   "fieldname": "opening_balance",
+   "fieldtype": "Currency",
+   "label": "Opening Balance",
+   "description": "What was still owed the day this system took over. Loaded, never derived — the recoveries that produced it happened on Factor HR and are not here."
+  },
+  {
+   "fieldname": "column_break_amounts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "loan_required_for",
+   "fieldtype": "Select",
+   "label": "Loan Required For",
+   "options": "\nGeneral\nMedical Treatment - Specified Disease\nEducation\nHousing\nVehicle\nMarriage\nTour Advance\nOther",
+   "description": "A tax field before it is a filing one: Rule 3(7)(i) exempts a loan for the medical treatment of a specified disease from the perquisite altogether."
+  },
+  {
+   "fieldname": "purpose_details",
+   "fieldtype": "Small Text",
+   "label": "Details Of Purpose"
+  },
+  {
+   "fieldname": "recovered_amount",
+   "fieldtype": "Currency",
+   "label": "Recovered To Date",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "The sum of the `Employee Loan Repayment` rows against this loan. Derived on save and never typed — two places to state one figure is two figures."
+  },
+  {
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "label": "Outstanding",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Opening balance plus disbursed, less recovered, floored at zero. Over-recovery is reported on its own rather than as a negative that prints as a credit."
+  },
+  {
+   "fieldname": "section_dates",
+   "fieldtype": "Section Break",
+   "label": "Dates"
+  },
+  {
+   "fieldname": "loan_date",
+   "fieldtype": "Date",
+   "label": "Loan Date",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1,
+   "description": "When it was applied for. Not when it was paid."
+  },
+  {
+   "fieldname": "deduction_start_from",
+   "fieldtype": "Date",
+   "label": "Deduction Start From",
+   "description": "The first payslip that carries an instalment. An advance paid mid-month is normally recovered from the month after."
+  },
+  {
+   "fieldname": "column_break_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Date",
+   "label": "Payment Date",
+   "description": "Disbursement — the one date money actually moved on."
+  },
+  {
+   "fieldname": "loan_account_no",
+   "fieldtype": "Data",
+   "label": "Loan Account No",
+   "description": "The lender's own reference. Not the employee's bank account."
+  },
+  {
+   "fieldname": "section_recovery",
+   "fieldtype": "Section Break",
+   "label": "Recovery"
+  },
+  {
+   "fieldname": "monthly_instalment",
+   "fieldtype": "Currency",
+   "label": "Monthly Instalment",
+   "description": "Blank lets the schedule split the sanction evenly over the term. Set it to hold an instalment somebody agreed to that the arithmetic would not have produced."
+  },
+  {
+   "fieldname": "salary_component",
+   "fieldtype": "Link",
+   "label": "Deduction Component",
+   "options": "Salary Component",
+   "fetch_from": "loan_type.salary_component",
+   "fetch_if_empty": 1
+  },
+  {
+   "fieldname": "column_break_recovery",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "repayment_schedule",
+   "fieldtype": "Table",
+   "label": "Repayment Schedule",
+   "options": "Employee Loan Repayment Schedule",
+   "description": "Built from the sanction, the term and the start month, and rebuilt only while nothing has been recovered — a schedule that rewrites itself under a loan somebody has been paying is a loan nobody can reconcile."
+  },
+  {
+   "fieldname": "section_close",
+   "fieldtype": "Section Break",
+   "label": "Closure"
+  },
+  {
+   "fieldname": "loan_completed",
+   "fieldtype": "Check",
+   "label": "Loan Completed",
+   "default": "0",
+   "read_only": 1,
+   "description": "Set by the schedule finishing, not by a person."
+  },
+  {
+   "fieldname": "do_not_auto_complete",
+   "fieldtype": "Check",
+   "label": "Do Not Auto Complete",
+   "default": "0",
+   "description": "The override, because a loan can finish its schedule and still be owed: a bounced deduction, a stopped month, an adjustment."
+  },
+  {
+   "fieldname": "column_break_close",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "loan_completed_on",
+   "fieldtype": "Date",
+   "label": "Loan Completed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Employee Loan Application",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "search_fields": "employee,employee_name,loan_type,loan_status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name",
+ "track_changes": 1
+}

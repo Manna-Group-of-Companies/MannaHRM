@@ -172,15 +172,32 @@ def test_a_handover_of_nothing_has_no_status_to_report():
 # ------------------------------------------ the doctype the client reads ---
 
 
-# **A test used to sit here and no longer can.** It read
-# `manna_hr/doctype/asset_assignment/asset_assignment.json` and checked every
-# field `ASSIGN_FIELDS` in `client/src/api/load.js` asks the site for. That is
-# the drift which produced "DocType Asset Assignment not found" once already:
-# a screen written against a doctype nobody had built, failing at the read.
-#
-# The schema now lives on the site, so there is nothing here to compare the
-# client against. `python tools/check_schema.py` makes the same comparison
-# against the site itself; it needs credentials and is not part of this suite.
+def test_the_assignment_doctype_holds_every_field_the_register_reads():
+	"""`ASSIGN_FIELDS` in client/src/api/load.js against the doctype JSON.
+
+	This is the drift that produced "DocType Asset Assignment not found": the
+	screen was written against a doctype nobody had built. A field quietly
+	dropped from the JSON would fail the same way and just as silently.
+	"""
+	import json
+	import re
+
+	load_js = os.path.join(APP, "..", "client", "src", "api", "load.js")
+	if not os.path.exists(load_js):
+		# The app is installed on a bench without the dashboard checked out
+		# beside it. Nothing to compare against; not a failure.
+		return
+
+	doc = json.load(io.open(os.path.join(
+		APP, "manna_hr", "doctype", "asset_assignment", "asset_assignment.json"), encoding="utf-8"))
+	have = set(f["fieldname"] for f in doc["fields"]) | {"name"}
+
+	client = io.open(load_js, encoding="utf-8").read()
+	found = re.search(r"const ASSIGN_FIELDS = \[(.*?)\];", client, re.S)
+	assert found, "client/src/api/load.js no longer declares ASSIGN_FIELDS"
+	wanted = set(re.findall(r'"([a-z_]+)"', found.group(1)))
+
+	assert wanted <= have, {"read by the client, missing from the doctype": sorted(wanted - have)}
 
 
 def test_a_status_nobody_chose_is_computed_from_the_counts():

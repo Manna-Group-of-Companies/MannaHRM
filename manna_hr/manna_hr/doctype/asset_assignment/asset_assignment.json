@@ -1,0 +1,222 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2026-09-07 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "employee",
+  "employee_name",
+  "company",
+  "column_break_who",
+  "asset",
+  "asset_type",
+  "assets_code",
+  "serial_number",
+  "asset_status",
+  "section_break_out",
+  "assign_units",
+  "assign_date",
+  "column_break_out",
+  "valid_till",
+  "section_break_back",
+  "return_unit",
+  "returned_on",
+  "column_break_back",
+  "lost_units",
+  "lost_on",
+  "recovery_amount",
+  "section_break_notes",
+  "remarks",
+  "assets_detail"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "HR-ASN-.#####",
+   "default": "HR-ASN-.#####"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "description": "From the person, not the gate. One machine and one store serve several companies at Manna, and the company follows the employee.",
+   "fetch_from": "employee.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_who",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Asset",
+   "options": "Asset",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Filled from the asset on save. Held here as well as there so the register still reads correctly after the asset is recategorised — a handover is a record of what happened, not a live view of what the thing is called now.",
+   "fieldname": "asset_type",
+   "fieldtype": "Link",
+   "label": "Asset Type",
+   "options": "Asset Category",
+   "read_only": 1
+  },
+  {
+   "description": "`item_code`, falling back to the asset's own name. Filled from the asset on save.",
+   "fieldname": "assets_code",
+   "fieldtype": "Data",
+   "label": "Assets Code",
+   "read_only": 1
+  },
+  {
+   "description": "Copied from the asset when it is not typed. Blank on about half of them, and that is a fact about the asset rather than a gap — a chair has no serial number.",
+   "fieldname": "serial_number",
+   "fieldtype": "Data",
+   "label": "Serial Number"
+  },
+  {
+   "description": "Worked out from the three counts on every save. The two exceptions are Scrapped and Damaged Or Not Working, which no count can produce and which a person may therefore impose; any other word picked here that disagrees with the counts is refused rather than overwritten. See manna_hr.rules.assignment_status.",
+   "fieldname": "asset_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Asset Status",
+   "options": "\nAssigned\nPartly Returned\nReturned\nPartly Lost\nLost\nScrapped\nDamaged Or Not Working"
+  },
+  {
+   "fieldname": "section_break_out",
+   "fieldtype": "Section Break",
+   "label": "Out"
+  },
+  {
+   "default": "1",
+   "description": "How many of them went out with this person. Not `asset_quantity` — that is how many were capitalised together, and issuing 3 of a batch of 12 had nowhere to be recorded before this doctype.",
+   "fieldname": "assign_units",
+   "fieldtype": "Int",
+   "label": "Assign Units",
+   "reqd": 1
+  },
+  {
+   "fieldname": "assign_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Assign Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_out",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The date it was lent until. Nothing enforces it and nothing should — it is the date somebody agreed to, so the register can be chased against it. An ERPNext handover has no such date because a log ends when a second row brings the asset back.",
+   "fieldname": "valid_till",
+   "fieldtype": "Date",
+   "label": "Valid Till"
+  },
+  {
+   "fieldname": "section_break_back",
+   "fieldtype": "Section Break",
+   "label": "Back, Or Not"
+  },
+  {
+   "default": "0",
+   "description": "How many came back. What makes Partly Returned a state rather than a guess.",
+   "fieldname": "return_unit",
+   "fieldtype": "Int",
+   "label": "Return Unit"
+  },
+  {
+   "fieldname": "returned_on",
+   "fieldtype": "Date",
+   "label": "Returned On"
+  },
+  {
+   "fieldname": "column_break_back",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "How many did not come back. Scrapping is an accounting entry against the whole asset; this is a count against a person, and the two are not the same act.",
+   "fieldname": "lost_units",
+   "fieldtype": "Int",
+   "label": "Lost Units"
+  },
+  {
+   "description": "The day somebody said it was missing. Not `disposal_date` on Asset — that one is set by scrapping, which may happen months later or not at all.",
+   "fieldname": "lost_on",
+   "fieldtype": "Date",
+   "label": "Lost On"
+  },
+  {
+   "description": "The figure agreed with the person. It is recorded here and taken nowhere: a deduction is a salary component on their next slip, which is a separate and deliberate act. Refused when nothing has been lost.",
+   "fieldname": "recovery_amount",
+   "fieldtype": "Currency",
+   "label": "Recovery Amount",
+   "options": "company:company_currency"
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "description": "Why this handover happened, or what was unusual about it. Frappe hangs Comments off a document instead, which is a different thing — a comment is signed and dated and cannot be edited into agreement later.",
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "description": "A note about the thing itself — the dent it already had. Belongs with the handover rather than with the asset, and ERPNext's Asset has no field for it under any name.",
+   "fieldname": "assets_detail",
+   "fieldtype": "Small Text",
+   "label": "Assets Detail"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Asset Assignment",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "HR Manager", "share": 1, "write": 1},
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "HR User", "share": 1, "write": 1},
+  {"read": 1, "role": "Employee"}
+ ],
+ "search_fields": "employee_name,asset,asset_status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name",
+ "track_changes": 1
+}

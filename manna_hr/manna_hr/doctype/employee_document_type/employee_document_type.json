@@ -1,0 +1,121 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:document_type_name",
+ "creation": "2026-09-07 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "document_type_name",
+  "category",
+  "is_active",
+  "column_break_shape",
+  "has_number",
+  "has_expiry",
+  "has_place",
+  "section_break_watch",
+  "is_statutory",
+  "warn_days",
+  "column_break_watch",
+  "description"
+ ],
+ "fields": [
+  {
+   "description": "The name people pick it by, and the name an Employee Document links to. Renames are refused for the same reason Letter Type refuses them — every document already filed names this string.",
+   "fieldname": "document_type_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Document Type",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Factor HR groups theirs loosely — Identity, Statutory, Employment. Free text rather than a Select: the list is theirs and is still being read off their screens.",
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category"
+  },
+  {
+   "default": "1",
+   "description": "A retired type. Kept rather than deleted — documents already filed under it still name it.",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "column_break_shape",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Nearly everything has one. A type without a number is a document identified only by the person and the date — a medical certificate, say.",
+   "fieldname": "has_number",
+   "fieldtype": "Check",
+   "label": "Has A Number"
+  },
+  {
+   "default": "1",
+   "description": "Unticked means the document never expires — a PAN card, a degree certificate. Such a document is never chased, and its status stays No Expiry rather than being reported as valid forever.",
+   "fieldname": "has_expiry",
+   "fieldtype": "Check",
+   "label": "Has An Expiry"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_place",
+   "fieldtype": "Check",
+   "label": "Has A Place Of Issue"
+  },
+  {
+   "fieldname": "section_break_watch",
+   "fieldtype": "Section Break",
+   "label": "Expiry Watch"
+  },
+  {
+   "default": "0",
+   "description": "Ticked means a person whose document has expired may not lawfully be at work — a visa, a residence card, a labour card. This is the difference the register exists to draw: an expired passport is an inconvenience, an expired visa is somebody who cannot be on site tomorrow.",
+   "fieldname": "is_statutory",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Legally Required To Work"
+  },
+  {
+   "default": "30",
+   "description": "How many days before expiry this type starts being reported as Expiring. A visa wants months, not weeks — renewing one takes longer than noticing it.",
+   "fieldname": "warn_days",
+   "fieldtype": "Int",
+   "label": "Warn Days Before Expiry"
+  },
+  {
+   "fieldname": "column_break_watch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Employee Document Type",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "HR Manager", "share": 1, "write": 1},
+  {"create": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "HR User", "share": 1, "write": 1},
+  {"read": 1, "role": "Employee"}
+ ],
+ "search_fields": "document_type_name,category",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "document_type_name",
+ "track_changes": 1
+}
