@@ -1,0 +1,154 @@
+{
+  "rule": "Where one person stood on one day",
+  "implementations": [
+    "manna_hr/rules.py :: resolve_day_status",
+    "client/src/lib/rules.js :: resolveDayStatus"
+  ],
+  "why": "Absent is the last resort, and the order the innocent explanations are checked in is the rule. It is written twice — once on the server and once in the dashboard, so a screen can answer without a round trip — and this file is the thing that stops the two drifting: both suites load these cases and assert the same answers, so a divergence is a build failure rather than something a worker finds in their payslip.",
+  "cases": [
+    {
+      "name": "a punch beats an approved leave record",
+      "why": "Somebody who cancelled their leave and came in worked that day. Marking them on leave because the request was never withdrawn pays them the wrong amount and tells them they were not there.",
+      "given": {
+        "has_punch_in": true,
+        "has_punch_out": true,
+        "leave_status": "Approved",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "present"
+    },
+    {
+      "name": "a punch beats a holiday",
+      "why": "Somebody who came in on Diwali came in. What they are owed for it is payroll's question, not this one's.",
+      "given": {
+        "has_punch_in": true,
+        "has_punch_out": true,
+        "leave_status": "",
+        "is_holiday": true,
+        "is_past_day": true
+      },
+      "then": "present"
+    },
+    {
+      "name": "one punch is still in rather than present",
+      "why": "A day counts as worked only with a punch in and out. An open shift is not a complete day and is not payroll-ready, and calling it present pays for hours nobody has measured.",
+      "given": {
+        "has_punch_in": true,
+        "has_punch_out": false,
+        "leave_status": "",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "on_floor"
+    },
+    {
+      "name": "a punch out with no punch in is not a worked day",
+      "why": "The gate read them leaving and never read them arriving. That is a correction, not a day, and it must not quietly become one.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": true,
+        "leave_status": "",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "absent"
+    },
+    {
+      "name": "granted leave is time off",
+      "why": "The ordinary case, pinned so that a reordering of the checks above it shows up here.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "Approved",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "on_leave"
+    },
+    {
+      "name": "an open leave request is not yet time off",
+      "why": "A request nobody has decided is not leave. Treating it as leave would let unapproved absence disappear into the leave column, where nobody looks for it again.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "Open",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "leave_pending"
+    },
+    {
+      "name": "an applied leave request is not yet time off",
+      "why": "Frappe writes both Open and Applied for undecided leave, depending on the workflow. Both mean the same thing here, and a copy that knew only one of them would call the other an absence.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "Applied",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "leave_pending"
+    },
+    {
+      "name": "a rejected request explains nothing",
+      "why": "Decided, and the answer was no. It must not sit in the pending column and it must not excuse the day.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "Rejected",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "absent"
+    },
+    {
+      "name": "a holiday is nobody's absence",
+      "why": "Including a weekly off, which reaches this rule as a holiday. The two are told apart on the row that is drawn, not in the rule that decides whether somebody was absent.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "",
+        "is_holiday": true,
+        "is_past_day": true
+      },
+      "then": "holiday"
+    },
+    {
+      "name": "a day still running is unmarked, not absent",
+      "why": "Treating a missing record as an absence marks the whole group absent at nine in the morning.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "",
+        "is_holiday": false,
+        "is_past_day": false
+      },
+      "then": "unmarked"
+    },
+    {
+      "name": "only a past day with no explanation at all is absent",
+      "why": "Everything that could explain the day has been asked and answered. This is the only case that reaches the last line of the rule.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "absent"
+    },
+    {
+      "name": "a holiday nobody worked is a holiday even before the day is over",
+      "why": "The not-yet check sits below the holiday check, so today being Sunday is a Sunday rather than a day still running. Swap the two and every weekly off in the current month reads as unmarked.",
+      "given": {
+        "has_punch_in": false,
+        "has_punch_out": false,
+        "leave_status": "",
+        "is_holiday": true,
+        "is_past_day": false
+      },
+      "then": "holiday"
+    }
+  ]
+}
