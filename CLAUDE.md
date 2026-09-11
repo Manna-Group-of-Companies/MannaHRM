@@ -93,7 +93,7 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ```bash
 python -m pytest manna_hr/tests -q        # 536 tests, no bench needed
 python tools/check_schema.py              # the site, against what the code assumes
-cd client && npm test                     # 2,617 tests, jsdom
+cd client && npm test                     # 2,635 tests, jsdom
 cd client && npm run contrast             # both palettes, every pairing, AA
 cd client && npm run shots                # the app in a real browser, light and dark
 cd app && flutter test                    # 50 tests, no site and no handset
@@ -309,4 +309,9 @@ existing `Attendance Log` history should be migrated is still open.
   page that 404s every script. See `client/README.md`.
 - **Device clock drift is not handled.** These machines drift by minutes a
   month, and a gate running eight minutes fast makes everybody there late.
-- **Leave, payroll and shift rosters are untouched** — attendance first.
+- **Payroll and shift rosters are untouched** — attendance first. Leave is one
+  write: Apply Leave raises a Leave Application as an **Open draft**
+  (`client/src/features/leave/raise.js`), and approving and submitting stay
+  with the approver. Nothing allocates leave. The site refuses an application
+  with no Leave Allocation behind it, and until HR decides the entitlements
+  that is every application on a counted leave type.

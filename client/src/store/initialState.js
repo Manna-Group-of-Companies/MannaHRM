@@ -752,7 +752,7 @@ const initial = {
 		emp: "", q: "", status: "Active", menu: false,
 		type: "", from: "", till: "", fromval: "1", tillval: "1",
 		remarks: "", file: "", notify: "", notifyq: "", notifymenu: false,
-		month: "", busy: false, msg: "", err: "",
+		month: "", busy: false, sending: false, msg: "", err: "",
 	},
 	/** Every Leave Application for the chosen person, any status — read when
 	    they are picked. The globally-loaded list holds only Open ones, because

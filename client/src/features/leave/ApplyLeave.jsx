@@ -1,12 +1,19 @@
-import { patch, useApp } from "@/store";
+import { getState, patch, update, useApp } from "@/store";
 import { useEffect } from "react";
 import { loadLeaveFor } from "@/api/load";
-import { deskImport, deskNew } from "@/lib/desk";
+import { deskImport, deskNewWith, deskUrl } from "@/lib/desk";
 import { CAL_MONTHS } from "@/data/masters";
 import { DAY, dmy, fmt, monthCells, thisMonth, todayIso, tidyDept, ymd } from "@/lib/format";
+import { esc } from "@/lib/doc";
 import { LEAVE_HISTORY_COLS, LEAVE_VALUES, LV_LEGEND } from "@/data/leave";
 import { Desk, Empty, Html, Note, Panel, Scroll } from "@/components/ui";
 import { scoped } from "@/lib/scope";
+import { DOCTYPE, raiseLeave } from "./raise";
+
+/* The attachment itself, as opposed to its name in the store. A `File` is not
+   a value a store should hold — it cannot be copied or compared — and it only
+   has to live from being chosen to being uploaded, on this one screen. */
+let chosenFile = null;
 
 /* Apply Leave, photographed 29 August 2026 — two columns, the application on
    the left and a month calendar on the right, with Leave History underneath.
@@ -20,9 +27,10 @@ import { scoped } from "@/lib/scope";
    `half_day_date`. A range that is half a day at both ends has nowhere to go on
    the doctype, and the form says so rather than rounding somebody's leave.
 
-   It does not submit, and the button says so rather than being greyed out — a
-   disabled control never fires, so somebody on a screen reader would get
-   silence where the reason should be. */
+   Submit raises a real Leave Application on the site, as Open — see raise.js
+   for what it sends and why it stops there. While one is on its way the button
+   says so rather than being greyed out: a disabled control never fires, so
+   somebody on a screen reader would get silence where the reason should be. */
 
 /** Inclusive, and deliberately not net of holidays or weekly offs.
 
@@ -242,9 +250,6 @@ export default function ApplyLeave() {
 
 	const total = totalDays({ ...f, from, till });
 	const single = from === till;
-	/* The one shape Frappe HR's Leave Application cannot hold: it carries one
-	   half_day_date, so only one end of a range can be half a day. */
-	const bothHalves = !single && f.fromval !== "1" && f.tillval !== "1";
 
 	const team = teamOf(s, emp);
 	const away = team
@@ -266,27 +271,66 @@ export default function ApplyLeave() {
 		!spanDays(from, till) && "a till date that is not before the from date",
 	].filter(Boolean);
 
-	const submit = () => {
+	const submit = async () => {
+		if (f.sending) return;
 		if (missing.length) {
 			return patch("apply", { msg: "Needs " + missing.join(", ") + ". Nothing has been sent." });
 		}
+		const who = esc(emp?.employee_name || f.emp);
+		const what = `${total} day${total === 1 ? "" : "s"} of ${esc(f.type)} for ${who}`;
+
+		patch("apply", { sending: true, msg: "" });
+		const r = await raiseLeave({ ...f, from, till }, emp, todayIso(), chosenFile);
+		patch("apply", { sending: false });
+
+		if (!r.ok && r.refuse) {
+			return patch("apply", { msg: `<b>${what} — not sent.</b> ${r.refuse}` });
+		}
+		if (!r.ok) {
+			const alloc = s.site && deskNewWith(s.site, "Leave Allocation", { employee: f.emp, leave_type: f.type });
+			return patch("apply", {
+				msg: `<b>${what} — the site refused it:</b> ${esc(r.error)}`
+					+ (r.noAllocation
+						? ` <br>Frappe HR measures every application against a <b>Leave Allocation</b>, and there is `
+						+ `none of ${esc(f.type)} for ${who} covering these dates. That is HR's to create, with the `
+						+ "number of days — "
+						+ (alloc ? `<a href="${esc(alloc)}" target="_blank" rel="noopener">allocate it on the desk</a>` : "on the desk")
+						+ " — or to mark the type <i>Leave Without Pay</i> or <i>Allow Negative Balance</i> if it "
+						+ "is not meant to be counted. Nothing has been written."
+						: " Nothing has been written."),
+			});
+		}
+
+		/* Straight into the queue it belongs in, so Dashboard → Approvals → Leave
+		   shows it without waiting for the next full read. */
+		update((st) => ({
+			approvals: { ...st.approvals, leave: [...(st.approvals.leave || []), r.made] },
+		}));
+		chosenFile = null;
+		const link = s.site ? deskUrl(s.site, DOCTYPE, r.made.name) : "";
 		patch("apply", {
-			msg: `<b>${total} day${total === 1 ? "" : "s"} of ${f.type} for `
-				+ `${emp?.employee_name || f.emp} — not submitted.</b> This page cannot create a Leave `
-				+ "Application: nothing here creates one, and the type has "
-				+ "no entitlement for a balance to be checked against. "
-				+ (bothHalves
-					? "<b>This one could not be written even from the site:</b> half a day at both ends needs two "
-					+ "<code>half_day_date</code> values and the doctype has one."
-					: "Raised for real it would land as <b>Open</b> on Dashboard → Approvals → Leave."),
+			file: "",
+			msg: `<b>${what} — raised as `
+				+ (link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${esc(r.made.name)}</a>` : esc(r.made.name))
+				+ ", Open.</b> It is waiting on Dashboard → Approvals → Leave"
+				+ (r.approver.user
+					? `, sent to <b>${esc(r.approver.user)}</b>${r.approver.inferred ? " (their reporting manager, inferred)" : ""}.`
+					: ". <b>Nobody is set to approve it</b> — no leave approver on the record and no reporting "
+						+ "manager with a login — so somebody with HR rights has to pick it up there.")
+				+ (r.fileError
+					? ` <b>The attachment did not go:</b> ${esc(r.fileError)}. Add it on the desk.`
+					: ""),
 		});
+		if (getState().apply.emp === f.emp) void loadLeaveFor(f.emp, ym);
 	};
 
-	const cancel = () =>
+	const cancel = () => {
+		chosenFile = null;
 		patch("apply", {
 			emp: "", q: "", type: "", from: "", till: "", fromval: "1", tillval: "1",
 			remarks: "", file: "", notify: "", notifyq: "", month: "", msg: "",
 		});
+	};
 
 	return (
 		<>
@@ -294,15 +338,14 @@ export default function ApplyLeave() {
 				<b className="font-display">Apply Leave</b>
 				<span className="cov part">Partial</span>
 				<span>
-					Their form, control for control, on stock Frappe HR's <b>Leave Application</b>. It is live
-					and it does not submit.{" "}
+					Their form, control for control, on stock Frappe HR's <b>Leave Application</b>. Submit
+					raises one on the site as <b>Open</b>, for the approver on Dashboard → Approvals → Leave.{" "}
 					{s.counts.leavetype ? (
 						<><b>{fmt(s.counts.leavetype)}</b> leave types on the site</>
 					) : (
 						<b>No leave type on the site yet</b>
 					)}
-					, and <b>none of them has an entitlement</b> — which is why Available Balance reads 0 on
-					their screen too.
+					. The site refuses an application with no <b>Leave Allocation</b> behind it, and says so.
 				</span>
 			</div>
 
@@ -373,9 +416,9 @@ export default function ApplyLeave() {
 							<span className="lab">Available Balance</span>
 							<b className="mono">0</b>
 							<span className="hint">
-								<b>0 on their screen and 0 here.</b> Frappe HR computes it from a Leave Allocation, and
-								no leave type has an entitlement — so there is nothing to allocate and nothing for an
-								application to be measured against. This is the blocker the Balance report ends on.
+								<b>Not computed here.</b> Frappe HR measures it from the person's Leave Allocation when
+								the application is saved, and refuses one that the allocation does not cover — that
+								refusal, in the site's words, is the balance check.
 							</span>
 						</div>
 
@@ -426,16 +469,14 @@ export default function ApplyLeave() {
 						<div className="lvf wide">
 							<span className="lab" id="lv-file-l">Attachment</span>
 							<input type="file" aria-labelledby="lv-file-l"
-								onChange={(e) => put({
-									file: e.target.files?.[0]?.name || "",
-									msg: e.target.files?.[0]
-										? `<b>${e.target.files[0].name} was read by this browser and goes no further.</b> `
-											+ "Attaching it for real writes a <code>File</code> row on the site and links it "
-											+ "to the application; no leave screen here files one."
-										: "",
-								})} />
+								onChange={(e) => {
+									chosenFile = e.target.files?.[0] || null;
+									put({ file: chosenFile?.name || "" });
+								}} />
 							<span className="hint">
-								{f.file ? <><b>{f.file}</b> chosen — held in this browser only</> : "their form takes a file"}
+								{f.file
+									? <><b>{f.file}</b> — filed against the application, privately, once it is raised</>
+									: "their form takes a file"}
 							</span>
 						</div>
 
@@ -450,12 +491,14 @@ export default function ApplyLeave() {
 									onPick={(name) => put({ notify: name, notifyq: "" })} />
 							</span>
 							<span className="hint">
-								ERPNext notifies the <code>leave_approver</code>, which nobody has set.{" "}
+								ERPNext notifies the <code>leave_approver</code>: the one on the person's record if it is
+								set, otherwise their reporting manager's login.{" "}
 								{mgr ? (
 									<>Their reporting manager is <b>{mgr.employee_name}</b>{" "}
 										<span className="cov none">inferred</span>.</>
 								) : f.emp ? (
-									<b>No reporting manager on this record, so this application would have nobody to go to.</b>
+									<b>No reporting manager on this record — unless one is set as their leave approver, the
+										application goes up with nobody named to approve it.</b>
 								) : (
 									"Follows from the employee."
 								)}
@@ -464,7 +507,9 @@ export default function ApplyLeave() {
 					</div>
 
 					<div className="repacts">
-						<button className="btn tpl" onClick={submit}>Submit</button>
+						<button className="btn tpl" onClick={() => void submit()} aria-busy={f.sending || undefined}>
+							{f.sending ? "Submitting…" : "Submit"}
+						</button>
 						<button className="btn ghost" onClick={cancel}>Cancel</button>
 					</div>
 
