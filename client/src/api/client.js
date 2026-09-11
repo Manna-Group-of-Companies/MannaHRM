@@ -98,7 +98,9 @@ function reason(e) {
    Two ways of getting it, because neither is present on every version. The
    whitelisted method is the clean one; the desk page carries the token in its
    bootinfo and always has, and is reachable here because `/app` is one origin
-   with this page — proxied in development, served by the site in production.
+   with this page — proxied in development and by the Cloudflare Worker, and
+   served by the site at `/hr`. So is `/desk`, which is where `/app` now
+   redirects on this site's Frappe; every one of those forwards both.
 
    A token that could not be fetched is not fatal: a site running with
    `ignore_csrf` writes perfectly well without one, and a site that does not

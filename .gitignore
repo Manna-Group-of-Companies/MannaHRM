@@ -27,6 +27,8 @@ data/**
 node_modules/
 client/.env
 client/dist/
+# `wrangler dev`'s local state — a simulated edge, not anything deployed.
+client/.wrangler/
 
 # **The built bundle is committed and the sourcemap is not.**
 #

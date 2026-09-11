@@ -1,0 +1,34 @@
+// The dashboard on Cloudflare Workers. See client/README.md and worker/index.js.
+//
+// Its presence is also what stops `wrangler deploy` from trying to auto-configure
+// the project by rewriting vite.config.js — which it cannot parse, and which was
+// the first failure on this project.
+{
+	// Has to match the Worker's name in the Cloudflare dashboard, or the build
+	// there refuses to deploy.
+	"name": "mannahrm",
+	"main": "worker/index.js",
+	"compatibility_date": "2026-08-01",
+
+	"assets": {
+		// `npm run build:cloudflare` — not `npm run build`, which writes the
+		// site's copy into manna_hr/public/hr with every script under a Frappe
+		// path.
+		"directory": "./dist",
+		"binding": "ASSETS",
+		// The pages route on the path, so `/employees/salary-master` has to be
+		// answered with index.html.
+		"not_found_handling": "single-page-application",
+		// Without this the asset layer answers first, and the rule above would
+		// hand index.html to a tab opened on `/private/files/…` — a navigation,
+		// so it counts as a page — instead of the file.
+		// Keep in step with SITE_PATHS in worker/index.js.
+		"run_worker_first": ["/api/*", "/app", "/app/*", "/desk", "/desk/*", "/files/*", "/private/*"]
+	},
+
+	"vars": {
+		// The one host the Worker will forward to. Not a secret: it is where
+		// the person signs in, and it is in the address bar of the desk.
+		"ERP_URL": "https://mannarubber.m.frappe.cloud"
+	}
+}

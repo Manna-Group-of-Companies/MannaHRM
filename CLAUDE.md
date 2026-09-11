@@ -61,6 +61,7 @@ exists — a private bench is not a preference here.
 | `client/` | The React HR dashboard. **ERPNext is its server** — see `client/README.md` |
 | `client/src/lib/write.js` | What the dashboard may create, change and delete — and the five doctypes it never writes |
 | `client/src/features/records/` | One form and one list, for every doctype this app installs |
+| `client/worker/` | The Cloudflare Worker: the bundle, and the site behind the same hostname. A pipe, never a rule |
 | `manna_hr/rules.py` | Pure rules — no `frappe` import. Testable without a bench. |
 | `manna_hr/manna_hr/doctype/` | The schema **and** its controllers. 21 doctypes; `client/scripts/schema.mjs` generates the client's copy from these |
 | `manna_hr/loans.py` | Staff loans — the parts that need a site. The arithmetic is in `rules.py` |
@@ -92,7 +93,7 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ```bash
 python -m pytest manna_hr/tests -q        # 536 tests, no bench needed
 python tools/check_schema.py              # the site, against what the code assumes
-cd client && npm test                     # 2,601 tests, jsdom
+cd client && npm test                     # 2,617 tests, jsdom
 cd client && npm run contrast             # both palettes, every pairing, AA
 cd client && npm run shots                # the app in a real browser, light and dark
 cd app && flutter test                    # 50 tests, no site and no handset
@@ -298,12 +299,14 @@ existing `Attendance Log` history should be migrated is still open.
   `client/src/features/records/`. What it will not write is in
   `client/src/lib/write.js`, and `Attendance` is the entry that list exists for.
   See its README.
-- **The dashboard is served by the site, at `/hr`, and by nothing else.**
-  Decided 11 September 2026. The build writes into `manna_hr/public/hr/` and
-  `manna_hr/www/hr.html`, and it goes live with the app install. A Cloudflare
-  Workers project was pointed at this repo and failed; do not configure one —
-  a static host 404s every script and has no `/api` behind it. See
-  `client/README.md`.
+- **The dashboard has two homes, and two builds.** `npm run build` is the
+  site's, at `/hr`, committed into `manna_hr/public/hr/`, live with the app
+  install. `npm run build:cloudflare` is Cloudflare Workers' (chosen 11
+  September 2026, because the site cannot serve `/hr` until then), where
+  `client/worker/index.js` forwards `/api`, `/app`, `/desk`, `/files` and
+  `/private` to the site. That Worker sees every password and session cookie,
+  and must stay a pipe — no rule goes in it. Mixing the builds up publishes a
+  page that 404s every script. See `client/README.md`.
 - **Device clock drift is not handled.** These machines drift by minutes a
   month, and a gate running eight minutes fast makes everybody there late.
 - **Leave, payroll and shift rosters are untouched** — attendance first.

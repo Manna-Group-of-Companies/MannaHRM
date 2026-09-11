@@ -79,24 +79,53 @@ before the request does anything.
 
 ---
 
-## The site serves it, at `/hr`
+## Where it is served — two homes, two builds
 
-Decided 11 September 2026. `npm run build` writes the bundle into
-`manna_hr/public/hr/` (served at `/assets/manna_hr/hr/`, which is `base`) and
-copies the page to `manna_hr/www/hr.html`; the `website_route_rules` entry in
-`manna_hr/hooks.py` answers every path under `/hr` with it, which is what the
-path routing in `routes/router.js` needs. `.env.production` sets the mount to
-match. The built files are committed, so the dashboard goes live when the app
-is installed on the site, and not before.
+The pages route on the path (`/employees/salary-master` is an address, see
+`routes/router.js`), and the page has to share an origin with `/api`. Both homes
+satisfy both; they differ in who stands in the middle.
 
-**Nothing else hosts it.** A Cloudflare Workers project was connected to this
-repo and its deploy failed — Wrangler, finding no `wrangler.jsonc`, tried to
-rewrite `vite.config.js` and could not parse it. Getting it past that would have
-been worse than the failure: the page would ask Cloudflare for scripts that
-live at a Frappe path, and send `/api` calls to an origin with nothing behind
-it. Hosting it anywhere but the site means a proxy that every password and
-session cookie passes through, which is the thing the one-origin arrangement
-exists to avoid.
+| | The site, at `/hr` | Cloudflare Workers |
+|---|---|---|
+| Build | `npm run build` | `npm run build:cloudflare` |
+| Writes | `manna_hr/public/hr/` + `manna_hr/www/hr.html`, committed | `dist/`, not committed |
+| Settings | `.env.production` | `.env.cloudflare` |
+| Live when | the app is installed on the site | now |
+| One origin because | it *is* the site | `worker/index.js` forwards `/api`, `/app`, `/desk`, `/files`, `/private` to it |
+
+**The site** is the arrangement this app was written for. `base` is
+`/assets/manna_hr/hr/`, where Frappe serves an app's `public/`, and the
+`website_route_rules` entry in `manna_hr/hooks.py` answers every path under
+`/hr` with the page. Nothing sits between the browser and ERPNext.
+
+**Cloudflare** is the dev arrangement, in production. Chosen 11 September 2026,
+because the site cannot serve `/hr` until `manna_hr` is installed on it. The
+Worker is `server.proxy` from `vite.config.js` again: it forwards those five
+prefixes to one fixed host, strips the site's `Domain` from `Set-Cookie`, keeps
+redirects on its own origin, passes the caller's address on as
+`X-Forwarded-For`, and caches nothing. It holds no rule — what somebody is paid
+is still the site's decision (CLAUDE.md §1). **It does see every password and
+every session cookie on the way through**, which is the price of not being
+served by the site. `tests/worker.test.js` states what it must and must not do.
+
+The Cloudflare project's settings, which live in its dashboard and not here:
+
+| Setting | Value |
+|---|---|
+| Root directory | `client` |
+| Build command | `npm run build:cloudflare` |
+| Deploy command | `npx wrangler deploy` |
+| Worker name | `mannahrm` — must match `name` in `wrangler.jsonc` |
+
+Two traps, both found on the first deploys. With no `wrangler.jsonc`, Wrangler
+tries to rewrite `vite.config.js` to add its own plugin and cannot parse it.
+And `npm run build` is the wrong build there: it succeeds, and publishes a page
+whose scripts are at `/assets/manna_hr/hr/…`, a path only Frappe answers.
+
+Signed in through the Worker, the session belongs to the Worker's hostname. The
+desk links go to the site itself (`VITE_DESK_URL`), where the person signs in a
+second time — the desk's own `/assets` are not forwarded, so it cannot be drawn
+through the Worker.
 
 ---
 

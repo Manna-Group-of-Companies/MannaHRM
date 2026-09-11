@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:cloudflare": "vite build --mode cloudflare",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

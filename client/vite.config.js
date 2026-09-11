@@ -109,18 +109,24 @@ export default defineConfig(({ command, mode }) => {
 		},
 	};
 
-	/* Only on a build. `npm run dev` serves at the root off :5173, so a base
-	   here would make the dev server ask for its own modules under a prefix
-	   nothing answers on. */
-	const building = command === "build";
-	const outDir = building
+	/* Only on a build for the site. `npm run dev` serves at the root off :5173,
+	   so a base here would make the dev server ask for its own modules under a
+	   prefix nothing answers on.
+
+	   `--mode cloudflare` is the other home, and it is the dev arrangement
+	   rather than the site one: served at the root, with `worker/index.js`
+	   standing where the proxy above stands. It writes `dist/` and leaves
+	   `manna_hr/public/hr/` alone — a Cloudflare build that emptied the site's
+	   bundle would be one commit away from shipping a white page to `/hr`. */
+	const forSite = command === "build" && mode !== "cloudflare";
+	const outDir = forSite
 		? path.join(APP_DIR, "public", "hr")
 		: path.resolve(HERE, "dist");
 
 	return {
 		root: HERE,
-		base: building ? ASSETS_AT : "/",
-		plugins: [react(), ...(building ? [publishPage(outDir)] : [])],
+		base: forSite ? ASSETS_AT : "/",
+		plugins: [react(), ...(forSite ? [publishPage(outDir)] : [])],
 		resolve: {
 			alias: { "@": path.resolve(HERE, "./src") },
 			extensions: [".mjs", ".js", ".jsx", ".json"],
@@ -133,6 +139,10 @@ export default defineConfig(({ command, mode }) => {
 				   token in its bootinfo, when the whitelisted method is not on this
 				   site's version. See `fetchCsrf` in src/api/client.js. */
 				"/app": proxy,
+				/* Where `/app` now redirects on this site's Frappe. Without it the
+				   browser follows the 301 to this dev server's own index.html and
+				   the token is never found. */
+				"/desk": proxy,
 				/* The bytes behind a `File` row, which the browser follows itself —
 				   an <img>, a tab, a save. */
 				"/files": proxy,
@@ -146,7 +156,11 @@ export default defineConfig(({ command, mode }) => {
 			   `manna_hr/public/hr`, not `manna_hr/public`. */
 			outDir,
 			emptyOutDir: true,
-			sourcemap: true,
+			/* Not on Cloudflare: everything in `dist/` is published, and a map
+			   there is the whole client's source, comments and all, to anyone
+			   who asks for it. The site's copy is safe because `.gitignore` keeps
+			   its maps out of the repo the bench deploys from. */
+			sourcemap: forSite,
 		},
 	};
 });
