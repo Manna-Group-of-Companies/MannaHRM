@@ -79,17 +79,24 @@ before the request does anything.
 
 ---
 
-## Deploying it is still open
+## The site serves it, at `/hr`
 
-`npm run build` writes `dist/` with `base` at `/`, and the pages route on the
-path — `/employees/salary-master` is an address, see `routes/router.js`. So
-whatever serves this has to answer **every unmatched path with `index.html`**.
+Decided 11 September 2026. `npm run build` writes the bundle into
+`manna_hr/public/hr/` (served at `/assets/manna_hr/hr/`, which is `base`) and
+copies the page to `manna_hr/www/hr.html`; the `website_route_rules` entry in
+`manna_hr/hooks.py` answers every path under `/hr` with it, which is what the
+path routing in `routes/router.js` needs. `.env.production` sets the mount to
+match. The built files are committed, so the dashboard goes live when the app
+is installed on the site, and not before.
 
-Serving it from the site itself is the arrangement this app is written for: it
-makes the page and the API one origin for real and removes the dev proxy from
-the picture. That needs a `website_route_rules` hook in `manna_hr/hooks.py` and
-a `base` to match, and neither has been decided — so the build stays
-unopinionated rather than encoding half of a choice nobody has made.
+**Nothing else hosts it.** A Cloudflare Workers project was connected to this
+repo and its deploy failed — Wrangler, finding no `wrangler.jsonc`, tried to
+rewrite `vite.config.js` and could not parse it. Getting it past that would have
+been worse than the failure: the page would ask Cloudflare for scripts that
+live at a Frappe path, and send `/api` calls to an origin with nothing behind
+it. Hosting it anywhere but the site means a proxy that every password and
+session cookie passes through, which is the thing the one-origin arrangement
+exists to avoid.
 
 ---
 

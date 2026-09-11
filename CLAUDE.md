@@ -14,6 +14,11 @@ plans around hrms being absent is stale.
 doctype behind it, and whether that doctype is stock or ours. Read it before
 adding a screen or a table — most of what looks missing is already in hrms.
 
+[docs/NEW_EMPLOYEE.md](docs/NEW_EMPLOYEE.md) is what has to happen when somebody
+is enrolled on a fingerprint machine. Putting a finger on it is half the job;
+without `Employee.attendance_device_id` every punch that person makes is
+dropped, and nobody notices until the month's pay is wrong.
+
 [docs/SITE_SURVEY.md](docs/SITE_SURVEY.md) is what the live site actually holds,
 read on 22 August 2026. Trust it over anything inferred from the sales repo.
 
@@ -85,12 +90,12 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ## 3. Tests
 
 ```bash
-python -m pytest manna_hr/tests -q        # 513 tests, no bench needed
+python -m pytest manna_hr/tests -q        # 536 tests, no bench needed
 python tools/check_schema.py              # the site, against what the code assumes
-cd client && npm test                     # 2,516 tests, jsdom
+cd client && npm test                     # 2,601 tests, jsdom
 cd client && npm run contrast             # both palettes, every pairing, AA
 cd client && npm run shots                # the app in a real browser, light and dark
-cd app && flutter test                    # 48 tests, no site and no handset
+cd app && flutter test                    # 50 tests, no site and no handset
 ```
 
 The Python ones cover `rules.py`, `geo.py`, the approval workflow's tables, the
@@ -267,7 +272,7 @@ existing `Attendance Log` history should be migrated is still open.
   [docs/DOCTYPES.md](docs/DOCTYPES.md) §14.
 - **The checks that left the test suite with the JSON are back.**
   `manna_hr/tests/test_doctypes.py` reads all 21 again, and the workflow and
-  onboarding tests read the fields they name. 478 Python tests.
+  onboarding tests read the fields they name. 536 Python tests.
   `tools/check_schema.py` is still what compares the repo against the live site,
   and still needs credentials.
 - **No bench tests.** Only the pure rules are covered.
@@ -281,7 +286,8 @@ existing `Attendance Log` history should be migrated is still open.
   the geofence and the server clock are at present only what the app does —
   which is the state §1 says a rule must never be left in. The fix is the
   install above, not a commit. `flutter test` covers the rules that can be
-  argued about without a site: 48 tests, no bench and no handset.
+  argued about without a site: 50 tests, no bench and no handset. Who gets it
+  is [docs/APP_USERS.md](docs/APP_USERS.md) — seventeen people, not the group.
 - **No leave or payroll on the phone.** The app reads leave to colour a day and
   writes none of it.
 - **The dashboard is in `client/`** and runs against the live
@@ -292,9 +298,12 @@ existing `Attendance Log` history should be migrated is still open.
   `client/src/features/records/`. What it will not write is in
   `client/src/lib/write.js`, and `Attendance` is the entry that list exists for.
   See its README.
-- **Where the dashboard is served in production is undecided.** It routes on the
-  path, so whatever serves it must answer every unmatched path with
-  `index.html`. `npm run dev` proxies to the site; nothing else is set up.
+- **The dashboard is served by the site, at `/hr`, and by nothing else.**
+  Decided 11 September 2026. The build writes into `manna_hr/public/hr/` and
+  `manna_hr/www/hr.html`, and it goes live with the app install. A Cloudflare
+  Workers project was pointed at this repo and failed; do not configure one —
+  a static host 404s every script and has no `/api` behind it. See
+  `client/README.md`.
 - **Device clock drift is not handled.** These machines drift by minutes a
   month, and a gate running eight minutes fast makes everybody there late.
 - **Leave, payroll and shift rosters are untouched** — attendance first.
