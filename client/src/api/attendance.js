@@ -1,6 +1,5 @@
-import { apiCreate, apiWrite, listAll } from "@/api/client";
+import { listAll } from "@/api/client";
 import { getState, set } from "@/store";
-import { load } from "@/api/load";
 
 /* ---------------------------------------------------------------------------
    One person's month, read from the site.
@@ -128,6 +127,62 @@ export async function loadRegMonth(emp, ym, force) {
 	});
 }
 
+/**
+ * Read everybody's month into `regGrid` — the register on Attendance before
+ * anybody is picked.
+ *
+ * The same three reads as `loadRegMonth` without the employee filter, and the
+ * one place this app asks for a month of everybody's punches. That is the
+ * widest read it makes, so it is paged a thousand at a time, keyed on the
+ * month, and made only when the register is actually on screen.
+ *
+ * Never throws, for the same reason: "nobody punched" and "the punches could
+ * not be read" are opposite findings on a screen about pay.
+ */
+export async function loadRegGrid(ym, force) {
+	if (!ym) return;
+	const cur = getState().regGrid;
+	if (cur.key === ym && cur.state && !force) return;
+	set({ regGrid: { ...cur, key: ym, state: "loading", err: "" } });
+
+	const [from, to] = monthRange(ym);
+	const doctype = getState().regDoctype || "Employee Attendance Regularization";
+	const read = (dt, long, short, filters) =>
+		listAll(dt, long, filters, 1000)
+			.catch(() => listAll(dt, short, filters, 1000))
+			.catch(() => null);
+
+	const [punches, leave, ar] = await Promise.all([
+		read("Employee Checkin", PUNCH_MIN, PUNCH_MIN,
+			[["time", ">=", from + " 00:00:00"], ["time", "<=", to + " 23:59:59"]]),
+		read("Leave Application", LEAVE_FIELDS, LEAVE_MIN,
+			[["from_date", "<=", to], ["to_date", ">=", from]]),
+		read(doctype, AR_FIELDS, AR_MIN,
+			[["attendance_date", ">=", from], ["attendance_date", "<=", to]]),
+	]);
+
+	/* A second answer for a month already left behind is dropped: paging back
+	   and forth quickly must not paint August's punches under September. */
+	if (getState().regGrid.key !== ym) return;
+
+	const refused = [
+		punches === null && "punches",
+		leave === null && "leave",
+		ar === null && "corrections",
+	].filter(Boolean);
+
+	set({
+		regGrid: {
+			key: ym,
+			state: "ok",
+			err: refused.length ? `The site would not answer for ${refused.join(", ")}.` : "",
+			punches: punches || [],
+			leave: leave || [],
+			ar: ar || [],
+		},
+	});
+}
+
 /** The shift windows, once — `Shift Type` holds the start and end times that
     make `Office Shift (08:30-17:30)` mean anything, and the first load reads
     only the names.
@@ -158,76 +213,4 @@ export function shiftLabel(name, windows) {
 	return w && w.start_time && w.end_time
 		? `${name} (${hhmm(w.start_time)}-${hhmm(w.end_time)})`
 		: name;
-}
-
-/* ---------------------------------------------------------------------------
-   Raising a correction for one day.
-
-   The pencil on a roster row. What it writes is an **Attendance
-   Regularization** — a *request* — and never an `Attendance` row, which is the
-   rule this whole app is built around (CLAUDE.md §5): attendance is generated
-   from `Employee Checkin` by the shift job, and a hand-written row is invisible
-   to the thing that would have created it. A correction asks for the missing
-   punch; approving it is what writes one, on the site, where the shift window
-   and the approver live.
-
-   So this dashboard can raise the question and cannot answer it. The row is
-   created as a **draft, Pending Approval**, under the person's own session —
-   `apiCreate` sends `docstatus: 0` and nothing here submits anything.
-
-   ## A decided correction is not edited, it is raised again
-
-   Once somebody has approved or refused a request, changing it in place would
-   rewrite what was decided and leave the decision attached to different
-   numbers. So the pencil opens an existing request only while it is still
-   pending; on a decided day it opens a new one, and the old one stays as the
-   record of what was asked and answered.
-   --------------------------------------------------------------------------- */
-
-/** Frappe wants a datetime; the form asks for a clock time on a known day. */
-export const stampFor = (iso, hm) => (hm ? `${iso} ${hm.length === 5 ? hm + ":00" : hm}` : "");
-
-/** What the site's open state is called, under either doctype name. The two
-    differ and the difference is not cosmetic — `regDoctype` decides which. */
-export const openStatusFor = (doctype) =>
-	(doctype === "Employee Attendance Regularization" ? "Pending Approval" : "Initiated");
-
-/**
- * Create or update one day's correction, then read the month back.
- *
- * Read back rather than patched locally for the reason every write on this
- * dashboard is: the site names the document and may normalise what was sent,
- * and a row invented here that disagrees with the site by one character is a
- * row that looks right until somebody clicks it.
- *
- * @returns {Promise<{ok: boolean, error?: string}>}
- */
-export async function saveCorrection({ doctype, employee, iso, inAt, outAt, reason, name }) {
-	const doc = {
-		employee,
-		attendance_date: iso,
-		requested_in: stampFor(iso, inAt),
-		requested_out: stampFor(iso, outAt),
-		reason: String(reason || "").trim(),
-	};
-
-	try {
-		if (name) {
-			/* An update carries no status: the request stays where it was in the
-			   queue. Moving it back to open because somebody fixed a typo would
-			   quietly undo an approver's work. */
-			const r = await apiWrite(doctype, name, doc);
-			if (!r.ok) return r;
-		} else {
-			await apiCreate(doctype, { ...doc, status: openStatusFor(doctype) });
-		}
-	} catch (e) {
-		return { ok: false, error: e.message || String(e) };
-	}
-
-	/* Both halves: the queue on every other screen, and this month. */
-	await load();
-	const [empId, ym] = String(getState().regMonth.key || "|").split("|");
-	if (empId && ym) await loadRegMonth(empId, ym, true);
-	return { ok: true };
 }

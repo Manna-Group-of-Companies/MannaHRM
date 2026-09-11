@@ -39,21 +39,29 @@ function Pick({ r }) {
 	);
 }
 
-/* Approve and reject are drawn exactly where Factor HR draws them and do not
-   act. A tick that silently does nothing would be worse than no tick at all, so
-   pressing one says why — deciding a correction writes Employee Checkin rows,
-   and that has to happen on the server, not in a page anybody can open.
+/* Approve and reject, drawn exactly where Factor HR draws them.
+
+   On a time correction they decide: each opens a confirmation that says what
+   will be written — approving puts punches on somebody's day, which is pay —
+   and `decide.js` does the writing. On the other queues they still do not act,
+   and pressing one says why rather than silently doing nothing.
 
    Enabled rather than disabled on purpose: a control that reports itself
    disabled never fires, so a screen-reader user would get silence instead of
    the reason. */
-function Decide({ r }) {
+function Decide({ r, live }) {
+	const open = (action) => set({ appdialog: "decide", dlgmsg: "",
+		appdecide: { name: r.name, action, note: "", busy: false } });
 	const say = (what) => set({ appmsg: `Cannot ${what} ${reqId(r)} from here. ${READ_ONLY}` });
+	const ok = live && r.name ? () => open("Approve") : () => say("approve");
+	const no = live && r.name ? () => open("Reject") : () => say("reject");
 	return (
 		<div className="act">
 			<div className="yn">
-				<button className="ok" title={READ_ONLY} onClick={() => say("approve")}>✓</button>
-				<button className="no" title={READ_ONLY} onClick={() => say("reject")}>✕</button>
+				<button className="ok" title={live ? "Approve — writes the missing punches" : READ_ONLY}
+					aria-label="Approve" onClick={ok}>✓</button>
+				<button className="no" title={live ? "Reject" : READ_ONLY}
+					aria-label="Reject" onClick={no}>✕</button>
 			</div>
 			<span className="link" title="Every field on the request, and its decision trail. Not built.">
 				View Details
@@ -129,7 +137,7 @@ function AttRow({ r, kind }) {
 					<br />
 					Remarks: {r.remarks ? r.remarks : <span className="muted">—</span>}
 				</div>
-				<Decide r={r} />
+				<Decide r={r} live />
 			</div>
 		</>
 	);

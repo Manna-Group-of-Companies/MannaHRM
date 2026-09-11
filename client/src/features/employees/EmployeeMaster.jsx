@@ -9,7 +9,7 @@ import { deskImport, deskUrl } from "@/lib/desk";
 import { ONB_BLANK } from "@/data/candidates";
 import { openEmployee } from "@/features/employees/openEmployee";
 import ExportEmployees from "@/features/employees/ExportEmployees";
-import { EMP_IMPORTS, EMP_MORE, EXP_BLANK, IMPORT_ICON, MORE_ICON, STATUS_ROWS } from "@/data/employees";
+import { EMP_IMPORTS, EMP_MORE, EMP_SHOWN, EXP_BLANK, IMPORT_ICON, MORE_ICON, STATUS_ROWS } from "@/data/employees";
 
 /* Factor HR's status filter, dot for dot: green Active, red InActive, blue All.
    A native <select> cannot colour an option, and on this control the colour is
@@ -70,6 +70,27 @@ function StatusDrop({ status, cur, menu }) {
 				))}
 			</div>
 		</span>
+	);
+}
+
+/** What the page is not drawing, and the way to draw it.
+
+    Only ever rendered when something is actually being held back, because a
+    control that says "showing all 9 of 9" is noise on every site small enough
+    for this never to matter. The count is the *filtered* count, not the loaded
+    one: what somebody wants to know here is how much of what they just asked
+    for is on the screen. */
+function More({ total, drawn, all }) {
+	if (total <= drawn) return null;
+	return (
+		<div className="empmore-bar text-fine text-ink-2">
+			<span>
+				Showing {fmt(drawn)} of {fmt(total)}.
+			</span>
+			<button className="embtn" onClick={() => set({ empall: !all })}>
+				{all ? "Show the first " + fmt(EMP_SHOWN) : "Show all " + fmt(total)}
+			</button>
+		</div>
 	);
 }
 
@@ -213,6 +234,10 @@ export default function EmployeeMaster() {
 	const s = useApp();
 	const { all, rows } = masterRows(s);
 	const status = tally(all, "status");
+	/* One list for both views. Drawing every person is what the page is for, so
+	   the cap is only about the first paint — anything held back is counted in
+	   the footer and is one click away. */
+	const shown = s.empall ? rows : rows.slice(0, EMP_SHOWN);
 
 	return (
 		<>
@@ -399,7 +424,7 @@ export default function EmployeeMaster() {
 							</tr>
 						</thead>
 						<tbody>
-							{rows.slice(0, 400).map((e) => (
+							{shown.map((e) => (
 								<tr key={e.name} data-emp={e.name} title="Open this record"
 									onClick={() => openEmployee(e.name)}>
 									<td className="mono">{e.employee_number || "—"}</td>
@@ -419,11 +444,13 @@ export default function EmployeeMaster() {
 				</Scroll>
 			) : (
 				<div className="cards">
-					{rows.slice(0, 300).map((e) => (
+					{shown.map((e) => (
 						<EmployeeCard key={e.name} e={e} onOpen={() => openEmployee(e.name)} />
 					))}
 				</div>
 			)}
+
+			<More total={rows.length} drawn={shown.length} all={s.empall} />
 
 			{s.exp.open ? (
 				<ExportEmployees onClose={() => set({ exp: { ...s.exp, open: false } })} />

@@ -618,6 +618,12 @@ export const EMP_LIST_COLS = [
 	{ key: "status", label: "STATUS", get: ["status"] },
 	{ key: "email", label: "EMAIL", get: ["prefered_email", "company_email", "personal_email"] },
 	{ key: "mobile", label: "MOBILE NO", get: ["cell_number"] },
+	/* Not one of their nine. Factor HR keeps the biometric id on the person's own
+	   screen, so picking somebody off this list to check which machine code they
+	   are enrolled under means opening every candidate in turn — and that is the
+	   one question this list gets asked when a punch is missing. Empty is not a
+	   gap: it means the person punches from the phone. */
+	{ key: "device", label: "ATTENDANCE DEVICE ID", get: ["attendance_device_id"] },
 	{
 		key: "aadhaar", label: "AADHAR NO",
 		none: "This site's Employee doctype has no Aadhaar field — checked against the live doctype "

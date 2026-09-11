@@ -1039,6 +1039,11 @@
   .embar label.inline > span { @apply whitespace-nowrap; }
   .embar .grow { @apply ml-auto; }
 
+  /* Employee Master's footer, which says what the page is holding back. Centred
+     because it is a statement about the whole list above it rather than a
+     control belonging to either edge. */
+  .empmore-bar { @apply flex flex-wrap gap-[.6rem] items-center justify-center py-[.8rem]; }
+
   /* Every toolbar button in the app is this one. `min-height` rather than more
      padding, so an icon-only button and a worded one line up on the same bar
      and neither of them is a 24px target. */
@@ -1150,6 +1155,20 @@
     @apply w-full bg-card border border-line rounded;
     height: min(60vh, 520px);
   }
+  /* A punch's map. Squarer than the paper: it is a place, not a page. */
+  .iomap {
+    @apply w-full bg-card border border-line rounded;
+    height: min(55vh, 420px);
+  }
+
+  /* The coordinate on a punch, as the thing that opens its map. A button
+     rather than a link because it opens a dialog here; the link out to a
+     maps app is inside it. */
+  .locbtn {
+    @apply bg-transparent border-0 p-0 cursor-pointer font-mono text-accent whitespace-nowrap;
+    font-size: inherit;
+  }
+  .locbtn:hover { @apply underline; }
 
   .cards { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
   .ecard {
@@ -3752,6 +3771,39 @@
 
   .regnone .art { @apply mx-auto mt-[1.1rem] block opacity-[.28]; }
 
+  /* The register on Attendance before anybody is picked: everybody down the
+     side, the cycle across. It sits on `table.muster` for the day columns, and
+     each state wears one of the five colour/wash pairs `npm run contrast`
+     already proves — so a new colour is not introduced to draw it. The code in
+     the cell carries the meaning; the colour only makes a row scannable. */
+  .rgkey { @apply flex flex-wrap gap-x-[1rem] gap-y-[.35rem] items-center px-[.9rem] py-[.6rem] border-b border-line text-fine text-ink-2; }
+  .rgkey > span { @apply inline-flex items-center gap-[.4rem]; }
+  .rgkey .rgc { @apply inline-block min-w-[1.6rem] px-[.25rem] py-[.1rem] rounded-sm text-center font-mono text-tiny; }
+
+  /* The name column stays put while thirty-one days scroll under it. */
+  /* Capped by the viewport, because on a phone a 13rem name column is half the
+     screen and leaves room for four days. */
+  table.rgrid .rgname { @apply sticky left-0 z-[1] bg-card text-left; min-width: min(13rem, 38vw); max-width: 16rem; }
+  .rgwho { @apply flex items-center gap-[.45rem] w-full text-left text-norm text-ink bg-transparent border-0 p-0 cursor-pointer; }
+  .rgwho b { @apply font-semibold truncate; }
+  .rgwho .mono { @apply font-mono text-fine text-ink-3 shrink-0; }
+  .rgwho:hover b { @apply underline; }
+
+  .rgc.full    { @apply bg-live-wash text-live; }
+  .rgc.partial { @apply bg-part-wash text-part font-semibold; }
+  .rgc.absent  { @apply bg-bad-wash text-bad font-semibold; }
+  .rgc.leave   { @apply bg-accent-wash text-accent; }
+  /* Asked for and not granted — outlined, not filled, for the same reason its
+     dot is hollow: it is a question about the day rather than a fact. */
+  .rgc.unappr  { @apply text-part; box-shadow: inset 0 0 0 1px rgb(var(--part)); }
+  .rgc.holiday, .rgc.weekoff { @apply bg-skip-wash text-skip; }
+  /* A correction filed against the day, whatever it was decided as. A bar
+     under the code rather than a second colour: the state is still the day's. */
+  .rgc.ar { box-shadow: inset 0 -3px 0 rgb(var(--part)); }
+  table.rgrid th.now { @apply text-accent font-bold; }
+  table.rgrid td.now { outline: 1px solid rgb(var(--accent)); outline-offset: -1px; }
+  table.rgrid .tot { @apply font-semibold text-ink-2 bg-rule; }
+
 
   /* ------------------ Salary Master, the form behind their + -------------- */
   /* Their revision form: a header strip carrying the person, the effective date
@@ -4042,10 +4094,10 @@
   .elcats select:focus { @apply outline-none border-brand; box-shadow: 0 0 0 3px rgb(var(--brand-soft)); }
   .elcats select:disabled { @apply bg-wash text-ink-3; }
 
-  /* Nine columns do not fit a laptop, so the table scrolls inside its own box
+  /* Ten columns do not fit a laptop, so the table scrolls inside its own box
      and the page never does. */
   .elscroll { @apply overflow-x-auto border border-line rounded-md bg-card; }
-  table.eltab { @apply w-full border-collapse text-read; min-width: 62rem; }
+  table.eltab { @apply w-full border-collapse text-read; min-width: 70rem; }
   table.eltab th, table.eltab td { @apply border-b border-line text-left align-middle whitespace-nowrap; }
   table.eltab thead th { @apply bg-wash sticky top-0 z-10; }
   table.eltab th.n, table.eltab td.n {
@@ -4082,7 +4134,8 @@
   table.eltab tbody tr:hover td { @apply bg-brand-soft; }
   table.eltab tbody tr:hover .pick { @apply text-brand-deep; }
   table.eltab .pick:focus-visible { @apply outline-none bg-brand-soft; box-shadow: inset 0 0 0 2px rgb(var(--brand)); }
-  table.eltab td.code .pick, table.eltab td.mobile .pick { @apply font-mono text-fine; }
+  table.eltab td.code .pick, table.eltab td.mobile .pick,
+  table.eltab td.device .pick { @apply font-mono text-fine; }
   table.eltab td.name .pick { @apply font-semibold; }
   table.eltab td.email .pick { @apply max-w-[16rem] truncate block; }
   table.eltab tr.none td { @apply px-[.7rem] py-[1.2rem] text-center text-ink-3 whitespace-normal; }

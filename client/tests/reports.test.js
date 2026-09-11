@@ -59,6 +59,14 @@ describe("who was here", () => {
 		expect(a.last).toBe("2026-09-08 18:03:00");
 	});
 
+	it("carries the punch-in itself, so the report can say where it was made", () => {
+		const [a, b] = present(PEOPLE, punches, "2026-09-08");
+		expect(a.punchIn).toBe(punches[0]);
+		// B's only punch was an OUT: there is no punch-in to place, and an OUT's
+		// location drawn under "punch-in" would be a claim about the wrong punch.
+		expect(b.punchIn).toBeNull();
+	});
+
 	it("splits ins from outs, so a count that is not two is visible", () => {
 		const rows = inOutCount(PEOPLE, punches, "2026-09-08");
 		expect(rows.find((r) => r.name === "B")).toMatchObject({ ins: 0, outs: 1, punches: 1 });

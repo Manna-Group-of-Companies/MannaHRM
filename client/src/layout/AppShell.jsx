@@ -5,6 +5,7 @@ import Sidebar from "@/layout/Sidebar";
 import TopBar from "@/layout/TopBar";
 import SubNav from "@/layout/SubNav";
 import PageOutlet from "@/layout/PageOutlet";
+import { MapDialog } from "@/components/PunchMap";
 import { useApp, set } from "@/store";
 
 export default function AppShell() {
@@ -54,6 +55,8 @@ export default function AppShell() {
 				<SubNav />
 				<PageOutlet />
 			</div>
+			{/* Any page can open it — see components/PunchMap.jsx. */}
+			<MapDialog />
 		</div>
 	);
 }

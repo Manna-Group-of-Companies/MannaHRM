@@ -1,11 +1,11 @@
-import { patch, set, useApp } from "@/store";
+import { patch, useApp } from "@/store";
 import { load } from "@/api/load";
 import { scoped } from "@/lib/scope";
 import { useEffect } from "react";
 import { MON, clock, dayOf, dmy, fmt, thisMonth, tidyDept, todayIso } from "@/lib/format";
-import { ROSTER_STATES, monthRoster, spanHours } from "@/lib/roster";
-import { hhmm, loadRegMonth, loadShiftWindows, openStatusFor, saveCorrection, shiftLabel } from "@/api/attendance";
-import { Desk, Modal, Note, Scroll } from "@/components/ui";
+import { REGISTER_CODE, ROSTER_STATES, daysOf, monthRegister, monthRoster, spanHours } from "@/lib/roster";
+import { loadRegGrid, loadRegMonth, loadShiftWindows, shiftLabel } from "@/api/attendance";
+import { Desk, Note, Scroll } from "@/components/ui";
 import { deskUrl } from "@/lib/desk";
 
 /* Factor HR's Attendance Regularization screen, photographed 28 Aug 2026:
@@ -16,12 +16,11 @@ import { deskUrl } from "@/lib/desk";
        No Employee Selected
        Please select employee for show Regularization
 
-   That empty state is the screen's whole model, so it is copied word for word,
-   their grammar included. **This queue is one person at a time.** Ours on
-   Dashboard → Approvals is everybody's corrections in one list, which is the
-   better screen for an approver working a backlog — but theirs is the one HR
-   uses to answer "what happened to my 19th of August", and the two are worth
-   seeing side by side rather than one replacing the other quietly. */
+   **Ours does not stay empty.** Until 11 September 2026 that empty state was
+   copied word for word; it is now the register — everybody down the side, the
+   days across — because HR's first question on this page is rarely about one
+   person. Picking somebody still opens their screen: the month a row per day,
+   which is the one HR uses to answer "what happened to my 19th of August". */
 
 /* Their cycle picker reads "Aug-2026". Thirteen months ending one ahead of
    today, which is as far as a correction can be raised for. */
@@ -151,7 +150,12 @@ function RegBar({ s, cyc }) {
 				<BarIcon path="M12 16V4M7 9l5-5 5 5M4 20h16" label="Import" dead
 					title="This writes attendance from a spreadsheet — no shift check, no geofence, no approver. Drawn because it exists over there, refused because it is the most dangerous button in any HR system." />
 				<BarIcon path="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4" label="Refresh"
-					title="Reload the queue from the site" onClick={() => void load()} />
+					title="Reload from the site"
+					onClick={() => {
+						void load();
+						if (s.reg.emp) void loadRegMonth(s.reg.emp, cyc, true);
+						else void loadRegGrid(cyc, true);
+					}} />
 				{/* This page reads open requests only — see pendingRegularizations() —
 				    so a decided correction vanishes from it entirely. The list on the
 				    site still holds every one, decided included, which is where a
@@ -198,8 +202,12 @@ function RosterCounts({ counts }) {
 
 /** One day. Their columns, in their order, plus the two this side can answer
     that theirs cannot: how many punches the day actually holds, and what the
-    correction was decided as. */
-function RosterRow({ r, label, onEdit }) {
+    correction was decided as.
+
+    **No edit on the row.** Their pencil raised a correction from here; it was
+    taken off on 11 September 2026, so this table only reads. A correction is
+    raised from the phone app and decided on Dashboard → Approvals. */
+function RosterRow({ r, label }) {
 	const st = ROSTER_STATES.find((x) => x.key === r.display) || ROSTER_STATES[7];
 	return (
 		<tr className={r.display === "absent" ? "bad" : undefined}>
@@ -231,126 +239,188 @@ function RosterRow({ r, label, onEdit }) {
 			<td>
 				{r.ar ? <span className={"cov " + (r.ar.status === "Approved" ? "live" : r.ar.status === "Rejected" ? "none" : "part")}>{r.ar.status}</span> : null}
 			</td>
-			<td className="act">
-				{/* Their pencil. It raises the correction for this day — the times
-				    the machine has no record of — and never writes attendance; see
-				    the dialog, which says so where somebody can read it. */}
-				<button type="button" className="fhact on" aria-label={`Correct ${r.iso}`}
-					title={r.ar
-						? `This day already carries a ${r.ar.status} request. Open it.`
-						: "Ask for the punch this day is missing."}
-					onClick={() => onEdit(r)}>
-					<svg viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16Z" /></svg>
-				</button>
-			</td>
 		</tr>
 	);
 }
 
-/** The pencil on a roster row: what the day should have been.
+/** The calendar a person is measured against: their own where the record names
+    one, otherwise their company's default. "" when neither says. */
+function holidayListOf(s, emp) {
+	const co = s.companies.find((c) => c.name === emp.company);
+	return emp.holiday_list || (co && co.default_holiday_list) || "";
+}
 
-    **It writes a request, never an attendance row.** Attendance is generated
-    from punches by the shift job, and a hand-written row is invisible to the
-    thing that would have created it — CLAUDE.md §5. So this asks for the
-    missing punch and an approver writes it, on the site, where the shift window
-    and the approval live. The dialog says so rather than implying a save here
-    settles anything. */
-function RegEdit({ s, emp, onClose }) {
-	const e = s.regedit;
-	const decided = e.name && e.status && e.status !== openStatusFor(s.regDoctype);
+/** Everybody the register draws: the company scope, then the status dot, the
+    category box and whatever is typed in Search — the same three controls that
+    narrow the picker, narrowing the rows. */
+function gridPeople(s) {
+	const q = (s.reg.q || "").trim().toLowerCase();
+	return scoped(s)
+		.filter((e) => !s.reg.status || e.status === s.reg.status)
+		.filter((e) => !s.reg.cat || e.department === s.reg.cat)
+		.filter((e) => !q || [e.employee_number, e.employee_name, e.designation]
+			.some((v) => (v || "").toLowerCase().includes(q)))
+		.slice()
+		.sort((a, b) => String(a.employee_name || "").localeCompare(String(b.employee_name || "")));
+}
 
-	const bad = !e.inAt && !e.outAt
-		? "A correction with neither time in it is not asking for anything."
-		: e.inAt && e.outAt && e.outAt <= e.inAt
-			? "The out is not after the in. A night shift belongs to the day it started, and this screen cannot yet say so."
-			: "";
+/** What a cell's title says — the day in words, because the code alone is a
+    letter somebody has to remember. */
+function cellTitle(d) {
+	const st = ROSTER_STATES.find((x) => x.key === d.display) || ROSTER_STATES[7];
+	return [
+		`${dmy(d.iso)} ${dayOf(d.iso)}`,
+		st.label,
+		d.inAt || d.outAt ? `In ${clock(d.inAt)} · Out ${clock(d.outAt)}` : "",
+		d.hours ? `${d.hours} hrs` : "",
+		d.holiday || "",
+		d.leave ? `${d.leave.leave_type || "Leave"} · ${d.leave.status}` : "",
+		d.ar ? `Correction ${d.ar.status}` : "",
+	].filter(Boolean).join("\n");
+}
 
-	const save = async () => {
-		patch("regedit", { busy: true, err: "" });
-		const r = await saveCorrection({
-			doctype: s.regDoctype,
-			employee: emp.name,
-			iso: e.iso,
-			inAt: e.inAt,
-			outAt: e.outAt,
-			reason: e.reason,
-			name: decided ? "" : e.name,
-		});
-		if (r.ok) return set({ regedit: { ...e, open: false, busy: false } });
-		patch("regedit", { busy: false, err: r.error || "The site refused, and said nothing about why." });
-	};
+/* The four totals at the end of a row. Present is a full day only — a day with
+   a punch-in and nothing after it is counted in its own column, because
+   whether it is paid is the policy question nobody has answered yet. */
+const GRID_TOTALS = [
+	["P", "Fullday", (c) => c.full],
+	["½", "Partial — a punch-in with no punch-out", (c) => c.partial],
+	["A", "Absent", (c) => c.absent],
+	["L", "Approved leave", (c) => c.leave],
+	["Off", "Holiday and weekly off", (c) => c.holiday + c.weekoff],
+];
+
+/* ---------------------------------------------------------------------------
+   The register: everybody down the side, the days of the cycle across.
+
+   What the page shows before anybody is picked. It used to show nothing —
+   Factor HR's "No Employee Selected" — and HR's first question on opening
+   Attendance is rarely about one person; it is who is missing this month. A
+   name opens that person's month underneath, which is the screen theirs goes
+   straight to.
+
+   Every cell is `monthRoster`, the same function the one-person month runs,
+   over one read of everybody's punches. So a cell and that person's row for
+   the day cannot disagree.
+   --------------------------------------------------------------------------- */
+function RegGrid({ s, cyc }) {
+	const g = s.regGrid;
+	const mine = g.key === cyc ? g : null;
+	const people = gridPeople(s);
+	const days = daysOf(cyc);
+	const today = todayIso();
+
+	if (!mine || mine.state === "loading") {
+		return <div className="regload">Reading {cycleLabel(cyc)} for everybody…</div>;
+	}
+
+	const reg = monthRegister({
+		ym: cyc,
+		people,
+		punches: mine.punches,
+		leave: mine.leave,
+		corrections: mine.ar,
+		holidaysOf: (e) => s.holidays[holidayListOf(s, e)] || [],
+		today,
+	});
+
+	/* Nobody on the list has a calendar at all: every Sunday is an absence to
+	   the rule. Said once, above the grid, rather than once per row. */
+	const noCal = people.filter((e) => !holidayListOf(s, e)).length;
 
 	return (
-		<Modal
-			title={e.name && !decided ? "Edit correction" : "Raise a correction"}
-			extra={
-				<div className="ctform">
-					<div className="cvwho">
-						<b>{dmy(e.iso)} {dayOf(e.iso)}</b>
-						<span>{emp.employee_name} · {emp.employee_number || "—"}</span>
-					</div>
+		<>
+			{mine.err ? <div className="deerr" role="alert"><b>{mine.err}</b></div> : null}
 
-					<div className="ctgrid">
-						<div className="ctf">
-							<label className="k" htmlFor="re_in"
-								title="What time this person actually arrived. Left empty where only the punch-out is missing.">
-								Requested In
-							</label>
-							<input id="re_in" type="time" value={e.inAt}
-								onChange={(ev) => patch("regedit", { inAt: ev.target.value, err: "" })} />
-						</div>
-						<div className="ctf">
-							<label className="k" htmlFor="re_out"
-								title="What time they left. Left empty where only the punch-in is missing.">
-								Requested Out
-							</label>
-							<input id="re_out" type="time" value={e.outAt}
-								onChange={(ev) => patch("regedit", { outAt: ev.target.value, err: "" })} />
-						</div>
-						<div className="ctf">
-							<label className="k" htmlFor="re_why"
-								title="Why the machine has no record of it. This is what an approver reads, and it is the whole of what they have to go on.">
-								Reason
-							</label>
-							<input id="re_why" value={e.reason}
-								onChange={(ev) => patch("regedit", { reason: ev.target.value, err: "" })} />
-						</div>
-					</div>
+			{noCal ? (
+				<Note>
+					<b>{fmt(noCal)} of {fmt(people.length)} have no holiday list</b> on their record or their
+					company. Their Sundays and holidays read as working days, and a day nobody punched on reads
+					as absent — fix the list before anybody is paid from this.
+				</Note>
+			) : null}
 
-					{decided ? (
-						<Note>
-							This day already carries a <b>{e.status}</b> request. It is not edited in
-							place — changing it would rewrite what was answered and leave the decision
-							attached to different numbers. Saving raises a new one, and the old stays as
-							the record of what was asked.
-						</Note>
-					) : null}
+			<div className="rgkey">
+				{ROSTER_STATES.filter((st) => REGISTER_CODE[st.key]).map((st) => (
+					<span key={st.key}>
+						<b className={"rgc " + st.key}>{REGISTER_CODE[st.key]}</b>
+						{st.label}
+					</span>
+				))}
+				<span><b className="rgc full ar">P</b>a correction is filed for the day</span>
+			</div>
 
-					<Note>
-						<b>This saves a request, not attendance.</b> Attendance is generated from
-						punches by the shift job on the site; a correction asks for the punch that is
-						missing, and approving it is what writes one. It lands as a draft, pending,
-						under your own session — and appears on <b>Dashboard → Approvals</b>.
-					</Note>
-
-					{bad ? <div className="deerr" role="alert"><b>{bad}</b></div> : null}
-					{e.err ? (
-						<div className="deerr" role="alert">
-							<b>The site refused.</b>
-							<span className="onberr">{e.err}</span>
-						</div>
-					) : null}
+			{people.length ? (
+				<Scroll>
+					<table className="muster rgrid">
+						<thead>
+							<tr>
+								<th className="rgname">Employee</th>
+								{days.map((iso) => (
+									<th className={"d" + (iso === today ? " now" : "")} key={iso}>
+										{+iso.slice(8)}
+										<small>{dayOf(iso).slice(0, 2)}</small>
+									</th>
+								))}
+								{GRID_TOTALS.map((t) => <th className="d tot" key={t[0]} title={t[1]}>{t[0]}</th>)}
+							</tr>
+						</thead>
+						<tbody>
+							{reg.map(({ emp, rows, counts }) => {
+								const list = holidayListOf(s, emp);
+								const waiting = list && !s.holidays[list];
+								return (
+									<tr key={emp.name}>
+										<td className="rgname">
+											<button type="button" className="rgwho"
+												title={`Open ${emp.employee_name}'s month`}
+												onClick={() => patch("reg", { emp: emp.name, q: "" })}>
+												<i className={"sdot " + (emp.status === "Active" ? "on" : "off")} />
+												<b>{emp.employee_name}</b>
+												<span className="mono">{emp.employee_number || emp.name}</span>
+											</button>
+										</td>
+										{/* Until this person's calendar is read, every Sunday is a day
+										    nobody punched on. The row waits rather than calling four
+										    of them absent. */}
+										{waiting ? (
+											<td className="muted" colSpan={days.length + GRID_TOTALS.length}>
+												Reading the {list} calendar…
+											</td>
+										) : (
+											<>
+												{rows.map((d) => (
+													<td key={d.iso} title={cellTitle(d)}
+														className={"d rgc " + d.display + (d.ar ? " ar" : "")
+															+ (d.iso === today ? " now" : "")}>
+														{REGISTER_CODE[d.display]}
+													</td>
+												))}
+												{GRID_TOTALS.map((t) => (
+													<td className="d tot" key={t[0]}>{fmt(t[2](counts))}</td>
+												))}
+											</>
+										)}
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</Scroll>
+			) : (
+				<div className="regnone">
+					<b>Nobody matches</b>
+					<span>No employee is left after the status, category and search on the bar.</span>
 				</div>
-			}
-			foot={
-				<button type="button" className="btn tpl" disabled={e.busy || Boolean(bad)}
-					title={bad || "Creates the request on the site, as you, pending approval."}
-					onClick={save}>
-					{e.busy ? "Saving…" : "Save"}
-				</button>
-			}
-			onClose={onClose}
-		/>
+			)}
+
+			<div className="regfoot">
+				<span className="cnt">
+					{fmt(people.length)} people · {fmt(days.length)} days · {fmt(mine.punches.length)} punches ·{" "}
+					{fmt(mine.ar.length)} correction(s), every status. Click a name for that person's month.
+				</span>
+			</div>
+		</>
 	);
 }
 
@@ -368,27 +438,6 @@ function RegMonth({ s, emp, cyc }) {
 	const holidays = s.holidays[listName] || [];
 
 	const label = shiftLabel(emp.default_shift, s.shiftWindows);
-
-	/** The pencil: open this day's request where it has one and is still open,
-	    otherwise a blank one seeded with what the machine did record — the times
-	    already there are the ones an approver is being asked to trust, and
-	    retyping them is how a correction acquires a typo. */
-	const onEdit = (r) => {
-		const open = r.ar && r.ar.status === openStatusFor(s.regDoctype) ? r.ar : null;
-		set({
-			regedit: {
-				open: true,
-				iso: r.iso,
-				name: open ? open.name : "",
-				status: r.ar ? r.ar.status : "",
-				inAt: hhmm(String((open && open.requested_in) || r.inAt || "").slice(11)),
-				outAt: hhmm(String((open && open.requested_out) || r.outAt || "").slice(11)),
-				reason: (open && open.reason) || "",
-				busy: false,
-				err: "",
-			},
-		});
-	};
 
 	const { rows, counts } = monthRoster({
 		ym: cyc,
@@ -434,19 +483,13 @@ function RegMonth({ s, emp, cyc }) {
 							<th>Date</th><th>Status</th><th>Shift</th>
 							<th>Time In</th><th>Time Out</th><th>Total Hrs</th>
 							<th>AR In</th><th>AR Date</th><th>AR Out</th><th>AR Hrs</th><th>AR Status</th>
-							<th className="act">Action</th>
 						</tr>
 					</thead>
 					<tbody>
-						{rows.map((r) => <RosterRow key={r.iso} r={r} label={label} onEdit={onEdit} />)}
+						{rows.map((r) => <RosterRow key={r.iso} r={r} label={label} />)}
 					</tbody>
 				</table>
 			</Scroll>
-
-			{s.regedit.open ? (
-				<RegEdit s={s} emp={emp}
-					onClose={() => set({ regedit: { ...s.regedit, open: false } })} />
-			) : null}
 
 			<div className="regfoot">
 				<span className="cnt">
@@ -475,6 +518,13 @@ export default function Regularization() {
 		if (emp) void loadRegMonth(emp.name, cyc);
 	}, [emp && emp.name, cyc]);
 
+	/* The register, when nobody is picked — the page's resting state, so it is
+	   read on arrival and again when the cycle changes. Keyed on the month, so
+	   coming back from somebody's month does not read it again. */
+	useEffect(() => {
+		if (!emp) void loadRegGrid(cyc);
+	}, [Boolean(emp), cyc]);
+
 	/* The shift windows, once, and only for somebody who has actually opened a
 	   roster — they are what turn `Office Shift` into `Office Shift
 	   (08:30-17:30)`, and nothing else on this dashboard needs them. */
@@ -501,8 +551,8 @@ export default function Regularization() {
 					{pend ? `${fmt(pend)} pending` : "queue live, empty"}
 				</span>
 				<span>
-					Factor HR’s screen, and it is <b>one person at a time</b>. The same requests are worked as a
-					backlog on <b>Dashboard → Approvals</b>, where the card carries the shift and the hours.
+					<b>Everybody’s month</b> until somebody is picked — click a name for their day-by-day month.
+					Corrections are raised from the phone app and decided on <b>Dashboard → Approvals</b>.
 				</span>
 			</div>
 
@@ -537,11 +587,7 @@ export default function Regularization() {
 				)}
 
 				{!emp ? (
-					/* Their words, their grammar. It is the screen. */
-					<div className="regnone">
-						<b>No Employee Selected</b>
-						<span>Please select employee for show Regularization</span>
-					</div>
+					<RegGrid s={s} cyc={cyc} />
 				) : (
 					<>
 						<div className="regwho">

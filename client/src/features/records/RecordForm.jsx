@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useApp } from "@/store";
 import { Gap, Html, Modal, Note } from "@/components/ui";
@@ -40,6 +40,7 @@ import { SCHEMA } from "@/data/schema";
     The site is what refuses a Link naming nothing, and that is the right place
     for it to fail. */
 const LINK_LIST = {
+	"Employee": "employees",
 	"Company": "companies",
 	"Department": "departments",
 	"Designation": "designations",
@@ -48,6 +49,66 @@ const LINK_LIST = {
 	"Leave Type": "leaveTypes",
 	"Letter Type": "letterTypes",
 };
+
+/** How a record reads in that list, where its id is not what anybody knows it
+    by. `HR-EMP-00042` is the value the site stores and the thing a person
+    filling in a correction has no way to know — so the option carries the name
+    and the code, and the datalist matches on either. */
+const LINK_LABEL = {
+	employees: (o) => [o.employee_name, o.employee_number].filter(Boolean).join(" · "),
+};
+
+/* ---------------------------------------------------------------------------
+   Fetch-from: the fields a doctype says follow from a Link on the same form.
+
+   `from: "employee.employee_name"` in the schema is Frappe's own `fetch_from`,
+   generated straight out of the doctype JSON. The site applies it on save, so
+   the *stored* value has never been the problem. What was wrong is what the
+   person filling the form sees: on a correction — the doctype whose two fields
+   are labelled Punch In and Punch Out — you typed an employee id from memory
+   into a box with no list on it, and Name and Company sat at "—" until after
+   you had saved. There was nothing on the screen that said which person the
+   punches you were about to write would belong to, on a form whose whole
+   purpose is writing somebody a punch they will be paid for.
+
+   Resolved out of the store rather than by asking the site, because the store
+   already holds every employee and a read per keystroke is a read per keystroke.
+   Where this app holds no list for the link — `Employee Loan Type`, `Employee
+   Document Type` — nothing is filled and the field stays as it was; the site
+   still fills it on save, which is the arrangement everywhere else here too.
+   --------------------------------------------------------------------------- */
+
+/** `{ sourceField: [[targetField, propertyOnTheSource], …] }` for one doctype. */
+function fetchMap(doctype) {
+	const out = {};
+	for (const f of (SCHEMA[doctype] || {}).fields || []) {
+		if (!f.from) continue;
+		const [src, prop] = String(f.from).split(".");
+		if (!src || !prop) continue;
+		(out[src] = out[src] || []).push([f.name, prop]);
+	}
+	return out;
+}
+
+/** What changing `field` to `value` fills in beside it.
+
+    An id this app cannot resolve empties the fields that followed from the old
+    one rather than leaving them: a correction showing the previous person's
+    name beside a new employee id is worse than one showing nothing, because it
+    reads as confirmation. */
+function derived(doctype, store, field, value) {
+	const targets = fetchMap(doctype)[field];
+	if (!targets) return {};
+
+	const spec = (SCHEMA[doctype] || {}).fields || [];
+	const link = (spec.find((f) => f.name === field) || {}).link;
+	const rows = store[LINK_LIST[link]] || [];
+	const row = value ? rows.find((o) => o.name === value) : null;
+
+	const out = {};
+	for (const [target, prop] of targets) out[target] = row ? (row[prop] ?? "") : "";
+	return out;
+}
 
 export default function RecordForm({ doctype, doc, onDone, onCancel }) {
 	const s = useApp();
@@ -65,7 +126,10 @@ export default function RecordForm({ doctype, doc, onDone, onCancel }) {
 
 	const base = doc || {};
 	const value = (f) => (draft[f.name] !== undefined ? draft[f.name] : base[f.name] ?? "");
-	const set = (f, v) => setDraft({ ...draft, [f.name]: v });
+	/* One `setDraft`, not two: the link and everything that follows from it are
+	   one change, and applying them in two calls would render the form once with
+	   the new employee beside the old employee's name. */
+	const set = (f, v) => setDraft((d) => ({ ...d, [f.name]: v, ...derived(doctype, s, f.name, v) }));
 
 	const editable = making ? { ok: true, why: "" } : canEdit(doctype, base);
 	const deletable = making ? { ok: false } : canDelete(doctype, base);
@@ -197,6 +261,20 @@ function Field({ f, doctype, store, value, onChange, disabled }) {
 	const list = LINK_LIST[f.link];
 	const opts = list ? (store[list] || []) : [];
 
+	/* Memoised on the list itself. This form re-renders on every keystroke in
+	   any box, and a site with a factory on it puts a couple of thousand people
+	   in this datalist — rebuilding those elements per character is the kind of
+	   slow that gets blamed on the network. Not capped: a picker that quietly
+	   omits people is the bug it exists to prevent. */
+	const options = useMemo(() => {
+		const label = LINK_LABEL[list];
+		return opts.map((o) => {
+			const v = o.name || o;
+			const text = label ? label(o) : "";
+			return <option key={v} value={v}>{text || undefined}</option>;
+		});
+	}, [opts, list]);
+
 	const common = { id, disabled, "aria-describedby": warn ? `${id}-w` : undefined };
 
 	let control;
@@ -220,11 +298,7 @@ function Field({ f, doctype, store, value, onChange, disabled }) {
 			<>
 				<input type="text" {...common} list={opts.length ? `${id}-list` : undefined}
 					value={value} onChange={(e) => onChange(e.target.value)} />
-				{opts.length ? (
-					<datalist id={`${id}-list`}>
-						{opts.map((o) => <option key={o.name || o} value={o.name || o} />)}
-					</datalist>
-				) : null}
+				{opts.length ? <datalist id={`${id}-list`}>{options}</datalist> : null}
 			</>
 		);
 	} else {

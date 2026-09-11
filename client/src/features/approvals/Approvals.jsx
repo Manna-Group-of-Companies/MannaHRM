@@ -1,8 +1,11 @@
-import { set, useApp } from "@/store";
+import { getState, set, useApp } from "@/store";
 import { load } from "@/api/load";
-import { exportLog, otherRows, qExport, qFilter, qTemplate, queueOf, reqId } from "@/features/approvals/queue";
+import { exportLog, logDecision, otherRows, qExport, qFilter, qTemplate, queueOf, reqId }
+	from "@/features/approvals/queue";
+import { APPROVED, OPEN, REJECTED, decideCorrection, punchesFor } from "@/features/approvals/decide";
 import { otherCols } from "@/features/approvals/OtherGrid";
 import { scoped } from "@/lib/scope";
+import { dayOf, dmy } from "@/lib/format";
 import { APPROVALS, QBULK, QGROUPS, QSCOPES, READ_ONLY } from "@/data/approvals";
 
 import { Empty, Html, Modal, Note, Panel, Scroll, panelProps, tabProps } from "@/components/ui";
@@ -30,7 +33,11 @@ function QToolbar({ total, shown }) {
 		/* Of Factor HR's two bulk actions, one reads and one writes. The one that
 		   reads is done here and now; the one that writes says why it cannot be. */
 		if (v === "decide") {
-			set({ appmsg: `${sel || "No"} request${sel === 1 ? "" : "s"} selected. ${READ_ONLY}` });
+			set({ appmsg: `${sel || "No"} request${sel === 1 ? "" : "s"} selected. `
+				+ (s.apptab === "attendance"
+					? "Bulk decisions are not wired: approving in bulk writes punches for every row at once. "
+						+ "Decide each card with its own tick or cross, which says what it writes first."
+					: READ_ONLY) });
 		}
 		if (v === "data") set({ appdialog: "data", dlgmsg: "" });
 	};
@@ -128,11 +135,90 @@ function GroupHead({ k, rows, t }) {
 	);
 }
 
-/** The three dialogs, sharing one shell so they close the same way. */
+/* The tick or the cross on a time correction, one step before it is written.
+
+   A confirmation rather than a one-click decision because approving puts
+   punches on somebody's day, and the dialog says which ones — a misclick on
+   the wrong card is exactly the mistake a queue of fifty invites. The note is
+   the approver's, kept apart from the employee's reason, and it is what the
+   employee sees back on a rejection. */
+function DecideDialog({ close }) {
+	const s = useApp();
+	const d = s.appdecide;
+	const r = (s.approvals.attendance || []).find((x) => x.name === d.name);
+	const approve = d.action === "Approve";
+	const e = (r && s.byName[r.employee]) || {};
+	const punches = r ? punchesFor(r) : [];
+
+	const go = async () => {
+		set({ appdecide: { ...d, busy: true }, dlgmsg: "" });
+		const res = await decideCorrection(r, d.action, d.note);
+		logDecision({ ref: d.name, employee: r.employee, action: d.action,
+			status: res.ok ? (approve ? APPROVED : REJECTED) : OPEN,
+			persisted: res.persisted, note: res.msg, queue: "Attendance" });
+		if (res.ok) {
+			set({ appdialog: "", dlgmsg: "", appmsg: res.msg,
+				appdecide: { name: "", action: "", note: "", busy: false } });
+		} else {
+			set({ appdecide: { ...getState().appdecide, busy: false }, dlgmsg: res.msg });
+		}
+	};
+
+	return (
+		<Modal
+			title={(approve ? "Approve " : "Reject ") + (d.name || "")}
+			msg={s.dlgmsg ? <span className="deerr" role="alert"><b>{s.dlgmsg}</b></span> : ""}
+			onClose={close}
+			extra={
+				r ? (
+					<div className="ctform">
+						<div className="cvwho">
+							<b>{dmy(r.attendance_date)} {dayOf(String(r.attendance_date || "").slice(0, 10))}</b>
+							<span>
+								{e.employee_name || r.employee_name || r.employee} · {e.employee_number || r.employee}
+							</span>
+						</div>
+						<Note>
+							{approve ? (
+								<>
+									Writes {punches.length === 1 ? "this punch" : "these punches"} to{" "}
+									<b>Employee Checkin</b>, as you:{" "}
+									<b>{punches.map((p) => `${p.log_type} ${p.time.slice(11, 16)}`).join(", ")}</b>.
+									Attendance for the day is then built from them by the shift job — it is
+									never written directly.
+								</>
+							) : (
+								<>Nothing is written to attendance. The note below is what the employee sees.</>
+							)}
+						</Note>
+						<div className="ctf">
+							<label className="k" htmlFor="dc_note">Decision note</label>
+							<input id="dc_note" value={d.note}
+								placeholder={approve ? "Optional" : "Why it is refused"}
+								onChange={(ev) => set({ appdecide: { ...d, note: ev.target.value } })} />
+						</div>
+					</div>
+				) : (
+					<Note>This request is no longer in the queue — somebody may already have decided it.</Note>
+				)
+			}
+			foot={
+				<button type="button" className={"btn " + (approve ? "go" : "imp")}
+					disabled={!r || d.busy} onClick={go}>
+					{d.busy ? "Saving…" : approve ? "✓ Approve" : "✕ Reject"}
+				</button>
+			}
+		/>
+	);
+}
+
+/** The dialogs, sharing one shell so they close the same way. */
 function Dialogs({ t, shown }) {
 	const s = useApp();
 	const close = () => set({ appdialog: "", dlgmsg: "" });
 	if (!s.appdialog) return null;
+
+	if (s.appdialog === "decide") return <DecideDialog close={close} />;
 
 	/* Factor HR's Import / Export dialog: Export · Download Template · Import
 	   Data, and Close. Two of the three only read and work here. The third writes

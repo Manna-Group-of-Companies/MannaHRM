@@ -56,6 +56,7 @@ import {
 import { Bars, Cols, Empty, Html, Legend, Note, Panel, Tile, Tiles } from "@/components/ui";
 import { Columns, Donut, Meter, Stat, Stats } from "@/components/charts";
 import Link from "@/routes/Link";
+import { LocCell } from "@/components/PunchMap";
 import {
 	ATT_BUCKETS, ESCALATION, FNF_TILES, HELP_DESK, NOT_BUILT, PAYROLL_TILES, QUICK_LINKS,
 	QUICK_REPORTS, THEIRS_EMPTY,
@@ -101,7 +102,12 @@ function activitySources(s) {
 			id: "ci:" + c.name,
 			kind: c.log_type === "OUT" ? "doc" : "in",
 			at: String(c.time || ""),
-			what: <><b>{nameOf(c.employee)}</b> punched {c.log_type === "OUT" ? "out" : "in"}</>,
+			what: (
+				<>
+					<b>{nameOf(c.employee)}</b> punched {c.log_type === "OUT" ? "out" : "in"}{" "}
+					<LocCell r={c} e={s.byName[c.employee]} compact />
+				</>
+			),
 		})),
 		(s.approvals.attendance || []).map((r) => ({
 			id: "reg:" + (r.name || r.employee),

@@ -88,14 +88,14 @@ export function qTemplate() {
 		+ "Deliberately no example row: a template that imports cleanly by accident is a hazard.";
 }
 
-/* No login of its own: the page talks to the site with one API token, so every
-   decision made here lands as that token's user. Recorded as such rather than
-   dressed up as the person at the keyboard. */
+/* Every write goes in under the signed-in person's own Frappe session, so that
+   is who a decision is logged against. The fallback is for a store that has not
+   yet asked the site who is signed in. */
 const DECIDER = "dashboard token";
 
-function logDecision(e) {
+export function logDecision(e) {
 	const s = getState();
-	const othlog = [{ at: nowStamp(), by: DECIDER, ...e }, ...s.othlog].slice(0, 200);
+	const othlog = [{ at: nowStamp(), by: s.user || DECIDER, ...e }, ...s.othlog].slice(0, 200);
 	set({ othlog });
 }
 

@@ -1,4 +1,5 @@
 import { clock, dayOf, dmy, dmyTime, spanOf, tidyDept } from "@/lib/format";
+import { coordText } from "@/lib/punchplace";
 /* Factor HR's Quick Reports — the exports that exist without asking support.
    Tagged by whether the file is already in hand, because that is the only thing
    deciding whether a report is a task or a footnote. */
@@ -142,6 +143,7 @@ export const DDA_LAYOUT = [["group","Show Employee Grouping"],["logo","With Logo
  * @property {import("@/lib/types").Employee} emp
  * @property {string} date
  * @property {string|null} in
+ * @property {Object|null} inAt   the first IN punch itself, for where it was made
  * @property {string|null} out
  * @property {string|null} work
  * @property {string} status
@@ -154,6 +156,9 @@ export const DDA_COLS = [
   ["Day",            r => dayOf(r.date),               "muted"],
   ["Shift",          r => r.emp.default_shift||"—",    ""],
   ["In",             r => r.in||"—",                   "mono"],
+  /* Ours, not theirs: where a phone punch-in was made. The fourth entry names
+     the punch, so the page can open it on a map. */
+  ["In Location",    r => coordText(r.inAt)||"—",      "mono", r => r.inAt],
   ["Out",            r => r.out||"—",                  "mono"],
   ["Work Duration",  r => r.work||"—",                 "mono"],
   ["Late Coming By", () => "—",                         "mono"],

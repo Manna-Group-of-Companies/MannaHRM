@@ -87,7 +87,9 @@ export const CHECKINS = [
 	{ name: "EMP-CKIN-00000002", employee: "HR-EMP-00001", time: `${TODAY} 17:31:44`, log_type: "OUT" },
 	/* An IN with no OUT, which is the row every In/Out report has to decide how
 	   to draw and the one a naive pairing gets wrong. */
-	{ name: "EMP-CKIN-00000003", employee: "HR-EMP-00002", time: `${TODAY} 09:12:03`, log_type: "IN" },
+	{ name: "EMP-CKIN-00000003", employee: "HR-EMP-00002", time: `${TODAY} 09:12:03`, log_type: "IN",
+		/* From the phone app, so Today's Punches draws a Location with a value in it. */
+		device_id: "PHONE-HR-EMP-00002", latitude: 9.591412, longitude: 76.522318 },
 ];
 
 export const REGULARIZATIONS = [

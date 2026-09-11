@@ -4,6 +4,7 @@ export const EICON = {
   role:  "M12 3a3.6 3.6 0 1 0 0 7.2A3.6 3.6 0 0 0 12 3M5 21v-1.2A5.4 5.4 0 0 1 10.4 14h3.2A5.4 5.4 0 0 1 19 19.8V21",
   dept:  "M3 21h18M5 21V4h9v17M14 10h5v11M8 8h3M8 12h3M8 16h3",
   where: "M12 21s6.5-5.7 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 15.3 12 21 12 21M12 12.5a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4",
+  dev:   "M8 11a4 4 0 0 1 8 0v1.5M12 11v3.5M8.5 15.5c.6-1 .9-2 .9-3.2M15.5 15.2c-.4 1.4-1 2.6-1.8 3.6M5.6 8.2a7.5 7.5 0 0 1 12.8 0M6.4 14.5c.4-.9.6-1.9.6-2.9",
 };
 
 /* Factor HR's status filter, dot for dot: green Active, red InActive, blue All.
@@ -17,6 +18,18 @@ export const EICON = {
    ask for and see. Anything else the site holds — Left, Suspended — is appended
    after them, so the control still follows the data rather than a fixed list. */
 export const STATUS_ROWS = [["Active","on"],["Inactive","off"]];
+
+/* How many people Employee Master draws before it stops and says so.
+
+   It used to draw 400 in the list and 300 in the cards and say nothing about
+   either, which on a group this size is the worst thing a headcount screen can
+   do: the heading counted every person loaded and the grid below it drew fewer,
+   so the page disagreed with itself and nothing on it admitted the cut. A cap
+   is still wanted — every card is a handful of DOM nodes and the first paint is
+   what somebody waits for — so it is one number for both views now, disclosed
+   in the footer, with the rest one click away. Same bargain the Calendar makes
+   with CAL_SHOWN. */
+export const EMP_SHOWN = 300;
 
 /* One person's record, grouped the way Factor HR groups its Employee Detail.
    The directory's list call asks for sixteen fields; this page fetches the

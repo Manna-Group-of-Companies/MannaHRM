@@ -161,6 +161,9 @@ export function present(rows, checkins, on) {
 				first: list[0].time,
 				last: list[list.length - 1].time,
 				punches: list.length,
+				/* The punch itself, not only its time, so the report can say where
+				   it was made. Null for somebody whose only punch was an OUT. */
+				punchIn: list.find((p) => p.log_type === "IN") || null,
 			};
 		});
 }

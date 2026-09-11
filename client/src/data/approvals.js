@@ -103,8 +103,8 @@ export const APPROVALS = [
      ["Initiated by, applied on","owner + creation","stock","Factor HR shows <em>Applied On</em> on the card face"],
      ["Last action by, last action on","modified_by + modified","live","Shown in the card header, as Factor HR shows it — <em>24-Aug-2026 17:15, HRI-040 - SURESH KUMAR P S</em>. Populated even while the request is still open"],
      ["Decided by","Reporting Manager / HR","stock","Routed from the reporting line — an approver must not sign off their own attendance"],
-     ["Decision, who and when","Link → User + Datetime","stock",""],
-     ["Decision note","Small Text","stock","Shown back to the employee on a rejection"],
+     ["Decision, who and when","Link → User + Datetime","live","Written with the decision, and shown in the card header as Last Action"],
+     ["Decision note","Small Text","live","Asked for in the tick and cross's confirmation. Shown back to the employee on a rejection"],
      ["Status","Pending Approval / Approved / Rejected","live","Factor HR's open state reads <b>Initiated</b>. Ours says Pending Approval, and the queue reads either"],
      ["Break out / break in","Datetime","build","Two kinds of break are counted in Factor HR — see FACTOHR_DATA §6. Not designed in yet, and it moves worked hours, which moves pay"],
      ["Late-in, early-out duration","Duration","build","Per row in Factor HR. Waits on the attendance policy"],
@@ -117,7 +117,7 @@ export const APPROVALS = [
      ["Refresh","Toolbar","live","Reloads from the site"],
      ["All · Last 10 / 20 / 50 Activities · Last 7 / 31 Days · Past Two / Three Months","Toolbar","live","Factor HR's own eight, defaulting to 50. Counted from when the request was raised, not the day it is about"],
      ["Employee Wise · Request Type Wise · Reporting Manager Wise","Toolbar","live","Factor HR's three. Reporting Manager Wise is the one that matters here — it is the queue an approver actually owns, and it shows up anybody with no reporting line"],
-     ["Approve, reject","Green tick and red cross, per card","build","Drawn where Factor HR draws them and inert: deciding writes <b>Employee Checkin</b> rows, which must happen on the server. These two are drawn and not wired"],
+     ["Approve, reject","Green tick and red cross, per card","live","Each opens a confirmation naming the punches it will write. The status goes to the site first, so its roles — and the workflow, once <code>manna_hr</code> is installed — decide; then any requested <b>Employee Checkin</b> the site did not write itself is written as you. A refused punch puts the request back to Pending. Never <b>Attendance</b>"],
      ["View Details","Per card","build","Every field on the request, and its decision trail"],
      ["Time Log","Per card","build","The day's raw punches, beside the correction"],
    ]},
@@ -242,7 +242,7 @@ export const QGROUPS = [["employee","Employee Wise"],["type","Request Type Wise"
 export const QBULK = [["","--- Select Bulk Action ---"],["decide","Bulk Approve / Reject"],
   ["data","Import / Export Data"]];
 
-export const READ_ONLY = "Deciding a request is a write, and this page has none wired for it. "
+export const READ_ONLY = "Deciding a request is a write, and this queue has none wired for it. "
   + "It is a window onto the queue, not the queue itself.";
 
 /* ---------------------------------------------------------------------------

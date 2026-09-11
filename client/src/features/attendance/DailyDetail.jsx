@@ -14,6 +14,7 @@ import ScheduleReport, { openSchedule } from "@/features/attendance/ScheduleRepo
 import ScheduleList, { openScheduleList } from "@/features/attendance/ScheduleList";
 import { load } from "@/api/load";
 import People from "@/components/People";
+import { LocCell } from "@/components/PunchMap";
 
 /* Factor HR's Daily Detail Attendance Report panel, photographed 28 Aug 2026:
    the title, one row of labelled controls — Particular Employee, Employee
@@ -91,13 +92,16 @@ function ddaRows(s) {
 			if (f.punch === "not" && !h) continue;
 
 			const p = punch[e.name + "|" + k] || [];
-			const ins = p.filter((x) => x.log_type === "IN").map((x) => x.time).sort();
+			const inRows = p.filter((x) => x.log_type === "IN")
+				.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+			const ins = inRows.map((x) => x.time);
 			const outs = p.filter((x) => x.log_type === "OUT").map((x) => x.time).sort();
 			const both = ins.length && outs.length;
 			rows.push({
 				emp: e,
 				date: k,
 				in: ins.length ? String(ins[0]).slice(11, 16) : "",
+				inAt: inRows[0] || null,
 				out: outs.length ? String(outs[outs.length - 1]).slice(11, 16) : "",
 				work: both ? spanOf(ins[0], outs[outs.length - 1]) : "",
 				/* The same duration as a number, because Month Wise has to add them
@@ -298,7 +302,7 @@ function ddaRun(s, kind) {
 	done(kind === "PDF"
 		? "<b>PDF is the print dialog with <em>Save as PDF</em> as the destination.</b> It is the same document "
 			+ "Print and Preview show; a second renderer would only be a second chance to disagree with the screen."
-		: "Sent to the print dialog. Landscape A4 — fourteen columns do not fit on a portrait page.");
+		: "Sent to the print dialog. Landscape A4 — fifteen columns do not fit on a portrait page.");
 }
 
 /** Factor HR's coloured status dot, which on this screen means the same thing
@@ -718,7 +722,9 @@ const Table = ({ list, cols }) => (
 				{list.map((r) => (
 					<tr key={r.emp.name + (r.date || r.month)}>
 						{cols.map((c) => (
-							<td key={c[0]} className={c[2] || undefined}>{String(c[1](r))}</td>
+							<td key={c[0]} className={c[2] || undefined}>
+								{c[3] ? <LocCell r={c[3](r)} e={r.emp} /> : String(c[1](r))}
+							</td>
 						))}
 					</tr>
 				))}

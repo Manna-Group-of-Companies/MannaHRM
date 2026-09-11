@@ -36,6 +36,9 @@ export const LETTER_FIELDS = LETTER_FIELDS_MIN.concat([
 	"letter_number", "reference_number", "remarks",
 ]);
 
+export const CHECKIN_FIELDS_MIN = ["name", "employee", "time", "log_type"];
+export const CHECKIN_FIELDS = CHECKIN_FIELDS_MIN.concat(["device_id", "latitude", "longitude"]);
+
 /* The correction queue.
 
    **The short name on this site is taken, and it is not ours.** The sales
@@ -47,7 +50,7 @@ export const LETTER_FIELDS = LETTER_FIELDS_MIN.concat([
    So this app's doctype is `Employee Attendance Regularization`, under that
    name in the repo as well as on the site — there is no longer a short name to
    try first and no guess about which one answered. `regDoctype` stays in the
-   store because the desk links and `openStatusFor` read it, and because a site
+   store because the desk links and the approval queue read it, and because a site
    that has neither should say so rather than silently write somewhere.
 
    A read that fails is not fatal: an empty queue must not blank the rest of the
@@ -126,8 +129,13 @@ export async function load() {
 			   tick reads. Asked for with the same fallback as the employee list. */
 			listAll("Company", ["name", "abbr", "default_holiday_list"])
 				.catch(() => listAll("Company", ["name", "abbr"])),
-			listAll("Employee Checkin", ["name", "employee", "time", "log_type"],
-				[["time", ">=", today + " 00:00:00"]]),
+			/* The coordinate is what lets Today's Punches say where a phone punch was
+			   made. hrms carries both fields, but a site on an older Employee
+			   Checkin would refuse the whole read — and this read is the dashboard
+			   — so the four fields every site has are what it falls back to. */
+			listAll("Employee Checkin", CHECKIN_FIELDS, [["time", ">=", today + " 00:00:00"]])
+				.catch(() => listAll("Employee Checkin", CHECKIN_FIELDS_MIN,
+					[["time", ">=", today + " 00:00:00"]])),
 			listAll("Shift Type", ["name"]),
 			listAll("Holiday List", ["name"]),
 			listAll("Leave Type", ["name"]),
@@ -187,6 +195,9 @@ export async function load() {
 		});
 
 		void loadHolidayDates();
+		/* Every screen that draws a punch-in says how far it was from the gate,
+		   so this is read once for all of them, after the paint. */
+		void loadWorkLocations();
 		/* After the paint, and never fatal. It is one small read that only the
 		   Categories screen wants, and `Custom Field` is System Manager's doctype
 		   to read — so an HR User signing in must not have the whole dashboard
@@ -330,6 +341,19 @@ export async function loadSeparations() {
 
 	if (Array.isArray(rows)) set({ seps: rows, sepState: "ok" });
 	else set({ seps: [], sepState: connMessage(rows) });
+}
+
+/* The surveyed places a phone punch is described against — "35 m from Main
+   Gate" rather than two numbers nobody can read. Ours, so a site without
+   `manna_hr` has no such doctype; that leaves the Location column showing the
+   coordinate and its map and nothing else, which is why this is never fatal.
+   Guarded like Work Pattern's read so a re-render cannot ask twice. */
+export async function loadWorkLocations() {
+	if (getState().workLocState) return;
+	set({ workLocState: "loading" });
+	const rows = await listAll("Work Location",
+		["name", "location_name", "latitude", "longitude", "is_active"]).catch(() => null);
+	set({ workLocs: rows || [], workLocState: rows ? "ok" : "error" });
 }
 
 export async function loadShiftAssignments() {

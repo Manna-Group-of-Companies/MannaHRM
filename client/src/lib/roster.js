@@ -216,3 +216,55 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 
 	return { rows, counts };
 }
+
+/* ---------------------------------------------------------------------------
+   Everybody's month, a row per person and a column per day.
+
+   The register HR reads before picking anybody. It is `monthRoster` run once
+   per person over one read of everybody's punches — not a second opinion about
+   what a day was. A cell here and the row the same person's month draws must
+   agree, and running the same function is the only way that stays true.
+   --------------------------------------------------------------------------- */
+
+/** What a cell prints. Short, because thirty-one of them sit in a row — and
+    every code is spelled out in the legend and in the cell's title, because a
+    letter alone is identity by memory. "Not yet" prints nothing: a future day
+    with a dot in it reads as data. */
+export const REGISTER_CODE = {
+	full: "P", partial: "½", absent: "A", leave: "L",
+	unappr: "L?", holiday: "H", weekoff: "WO", unmarked: "",
+};
+
+const byEmployee = (rows) => {
+	const m = new Map();
+	for (const r of rows || []) {
+		if (!m.has(r.employee)) m.set(r.employee, []);
+		m.get(r.employee).push(r);
+	}
+	return m;
+};
+
+/**
+ * One `monthRoster` per person.
+ *
+ * `holidaysOf(emp)` rather than one list, because the calendar belongs to the
+ * person — their own where the record names one, otherwise their company's —
+ * and a group-wide register spans companies whose holidays differ.
+ */
+export function monthRegister({ ym, people, punches, leave, corrections, holidaysOf, today }) {
+	const p = byEmployee(punches);
+	const l = byEmployee(leave);
+	const c = byEmployee(corrections);
+	return (people || []).map((emp) => ({
+		emp,
+		...monthRoster({
+			ym,
+			punches: p.get(emp.name) || [],
+			leave: l.get(emp.name) || [],
+			corrections: c.get(emp.name) || [],
+			holidays: holidaysOf ? holidaysOf(emp) : [],
+			shift: emp.default_shift || "",
+			today,
+		}),
+	}));
+}

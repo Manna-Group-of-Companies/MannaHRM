@@ -21,6 +21,13 @@ import { EMP_LIST_COLS, EMP_LIST_SIZE, SITE_CATEGORY_TYPES } from "@/data/master
    so on hover, because a column quietly dropped is a column nobody remembers to
    ask for — and the answer may well be that neither should be stored.
 
+   The tenth, ATTENDANCE DEVICE ID, is not theirs. It is here because it is the
+   column somebody wants when a punch is missing, and theirs makes you open a
+   person's screen to see it. Blank means the phone, so it is filterable both
+   ways: type a machine code to find who is on it, and there is no way to ask
+   for "nobody enrolled" from a box — the Biometric filter on Employee Master
+   is where that question lives.
+
    The pager is theirs down to the running number down the left, which counts
    across pages rather than restarting at 1 on each. That is not decoration: it
    is what somebody reads out over a phone. */
@@ -267,7 +274,11 @@ export default function EmployeeList({ pool, onPick, onReload, busy }) {
 												{c.none ? <span className="muted">—</span>
 													: c.kind === "date" ? asDate(v)
 														: c.key === "status" ? <><i className={"sdot " + (v === "Active" ? "on" : "off")} />{v}</>
-															: v || <span className="muted">-</span>}
+															/* Empty here is a fact, not a missing value: nobody enrolled on a
+															   machine punches from the phone, and the geofence is what judges
+															   that punch. Drawn the way Employee Master draws the same gap. */
+															: c.key === "device" && !v ? <span className="tag">phone</span>
+																: v || <span className="muted">-</span>}
 											</button>
 										</td>
 									);

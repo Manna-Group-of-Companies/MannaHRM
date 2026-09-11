@@ -240,21 +240,25 @@ export async function api(path, params) {
 
 /* Frappe pages at whatever `limit_page_length` says; the loop stops at the
    first short page. Kept in one place because getting the last page wrong
-   shows up as a headcount quietly 100 short rather than as an error. */
-export async function listAll(label, fields, filters) {
+   shows up as a headcount quietly 100 short rather than as an error.
+
+   `size` is for the few reads that are big by nature — a month of everybody's
+   punches is thousands of rows, and at 100 a page that is dozens of requests
+   against a site with a daily compute limit. */
+export async function listAll(label, fields, filters, size = 100) {
 	let out = [];
 	let start = 0;
 	for (;;) {
 		const p = {
 			fields: JSON.stringify(fields),
-			limit_page_length: 100,
+			limit_page_length: size,
 			limit_start: start,
 		};
 		if (filters) p.filters = JSON.stringify(filters);
 		const page = (await api("/api/resource/" + dt(label), p)).data || [];
 		out = out.concat(page);
-		if (page.length < 100) return out;
-		start += 100;
+		if (page.length < size) return out;
+		start += size;
 	}
 }
 

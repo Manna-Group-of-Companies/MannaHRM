@@ -1,6 +1,9 @@
 import { getState, patch, set, useApp } from "@/store";
 import { listAll } from "@/api/client";
+import { loadWorkLocations } from "@/api/load";
 import { clock, dayOf, dmy, fmt, nowStamp, tidyDept, todayIso } from "@/lib/format";
+import { coordText, placeText, streamOf } from "@/lib/punchplace";
+import { LocCell } from "@/components/PunchMap";
 import { Fragment } from "react";
 import { CAT_FIELDS, CAT_GROUP_BY, IO_BY, IO_MAXDAYS, IO_PERIODS } from "@/data/attendance";
 import { Empty, ExportMenu, Gap, Html, Modal, Note, Panel, Scroll, panelProps, tabProps } from "@/components/ui";
@@ -19,17 +22,12 @@ import ScheduleList, { openScheduleList } from "@/features/attendance/ScheduleLi
    on open, and any other day has to be fetched, so Generate is a request and
    the rest of the form is arithmetic on what it returned. */
 
-/* Which stream a punch came from. The trusted device-id prefix is still one of
-   the open questions, so this reads the weaker version of the same rule: a
-   punch carrying a terminal is from a machine, and one carrying none is not.
-   Named `Unknown` rather than `Mobile` on purpose — the strong claim needs the
-   prefix, and calling it mobile would geofence it in a reader's head. */
-const ioStream = (r) => (r.device_id ? "Terminal" : "Unknown");
-
 /* One column list, and the table on screen, the CSV and the printed document
-   all read it: `[heading, csv field, class, value]`. Three lists would be three
-   chances for an export to disagree with what somebody read off the screen,
-   and the export is the copy that gets argued over.
+   all read it: `[heading, csv field, class, value, screen?]`. Three lists would
+   be three chances for an export to disagree with what somebody read off the
+   screen, and the export is the copy that gets argued over. The optional fifth
+   draws the same value as something to click; it never says anything the
+   fourth does not.
 
    The value function returns "" for absent rather than a dash — the dash is a
    thing a reader needs and a thing a data file must not have. */
@@ -40,7 +38,13 @@ const IO_COLS = [
 	["Name", "name", "", (r, e) => e.employee_name || r.employee_name || ""],
 	["In / Out", "log_type", "", (r) => r.log_type || ""],
 	["Terminal", "terminal", "mono", (r) => r.device_id || ""],
-	["Stream", "stream", "", (r) => ioStream(r)],
+	["Stream", "stream", "", (r) => streamOf(r)],
+	/* Factor HR's export has a Location column on this report, and it was the
+	   one of their four we could not fill until the phone app started sending a
+	   coordinate. */
+	["Location", "location", "mono", (r) => coordText(r),
+		(r, e) => <LocCell r={r} e={e} />],
+	["Where", "where", "muted", (r, e, s) => placeText(r, s.workLocs)],
 	["Company", "company", "muted", (r, e) => e.company || ""],
 ];
 
@@ -108,7 +112,7 @@ function ioFiltered(s) {
 			if (s.company && e.company !== s.company) return false;
 			if (f.status && (e.status || "") !== f.status) return false;
 			if (f.logtype && (r.log_type || "") !== f.logtype) return false;
-			if (f.stream && ioStream(r) !== f.stream) return false;
+			if (f.stream && streamOf(r) !== f.stream) return false;
 			const hm = String(r.time || "").slice(11, 16);
 			if (f.t1 && hm && hm < f.t1) return false;
 			if (f.t2 && hm && hm > f.t2) return false;
@@ -137,10 +141,22 @@ function ioFiltered(s) {
 		});
 }
 
-/* The one request this page makes. Both field lists are tried in turn: an
-   `Employee Checkin` without `device_id` on it would otherwise take the whole
-   report down, and the report is more useful without that column than absent. */
+/* The one request this page makes, tried from the widest field list down: a
+   field the site has not got refuses the whole read rather than dropping the
+   column, and the report is more useful without a column than absent.
+
+   The widest carries the server's geofence verdict, which only exists once
+   `manna_hr` is installed. The next is stock hrms, coordinate included. */
+const IO_BASE = ["name", "employee", "employee_name", "time", "log_type", "device_id"];
+const IO_GEO = IO_BASE.concat(["latitude", "longitude"]);
+const IO_TIERS = [
+	IO_GEO.concat(["custom_distance_metres", "custom_geofence_result"]),
+	IO_GEO,
+	IO_BASE,
+];
+
 async function ioGenerate() {
+	void loadWorkLocations();
 	const f = getState().io;
 	const from = f.from || todayIso();
 	const till = f.till || todayIso();
@@ -162,8 +178,11 @@ async function ioGenerate() {
 	set({ ioState: "loading", ioMsg: "" });
 	const range = [["time", ">=", from + " 00:00:00"], ["time", "<=", till + " 23:59:59"]];
 
-	let rows = await listAll("Employee Checkin",
-		["name", "employee", "employee_name", "time", "log_type", "device_id"], range).catch(() => null);
+	let rows = null;
+	for (const fields of IO_TIERS) {
+		rows = await listAll("Employee Checkin", fields, range).catch(() => null);
+		if (rows !== null) break;
+	}
 	let err = "";
 	if (rows === null) {
 		rows = await listAll("Employee Checkin", ["name", "employee", "time", "log_type"], range)
@@ -190,7 +209,7 @@ function ioExport(s) {
 	const cols = ioCols(s.io).filter((c) => c[1]);
 	const csv = toCsv(cols.map((c) => c[1]), rows.map((r) => {
 		const e = s.byName[r.employee] || {};
-		return cols.map((c) => c[3](r, e));
+		return cols.map((c) => c[3](r, e, s));
 	}));
 	const name = ioStamp(s) + ".csv";
 	download(name, csv);
@@ -243,7 +262,7 @@ function ioPaper(s, rows) {
 		last = k;
 		const tds = cols
 			.map((c) => `<td${c[2] ? ` class="${c[2]}"` : ""}>`
-				+ `${esc(dash(c[3](r, e), c[2] === "sel" ? "no photo" : ""))}</td>`)
+				+ `${esc(dash(c[3](r, e, s), c[2] === "sel" ? "no photo" : ""))}</td>`)
 			.join("");
 		return sec + grp + `<tr>${tds}</tr>`;
 	}).join("");
@@ -295,7 +314,7 @@ function ioRun(s, kind) {
 			? "<b>PDF is the print dialog with <em>Save as PDF</em> as the destination.</b> The browser writes a "
 				+ "better PDF than a library shipped to it would, and it writes it from the same document Print "
 				+ "and Preview show — a second renderer would only be a second chance to disagree with the screen."
-			: "Sent to the print dialog. Landscape A4 on purpose: the table is eight columns wide, nine with "
+			: "Sent to the print dialog. Landscape A4 on purpose: the table is ten columns wide, eleven with "
 				+ "the selfie column, and portrait drops the last of them off the page.",
 	});
 }
@@ -648,11 +667,13 @@ function IoForm({ s }) {
 									<span className="ctl">
 										<select value={f.stream} onChange={(e) => patch("io", { stream: e.target.value })}>
 											<option value="">All</option>
+											<option>Mobile</option>
 											<option>Terminal</option>
+											<option>Correction</option>
 											<option>Unknown</option>
 										</select>
 										<span className="hint text-mini text-ink-3">
-											a punch with no terminal; the trusted prefix is still an open question
+											mobile is the phone app; unknown is a punch with no device id at all
 										</span>
 									</span>
 								</div>
@@ -672,8 +693,8 @@ function IoForm({ s }) {
 }
 
 /* The generated table. Their export carries Terminal, Location, Punch Info and
-   a selfie per row; ours carries the two of those four that Employee Checkin
-   has a column for, and says so where the others would be. */
+   a selfie per row; ours carries the three of those four that Employee Checkin
+   has a column for, and says so where the selfie would be. */
 function IoReport({ s }) {
 	const f = s.io;
 	const rows = ioFiltered(s);
@@ -726,7 +747,7 @@ function IoReport({ s }) {
 
 
 			<Scroll style={{ marginTop: ".6rem" }}>
-				<table className="io" style={{ minWidth: 980 }}>
+				<table className="io" style={{ minWidth: 1240 }}>
 					<thead>
 						<tr>{cols.map((c) => <th key={c[0]}>{c[0]}</th>)}</tr>
 					</thead>
@@ -757,7 +778,7 @@ function IoReport({ s }) {
 									<tr>
 										{cols.map((c) => (
 											<td key={c[0]} className={c[2]}>
-												{dash(c[3](r, e), c[2] === "sel" ? "no photo" : "")}
+												{c[4] ? c[4](r, e, s) : dash(c[3](r, e, s), c[2] === "sel" ? "no photo" : "")}
 											</td>
 										))}
 									</tr>
@@ -799,7 +820,8 @@ export default function InOut() {
 								<table>
 									<thead>
 										<tr>
-											<th>Time</th><th>Emp code</th><th>Name</th><th>In / Out</th><th>Company</th>
+											<th>Time</th><th>Emp code</th><th>Name</th><th>In / Out</th><th>Stream</th>
+											<th>Location</th><th>Where</th><th>Company</th>
 										</tr>
 									</thead>
 									<tbody>
@@ -811,6 +833,9 @@ export default function InOut() {
 													<td className="mono">{e.employee_number || c.employee}</td>
 													<td>{e.employee_name || ""}</td>
 													<td>{c.log_type || "—"}</td>
+													<td>{streamOf(c)}</td>
+													<td className="mono"><LocCell r={c} e={e} /></td>
+													<td className="muted">{placeText(c, s.workLocs) || "—"}</td>
 													<td className="muted">{e.company || "—"}</td>
 												</tr>
 											);

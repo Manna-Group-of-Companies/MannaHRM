@@ -186,16 +186,6 @@ const initial = {
 	    findings on a screen about whether somebody was paid. */
 	regMonth: { key: "", state: "", err: "", punches: [], leave: [], ar: [] },
 
-	/** The pencil on a roster row: one day's correction, being written.
-
-	    `name` is the request being edited, or "" for a day that has none — and
-	    the difference decides whether Save updates or creates. A *decided*
-	    request is never edited in place: changing it would rewrite what was
-	    answered and leave the decision attached to different numbers, so the
-	    pencil opens a new one and the old stays as the record. See
-	    api/attendance.js. */
-	regedit: { open: false, iso: "", name: "", inAt: "", outAt: "", reason: "", busy: false, err: "" },
-
 	/** `Shift Type` start and end times, by name — what makes a roster row read
 	    `Office Shift (08:30-17:30)` rather than just `Office Shift`. The first
 	    load reads only the names; this is the second, on-demand half.
@@ -570,6 +560,11 @@ const initial = {
 	empdept: "",
 	empdesig: "",
 	empdev: "",
+	/* Whether the master is drawing everybody or the first EMP_SHOWN of them.
+	   Here rather than in the component so that opening a person and coming
+	   back does not quietly cut the list again under somebody who had asked for
+	   all of it. */
+	empall: false,
 
 	/** Employee Master → ⋯ → Export Employees Data — Factor HR's own dialog.
 	    See features/employees/ExportEmployees.jsx.
@@ -686,6 +681,11 @@ const initial = {
 		gmenu: false,
 	},
 	ioRows: null, ioState: "", ioMsg: "", ioRan: "",
+	/** The punch whose map is open — `{lat, lng, who, when, where}` — or null.
+	    One for the whole app: see components/PunchMap.jsx. */
+	punchMap: null,
+	/** Surveyed places, for "35 m from Main Gate". See loadWorkLocations. */
+	workLocs: [], workLocState: "",
 	/** The rendered report, held while Preview is open. It is the same document
 	    Print, PDF and Word are handed — a preview showing anything else would be
 	    a preview of nothing. */
@@ -773,6 +773,11 @@ const initial = {
 	appmsg: "",
 	appdialog: "",
 	dlgmsg: "",
+	/** Everybody's month, for the register on Attendance before anybody is
+	    picked. Keyed on the month; see loadRegGrid. */
+	regGrid: { key: "", state: "", err: "", punches: [], leave: [], ar: [] },
+	/** The card whose tick or cross is waiting on its confirmation. */
+	appdecide: { name: "", action: "", note: "", busy: false },
 
 	/* The Other queue is a grid with its own filters and its own staged
 	   decisions; none of it belongs to the card queues. */

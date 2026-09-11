@@ -70,7 +70,15 @@ const CHECKINS = [
 	["ci5", "HR-EMP-00007", `${today} 07:58:00`, "IN"],
 	["ci6", "HR-EMP-00007", `${today} 16:40:00`, "OUT"],
 	["ci7", "HR-EMP-00008", `${today} 09:31:00`, "IN"],
-].map(([name, employee, time, log_type]) => ({ name, employee, time, log_type }));
+].map(([name, employee, time, log_type]) => ({ name, employee, time, log_type }))
+	/* Two phone punches, so the Location column is drawn with something in it:
+	   one near the gate, and one that arrived with the location switched off. */
+	.concat([
+		{ name: "ci8", employee: "HR-EMP-00002", time: `${today} 08:47:00`, log_type: "IN",
+			device_id: "PHONE-HR-EMP-00002", latitude: 9.591412, longitude: 76.522318 },
+		{ name: "ci9", employee: "HR-EMP-00003", time: `${today} 17:55:00`, log_type: "OUT",
+			device_id: "PHONE-HR-EMP-00003" },
+	]);
 
 const LEAVE = [
 	{
@@ -116,6 +124,9 @@ const LETTERS = [
 const DATA = {
 	Employee: EMPLOYEES,
 	"Employee Checkin": CHECKINS,
+	"Work Location": [
+		{ name: "Main Gate", location_name: "Main Gate", latitude: 9.5912, longitude: 76.5221, is_active: 1 },
+	],
 	Company: [
 		{ name: "Manna Rubber", abbr: "MR", default_holiday_list: "Manna 2026" },
 		{ name: "Manna Polymers", abbr: "MP", default_holiday_list: "Manna 2026" },
@@ -212,6 +223,7 @@ const PAGES = [
 	["coverage", "/settings/coverage", "their 160 menu items against ours"],
 	["payroll-all", "/payroll/all", "Payroll — all of their menu"],
 	["msp", "/attendance/msp", "MSP — the punches somebody has to fix"],
+	["present", "/attendance/present", "Present Report — with where each punch-in was made"],
 	["orgchart", "/employees/orgchart", "Organization Chart, off reports_to"],
 	["blueprint", "/attendance/manage-attendance-policy", "a blueprint — the biggest unbuilt item"],
 	["refused", "/attendance/online-attendance", "the one item that will not be built"],

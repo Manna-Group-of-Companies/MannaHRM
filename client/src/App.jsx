@@ -125,6 +125,7 @@ export default function App() {
 			if (e.key !== "Escape") return;
 			if (getState().appdialog) return set({ appdialog: "", dlgmsg: "" });
 			if (getState().ioDoc) return set({ ioDoc: "" });
+			if (getState().punchMap) return set({ punchMap: null });
 			if (getState().ddaDoc) return set({ ddaDoc: "" });
 			if (getState().mbDoc) return set({ mbDoc: "" });
 			if (getState().lvbDoc) return set({ lvbDoc: "" });

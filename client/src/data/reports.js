@@ -1,4 +1,5 @@
 import { clock, dmy, tidyDept } from "../lib/format.js";
+import { coordText, placeText } from "../lib/punchplace.js";
 import {
 	absent, availedLeave, birthdays, directory, headCount, inOutCount, leaveHistory,
 	missedPunches, monthlyLeave, newJoiners, orgChart, pendingLeave, present, shiftReport, weekoffs,
@@ -23,10 +24,12 @@ import {
      ask       what the reader has to choose — "day", "month", "window", "" —
                and what the page draws to ask it
      build     (store, ask) → rows. Pure; it lives in `lib/reports.js`
-     cols      [heading, csv field, class, value] — the same shape InOut.jsx
+     cols      [heading, csv field, class, value, punch?] — the same shape InOut.jsx
                uses, and for the same reason: the table, the CSV and anything
                printed read one list, so an export cannot disagree with what
-               somebody read off the screen
+               somebody read off the screen. `punch`, when present, returns
+               the Employee Checkin the cell is about, and the page draws the
+               value as the button that opens that punch on a map
      empty     what an empty result means here, which is never the same thing
      note      what the report will not tell you. **Every spec has one.**
 
@@ -83,11 +86,14 @@ export const REPORTS = [
 			["Phone", "phone", "mono", (e) => e.cell_number || ""],
 			["Email", "email", "", (e) => e.company_email || e.personal_email || e.prefered_email || ""],
 			["Company", "company", "muted", (e) => e.company || ""],
+			["Device id", "device", "mono", (e) => e.attendance_device_id || "phone"],
 		]),
 		empty: "No employees have been read.",
 		note: "Contact details as the Employee record holds them. A blank is a record nobody has "
 			+ "filled in rather than somebody with no phone — the migration loaded the master and not "
-			+ "the paperwork.",
+			+ "the paperwork. <b>Device id is the exception: blank there is not a gap.</b> It is the "
+			+ "<code>attendance_device_id</code> a fingerprint machine sends, and somebody without one "
+			+ "punches from the phone, which is why this column says so rather than leaving it empty.",
 	},
 	{
 		id: "weekoff", section: "employees", title: "Weekoff Holiday Report", ico: "🗓", ask: "",
@@ -120,11 +126,16 @@ export const REPORTS = [
 	/* ---- Attendance ---- */
 	{
 		id: "present", section: "attendance", title: "Present Report", ico: "✅", ask: "day",
-		build: (s, a) => present(s.rows, s.checkins, a.day),
+		build: (s, a) => present(s.rows, s.checkins, a.day)
+			.map((e) => ({ ...e, inWhere: placeText(e.punchIn, s.places) })),
 		cols: WHO.concat([
 			["First punch", "first", "mono", (e) => clock(e.first)],
 			["Last punch", "last", "mono", (e) => clock(e.last)],
 			["Punches", "punches", "num", (e) => e.punches],
+			/* Where the punch-in was made, for the people who punch from the phone.
+			   The fifth entry names the punch, so the page can open it on a map. */
+			["Punch-in location", "in_location", "mono", (e) => coordText(e.punchIn), (e) => e.punchIn],
+			["Where", "in_where", "muted", (e) => e.inWhere],
 		]),
 		empty: "No punches have reached the site for this day.",
 		note: "<b>An OUT with no IN counts.</b> A missed morning punch and a night shift that began "

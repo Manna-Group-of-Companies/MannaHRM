@@ -13,6 +13,7 @@ import {
 } from "@/lib/profedit";
 import { deskUrl } from "@/lib/desk";
 import People from "@/components/People";
+import { LocCell } from "@/components/PunchMap";
 import { DATE_FIELD } from "@/data/employees";
 import { fieldLabel, PROFILE_CHECKS, PROFILE_CHIPS, PROFILE_FIRST_CHILD, PROFILE_HEAD, PROFILE_LONG, PROFILE_MAPPED, PROFILE_PANES, PROFILE_PLUMBING, PROFILE_TABS } from "@/data/profile";
 
@@ -510,7 +511,7 @@ function TodayPunches({ s, emp }) {
 		<div className="proline mt-[.7rem]">
 			{mine.map((c) => (
 				<span className="chip" key={c.name}>
-					{clock(c.time)} {c.log_type || "—"}
+					{clock(c.time)} {c.log_type || "—"} <LocCell r={c} e={s.byName[emp]} compact />
 				</span>
 			))}
 		</div>

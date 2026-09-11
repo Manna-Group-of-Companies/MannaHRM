@@ -5,6 +5,7 @@ import { active, scoped } from "@/lib/scope";
 import { download, toCsv } from "@/lib/csv";
 import { isoAgo, todayIso } from "@/lib/format";
 import { Empty, Html, Note, Scroll } from "@/components/ui";
+import { LocCell } from "@/components/PunchMap";
 import { daysBetween, reportFor } from "@/data/reports";
 
 /* ---------------------------------------------------------------------------
@@ -56,7 +57,10 @@ export default function Report({ section, id }) {
 	if (!spec) return <Empty title="No such report">Nothing is registered at this address.</Empty>;
 
 	const rows = spec.build(
-		{ rows: (ROWS_FOR[section] || scoped)(s), checkins: s.checkins, leave: s.approvals.leave || [], holidays: s.holidays },
+		{
+			rows: (ROWS_FOR[section] || scoped)(s), checkins: s.checkins, leave: s.approvals.leave || [],
+			holidays: s.holidays, places: s.workLocs,
+		},
 		ask,
 	);
 
@@ -105,11 +109,12 @@ export default function Report({ section, id }) {
 							<tbody>
 								{rows.map((r, i) => (
 									<tr key={(r.name || r.employee || "") + ":" + (r.on || r.from_date || r.month || i)}>
-										{spec.cols.map(([, key, cls, val]) => {
+										{spec.cols.map(([, key, cls, val, punch]) => {
 											const v = val(r);
 											return (
 												<td key={key} className={cls || undefined}>
-													{v === "" || v == null ? <span className="text-ink-3">—</span> : v}
+													{punch ? <LocCell r={punch(r)} e={r} />
+														: v === "" || v == null ? <span className="text-ink-3">—</span> : v}
 												</td>
 											);
 										})}
