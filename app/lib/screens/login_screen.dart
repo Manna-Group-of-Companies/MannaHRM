@@ -84,6 +84,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // The group's own lockup, the same file the field-sales app
+                  // ships. It is dark-on-white artwork, so it sits on the light
+                  // scaffold and nowhere near the dark app bar — half of it is
+                  // the same grey.
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Image.asset('assets/manna_logo.png',
+                        height: 62, fit: BoxFit.contain),
+                  ),
+                  const SizedBox(height: 22),
                   const Text('Manna HR',
                       style: TextStyle(
                           fontSize: 30, fontWeight: FontWeight.w700)),

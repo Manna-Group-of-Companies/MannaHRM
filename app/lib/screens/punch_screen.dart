@@ -14,6 +14,16 @@ import 'package:manna_hr_app/screens/login_screen.dart';
 import 'package:manna_hr_app/services/api.dart';
 import 'package:manna_hr_app/services/location.dart';
 
+/// The first letter of a name, for the avatar — or `?`.
+///
+/// `?? '?'` guarded null and not the empty string, and `.characters.first` on
+/// an empty string is a `StateError`: an Employee saved with a blank name took
+/// the whole punch screen down with it, button included.
+String initialOf(Object? name) {
+  final s = '${name ?? ''}'.trim();
+  return s.isEmpty ? '?' : s.characters.first.toUpperCase();
+}
+
 /// Punch in, punch out.
 ///
 /// The whole screen is one button and the reason it says what it says. Which
@@ -37,6 +47,21 @@ class _PunchScreenState extends State<PunchScreen> {
   String _error = '';
   Timer? _tick;
 
+  /// The day [_today] was read for. The screen stays open across midnight on a
+  /// night shift, and without this the button would go on offering a punch-out
+  /// against yesterday's punch-in.
+  String _loadedFor = '';
+
+  /// The day a read was last *attempted* for. Separate from [_loadedFor] so a
+  /// read that fails at midnight — no signal on the night bus — is tried once
+  /// rather than once a second for as long as the screen is open.
+  String _triedFor = '';
+
+  /// True only when the site *answered* that no Employee carries this user.
+  /// A read that failed is not that answer, and must not draw the card that
+  /// sends somebody to HR.
+  bool _linkMissing = false;
+
   String get _iso => isoDay(ServerClock.I.now());
   String get _next => nextLogType(_today);
 
@@ -47,7 +72,13 @@ class _PunchScreenState extends State<PunchScreen> {
     // The clock on screen is the site's, so it has to move. One second is the
     // resolution somebody watching a punch land expects.
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      final day = _iso;
+      if (_loadedFor.isNotEmpty && _loadedFor != day && _triedFor != day &&
+          !_loading && !_busy) {
+        _load(quiet: true);
+      }
+      setState(() {});
     });
   }
 
@@ -57,19 +88,33 @@ class _PunchScreenState extends State<PunchScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  /// [quiet] keeps what is on screen while the site is asked again — after a
+  /// punch, the list growing by one row is the confirmation, and blanking the
+  /// whole screen to a spinner first hides the very thing that just happened.
+  Future<void> _load({bool quiet = false}) async {
     setState(() {
-      _loading = true;
+      if (!quiet) _loading = true;
       _error = '';
     });
+    final day = _iso;
+    _triedFor = day;
+    // A new day starts empty rather than carrying yesterday's punches forward
+    // until the read lands. Which way the button points is read off this list,
+    // and yesterday's IN would offer a punch-OUT to somebody arriving for work;
+    // an empty list offers IN, the punch that cannot make a day worse.
+    if (_loadedFor.isNotEmpty && _loadedFor != day) _today = const [];
     try {
-      if (Session.I.employee == null) await Api.resolveEmployee();
-      final punches = await Api.punchesOn(_iso);
+      if (Session.I.employee == null) {
+        final found = await Api.resolveEmployee();
+        _linkMissing = found == null;
+      }
+      final punches = await Api.punchesOn(day);
       final place = await Api.workLocation();
       if (!mounted) return;
       setState(() {
         _today = punches;
         _place = place;
+        _loadedFor = day;
       });
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
@@ -113,7 +158,7 @@ class _PunchScreenState extends State<PunchScreen> {
       _say(direction == kLogIn
           ? 'Punched in at ${clockOf(stampOf(ServerClock.I.now()))} ✓'
           : 'Punched out at ${clockOf(stampOf(ServerClock.I.now()))} ✓');
-      await _load();
+      await _load(quiet: true);
     } catch (e) {
       if (!mounted) return;
       await _refusedWithCorrection(humanError(e));
@@ -206,7 +251,10 @@ class _PunchScreenState extends State<PunchScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
-            if (emp == null) _noEmployeeCard() else _whoCard(emp),
+            if (emp != null)
+              _whoCard(emp)
+            else if (_linkMissing)
+              _noEmployeeCard(),
             const SizedBox(height: 6),
             _clockCard(),
             const SizedBox(height: 10),
@@ -235,6 +283,14 @@ class _PunchScreenState extends State<PunchScreen> {
                     style: const TextStyle(color: Color(0xFF991B1B))),
               ),
             ],
+            // At the foot, small, and out of the way of the one control that
+            // matters. A mark over the punch button would be a logo somebody
+            // has to look past every morning.
+            const SizedBox(height: 28),
+            Center(
+              child: Image.asset('assets/manna_logo.png',
+                  height: 26, fit: BoxFit.contain),
+            ),
           ],
         ),
       ),
@@ -252,7 +308,7 @@ class _PunchScreenState extends State<PunchScreen> {
         leading: CircleAvatar(
           backgroundColor: const Color(0xFFEA580C),
           child: Text(
-            '${emp['employee_name'] ?? '?'}'.characters.first.toUpperCase(),
+            initialOf(emp['employee_name']),
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
@@ -379,6 +435,21 @@ class _PunchScreenState extends State<PunchScreen> {
   /// walking fifty metres and arguing with HR afterwards. It is a reading and
   /// not a gate — the server measures the same thing and decides.
   Widget _locationLine() {
+    final fix = _fix;
+    final reading = _locationReading();
+    // A fix can carry a coordinate *and* a caveat — the last place the phone
+    // knew, when no fresh one came in time. The reading alone would present an
+    // old position as where somebody is standing.
+    if (fix == null || !fix.has || fix.problem.isEmpty) return reading;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      reading,
+      const SizedBox(height: 3),
+      Text(fix.problem,
+          style: const TextStyle(fontSize: 12.5, color: Color(0xFF92400E))),
+    ]);
+  }
+
+  Widget _locationReading() {
     final fix = _fix;
     final place = _place;
     final style = TextStyle(fontSize: 12.5, color: Colors.black.withValues(alpha: .6));

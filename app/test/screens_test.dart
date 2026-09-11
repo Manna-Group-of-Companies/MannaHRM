@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:manna_hr_app/screens/correction_sheet.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
+import 'package:manna_hr_app/screens/punch_screen.dart' show initialOf;
 
 /// The screens open, and the one control that can quietly lose somebody's day
 /// is refused before it is pressed.
@@ -87,5 +88,47 @@ void main() {
     // The sentence is the whole reason this form is not called "fix my day".
     expect(find.textContaining('It does not mark the day'), findsOneWidget);
     expect(find.text('08:30'), findsOneWidget);
+  });
+
+  testWidgets('the correction sheet rides above the keyboard, Send included',
+      (tester) async {
+    // A short phone with the keyboard up: 800 logical pixels tall, 320 of them
+    // keys. Before the fix the sheet read its inset off the caller's context,
+    // captured before the keyboard existed, and sat underneath it.
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (ctx) => TextButton(
+            onPressed: () => showCorrectionSheet(ctx,
+                iso: '2026-09-09', seedIn: '08:30', note: 'gate did not read'),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    await tester.pumpAndSettle();
+
+    final send = find.widgetWithText(FilledButton, 'Send for approval');
+    await tester.ensureVisible(send);
+    await tester.pumpAndSettle();
+    // Above the top of the keys, so a thumb can reach it.
+    expect(tester.getBottomLeft(send).dy, lessThanOrEqualTo(800 - 320));
+  });
+
+  test('an employee with a blank name still gets an avatar, not a crash', () {
+    // `.characters.first` on an empty string is a StateError, and it took the
+    // whole punch screen down — button included — for one blank field.
+    expect(initialOf(''), '?');
+    expect(initialOf('   '), '?');
+    expect(initialOf(null), '?');
+    expect(initialOf('ebin joy'), 'E');
   });
 }

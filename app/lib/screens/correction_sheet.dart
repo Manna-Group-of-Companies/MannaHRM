@@ -27,10 +27,20 @@ Future<bool> showCorrectionSheet(
   final made = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => Padding(
+    // **The sheet's own context, not the caller's.** The caller's was captured
+    // once, before the keyboard existed, so its inset was zero forever: tapping
+    // Reason raised the keyboard straight over the box being typed in and over
+    // Send — a form that looks finished and cannot be submitted. The builder's
+    // context is rebuilt as the keyboard moves, which is what makes the sheet
+    // ride up with it. Scrollable as well, for a phone short enough that even
+    // the risen sheet does not fit above the keys.
+    builder: (sheetCtx) => Padding(
       padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: _CorrectionForm(iso: iso, seedIn: seedIn, seedOut: seedOut, note: note),
+          bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+      child: SingleChildScrollView(
+        child: _CorrectionForm(
+            iso: iso, seedIn: seedIn, seedOut: seedOut, note: note),
+      ),
     ),
   );
   return made == true;

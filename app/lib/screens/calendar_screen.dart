@@ -291,8 +291,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     await showModalBottomSheet(
       context: context,
+      // Scrollable, and allowed past half the screen. A day holding a
+      // correction, a leave and a gate that double-read is taller than the
+      // default sheet on a small phone, and a Column that does not fit paints
+      // yellow-and-black stripes over the one row somebody opened it to read.
+      isScrollControlled: true,
       builder: (sheetCtx) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Row(children: [

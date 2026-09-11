@@ -48,8 +48,10 @@ class Api {
       if (!creds.canReauth) return null;
       final ok = await _passwordLogin(creds.email, creds.password);
       if (!ok) return null;
+    } else {
+      Session.I.user = who;
     }
-    return resolveEmployee();
+    return _resolveQuietly();
   }
 
   /// Sign in. Everything the app reads and writes afterwards runs under this
@@ -65,7 +67,22 @@ class Api {
     if (!ok) throw const Refused('Wrong email or password.');
     await AuthStore.saveLogin(
         siteUrl: siteUrl, email: email, password: password);
-    return resolveEmployee();
+    return _resolveQuietly();
+  }
+
+  /// The employee lookup, where a failure must not undo a sign-in that worked.
+  ///
+  /// The password was right and the session is live; if the lookup after it
+  /// fails, throwing here would leave somebody on the sign-in form reading an
+  /// error about a password they typed correctly. So it returns null and the
+  /// punch screen — which asks again on open — is where the real reason is
+  /// shown.
+  static Future<Map<String, dynamic>?> _resolveQuietly() async {
+    try {
+      return await resolveEmployee();
+    } catch (_) {
+      return null;
+    }
   }
 
   static void _wireReauth() {
@@ -100,6 +117,11 @@ class Api {
     Session.I.email = email;
     await AuthStore.saveSid(sid);
     await _fetchCsrf();
+    // Falls back to the typed word when the site will not say, which rounds the
+    // safe way: looking somebody up by what they typed can still find them,
+    // and looking them up by nothing cannot.
+    final who = await whoami();
+    Session.I.user = (who.isEmpty || who == 'Guest') ? email : who;
     return true;
   }
 
@@ -206,7 +228,7 @@ class Api {
   /// so and names the fix rather than showing an empty month. HR sets `user_id`
   /// on the Employee record.
   static Future<Map<String, dynamic>?> resolveEmployee() async {
-    final who = Session.I.email;
+    final who = Session.I.user.isNotEmpty ? Session.I.user : Session.I.email;
     if (who.isEmpty) return null;
     final rows = await _read(
       'Employee',
@@ -217,7 +239,17 @@ class Api {
       ],
       orderBy: 'modified desc',
     );
-    if (rows == null || rows.isEmpty) return null;
+    // Null and empty are opposite findings and must not share a screen. Empty
+    // is "HR has not set your User ID", which is HR's to fix. Null is "the site
+    // did not answer" — a dropped signal, a permission — and telling somebody
+    // at a gate to go and see HR about a bad minute of 4G sends them to the
+    // wrong person with the wrong question.
+    if (rows == null) {
+      throw const Refused(
+          'The site would not say which employee you are. Check your signal '
+          'and pull down to try again.');
+    }
+    if (rows.isEmpty) return null;
     // Active first: somebody who left and came back has two records, and the
     // live one is the one their punches belong to.
     rows.sort((a, b) =>

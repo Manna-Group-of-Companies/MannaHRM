@@ -21,7 +21,22 @@ class Session {
   Session._();
 
   String siteUrl = kDefaultSiteUrl;
+
+  /// What was typed on the sign-in form, and what a silent re-login sends back
+  /// as `usr`. **Not the same thing as [user]**, and not what an Employee is
+  /// looked up by — Frappe accepts a username there as readily as an email.
   String email = '';
+
+  /// Who the site says this session is: the `User` id, straight from
+  /// `frappe.auth.get_logged_user`.
+  ///
+  /// This is what `Employee.user_id` holds and therefore the only thing worth
+  /// matching an employee on. Asked rather than assumed, because somebody who
+  /// signs in as `paul` is signed in as `paul@mannarubber.com`, and looking up
+  /// the typed word finds nobody — which reads on screen as "HR has not linked
+  /// your record" and is a person unable to punch.
+  String user = '';
+
   String sid = '';
   String csrfToken = '';
 
@@ -58,6 +73,7 @@ class Session {
   void clearAuth() {
     sid = '';
     csrfToken = '';
+    user = '';
     employee = null;
   }
 
