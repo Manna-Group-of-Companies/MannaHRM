@@ -31,22 +31,30 @@ export function dayOf(iso) {
 	return isNaN(d.getTime()) ? "" : DAY[d.getDay()];
 }
 
+/* All of these through `ymd`, never toISOString — see the note on it below.
+   toISOString made `monthEnd` a day short every day of the year, and every
+   other one here name yesterday between local midnight and 05:30, which is the
+   night shift and the early gate. tests/dates.test.js runs them in Kolkata time,
+   because a suite in UTC passes against the broken version. */
 export function isoAgo(days) {
 	const d = new Date();
 	d.setDate(d.getDate() - days);
-	return d.toISOString().slice(0, 10);
+	return ymd(d);
 }
 
-export const todayIso = () => new Date().toISOString().slice(0, 10);
-export const thisMonth = () => new Date().toISOString().slice(0, 7);
-export const monthStart = () => new Date().toISOString().slice(0, 8) + "01";
+export const todayIso = () => ymd(new Date());
+export const thisMonth = () => todayIso().slice(0, 7);
+export const monthStart = () => thisMonth() + "-01";
 export const monthEnd = () => {
 	const d = new Date();
-	return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+	return ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 };
 
-/** "24-Aug-2026 17:15" for a log line, from the browser clock. */
-export const nowStamp = () => new Date().toISOString().slice(0, 16).replace("T", " ");
+/** "2026-08-24 17:15" for a log line, from the browser clock, in local time. */
+export const nowStamp = () => {
+	const d = new Date();
+	return `${ymd(d)} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
 
 /* Hours, worded as Factor HR words them — "11 hrs 18 minutes", not 11.3. */
 export function hrsMin(ms) {
