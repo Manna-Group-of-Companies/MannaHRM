@@ -1,4 +1,4 @@
-import { apiCreate, apiWrite } from "@/api/client";
+import { apiCreate, apiDeleteFile, apiUpload, apiWrite } from "@/api/client";
 import { employeeDoc } from "@/lib/newemp";
 
 /* ---------------------------------------------------------------------------
@@ -58,4 +58,48 @@ export async function createEmployee(f) {
  */
 export async function saveEmployee(name, patch) {
 	return apiWrite("Employee", name, patch);
+}
+
+/**
+ * File a photograph against one Employee and point `Employee.image` at it.
+ *
+ * **Two writes, because Frappe's upload does not set the field.** `upload_file`
+ * with a `fieldname` records which field the File belongs to and stops there;
+ * the desk's own Attach Image control sets the value itself afterwards. Upload
+ * alone would leave a photograph on the record and the avatar still blank.
+ *
+ * **Private**, as every upload here is (see `apiUpload`): it is a face, and a
+ * public file in Frappe is served to anybody holding the URL.
+ *
+ * **A refused second write takes the first one back.** A File filed against
+ * `image` that `image` does not name is a photograph of somebody sitting on the
+ * site with nothing pointing at it, which nobody will ever find to delete. The
+ * photograph it replaces is left alone, the way the desk leaves it — it is an
+ * attachment on the record, and removing one is not what "change the photo"
+ * asked for.
+ *
+ * Returns `{ok}` with the site's own words on a refusal, like `saveEmployee`.
+ *
+ * @param {string} name the Employee record id
+ * @param {File}   file what was picked
+ * @returns {Promise<{ok: boolean, url?: string, error?: string}>}
+ */
+export async function saveEmployeePhoto(name, file) {
+	let row;
+	try {
+		row = await apiUpload(file, { doctype: "Employee", name, field: "image", optimize: true });
+	} catch (e) {
+		return { ok: false, error: e.message };
+	}
+	const url = row?.file_url;
+	if (!url) return { ok: false, error: "The site took the file and did not say where it put it." };
+
+	const r = await apiWrite("Employee", name, { image: url });
+	if (!r.ok) {
+		/* Best effort: if this fails too, the refusal above is still the thing
+		   worth showing, and the orphan is no worse than it would have been. */
+		try { await apiDeleteFile(row.name); } catch { /* see above */ }
+		return r;
+	}
+	return { ok: true, url };
 }

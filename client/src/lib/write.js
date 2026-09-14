@@ -139,6 +139,15 @@ export function canDelete(doctype, doc) {
 			why: "Submitted. Cancel it first — cancelling leaves the document visible and marked, "
 				+ "which is what somebody reading the history later needs." };
 	}
+	/* Frappe will delete a cancelled document, and that is the one thing a
+	   cancelled document is not for. It is the record that something was
+	   withdrawn — a month closed and reopened, a payment reversed — and deleting
+	   it leaves a hole where the evidence was. */
+	if (doc && doc.docstatus === 2) {
+		return { ok: false, warn: "",
+			why: "Cancelled. A cancelled document is the record that something was withdrawn, and "
+				+ "deleting it takes that record with it." };
+	}
 	/* A master is the dangerous kind of delete, because nothing about the record
 	   itself says how many other records name it. The site refuses a linked one,
 	   so this is a warning rather than a refusal — but it is worth saying before

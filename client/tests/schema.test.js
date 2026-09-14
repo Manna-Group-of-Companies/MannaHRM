@@ -32,8 +32,9 @@ describe("what the schema carries", () => {
 		// 21 restored on 8 September, plus Manna Announcement, added the same day
 		// so that Factor HR's Announcements and CEO Speak panels have something
 		// behind them. One doctype with a kind, because the two differ in a word.
-		expect(Object.keys(SCHEMA)).toHaveLength(22);
-		expect(RECORD_DOCTYPES).toHaveLength(16);
+		// Attendance Submission on 11 September — Submit Attendance's month freeze.
+		expect(Object.keys(SCHEMA)).toHaveLength(23);
+		expect(RECORD_DOCTYPES).toHaveLength(17);
 	});
 
 	it("keeps child tables and Singles out of the record list", () => {

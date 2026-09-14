@@ -145,6 +145,13 @@ const initial = {
 	    somebody can act on. */
 	profmsg: "",
 	profsaving: false,
+	/** The photograph on the header card: `busy` while it uploads, and what the
+	    last one said. Its own key rather than `profmsg`, because a photograph is
+	    saved the moment it is picked and has nothing to do with the Save bar —
+	    and in the store rather than the header because the record is read back
+	    afterwards, which unmounts the header and would take a local message with
+	    it. */
+	profpic: { busy: false, msg: "", bad: false },
 
 	/* The calendar screen's own state: which month, which holiday list, which
 	   days have been expanded past "+ N more…", and the search box Factor HR

@@ -276,9 +276,14 @@ export async function getDoc(label, name) {
 
    **Nothing here submits anything.** Not because this file refuses to — it is a
    client, and a client that refuses is a client somebody can skip — but because
-   no screen sends a `docstatus`, and a document created without one is a draft.
-   Submitting decides that somebody is paid, and it is done on the desk where
-   the validation and the audit trail are.
+   no screen sends a `docstatus` through it, and a document created without one
+   is a draft. Submitting decides that somebody is paid, and it is done on the
+   desk where the validation and the audit trail are.
+
+   **One exception, and it is in `api/crud.js`, not here:** Submit Attendance
+   submits and cancels `Attendance Submission`, because submitting it is the
+   whole of what that page is for. It can, because that doctype's controller —
+   not the page — is what checks the month and freezes it (manna_hr/freeze.py).
    --------------------------------------------------------------------------- */
 
 /** One field change. Frappe's PUT is a partial update; a submitted document
@@ -333,7 +338,7 @@ export async function apiDelete(label, name) {
     guesses the URL, with no session behind it at all.
 
     @returns {Promise<object>} the File row, as the site stored it */
-export async function apiUpload(file, { doctype, name, field }) {
+export async function apiUpload(file, { doctype, name, field, optimize = false }) {
 	const form = new FormData();
 	form.append("file", file, file.name || "upload");
 	form.append("is_private", "1");
@@ -345,8 +350,11 @@ export async function apiUpload(file, { doctype, name, field }) {
 	if (field) form.append("fieldname", field);
 	/* Frappe's optimiser re-encodes what it is given. A scan is evidence of a
 	   document, and re-encoding one to save bandwidth is the sort of quiet loss
-	   that is only noticed when somebody needs to read a serial number. */
-	form.append("optimize", "0");
+	   that is only noticed when somebody needs to read a serial number — so it is
+	   off unless asked for. A profile photograph is the one caller that asks: it
+	   is drawn five centimetres wide, and a phone's twelve megapixels of it is a
+	   download on every open of the record. */
+	form.append("optimize", optimize ? "1" : "0");
 
 	const r = await http.post("/api/method/upload_file", form, {
 		/* A scan is bigger than anything else this app sends. The default half

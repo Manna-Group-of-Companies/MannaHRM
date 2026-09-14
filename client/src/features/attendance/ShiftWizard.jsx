@@ -1,21 +1,21 @@
 import { useEffect } from "react";
 
 import { getState, patch, set, useApp } from "@/store";
-import { Desk, Modal } from "@/components/ui";
+import { Modal } from "@/components/ui";
 import { getDoc } from "@/api/client";
-import { deskNewWith, deskUrl } from "@/lib/desk";
+import { saveShiftType } from "@/api/shifttype";
 import {
-	SHW_BLANK, SHW_GRACE, SHW_GRACE_MODES, SHW_KINDS, SHW_STEPS, SHW_TIMING,
+	SHW_BLANK, SHW_GRACE, SHW_GRACE_MODES, SHW_KINDS, SHW_STEPS, SHW_TIMING, toInput,
 } from "@/data/shiftwizard";
 
 /* ---------------------------------------------------------------------------
-   **The shift wizard**, behind the ✎ on every row of SHIFT & WORK PATTERN.
+   **The shift wizard**, behind the + and the ✎ of SHIFT & WORK PATTERN.
    Photographed 4 September 2026 and drawn step for step.
 
    The argument for every control is in data/shiftwizard.js, where the tables
    are. What is here is the four things a component decides: how each step is
    laid out, what Next will not let past, what the site is asked for when the
-   dialog opens, and which hand-off Save makes.
+   dialog opens, and whether Save creates or changes.
 
    ## Their chrome, not the other wizard's
 
@@ -26,19 +26,11 @@ import {
 
    ## It reads before it draws
 
-   The ✎ is on a row of *Factor HR's* list, and about half those shifts do not
-   exist on this site — which is what the count in that heading is about. So the
-   dialog asks for the document as it opens, and the answer decides two things:
-   whether the boxes are seeded from what the site holds or from Factor HR's own
-   defaults, and which hand-off Save can make. Both are said on the dialog
-   rather than left for somebody to discover on the site.
+   Opened from a row, the dialog asks for that document as it opens, and the
+   answer decides whether the boxes are seeded from what the site holds and
+   whether Save changes it or creates it. Opened from the +, there is nothing to
+   read: it is a new shift, on the opening values in data/shiftwizard.js.
    --------------------------------------------------------------------------- */
-
-/** `HH:MM:SS` on the site, `HH:MM` in an `<input type="time">`. Both directions
-    in one place, because a shift that came back as 08:30:00 and went out as
-    08:30 would look like an edit nobody made. */
-const toInput = (t) => String(t || "").slice(0, 5);
-const toSite = (t) => (t && t.length === 5 ? t + ":00" : t || "");
 
 /** Read the Shift Type this row names, if the site has one.
 
@@ -55,6 +47,7 @@ async function loadShift(name) {
 	patch("shw", {
 		state: "done",
 		ours: true,
+		doc,
 		/* Seeded from the site, and only for the fields the site actually holds —
 		   the rest keep Factor HR's own opening values, because a blank is not
 		   what their form shows and an invented number would be worse. */
@@ -70,11 +63,30 @@ async function loadShift(name) {
 	});
 }
 
-/** Open the wizard for one row of the shift list. Exported so the ✎ and
-    anything else that ever opens it share the one definition of "open" —
-    including the read, which is the half a caller would forget. */
-export function openShiftWizard(name) {
+/** Open the wizard for one row of the shift list, or blank for a new shift when
+    no name is given. Exported so the +, the ✎ and anything else that ever opens
+    it share the one definition of "open" — including the read, which is the
+    half a caller would forget. */
+export function openShiftWizard(name = "") {
 	set({ shw: { ...SHW_BLANK(name), open: true } });
+}
+
+/** Save, and what the dialog does with the answer. The form stays open and
+    filled on a refusal — a form that emptied itself on a refusal would cost
+    somebody their typing — and closes on success, onto a list that has been
+    read back from the site. */
+async function save() {
+	const w = getState().shw;
+	if (w.busy) return;
+	patch("shw", { busy: true, msg: "", bad: false });
+	try {
+		const r = await saveShiftType(w);
+		set({ shw: SHW_BLANK() });
+		return r;
+	} catch (e) {
+		patch("shw", { busy: false, bad: true, msg: String(e?.message || e) });
+		return null;
+	}
 }
 
 /** One labelled row. Their layout puts the label to the left of the control,
@@ -110,25 +122,11 @@ export default function ShiftWizard({ onClose }) {
 	}, [w.open, w.row]);
 
 	const kind = SHW_KINDS.find((k) => k.key === f.kind) || SHW_KINDS[0];
-	const gmode = SHW_GRACE_MODES.find((m) => m.key === f.gmode) || SHW_GRACE_MODES[0];
 	const at = SHW_STEPS.findIndex(([k]) => k === w.step);
-
-	/* Everything the desk form would open holding. Only the fields that exist —
-	   `deskNewWith` drops empties, so an untouched box leaves the doctype's own
-	   default alone rather than overwriting it with "". */
-	const values = {
-		name: f.name.trim(),
-		start_time: toSite(f.start),
-		end_time: toSite(f.end),
-		begin_check_in_before_shift_start_time: f.early,
-		allow_check_out_after_shift_end_time: f.late,
-		/* Grace by category has nowhere to land, so the two numbers only go over
-		   when they are meant to apply to everybody — which is what the field
-		   means on the site. Picking their other mode says so on the form. */
-		...(f.gmode === "all"
-			? { late_entry_grace_period: f.gstart, early_exit_grace_period: f.gend }
-			: {}),
-	};
+	/* New is the +, which opens with no row. A row whose read came back empty
+	   also creates on Save, and says so, but it is not "new" to the title. */
+	const fresh = !w.row;
+	const named = Boolean(f.name.trim());
 
 	/** What the site has nowhere to put, gathered once and shown before
 	    anything opens. Not silently dropped, and not written into a field that
@@ -140,10 +138,6 @@ export default function ShiftWizard({ onClose }) {
 		f.hasbreak && SHW_TIMING[0].why,
 		f.gmode === "cat" && SHW_GRACE_MODES[1].why,
 	].filter(Boolean);
-
-	const href = s.site && (w.ours
-		? deskUrl(s.site, "Shift Type", w.row)
-		: deskNewWith(s.site, "Shift Type", values));
 
 	function go(k) {
 		const i = SHW_STEPS.findIndex(([x]) => x === k);
@@ -165,7 +159,13 @@ export default function ShiftWizard({ onClose }) {
 			<div className="shwhead">
 				<div className="shwname">
 					<label htmlFor="shw_name">Name</label>
-					<input id="shw_name" value={f.name} onChange={(e) => setF({ name: e.target.value })} />
+					{/* Locked on a shift the site holds: the name is its id, and
+					    changing it is Frappe's rename, not a save. */}
+					<input id="shw_name" value={f.name} readOnly={w.ours === true}
+						title={w.ours === true
+							? "The name is this shift's id. Renaming it is done on the ERPNext site, where every assignment that names it is renamed with it."
+							: "Shift Type is named by exactly what is typed here."}
+						onChange={(e) => setF({ name: e.target.value })} />
 				</div>
 				{/* Their tick, top right. It has no field, and their own list shows the
 				    column blank on every row — so it is drawn where they draw it and
@@ -282,7 +282,7 @@ export default function ShiftWizard({ onClose }) {
 
 	return (
 		<Modal
-			title={w.row ? `Shift — ${w.row}` : "Shift"}
+			title={fresh ? "New Shift" : `Shift — ${w.row}`}
 			wide
 			onClose={onClose}
 			extra={
@@ -293,23 +293,24 @@ export default function ShiftWizard({ onClose }) {
 						<div className="shwsel">Current selection : <b>{kind.label}</b></div>
 					) : null}
 
-					{/* What the site holds for this row, and therefore what Save can do.
-					    Before the form rather than after it: it changes what the buttons
-					    at the bottom mean. */}
-					{w.state === "loading" ? (
+					{/* What Save is about to do. Before the form rather than after it:
+					    it changes what the button at the bottom means. */}
+					{fresh ? (
+						<div className="note">
+							A new Shift Type. Save <b>creates it on the ERPNext site</b>, as you, and the site's
+							own validation decides whether it is accepted.
+						</div>
+					) : w.state === "loading" ? (
 						<div className="note">Asking the site whether it holds a Shift Type called “{w.row}”…</div>
 					) : w.ours === true ? (
 						<div className="note">
 							The site holds <b>{w.row}</b>, and the boxes it has a field for are filled from it.
-							Save opens that document — Frappe takes these answers as defaults on a <em>new</em>
-							{" "}Shift Type and not on one that already exists, so on this row Save is
-							{" "}<b>open it and type them there</b>.
+							Save <b>changes it on the site</b> — only the boxes that were changed are sent.
 						</div>
 					) : w.ours === false ? (
 						<div className="note">
-							No Shift Type called <b>{w.row}</b> on this site — which is what the count in that
-							heading is about. So the boxes open on Factor HR's own values, and Save
-							{" "}<b>creates it</b>, with everything here already in it.
+							No Shift Type called <b>{w.row}</b> could be read from this site, so the boxes open
+							on the form's own values and Save <b>creates it</b>.
 						</div>
 					) : null}
 
@@ -344,16 +345,17 @@ export default function ShiftWizard({ onClose }) {
 								Next
 							</button>
 						) : (
-							<Desk className="btn tpl" href={f.name.trim() ? href : ""}
-								dead={f.name.trim() ? undefined : "A shift needs a name — Shift Type is named by it."}
-								title={w.ours
-									? "Opens this Shift Type on the ERPNext site. Nothing on this dashboard writes, and an existing document takes no defaults from a link — so the answers here are typed there."
-									: "Creates this Shift Type on the ERPNext site, with everything typed here already in it. The document is made there, by whoever is logged in there, under the site's own validation."}>
-								Save
-							</Desk>
+							<button className="btn tpl" onClick={() => void save()}
+								disabled={!named || w.busy || w.state === "loading"}
+								title={!named ? "A shift needs a name — Shift Type is named by it."
+									: w.ours === true
+										? "Changes this Shift Type on the ERPNext site — only the boxes that were changed."
+										: "Creates this Shift Type on the ERPNext site, as you, under the site's own validation."}>
+								{w.busy ? "Saving…" : "Save"}
+							</button>
 						)}
-						<button className="btn ghost"
-							title="Closes the wizard and empties it. Nothing here has been sent anywhere."
+						<button className="btn ghost" disabled={w.busy}
+							title="Closes the wizard and empties it. Nothing typed since the last Save is sent."
 							onClick={() => { onClose(); patch("shw", SHW_BLANK()); }}>
 							Cancel
 						</button>

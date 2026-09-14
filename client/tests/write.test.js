@@ -5,7 +5,8 @@ import {
 	fieldWarning, formFields, isMaster, missingRequired, namingField, patchOf,
 } from "@/lib/write";
 import { RECORD_DOCTYPES, SCHEMA } from "@/data/schema";
-import { MANAGED } from "@/data/manage";
+import { MANAGED, OWN_PAGES } from "@/data/manage";
+import { MODULES } from "@/routes/registry";
 
 /* ---------------------------------------------------------------------------
    What this app will write, and what it will not.
@@ -91,6 +92,14 @@ describe("Frappe's own rules about a submitted document", () => {
 
 	it("will not edit a cancelled one either", () => {
 		expect(canEdit("Employee Letter", { docstatus: 2 }).ok).toBe(false);
+	});
+
+	it("will not delete a cancelled one — it is the record that something was withdrawn", () => {
+		// Frappe would. A reopened month's submission deleted is a month that
+		// payroll's history says was never shut.
+		const d = canDelete("Attendance Submission", { docstatus: 2 });
+		expect(d.ok).toBe(false);
+		expect(d.why).toContain("withdrawn");
 	});
 
 	it("edits an ordinary draft", () => {
@@ -210,17 +219,27 @@ describe("the form is built from the doctype, not by hand", () => {
 });
 
 describe("every record doctype has somewhere to be managed", () => {
-	it("covers all fifteen", () => {
-		expect(MANAGED).toHaveLength(RECORD_DOCTYPES.length);
-		expect(MANAGED.map((m) => m[3]).sort()).toEqual([...RECORD_DOCTYPES].sort());
+	it("covers every one, on a generic list or on a page of its own — and never both", () => {
+		const places = [...MANAGED, ...OWN_PAGES].map((m) => m[3]);
+		expect(places).toHaveLength(RECORD_DOCTYPES.length);
+		expect([...places].sort()).toEqual([...RECORD_DOCTYPES].sort());
 	});
 
 	it("names a doctype this app actually installs", () => {
-		for (const [, , , doctype] of MANAGED) expect(SCHEMA[doctype], doctype).toBeDefined();
+		for (const [, , , doctype] of [...MANAGED, ...OWN_PAGES]) expect(SCHEMA[doctype], doctype).toBeDefined();
+	});
+
+	it("gives a doctype with a page of its own a page that exists", () => {
+		// An entry here with no page behind it is a doctype nothing manages,
+		// which is the gap the first test exists to close.
+		for (const [section, slug, , doctype] of OWN_PAGES) {
+			expect(MODULES[section].pages[slug], doctype).toBeDefined();
+			expect(MODULES[section].tabs.map((t) => t[0]), doctype).toContain(slug);
+		}
 	});
 
 	it("says on every page what the records are for", () => {
-		for (const [, , title, , note] of MANAGED) {
+		for (const [, , title, , note] of [...MANAGED, ...OWN_PAGES]) {
 			expect(note, title).toBeTruthy();
 			expect(note.length, title).toBeGreaterThan(80);
 		}

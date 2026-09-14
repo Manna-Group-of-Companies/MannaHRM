@@ -16,6 +16,11 @@ export const EMP_FIELDS = EMP_FIELDS_MIN.concat([
 	   the EMP_FIELDS_MIN fallback below — which would quietly drop the pay figure
 	   and empty Salary Master. */
 	"cell_number", "prefered_email", "company_email", "personal_email",
+	/* The photograph's URL, for the cards on Employee Master. Stock on ERPNext's
+	   Employee — it is the doctype's `image_field` — so it cannot be the field
+	   that sends this read to the fallback. The bytes are not read here; the
+	   browser fetches each one as its card scrolls into view. */
+	"image",
 ]);
 
 /* The Create Letters register — see features/onboard/CreateLetters.jsx, which

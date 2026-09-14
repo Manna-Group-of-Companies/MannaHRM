@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { api } from "@/api/client";
-import { getState, set } from "@/store";
+import { getState, set, useStore } from "@/store";
 
 /* One whole Employee document, read once and kept.
 
@@ -10,6 +10,11 @@ import { getState, set } from "@/store";
    two copies of that rule would be two places for it to drift. */
 
 export function useEmployeeDoc(name) {
+	/* Watched as well as `name`, because `forgetEmployeeDoc` is how every caller
+	   asks for a fresh copy — ↻, Save, a new photograph — and it changes nothing
+	   else. Keyed on `name` alone, the effect never ran again after one, and the
+	   page sat on "reading the record…" until somebody navigated away. */
+	const held = useStore((s) => !!name && name in s.empDoc);
 	useEffect(() => {
 		if (!name || getState().empDoc[name]) return;
 		let live = true;
@@ -24,7 +29,7 @@ export function useEmployeeDoc(name) {
 		return () => {
 			live = false;
 		};
-	}, [name]);
+	}, [name, held]);
 }
 
 /** Drop the cached copy, which is what makes the refresh button read again. */

@@ -1,5 +1,6 @@
+import Avatar from "@/components/Avatar";
 import { EICON } from "@/data/employees";
-import { initials, tidyDept } from "@/lib/format";
+import { tidyDept } from "@/lib/format";
 import { isOn } from "@/lib/scope";
 
 /* Employee Master, in the shape Factor HR draws it (screenshot 28 Aug 2026):
@@ -36,7 +37,7 @@ export default function EmployeeCard({ e, onOpen }) {
 				}
 			}}
 		>
-			<div className="ava">{initials(e.employee_name)}</div>
+			<Avatar className="ava" name={e.employee_name} image={e.image} />
 			<div>
 				<div className="ename">
 					<span>{name}</span>

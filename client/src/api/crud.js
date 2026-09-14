@@ -83,8 +83,9 @@ export async function remove(doctype, name) {
  *
  * **Submitting is not saving.** It freezes the document: no field on it can be
  * changed again, and the only way back is cancel-and-amend, which leaves the
- * original visible. Anything that offers this has to say so before the click —
- * see `features/records/RecordForm.jsx`.
+ * original visible. Anything that offers this has to say so before the click.
+ * The one screen that does is Submit Attendance, where submitting is the month
+ * freeze — see `features/attendance/SubmitAttendance.jsx`.
  */
 export async function submit(doctype, name) {
 	return step(doctype, name, 1, "submit");

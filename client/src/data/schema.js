@@ -272,6 +272,133 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Attendance Submission": {
+		name: "Attendance Submission",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 1,
+		autoname: "naming_series:",
+		title: "period",
+		fields: [
+			{
+				name: "naming_series",
+				label: "Series",
+				kind: "select",
+				choices: [
+					"HR-ATS-.YYYY.-"
+				],
+				def: "HR-ATS-.YYYY.-"
+			},
+			{
+				name: "company",
+				label: "Company",
+				kind: "link",
+				link: "Company",
+				reqd: 1,
+				hint: "A month is closed one company at a time. Four companies share this site and pay on their own calendars, so one company's close must not freeze another's.",
+				list: 1
+			},
+			{
+				name: "period",
+				label: "Period",
+				kind: "text",
+				reqd: 1,
+				hint: "`YYYY-MM` — 2026-08 for August 2026. Refused until the month's last day is over, on the server's clock.",
+				list: 1
+			},
+			{
+				name: "from_date",
+				label: "From",
+				kind: "readonly",
+				hint: "From the period, never typed. What the freeze compares a day against."
+			},
+			{
+				name: "to_date",
+				label: "To",
+				kind: "readonly",
+				hint: "The month's real last day, not the 31st."
+			},
+			{
+				name: "attendance_rows",
+				label: "Attendance Rows",
+				kind: "readonly",
+				hint: "Counted at the moment of submitting. The freeze keeps the rows from changing; these figures are how anybody can tell if something changed them anyway.",
+				list: 1
+			},
+			{
+				name: "employee_count",
+				label: "Employees",
+				kind: "readonly"
+			},
+			{
+				name: "present_days",
+				label: "Present",
+				kind: "readonly"
+			},
+			{
+				name: "half_days",
+				label: "Half Day",
+				kind: "readonly"
+			},
+			{
+				name: "absent_days",
+				label: "Absent",
+				kind: "readonly"
+			},
+			{
+				name: "leave_days",
+				label: "On Leave",
+				kind: "readonly"
+			},
+			{
+				name: "work_from_home_days",
+				label: "Work From Home",
+				kind: "readonly"
+			},
+			{
+				name: "other_days",
+				label: "Other",
+				kind: "readonly",
+				hint: "Rows with a status none of the columns above name. Counted rather than dropped, so the figures still add up to the rows."
+			},
+			{
+				name: "submitted_by",
+				label: "Submitted By",
+				kind: "readonly",
+				link: "User"
+			},
+			{
+				name: "submitted_on",
+				label: "Submitted On",
+				kind: "readonly",
+				list: 1
+			},
+			{
+				name: "reopened_by",
+				label: "Reopened By",
+				kind: "readonly",
+				link: "User"
+			},
+			{
+				name: "reopened_on",
+				label: "Reopened On",
+				kind: "readonly",
+				hint: "Set when the submission is cancelled. The cancelled record stays, so the history reads as a month that was closed and then opened again, and by whom."
+			},
+			{
+				name: "remarks",
+				label: "Remarks",
+				kind: "long"
+			},
+			{
+				name: "amended_from",
+				label: "Amended From",
+				kind: "readonly",
+				link: "Attendance Submission"
+			}
+		]
+	},
 	"Employee Attendance Regularization": {
 		name: "Employee Attendance Regularization",
 		module: "Manna HR",

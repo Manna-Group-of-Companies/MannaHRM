@@ -3,16 +3,17 @@ import { go } from "@/routes/router";
 import { loadOnBoard } from "@/api/load";
 import { forgetEmployeeDoc, useEmployeeDoc } from "@/features/employees/useEmployeeDoc";
 import { scoped } from "@/lib/scope";
-import { clock, dmy, filled, fmt, initials, tidyDept } from "@/lib/format";
+import { clock, dmy, filled, fmt, tidyDept } from "@/lib/format";
 import { Fragment, useEffect, useState } from "react";
 
 import { Desk, Empty, Html, Scroll } from "@/components/ui";
-import { saveEmployee } from "@/api/employee";
+import { saveEmployee, saveEmployeePhoto } from "@/api/employee";
 import {
 	CHOICES, LINK_LISTS, boxValue, changedCount, controlFor, patchFrom, whyNotEditable, withEdit,
 } from "@/lib/profedit";
 import { deskUrl } from "@/lib/desk";
 import People from "@/components/People";
+import Avatar from "@/components/Avatar";
 import { LocCell } from "@/components/PunchMap";
 import { DATE_FIELD } from "@/data/employees";
 import { fieldLabel, PROFILE_CHECKS, PROFILE_CHIPS, PROFILE_FIRST_CHILD, PROFILE_HEAD, PROFILE_LONG, PROFILE_MAPPED, PROFILE_PANES, PROFILE_PLUMBING, PROFILE_TABS } from "@/data/profile";
@@ -222,9 +223,8 @@ function Tab({ t, tab, child, assets }) {
     a pencil per card that saved only its own card would be thirteen writes to
     one record and thirteen chances for one of them to be refused halfway.
 
-    `deskHref` is the record on the site, still — the ✎ on the photograph and
-    History both go there, because a photograph is a crop-and-file form the site
-    already has and the timeline is a doctype nothing here reads. */
+    `deskHref` is the record on the site, still — History goes there, because
+    the timeline is a doctype nothing here reads. */
 function Card({ title, children, onRefresh, editing, onEdit, deskHref }) {
 	return (
 		<section className={"procard" + (editing ? " editing" : "")}>
@@ -569,7 +569,35 @@ function AssetsPane({ s, emp }) {
 	);
 }
 
-function Header({ doc, onRefresh, deskHref, editing, edit, onEdit }) {
+/** The avatar, and the ✎ that sets it.
+
+    The ✎ picks a file and saves it straight away rather than waiting for the
+    Save bar. There is nothing to review about a photograph before it goes — the
+    picture *is* the review — and a picked file cannot be held in the draft
+    anyway: a `File` object does not survive being put in the store. */
+function Photo({ doc, pic, onPick }) {
+	const verb = doc.image ? "Change the photograph" : "Add a photograph";
+
+	return (
+		<Avatar className="proava" name={doc.employee_name} image={doc.image}>
+			<label className={"pen" + (pic.busy ? " busy" : "")}
+				title={pic.busy ? "Uploading…" : `${verb} — saved to the site as soon as it is picked.`}>
+				<span aria-hidden="true">{pic.busy ? "…" : "✎"}</span>
+				<input type="file" accept="image/*" disabled={pic.busy} aria-label={verb}
+					onChange={(e) => {
+						const f = e.target.files?.[0];
+						/* Emptied so that picking the same file again after a refusal
+						   is a change the browser reports, rather than a click that
+						   does nothing. */
+						e.target.value = "";
+						if (f) onPick(f);
+					}} />
+			</label>
+		</Avatar>
+	);
+}
+
+function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto }) {
 	const nulls = keepsNulls(doc);
 	const on = doc.status === "Active";
 	const chip = (row) => {
@@ -579,17 +607,7 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit }) {
 
 	return (
 		<section className="prohead">
-			<div className="proava">
-				{initials(doc.employee_name)}
-				{/* A photograph is filed on the record, and filing one is a write with a
-				    crop, a size and a default beside it — which is a form, and the
-				    site already has that form. So the ✎ opens it there rather than
-				    growing a second one here. */}
-				<Desk className="pen" href={deskHref} label="Add a photograph"
-					title="Attach a photograph on the ERPNext site, where the form that crops and files one already exists.">
-					✎
-				</Desk>
-			</div>
+			<Photo doc={doc} pic={pic} onPick={onPhoto} />
 
 			<div className="prowho">
 				<div className="proname">
@@ -616,6 +634,12 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit }) {
 						</Desk>
 					</span>
 				</div>
+
+				{(pic.busy || pic.msg) && (
+					<div className={"propic" + (pic.bad ? " bad" : "")} role="status">
+						{pic.busy ? "Uploading the photograph…" : pic.msg}
+					</div>
+				)}
 
 				<div className="prochips">
 					<span className="prostat">
@@ -672,8 +696,47 @@ export default function EmployeeProfile() {
 	   else's record — which is the one mistake on this page nothing downstream
 	   would catch, because both values are legal. */
 	useEffect(() => {
-		set({ profedit: false, profdraft: {}, profmsg: "", profsaving: false });
+		set({
+			profedit: false, profdraft: {}, profmsg: "", profsaving: false,
+			profpic: { busy: false, msg: "", bad: false },
+		});
 	}, [picked]);
+
+	async function savePhoto(file) {
+		/* Only what the browser can say for certain is not a picture. An empty
+		   type is a file it could not name, and the site is the one to judge it. */
+		if (file.type && !file.type.startsWith("image/")) {
+			set({ profpic: { busy: false, msg: `${file.name} is not a picture.`, bad: true } });
+			return;
+		}
+		const who = picked;
+		set({ profpic: { busy: true, msg: "", bad: false } });
+		const r = await saveEmployeePhoto(who, file);
+		/* Read back whatever happened: the site may have kept the file even where
+		   it refused the field, and the avatar should draw what is there. */
+		forgetEmployeeDoc(who);
+		/* And the row Employee Master draws its card from, which came from the
+		   list read at load and would otherwise show the old face — or none —
+		   until the next full reload. */
+		if (r.ok) {
+			const { employees, byName } = getState();
+			if (byName[who]) {
+				const row = { ...byName[who], image: r.url };
+				set({
+					employees: employees.map((e) => (e.name === who ? row : e)),
+					byName: { ...byName, [who]: row },
+				});
+			}
+		}
+		/* Somebody who moved to another record while this uploaded has had the
+		   message reset under them, and this one is about the person they left. */
+		if (getState().empSel !== who) return;
+		set({
+			profpic: r.ok
+				? { busy: false, msg: "Photograph saved.", bad: false }
+				: { busy: false, msg: `The site refused this photograph: ${r.error}`, bad: true },
+		});
+	}
 
 	const startEdit = () => set({ profedit: true, profdraft: {}, profmsg: "" });
 	const cancelEdit = () => set({ profedit: false, profdraft: {}, profmsg: "" });
@@ -760,8 +823,8 @@ export default function EmployeeProfile() {
 	const pane = PROFILE_PANES[tab];
 	const nulls = keepsNulls(doc);
 	const assetsMine = s.onboardRead ? s.assets.filter((a) => a.custodian === picked).length : null;
-	/* The record on the site. The photograph, History and ↗ open this one
-	   document over there; everything this page writes, it writes itself. */
+	/* The record on the site. History and ↗ open this one document over there;
+	   everything this page writes, the photograph included, it writes itself. */
 	const deskHref = s.site && picked ? deskUrl(s.site, "Employee", picked) : "";
 
 	const editing = s.profedit;
@@ -803,7 +866,8 @@ export default function EmployeeProfile() {
 			</div>
 
 			<Header doc={doc} onRefresh={refresh} deskHref={deskHref}
-				editing={editing} edit={edit} onEdit={startEdit} />
+				editing={editing} edit={edit} onEdit={startEdit}
+				pic={s.profpic} onPhoto={savePhoto} />
 
 			{/* Outside the pane rather than inside it, because the draft is the
 			    whole record: switching panes while editing must not look like the

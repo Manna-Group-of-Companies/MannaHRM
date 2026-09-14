@@ -95,6 +95,28 @@ export const MANAGED = [
 		+ "doctype."],
 ];
 
+/* ---------------------------------------------------------------------------
+   **Record doctypes with a page of their own instead of a generic list.**
+
+   Same shape as MANAGED. A doctype goes here when the generic form cannot do
+   the one thing the record is for — `features/records/` creates, edits and
+   deletes, and never submits or cancels, because on every other doctype of
+   ours that is the approver's step on the desk.
+
+   `Attendance Submission` is nothing *but* submit and cancel: submitting is
+   the month freeze, cancelling reopens it. A generic list beside Submit
+   Attendance would offer New and Edit on a record whose whole meaning is its
+   docstatus, and would be a second place to close a month that says nothing
+   about what closing it does.
+   --------------------------------------------------------------------------- */
+
+export const OWN_PAGES = [
+	["attendance", "submit", "Submit Attendance", "Attendance Submission",
+		"One company's month, closed. Submitting it is the freeze — from then on the site refuses any "
+		+ "attendance, approved leave or approved correction that would change a day in it — and "
+		+ "reopening it is refused once salary has been processed from the month. manna_hr/freeze.py."],
+];
+
 /** The doctype managed at one address, or "". */
 export const managedAt = (section, subtab) =>
 	(MANAGED.find((m) => m[0] === section && m[1] === subtab) || [])[3] || "";

@@ -31,21 +31,20 @@
    finding this dialog exists to make visible, and it is on the radio buttons
    themselves.
 
-   ## Nothing here writes
+   ## Save writes, and the site decides
 
-   Nothing on this dashboard creates a `Shift Type`, and that is the standing
-   rule rather than an omission: a shift window decides which day a night
-   worker's punches belong to. So Save hands off to the site, and *which*
-   hand-off depends on
-   something worth saying out loud:
+   Since 11 September 2026 Save is a write rather than a hand-off to the desk:
+   the + on the list opens this dialog blank and Save creates the `Shift Type`;
+   the ✎ opens it over an existing one and Save sends only the boxes that
+   changed. Both go as the signed-in person, so hrms's own Shift Type
+   validation and the person's roles are what accept or refuse it — see
+   api/shifttype.js. A shift window decides which day a night worker's punches
+   belong to, so the refusal is printed in the site's words rather than
+   rephrased.
 
-     · a shift this site does not hold yet opens as a **new** Shift Type with
-       everything typed here already in it, through Frappe's `new` route;
-     · a shift it does hold opens as **that document**, and the answers cannot
-       ride along — Frappe takes query-string defaults on a new document and not
-       on an existing one.
-
-   The dialog says which of the two it is about to do, before it does it.
+   The name is the one box that is not editable on an existing shift. It is the
+   document's id, and a PUT cannot rename — that is Frappe's rename, which
+   rewrites every Shift Assignment and Employee that names it.
    --------------------------------------------------------------------------- */
 
 /** Their three steps. The label is the heading their step draws — step 3 is the
@@ -128,13 +127,14 @@ export const SHW_TIMING = [
 	{ key: "early", label: "But employee can come early by", kind: "mins", state: "live",
 		field: "begin_check_in_before_shift_start_time",
 		why: "`begin_check_in_before_shift_start_time` — how long before the start a punch still counts "
-			+ "as this shift's. Minutes. ERPNext defaults it to 60; Factor HR's form opens on 0, and "
-			+ "theirs is what is drawn." },
+			+ "as this shift's. Minutes. Factor HR's form opens on 0; this one opens on ERPNext's 60, "
+			+ "because on ERPNext 0 means a punch a minute before the start belongs to no shift, and "
+			+ "the day of somebody who turned up early reads as absent." },
 
 	{ key: "late", label: "But employee can go late by", kind: "mins", state: "live",
 		field: "allow_check_out_after_shift_end_time",
 		why: "`allow_check_out_after_shift_end_time`, the same thing at the other end. Minutes, and the "
-			+ "same default difference." },
+			+ "same default, for the same reason: at 0 somebody who stays a minute late has no punch-out." },
 ];
 
 /** Step 3. Their radio picks between one grace for everybody on the shift and
@@ -143,12 +143,13 @@ export const SHW_GRACE = [
 	{ key: "gstart", label: "Grace start", state: "live", field: "late_entry_grace_period",
 		blurb: "(Late coming will not be calculated until given minutes in field is exceed)",
 		why: "`Shift Type.late_entry_grace_period`. Minutes after the start before a late mark is "
-			+ "earned. ERPNext pairs it with `enable_entry_grace_period`, which this site's model has "
-			+ "not got — so a grace of 0 and no grace at all are the same thing here." },
+			+ "earned. hrms only reads it when `enable_late_entry_marking` is ticked, so a grace above "
+			+ "0 ticks it on save — otherwise the number would be stored and never used." },
 
 	{ key: "gend", label: "Grace end", state: "live", field: "early_exit_grace_period",
 		blurb: "(Early going will not be calculated until given minutes in field is exceed)",
-		why: "`Shift Type.early_exit_grace_period`, the same at the other end." },
+		why: "`Shift Type.early_exit_grace_period`, the same at the other end, with "
+			+ "`enable_early_exit_marking`." },
 ];
 
 /** Their two grace modes. The second is the finding on this step. */
@@ -168,22 +169,25 @@ export const SHW_GRACE_MODES = [
 
 /** An untouched wizard, and the only definition of one.
 
-    `name` is seeded by the row the ✎ was clicked on, and the rest are the
-    values their own capture opens with — 08:30 to 17:30, everything else zero,
-    Time Based and grace-for-all selected. `doc` is what the site holds for this
-    shift once it has been read, or null; `state` walks the read. */
+    `name` is seeded by the row the ✎ was clicked on — empty for the +, which
+    is what makes it a new shift. The rest are the values their own capture
+    opens with — 08:30 to 17:30, Time Based and grace-for-all selected — except
+    the two tolerances, which open on ERPNext's 60 for the reason on SHW_TIMING.
+    `doc` is what the site holds for this shift once it has been read, or null;
+    `state` walks the read. */
 export const SHW_BLANK = (name = "") => ({
 	open: false,
 	step: "kind",
 	/* The row the wizard was opened from, which is not the same as the name in
-	   the box: somebody may rename it, and Save has to know which document it
-	   was meant to be about. */
+	   the box: Save has to know which document it was meant to be about. */
 	row: name,
 	/** Whether this site holds a Shift Type of that name — set by the read, and
-	    what decides which hand-off Save makes. `null` until it is known. */
+	    what decides whether Save creates or changes. `null` until it is known. */
 	ours: null,
+	doc: null,
 	state: "",
 	err: "",
+	busy: false,
 	f: {
 		name,
 		isdefault: false,
@@ -191,8 +195,8 @@ export const SHW_BLANK = (name = "") => ({
 		hasbreak: false,
 		start: "08:30",
 		end: "17:30",
-		early: "0",
-		late: "0",
+		early: "60",
+		late: "60",
 		gmode: "all",
 		gstart: "0",
 		gend: "0",
@@ -200,3 +204,52 @@ export const SHW_BLANK = (name = "") => ({
 	msg: "",
 	bad: false,
 });
+
+/** A site Time → the `HH:MM` an `<input type="time">` holds.
+
+    Parsed rather than sliced: Frappe hands a Time back as `8:30:00` as often as
+    `08:30:00` (it is a timedelta on the way out), and the first five characters
+    of the short one are `8:30:`, which the input rejects and draws as blank. */
+export function toInput(t) {
+	const m = /^(\d{1,2}):(\d{2})/.exec(String(t || "").trim());
+	return m ? `${m[1].padStart(2, "0")}:${m[2]}` : "";
+}
+
+/** `HH:MM` → the `HH:MM:SS` the site stores. Both directions exist so a shift
+    that came back as 08:30:00 and goes out as 08:30 is not an edit nobody made. */
+export const toSite = (t) => (t && t.length === 5 ? t + ":00" : t || "");
+
+/** A minutes box → a whole, non-negative number. Blank is 0, which is what an
+    emptied box means on their form too. */
+const mins = (v) => Math.max(0, Math.round(Number(v) || 0));
+
+/**
+ * The `Shift Type` document the wizard's answers make. Pure.
+ *
+ * Only fields the site has. What it has nowhere to put — IS DEFAULT, the kind,
+ * the break, grace by category — is listed on the dialog and not sent: Frappe
+ * drops an unknown key without a word, so sending one would be a value that
+ * saved, reported success and was never there.
+ */
+export function shiftDoc(f) {
+	const doc = {
+		name: String(f.name || "").trim(),
+		start_time: toSite(f.start),
+		end_time: toSite(f.end),
+		begin_check_in_before_shift_start_time: mins(f.early),
+		allow_check_out_after_shift_end_time: mins(f.late),
+	};
+	/* Grace by category has nowhere to land, so the two numbers only go over
+	   when they are meant to apply to everybody — which is what the field means
+	   on the site. */
+	if (f.gmode === "all") {
+		doc.late_entry_grace_period = mins(f.gstart);
+		doc.early_exit_grace_period = mins(f.gend);
+		/* Ticked only, never unticked: a grace of 0 says nothing about whether
+		   late marks are wanted, and switching off marking somebody set on the
+		   desk is a change nobody asked for here. */
+		if (doc.late_entry_grace_period > 0) doc.enable_late_entry_marking = 1;
+		if (doc.early_exit_grace_period > 0) doc.enable_early_exit_marking = 1;
+	}
+	return doc;
+}

@@ -22,10 +22,10 @@ import ShiftWizard, { openShiftWizard } from "@/features/attendance/ShiftWizard"
    Assignment` — the Work Pattern half, read only when somebody asks for that
    half, because the site has a daily compute limit. */
 
-/* A shift is a document on the site — `Shift Type` — so Add and the two row
-   actions open it there. Every row here is one, so neither action can be dead
-   any more: the case they used to guard against was a row we did not hold, and
-   there are none of those left.
+/* A shift is a document on the site — `Shift Type`. Add and ✎ open Factor HR's
+   own shift form over it, and its Save writes the document (api/shifttype.js);
+   Delete still opens it on the desk, because a shift removed under a roster is
+   a day nobody is measured against.
 
    Work Pattern is the other half of their screen and has never been opened, so
    what is under it is ours. Nothing is invented in its place. */
@@ -164,8 +164,8 @@ function WorkPattern({ s }) {
 
 /* Their screen, redrawn — the same shell as Category Type, because it is the
    same product drawing the same kind of master. Show, Search and the sort
-   arrows act on this table, so they work here; Add and the row actions act on a
-   Shift Type, so they open it on the site. */
+   arrows act on this table; Add and ✎ open the shift form, which saves to the
+   site. */
 function ShiftPattern({ s }) {
 	const pattern = s.shMaster === "pattern";
 	const q = (s.shq || "").trim().toLowerCase();
@@ -193,12 +193,17 @@ function ShiftPattern({ s }) {
 				<span className="right">
 					{/* Add makes whichever master is being shown — the two halves of this
 					    screen are two doctypes, and one + that always made a Shift Type
-					    would be wrong half the time. */}
-					<Desk className="embtn pri" label="Add"
-						href={s.site && deskNew(s.site, pattern ? "Shift Assignment" : "Shift Type")}
-						title={pattern
-							? "Roster somebody on the ERPNext site — a dated Shift Assignment, which is what a punch is actually measured against."
-							: "Define a Shift Type on the ERPNext site. Nothing generates attendance until these exist — a shift is what a punch is measured against."}>+</Desk>
+					    would be wrong half the time. A Shift Type is made here, in their
+					    form; a Shift Assignment is still made on the desk. */}
+					{pattern ? (
+						<Desk className="embtn pri" label="Add"
+							href={s.site && deskNew(s.site, "Shift Assignment")}
+							title="Roster somebody on the ERPNext site — a dated Shift Assignment, which is what a punch is actually measured against.">+</Desk>
+					) : (
+						<button type="button" className="embtn pri" aria-label="Add"
+							title="New shift — Factor HR's form, saved to the ERPNext site as a Shift Type. Nothing generates attendance until these exist — a shift is what a punch is measured against."
+							onClick={() => openShiftWizard()}>+</button>
+					)}
 				</span>
 			</header>
 
@@ -241,8 +246,7 @@ function ShiftPattern({ s }) {
 				<Empty title="This site holds no shifts">
 					<code>Shift Type</code> came back empty. Until a shift exists there is nothing for a punch
 					to be measured against, so nothing generates attendance and every day reads as absence —
-					which makes this the first thing that has to change. The doctype arrives with
-					<code> hrms</code>, and docs/SITE_SURVEY.md records that as not installed.
+					which makes this the first thing that has to change. The + above makes one.
 				</Empty>
 			) : (
 			<>
@@ -279,7 +283,7 @@ function ShiftPattern({ s }) {
 									    from here: a shift removed under a roster is a day nobody is
 									    measured against. */}
 									<button className="fhact on" aria-label="Edit"
-										title="Factor HR's shift form — a name and a kind, then the window and its tolerances, then grace timings. The document itself is made on the ERPNext site; nothing here writes."
+										title="Factor HR's shift form — a name and a kind, then the window and its tolerances, then grace timings. Save changes this Shift Type on the ERPNext site."
 										onClick={() => openShiftWizard(r.name)}>
 										<svg viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16Z" /></svg>
 									</button>

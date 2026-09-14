@@ -54,6 +54,7 @@ const EMPLOYEES = [
 	status: "Active", attendance_device_id: employee_number, reports_to: "", default_shift: "General",
 	cell_number: "9000000000", prefered_email: "", company_email: "", personal_email: "",
 	salutation: "", grade: "", branch: "", employment_type: "Full-time", holiday_list: "Manna 2026",
+	image: "",
 }));
 /* One who has left. Every count on the dashboard is of the active list, and a
    fixture with nobody gone never renders the difference between the two. */

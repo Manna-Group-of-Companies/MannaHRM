@@ -1182,6 +1182,14 @@
            border border-brand-tint flex items-center justify-center font-display text-title font-bold;
     background: linear-gradient(160deg, rgb(var(--card)), rgb(var(--brand-soft)));
     box-shadow: inset 0 0 0 3px rgb(var(--card));
+    position: relative;
+  }
+  /* Inside the 3px card-coloured ring rather than over it, so a photograph
+     sits in the same frame the initials do. Sized outright: an absolutely
+     placed image ignores `inset` on the far sides and keeps its own size. */
+  .ava img {
+    @apply absolute rounded-full object-cover;
+    top: 3px; left: 3px; width: calc(100% - 6px); height: calc(100% - 6px);
   }
   .ename { @apply flex items-baseline gap-[.5rem] font-semibold text-norm; }
   .ename span { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
@@ -3374,6 +3382,20 @@
     min-height: 1.95rem;
   }
   .dtbar .pager button:hover:not([disabled]) { @apply border-brand text-brand-deep bg-brand-soft; }
+  /* A dead pager button and a dead box used to be drawn exactly like live ones,
+     which on Submit Attendance read as a page that had stopped working rather
+     than one with nothing to page through. Dead has to look dead. */
+  .dtbar .pager button[disabled],
+  .dtbar select[disabled], .dtbar input[disabled] { @apply opacity-[.45] cursor-not-allowed; }
+
+  /* SUBMIT ATTENDANCE — the company and the month sit on the toolbar beside
+     Add and Preview Data, because every one of those three acts on that pair.
+     Labelled boxes rather than bare ones: a close for the wrong company or the
+     wrong month is the mistake this page most needs to make hard. */
+  .atsubbar { @apply flex flex-wrap gap-y-[.6rem] gap-x-[.7rem] items-end; }
+  .atsubbar .rfield { @apply min-w-[11rem]; }
+  .atsubbar .grow { @apply ml-auto; }
+  .atsubwhy { @apply list-disc pl-[1.2rem] mt-[.35rem] flex flex-col gap-[.3rem]; }
 
   /* IN / OUT ACTIVITY REPORT — Factor HR's newer report chrome: uppercase field
      labels above boxed controls, a criteria tab strip beneath them, the primary
@@ -4495,8 +4517,16 @@
     @apply absolute right-0 bottom-0 w-[1.75rem] h-[1.75rem] rounded-full bg-card border border-line
            text-ink-3 text-tiny leading-none inline-flex items-center justify-center;
   }
-  .proava .pen[disabled] { @apply cursor-not-allowed opacity-60; }
-  .proava a.pen:hover { @apply border-brand text-brand-deep; }
+  /* Absolute rather than in the flow, so the photograph fills the circle inside
+     the border and the initials it replaces never push it off-centre. */
+  .proava img { @apply absolute inset-0 w-full h-full rounded-full object-cover; }
+  .proava .pen { @apply cursor-pointer; }
+  .proava .pen:hover { @apply border-brand text-brand-deep; }
+  .proava .pen:focus-within { @apply border-brand; box-shadow: 0 0 0 3px rgb(var(--brand) / .18); }
+  .proava .pen.busy { @apply cursor-progress opacity-60; }
+  .proava .pen input[type="file"] { @apply sr-only; }
+  .propic { @apply text-fine text-live; }
+  .propic.bad { @apply text-bad; overflow-wrap: anywhere; }
   .prowho  { @apply min-w-0 flex-1 flex flex-col gap-[.5rem]; }
   .proname { @apply flex flex-wrap gap-x-[.7rem] gap-y-[.4rem] items-center; }
   .proname b { @apply font-display text-sub font-bold; }
@@ -5165,7 +5195,9 @@
      anything becoming unreadable. */
   .prohead { padding: .7rem; gap: .7rem; }
   .proava  { width: 4rem; height: 4rem; font-size: theme(fontSize.title); }
-  .proava .pen { display: none; }
+  /* Kept on a phone, where it was hidden while it only opened the desk: a
+     phone is the likeliest thing to be holding the camera. */
+  .proava .pen { width: 1.5rem; height: 1.5rem; }
 }
 
 /* Anything driven by a finger rather than a pointer gets the 44px floor, at
