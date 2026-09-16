@@ -54,6 +54,12 @@ export const MANAGED = [
 		+ "id that does not start with the trusted prefix is treated as a mobile punch and "
 		+ "geofenced** — so renaming one here breaks its punches, and inventing one lets an unknown "
 		+ "machine skip the fence. CLAUDE.md §5."],
+	["attendance", "deviceusers", "Machine Users", "Attendance Device User",
+		"Everybody enrolled on a fingerprint machine, as the bridge reads each machine's own user "
+		+ "list on every pass. **A blank Employee is the row to act on**: somebody the machine lets "
+		+ "punch whose number is nobody's Attendance Device ID, so every punch they make is refused. "
+		+ "Enrolled At is when they appeared, to within one poll — blank for anybody already on the "
+		+ "machine when the bridge first read it, because the machine keeps no enrolment date."],
 	["attendance", "locations", "Work Locations", "Work Location",
 		"The geofence: a coordinate and a radius per site. This is what a mobile punch is measured "
 		+ "against, so a radius typed too wide is a punch accepted from the next town — and one "
@@ -116,6 +122,37 @@ export const OWN_PAGES = [
 		+ "attendance, approved leave or approved correction that would change a day in it — and "
 		+ "reopening it is refused once salary has been processed from the month. manna_hr/freeze.py."],
 ];
+
+/* ---------------------------------------------------------------------------
+   Records drawn on another record's form, beneath its own fields.
+
+   `match` is `[field on the open record, field on the related one]`. The
+   people on a machine are matched by `device_id` and not by the Link to
+   `Attendance Device`: the bridge reads a machine's users whether or not
+   anybody has registered it, and a register filled in later would otherwise
+   show a machine with nobody on it until the next write.
+   --------------------------------------------------------------------------- */
+export const RELATED = {
+	"Attendance Device": {
+		doctype: "Attendance Device User",
+		title: "Enrolled on this machine",
+		match: ["device_id", "device_id"],
+		empty: "Nobody has been read off this machine yet. The bridge lists a machine's users on "
+			+ "every pass once the Attendance Device User doctype is on the site.",
+		/* Newest enrolment first, because the question somebody opens this with
+		   is "did the person enrolled this morning come through". */
+		sort: (a, b) => String(b.enrolled_at || "").localeCompare(String(a.enrolled_at || ""))
+			|| Number(b.on_device) - Number(a.on_device)
+			|| Number(a.device_user_id) - Number(b.device_user_id),
+		summary: (rows) => {
+			const on = rows.filter((r) => Number(r.on_device));
+			const unlinked = on.filter((r) => !r.employee).length;
+			return `${on.length} enrolled`
+				+ (unlinked ? ` · ${unlinked} not linked to an employee` : "")
+				+ (rows.length > on.length ? ` · ${rows.length - on.length} removed` : "");
+		},
+	},
+};
 
 /** The doctype managed at one address, or "". */
 export const managedAt = (section, subtab) =>

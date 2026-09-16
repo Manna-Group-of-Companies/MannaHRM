@@ -1,0 +1,22 @@
+# Machine serial number -> the name its punches already carry in ERPNext.
+#
+# Read by the automatic install (INSTALL.bat from an auto zip), which has nobody
+# at the keyboard to say "this box is the one we already call BIO-MRP-GATE1".
+# A punch carries no serial, so without this line a second PC at that gate would
+# send the same people's punches under a second name.
+#
+# A machine not listed here is named from its serial (BIO-<serial>), which is
+# unique and survives an IP change, so it needs no entry to stay consistent.
+# Add a line only for a machine that was named by hand before the auto install
+# existed. The serial is on the machine: Menu > System > Device Info, or
+# `python probe.py <ip>`.
+
+# A plain name, or a table that also says the machine reports IN and OUT.
+# Only say so for a machine somebody has checked: its shifts then pair on log
+# type, and one that does not really report direction would mark a day on
+# which nobody ever left.
+
+[machines]
+# Manna Rubber Products gate. Reports IN/OUT (checked 2026-08: 39,453 in, 39,563
+# out), and all three MRP shifts pair strictly on log type.
+CGKK211561350 = { name = "BIO-MRP-GATE1", report_direction = true }

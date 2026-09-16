@@ -14,7 +14,12 @@ program that deletes on purpose.
 
 import logging
 
-from zk import ZK
+try:
+	from zk import ZK
+except ImportError:
+	# A box that only runs the ADMS listener has no machine to read and need not
+	# install a ZK library. Said at the moment one is needed, not at import.
+	ZK = None
 
 log = logging.getLogger(__name__)
 
@@ -24,10 +29,19 @@ log = logging.getLogger(__name__)
 PUNCH_IN = 0
 PUNCH_OUT = 1
 
+# pyzk's `const.USER_ADMIN`. Every other privilege value is an ordinary user.
+USER_ADMIN = 14
+
 
 class Device:
-	def __init__(self, name, host, port=4370, password=0, timeout=15, force_udp=False):
+	def __init__(self, name, host, port=4370, password=0, timeout=15, force_udp=False,
+	             report_direction=False):
+		if ZK is None:
+			raise SystemExit("Reading {0} needs pyzk: pip install -r requirements.txt".format(name))
+
 		self.name = name
+		# **Off unless somebody has checked the machine.** See `_log_type`.
+		self.report_direction = report_direction
 		self._host = host
 		self._port = port
 		self._zk = ZK(
@@ -50,19 +64,22 @@ class Device:
 		conn = None
 		try:
 			conn = self._zk.connect()
-			# Stops the machine accepting punches while we read. Without it a
-			# punch landing mid-read can be missed entirely.
-			conn.disable_device()
+			# The machine is NOT disabled while it is read. Disabling it is what
+			# every sample does, and it cost two hours on 11 Sep 2026: a bridge
+			# killed mid-read never reached its enable_device(), and the gate
+			# refused every finger across a shift change until somebody noticed.
+			# A read of ~80,000 records takes over a minute, so even a clean
+			# pass locked the gate for a minute in every five. Nothing is lost
+			# by not locking: records are appended with a later timestamp than
+			# anything already read, so a punch landing mid-read is simply the
+			# first record of the next pass. dump.py reads the same way.
 			records = conn.get_attendance() or []
 		finally:
 			if conn:
 				try:
-					conn.enable_device()
 					conn.disconnect()
 				except Exception:
-					# A failure re-enabling is worth knowing about but must not
-					# lose the records we already read.
-					log.exception("%s: failed to release device cleanly", self.name)
+					log.exception("%s: failed to disconnect cleanly", self.name)
 
 		punches = []
 		for record in records:
@@ -73,21 +90,58 @@ class Device:
 				{
 					"device_user": str(record.user_id).strip(),
 					"punched_at": stamp,
-					"log_type": _log_type(getattr(record, "punch", None)),
+					"log_type": _log_type(getattr(record, "punch", None), self.report_direction),
 				}
 			)
 
 		punches.sort(key=lambda p: p["punched_at"])
 		return punches
 
+	def users(self):
+		"""Everybody enrolled on the machine: user id, name, and whether an admin.
 
-def _log_type(punch):
-	"""Direction, or None when the machine does not report one.
+		A connection of its own rather than a second question inside `read`. The
+		user list is a second or two; tying it to the punch read would mean a
+		machine that times out listing users also delivers no punches that pass.
+		"""
+		conn = None
+		try:
+			conn = self._zk.connect()
+			found = conn.get_users() or []
+		finally:
+			if conn:
+				try:
+					conn.disconnect()
+				except Exception:
+					log.exception("%s: failed to disconnect cleanly", self.name)
+
+		users = []
+		for user in found:
+			uid = str(user.user_id).strip()
+			if not uid:
+				continue
+			users.append(
+				{"device_user": uid, "name": (user.name or "").strip(), "admin": user.privilege == USER_ADMIN}
+			)
+		return users
+
+
+def _log_type(punch, report_direction=False):
+	"""Direction, or None when the machine's is not to be believed.
 
 	None is returned rather than guessed. A guessed direction is worse than no
 	direction: the shift's pairing mode can alternate IN/OUT correctly from
 	nothing, but it cannot recover from being told the wrong thing confidently.
+
+	**`report_direction` is off by default, and that is the whole point.** A ZK
+	machine that was never set up for in/out does not say so. It reports `0` on
+	every punch — the same value as a genuine check-in, and a day on which nobody
+	ever left. `adms.log_type_for` makes the same decision on the push side and
+	shares the setting: one machine must not report direction one way and not
+	the other.
 	"""
+	if not report_direction:
+		return None
 	if punch == PUNCH_IN:
 		return "IN"
 	if punch == PUNCH_OUT:

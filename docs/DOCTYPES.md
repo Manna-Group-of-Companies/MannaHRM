@@ -105,19 +105,43 @@ holds them and creates the field: see
 | Page | Doctype | |
 |---|---|---|
 | Attendance Regularization | `Employee Attendance Regularization` | ours |
-| Submit Attendance | `Employee Checkin` → `Attendance` | stock |
+| Submit Attendance | `Attendance Submission` | ours — and install-only, see below |
 | In / Out Activities | `Employee Checkin` | stock |
 | Daily Detail, Monthly Basic | `Attendance` | stock |
 | Statutory Reports | — | derived |
 | Manage Shift | `Shift Type`, `Shift Assignment` | stock |
 | Schedule Report | `Auto Email Report` | stock |
 | (the machines themselves) | `Attendance Device` | ours |
+| Machine Users — who is enrolled on each | `Attendance Device User` | ours, written by the bridge |
 | (the geofence anchor) | `Work Location` | ours |
 | (every tunable number) | `Manna HR Settings` (Single) | ours |
 
 **Never write `Attendance` directly.** It is generated from `Employee Checkin`
 by the shift job; a correction writes the missing *punch*. The whole argument is
 in `CLAUDE.md` §5 and `manna_hr/regularization.py`.
+
+**`Attendance Submission` is Factor HR's monthly close, and Frappe HR has
+nothing like it** — payroll there reads `Attendance` live. One submittable
+record per company per month: submitting it freezes the month, cancelling it
+reopens it. The freeze is `manna_hr/freeze.py`, wired in `hooks.py`, and it
+shuts four doors: no Attendance created, changed or cancelled in the month; no
+leave approved or cancelled across it; no correction approved for a day in it;
+and **no refusal of a punch, ever** — the punch is kept and the day it would
+have made waits. The controller refuses the submit until the month has ended
+(on the server's clock), while it has no attendance, or while a correction or a
+leave in it is still open; it refuses the reopen once a salary slip covers the
+month.
+
+Two things about it are sharp enough to name here:
+
+- **The refusal is a `DuplicateAttendanceError` on purpose.** hrms's shift job
+  marks absentees through `mark_attendance`, which catches that and
+  `OverlappingShiftAttendanceError` and nothing else. A plain `ValidationError`
+  from the freeze would end the job's run for every shift after it — the whole
+  group's attendance, stopped by one unmarked day in one frozen month.
+- **It must arrive by `bench install-app`, never as a custom doctype.** It is
+  nothing but its controller. A custom one would save, submit, say Submitted,
+  and freeze nothing. `tools/check_schema.py` refuses a site where it is custom.
 
 `Attendance Device` is new here. Until it existed, a `device_id` was a string
 that appeared in punches and nowhere else — nothing said which machine it was,
@@ -232,6 +256,21 @@ names the field rather than the missing table.
 
 Twenty-one rows, fifteen of them things a person opens — the other six are child
 tables, which have no list of their own and exist inside their parent.
+
+Two more are in the repo beyond these twenty-one: `Manna Announcement`, added
+8 September 2026, and `Attendance Submission` (record, submittable; links to
+`Company` and `User`), added 11 September 2026. The second is not on the site,
+and must only ever arrive with the app install — see §5.
+
+A third, `Attendance Device User` (record; links to `Attendance Device` and
+`Employee`), was added 15 September 2026: one row per person enrolled on a
+machine, written by the bridge from the machine's own user list and drawn under
+that machine's form. A blank Employee is somebody the gate lets punch whose every
+punch is refused. The machine keeps no enrolment date, so Enrolled At is when the
+bridge saw them appear — to within one poll, and blank for anybody already
+enrolled at the bridge's first read. Unlike `Attendance Submission` it can be a
+custom doctype until the install, because its controller only fills two links
+the bridge also fills: `python tools/create_doctype.py "Attendance Device User"`.
 
 ---
 
@@ -380,6 +419,11 @@ per-row edit and delete. `client/src/data/manage.js` is the list.
 
 Child tables and `Manna HR Settings` have no page of their own: a child row is
 created on the record that holds it, and a Single always exists.
+
+`Attendance Submission` is the one record doctype with its own page instead of
+a generic list — Attendance → Submit Attendance — because the generic form
+creates, edits and deletes and never submits, and submitting is all that record
+is for. `OWN_PAGES` in `client/src/data/manage.js`.
 
 ### What the dashboard will not write
 

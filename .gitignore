@@ -3,8 +3,15 @@
 # whoever maintains the box; see bridge/run-bridge.example.bat.
 bridge/config.toml
 bridge/run-bridge.bat
+bridge/bridge.env
 bridge/*.sqlite3
 bridge/*.log
+bridge/*.log.1
+# The setup's backups and the runner it moves aside: the second can hold a key.
+bridge/*.bak
+bridge/*.old
+# package.ps1's output, rebuilt from the files above it.
+bridge/dist/
 
 __pycache__/
 *.py[cod]
@@ -48,3 +55,5 @@ manna_hr/public/**/*.map
 *.bundle
 _claude/
 Claude outputs/
+# package.ps1 -Auto writes one into its zip; one lying in the bridge folder is a key.
+bridge/autoinstall.toml

@@ -80,6 +80,18 @@ class PunchQueue:
 		with self._lock, self._connect() as db:
 			db.execute("UPDATE punch SET sent_at = ? WHERE id = ?", (when, punch_id))
 
+	def mark_unmapped(self, punch_id, error):
+		"""Record why a punch waits, without spending one of its attempts.
+
+		A punch waiting on `Employee.attendance_device_id` is not failing, it is
+		waiting on a person. Counting it as an attempt retired it for good after
+		twenty passes - about a hundred minutes of a running bridge - so linking
+		the employee afterwards released nothing, and a new joiner's first week
+		quietly never arrived.
+		"""
+		with self._lock, self._connect() as db:
+			db.execute("UPDATE punch SET last_error = ? WHERE id = ?", (str(error)[:500], punch_id))
+
 	def mark_failed(self, punch_id, error):
 		with self._lock, self._connect() as db:
 			db.execute(
@@ -115,6 +127,52 @@ class PunchQueue:
 		with self._connect() as db:
 			row = db.execute("SELECT COUNT(*) AS n FROM punch WHERE sent_at IS NULL").fetchone()
 			return row["n"]
+
+	def stats(self):
+		"""One row per device, for the question "is anything arriving".
+
+		Everything here comes off the local queue and none of it needs a
+		network, which is the point: when attendance is missing, the first thing
+		worth knowing is whether the punches reached *this box* at all. That
+		splits the problem in half — a device that is not talking is a different
+		job from a site that is not accepting.
+
+		`newest` and `newest_sent` are punch times, not clock times. A device
+		whose newest punch is yesterday afternoon has either sent nothing since
+		or nobody has punched, and only somebody who knows the shift can tell
+		those apart — so both are printed rather than one being turned into a
+		verdict here.
+		"""
+		with self._connect() as db:
+			rows = db.execute(
+				"""
+				SELECT device_id,
+				       COUNT(*)                                        AS total,
+				       SUM(CASE WHEN sent_at IS NULL THEN 1 ELSE 0 END) AS unsent,
+				       MAX(punched_at)                                  AS newest,
+				       MAX(CASE WHEN sent_at IS NOT NULL THEN punched_at END) AS newest_sent,
+				       MAX(attempts)                                    AS attempts
+				FROM punch
+				GROUP BY device_id
+				ORDER BY device_id
+				"""
+			).fetchall()
+			out = [dict(r) for r in rows]
+
+		with self._connect() as db:
+			for row in out:
+				# The most recent complaint for this device, so a stuck queue
+				# says *why* rather than only how big it is.
+				err = db.execute(
+					"""
+					SELECT last_error FROM punch
+					WHERE device_id = ? AND sent_at IS NULL AND last_error IS NOT NULL
+					ORDER BY id DESC LIMIT 1
+					""",
+					(row["device_id"],),
+				).fetchone()
+				row["last_error"] = err["last_error"] if err else None
+		return out
 
 	# -------------------------------------------------------------- cursor ---
 

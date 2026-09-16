@@ -407,3 +407,25 @@ def test_a_device_nothing_has_come_from_is_simply_absent(tmp_path):
 	# for an empty queue, which is a different sentence and a different fix.
 	queue = PunchQueue(str(tmp_path / "q.sqlite3"))
 	assert queue.stats() == []
+
+
+def test_a_first_push_sends_nothing_from_before_the_start_date(tmp_path):
+	# A machine's first push is everything it ever stored. Setup seeds the same
+	# cursor it seeds for a machine that is read, and older punches are taken
+	# and not queued, so the site does not fill with years of attendance.
+	queue = PunchQueue(str(tmp_path / "q.sqlite3"))
+	queue.set_last_seen("BIO-HITECH", "2026-08-31 23:59:59")
+	server = adms.AdmsServer(
+		("127.0.0.1", 0), adms.AdmsHandler, queue=queue,
+		devices={"HT1": {"name": "BIO-HITECH", "report_direction": False}},
+		options={"first_stamp": "0", "block": {"delay": 10, "timezone": "5.5"}},
+	)
+	threading.Thread(target=server.serve_forever, daemon=True).start()
+	try:
+		body = "509\t2026-08-30 08:01:00\t0\t1\n509\t2026-09-01 08:02:00\t0\t1\n520\t2026-09-15 06:41:31\t0\t1\n"
+		url = "http://127.0.0.1:{0}/iclock/cdata?SN=HT1&table=ATTLOG&Stamp=99".format(server.server_address[1])
+		answer = urllib.request.urlopen(urllib.request.Request(url, data=body.encode(), method="POST")).read().decode()
+	finally:
+		server.shutdown()
+	assert answer == "OK: 3"
+	assert sorted(r["punched_at"] for r in queue.pending()) == ["2026-09-01 08:02:00", "2026-09-15 06:41:31"]

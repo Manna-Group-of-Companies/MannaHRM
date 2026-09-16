@@ -1,0 +1,245 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2026-09-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "company",
+  "period",
+  "column_break_period",
+  "from_date",
+  "to_date",
+  "section_figures",
+  "attendance_rows",
+  "employee_count",
+  "present_days",
+  "half_days",
+  "column_break_figures",
+  "absent_days",
+  "leave_days",
+  "work_from_home_days",
+  "other_days",
+  "section_who",
+  "submitted_by",
+  "submitted_on",
+  "column_break_who",
+  "reopened_by",
+  "reopened_on",
+  "section_notes",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "HR-ATS-.YYYY.-",
+   "default": "HR-ATS-.YYYY.-"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1,
+   "search_index": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "A month is closed one company at a time. Four companies share this site and pay on their own calendars, so one company's close must not freeze another's."
+  },
+  {
+   "fieldname": "period",
+   "fieldtype": "Data",
+   "label": "Period",
+   "reqd": 1,
+   "search_index": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "`YYYY-MM` — 2026-08 for August 2026. Refused until the month's last day is over, on the server's clock."
+  },
+  {
+   "fieldname": "column_break_period",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From",
+   "read_only": 1,
+   "search_index": 1,
+   "description": "From the period, never typed. What the freeze compares a day against."
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To",
+   "read_only": 1,
+   "search_index": 1,
+   "description": "The month's real last day, not the 31st."
+  },
+  {
+   "fieldname": "section_figures",
+   "fieldtype": "Section Break",
+   "label": "The month, as it was frozen"
+  },
+  {
+   "fieldname": "attendance_rows",
+   "fieldtype": "Int",
+   "label": "Attendance Rows",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Counted at the moment of submitting. The freeze keeps the rows from changing; these figures are how anybody can tell if something changed them anyway."
+  },
+  {
+   "fieldname": "employee_count",
+   "fieldtype": "Int",
+   "label": "Employees",
+   "read_only": 1
+  },
+  {
+   "fieldname": "present_days",
+   "fieldtype": "Int",
+   "label": "Present",
+   "read_only": 1
+  },
+  {
+   "fieldname": "half_days",
+   "fieldtype": "Int",
+   "label": "Half Day",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_figures",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "absent_days",
+   "fieldtype": "Int",
+   "label": "Absent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "leave_days",
+   "fieldtype": "Int",
+   "label": "On Leave",
+   "read_only": 1
+  },
+  {
+   "fieldname": "work_from_home_days",
+   "fieldtype": "Int",
+   "label": "Work From Home",
+   "read_only": 1
+  },
+  {
+   "fieldname": "other_days",
+   "fieldtype": "Int",
+   "label": "Other",
+   "read_only": 1,
+   "description": "Rows with a status none of the columns above name. Counted rather than dropped, so the figures still add up to the rows."
+  },
+  {
+   "fieldname": "section_who",
+   "fieldtype": "Section Break",
+   "label": "Who"
+  },
+  {
+   "fieldname": "submitted_by",
+   "fieldtype": "Link",
+   "label": "Submitted By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "submitted_on",
+   "fieldtype": "Datetime",
+   "label": "Submitted On",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_who",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reopened_by",
+   "fieldtype": "Link",
+   "label": "Reopened By",
+   "options": "User",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "reopened_on",
+   "fieldtype": "Datetime",
+   "label": "Reopened On",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "description": "Set when the submission is cancelled. The cancelled record stays, so the history reads as a month that was closed and then opened again, and by whom."
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": ""
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Attendance Submission",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-09-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Attendance Submission",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "company,period",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "period",
+ "track_changes": 1
+}

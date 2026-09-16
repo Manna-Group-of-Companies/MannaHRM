@@ -1,0 +1,6 @@
+# cmd.exe misreads labels and goto in a batch file with bare LF endings, and
+# sh reads "sh\r" off a shebang with CRLF ones. Both are wrong on the PC they
+# are run on, not the one they were written on, so the endings are fixed here
+# rather than left to core.autocrlf.
+*.bat text eol=crlf
+*.sh  text eol=lf

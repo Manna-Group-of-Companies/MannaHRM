@@ -40,10 +40,30 @@ doc_events = {
 		# `doc.time`, and hrms' own validation reads that field to resolve the
 		# shift. Running after it would resolve the shift from a time we are
 		# about to change.
+		#
+		# **No freeze guard here, and there must never be one.** A punch is
+		# evidence and may be the last copy of it; the bridge is never told no.
+		# A punch in a submitted month is kept, and the day it would have made
+		# is what `freeze.guard_attendance` refuses. See manna_hr/freeze.py.
 		"before_validate": "manna_hr.checkin.validate",
 	},
 	"Employee Attendance Regularization": {
+		# Raising one for a submitted month is allowed; approving it is not.
+		"validate": "manna_hr.freeze.guard_regularization",
 		"on_update": "manna_hr.regularization.on_update",
+	},
+	# The month freeze — Submit Attendance. Once `Attendance Submission` is
+	# submitted for a company's month, nothing in that month changes under the
+	# payslips paid from it. See manna_hr/freeze.py for why the refusal is a
+	# `DuplicateAttendanceError`: anything else would stop hrms's shift job for
+	# the whole group.
+	"Attendance": {
+		"validate": "manna_hr.freeze.guard_attendance",
+		"before_cancel": "manna_hr.freeze.guard_attendance_cancel",
+	},
+	"Leave Application": {
+		"before_submit": "manna_hr.freeze.guard_leave",
+		"before_cancel": "manna_hr.freeze.guard_leave",
 	},
 }
 
@@ -108,6 +128,7 @@ fixtures = [
 				"in",
 				[
 					"Employee-custom_hr_section",
+					"Employee-custom_punch_method",
 					"Employee-custom_work_location",
 					"Employee-custom_allow_remote_punch",
 					"Employee-custom_factor_hr_id",

@@ -178,6 +178,15 @@ export const DATE_FIELD = /(date|dob|valid_upto|held_on)/;
    --------------------------------------------------------------------------- */
 export const NEW_EMP_STEPS = [
 	["basic", "Basic Details", [
+		/* Asked for on 16 September 2026: the company and how this person will
+		   punch are the first two things chosen, because both decide what the
+		   rest of the form needs — a machine punch needs a Machine Code, an app
+		   punch needs an email to sign in with. Company moved here from Job
+		   Organization rather than being asked twice. */
+		["Company and punching", [
+			["company",             "Company",      "select", 1, "company", 12],
+			["custom_punch_method", "Punch Method", "select", 1, "punch",   12],
+		]],
 		["", [
 			["employee_number",      "Emp Code",       "text",   1, "",           8],
 			["attendance_device_id", "Machine Code",   "text",   0, "",           8],
@@ -227,9 +236,8 @@ export const NEW_EMP_STEPS = [
 	   attendance for, and that is not visible until payroll. */
 	["org", "Job Organization", [
 		["Where in the group", [
-			["company",    "Company",    "select", 1, "company",    8],
-			["branch",     "Branch",     "select", 0, "branch",     8],
-			["department", "Department", "select", 0, "department", 8],
+			["branch",     "Branch",     "select", 0, "branch",     12],
+			["department", "Department", "select", 0, "department", 12],
 		]],
 		["Role and reporting", [
 			["designation",    "Designation",       "select", 0, "designation", 8],
@@ -273,7 +281,17 @@ export const NEW_EMP_NOFIELD = {
    Still deliberately not on every field. Each of these is either a field that
    decides something downstream, or a field that is not quite what its label
    says. */
+/** How a person punches — the options of `Employee.custom_punch_method`, in the
+ *  order manna_hr/install.py declares them. */
+export const PUNCH_METHODS = ["Fingerprint Machine", "Mobile App", "Both"];
+
+/** Whether a method includes the machine, or the phone. */
+export const punchesOnMachine = (m) => m === "Fingerprint Machine" || m === "Both";
+export const punchesOnApp = (m) => m === "Mobile App" || m === "Both";
+
 export const NEW_EMP_HINT = {
+	"Punch Method": "Fingerprint Machine needs a Machine Code, or every punch is dropped. Mobile App "
+		+ "needs a Company or Personal Email, which becomes the phone app's login.",
 	"Machine Code": "The fingerprint machine's enrolment number, and the join between a punch and a "
 		+ "person. Left empty, this person can only punch from a phone.",
 	"Status": "Active is what a new hire is. Anything else here is a record being back-filled.",

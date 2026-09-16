@@ -7,7 +7,7 @@ import { Desk } from "@/components/ui";
 import { deskUrl } from "@/lib/desk";
 import { createEmployee } from "@/api/employee";
 import {
-	ED_STATUSES, NEW_EMP_COPIED, NEW_EMP_HINT, NEW_EMP_NOFIELD, NEW_EMP_STEPS,
+	ED_STATUSES, PUNCH_METHODS, NEW_EMP_COPIED, NEW_EMP_HINT, NEW_EMP_NOFIELD, NEW_EMP_STEPS,
 } from "@/data/employees";
 
 /* Factor HR's Create Employee, the wizard their Add New Employee opens.
@@ -91,6 +91,7 @@ function optionsFor(s, all, f) {
 		branch:          [uniq(all, "branch"), false],
 		status:          [ED_STATUSES, true],
 		company:         [s.companies.map((c) => c.name), true],
+		punch:           [PUNCH_METHODS, true],
 		/* A disabled Department is one somebody closed. Offering it is offering
 		   to put a new joiner into a department that no longer takes anybody. */
 		department:      [s.departments.filter((d) => !d.disabled).map((d) => d.name), true],
@@ -244,6 +245,17 @@ export default function CreateEmployee() {
 						{done.company ? <> in <b>{done.company}</b></> : null}. The directory is being
 						re-read, so they appear in Employee Master in a moment.
 					</p>
+					{done.custom_punch_method ? (
+						<p>
+							Punches on <b>{done.custom_punch_method}</b>.
+							{done.custom_punch_method !== "Mobile App" && done.attendance_device_id
+								? <> Enrol finger number <b>{done.attendance_device_id}</b> on the machine.</> : null}
+							{done.custom_punch_method !== "Fingerprint Machine"
+								? <> For the phone app, create their ERPNext login with
+									{" "}<b>{done.company_email || done.personal_email}</b> and link it to this record
+									(<code>tools/setup_phone_punch.py --apply</code>).</> : null}
+						</p>
+					) : null}
 					{/* What this form did not ask for and hrms needs before the record
 					    does anything. Named rather than implied — a new Employee with
 					    none of it looks finished and is not. */}

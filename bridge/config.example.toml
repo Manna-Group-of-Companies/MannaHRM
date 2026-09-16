@@ -3,10 +3,9 @@
 
 [erp]
 url = "https://mannarubber.m.frappe.cloud"
-# Better supplied as MANNA_API_KEY / MANNA_API_SECRET in the environment, so
-# this file stays readable by whoever maintains the box.
-api_key = ""
-api_secret = ""
+# Not here. The installer puts the key in bridge.env beside this file, locked
+# to the service account, so this file stays readable by whoever maintains the
+# box. MANNA_API_KEY / MANNA_API_SECRET in the environment also work.
 
 [bridge]
 queue_path   = "punches.sqlite3"
@@ -18,17 +17,66 @@ poll_seconds = 300
 retain_days  = 90
 log_level    = "INFO"
 
-# One block per machine. `name` becomes Employee Checkin.device_id, so it must
-# be unique across every site and must start with the trusted prefix in
-# Manna HR Settings (default BIO-) or its punches will be treated as mobile
-# punches and geofenced.
+# The listener for machines that push instead of being read — ZKTeco calls it
+# ADMS, eSSL calls it the cloud server, and the menu on the machine says
+# Comm -> Cloud Server Setting. Started when `enabled = true`, when the bridge
+# is run with `--adms`, or by itself when any [[device]] below has a serial and
+# no host. See bridge/README.md.
+[adms]
+enabled = false
+# Empty means every interface. The machines are on the LAN and so is this box;
+# naming one address is a change to make when somebody knows which address it
+# will still have after the next reboot.
+host = ""
+# **Read this off the machine rather than setting it.** Its own screen already
+# has a port on it — the K90+ID at Manna Rubber Products says 8081 — and
+# matching the config to the machine is one edit instead of two.
+#
+# Not 80, whichever way round: a privileged port needs root on Linux, and this
+# program has no business running as root.
+port = 8081
+# How often an idle device checks in. Ten seconds keeps a punch under a minute
+# old without the machine talking constantly.
+delay_seconds = 10
+# What the device sets its own clock to. 5.5 is IST.
+timezone = "5.5"
+# Where a machine that has never connected before is told to resume from.
+# "0" means "everything you still hold", which on a machine with three years of
+# history is hours of posting and a site full of attendance nobody asked for —
+# the same trap `--from` exists for on the reading side. Set it to the last
+# stamp the machine reported if you want it to pick up rather than replay.
+first_stamp = "0"
+
+# One block per machine, however it is read.
+#
+# `name` becomes Employee Checkin.device_id, so it must be unique across every
+# site and must start with the trusted prefix in Manna HR Settings (default
+# BIO-) or its punches will be treated as mobile punches and geofenced.
+#
+# `host` is how the bridge reads it. `serial` is how it identifies itself when
+# it pushes — it is on the label, and on the machine under Menu -> System Info.
+# A block needs at least one of them; both is fine and useful on a bad network,
+# because the queue de-duplicates and either route alone is enough to pay
+# people.
 [[device]]
 name = "BIO-TREADS-GATE1"
 host = "192.168.1.201"
+serial = "CJXY201960500123"
 port = 4370
 # The device's comm key, if one is set. 0 means none.
 password = 0
 
+# **Only tick this on a machine somebody has actually stood in front of.**
+# A ZK device that was never set up for in/out does not say so — it reports 0
+# on every punch, which is the same value as a real check-in and reads as a day
+# on which nobody ever left. Left off, no direction is sent at all and the
+# shift alternates them, which is right from nothing and unrecoverable from a
+# confident lie.
+report_direction = false
+
+# Push only: no address, so the bridge never reads it. Right for a machine on a
+# network this box cannot reach — and a complete setup on its own. Nothing
+# polls, and `pyzk` is never imported.
 [[device]]
 name = "BIO-TREADS-OFFICE"
-host = "192.168.1.202"
+serial = "CJXY201960500456"

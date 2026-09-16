@@ -7,6 +7,8 @@ import {
 	blankDoc, canDelete, canEdit, fieldWarning, formFields, missingRequired, namingField, patchOf,
 } from "@/lib/write";
 import { SCHEMA } from "@/data/schema";
+import { RELATED } from "@/data/manage";
+import Related from "@/features/records/Related";
 
 /* ---------------------------------------------------------------------------
    One form, for creating or changing any record this app installs.
@@ -223,6 +225,7 @@ export default function RecordForm({ doctype, doc, onDone, onCancel }) {
 				</Note>
 			) : null}
 
+			{!making && RELATED[doctype] ? <Related doctype={doctype} doc={base} /> : null}
 		</>
 	);
 

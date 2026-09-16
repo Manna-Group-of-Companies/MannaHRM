@@ -8,6 +8,7 @@ import { Empty, Gap, Modal, Note, Scroll } from "@/components/ui";
 import { canCreate, canDelete } from "@/lib/write";
 import { SCHEMA, listFields } from "@/data/schema";
 import RecordForm from "@/features/records/RecordForm";
+import { cell } from "@/features/records/cell";
 
 /* ---------------------------------------------------------------------------
    Every record of one doctype, with New, Edit and Delete.
@@ -226,13 +227,4 @@ export default function RecordList({ doctype, title, note }) {
 			) : null}
 		</>
 	);
-}
-
-/** One value, as a person reads it. A blank is a dash on screen — the CSV
-    exports elsewhere in this app write "" for the same value, because a dash is
-    a thing a reader needs and a thing a data file must not have. */
-function cell(v, f) {
-	if (f.kind === "check") return Number(v) ? "Yes" : "No";
-	if (v == null || v === "") return <span className="text-ink-3">—</span>;
-	return String(v);
 }

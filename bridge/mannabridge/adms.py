@@ -414,9 +414,22 @@ class AdmsHandler(BaseHTTPRequestHandler):
 			# refusing it would put the device in a retry loop over nothing.
 			return self._reply("OK: 0")
 
-		new = 0
+		new = old = 0
 		try:
+			# **A machine's first push is everything it has ever stored** — a
+			# first_stamp of "0" asks for exactly that, and a stamp is the
+			# device's own counter, not a date anybody can set. So the date lives
+			# here instead: the same cursor setup seeds for a machine that is read,
+			# "the last second before the first day to send". Older punches are
+			# acknowledged and not queued, so the site is not filled with years of
+			# attendance nobody asked for, and the machine keeps its own copy.
+			# A machine read as well as pushed has the pull cursor here instead,
+			# which is safe for the same reason: anything at or before it was read.
+			start = self.server.queue.last_seen(device_id) if device else None
 			for punch in punches:
+				if start and punch["punched_at"] <= start:
+					old += 1
+					continue
 				if self.server.queue.offer(
 					device_id, punch["device_user"], punch["punched_at"], punch["log_type"]
 				):
@@ -440,8 +453,9 @@ class AdmsHandler(BaseHTTPRequestHandler):
 			self.server.wake.set()
 
 		log.info(
-			"ADMS %s: %d punch(es), %d new, newest %s%s",
+			"ADMS %s: %d punch(es), %d new, newest %s%s%s",
 			device_id, len(punches), new, newest,
+			", {0} before the start date and not sent".format(old) if old else "",
 			"" if device else "  — NOT DELIVERABLE, serial not in config",
 		)
 		# The count of records accepted, which is what the firmware reads.

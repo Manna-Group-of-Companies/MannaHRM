@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { store, set, getState, resetStore } from "@/store";
 import RecordForm from "@/features/records/RecordForm";
 import { SCHEMA } from "@/data/schema";
+import { canCreate } from "@/lib/write";
 import { loadedState } from "./fixture";
 
 /* ---------------------------------------------------------------------------
@@ -95,8 +96,12 @@ describe("the Punch In form fetches the person it is about", () => {
 		   so a doctype that grows one is covered without anybody editing this. */
 		set(loadedState());
 		const who = getState().employees[0];
+		/* Only forms somebody fills. Attendance Device User carries the same
+		   fetch-from for the site's sake, and nobody types an employee into it
+		   here — the bridge writes every row, so this app draws no form for it. */
 		const carriers = Object.values(SCHEMA)
 			.filter((d) => d.fields.some((f) => f.from === "employee.employee_name"))
+			.filter((d) => canCreate(d.name).ok)
 			.map((d) => d.name);
 		expect(carriers.length).toBeGreaterThan(1);
 

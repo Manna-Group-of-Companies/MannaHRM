@@ -1,4 +1,4 @@
-import { NEW_EMP_STEPS } from "../data/employees.js";
+import { NEW_EMP_STEPS, punchesOnApp, punchesOnMachine } from "../data/employees.js";
 import { ageOn, todayIso } from "./format.js";
 
 /* ---------------------------------------------------------------------------
@@ -89,9 +89,32 @@ export function employeeDoc(f) {
     for is telling somebody what to go and fill in, and `final_confirmation_date`
     is not what the box over it says. */
 export function missing(step, f) {
-	return fieldsOf(step)
+	const rows = fieldsOf(step);
+	const out = rows
 		.filter((r) => r[3] && r[0] && !String(f[r[0]] ?? "").trim())
 		.map((r) => r[1]);
+	return out.concat(punchGaps(f).filter((g) => rows.some((r) => r[0] === g.on)).map((g) => g.label));
+}
+
+const typed = (v) => String(v ?? "").trim() !== "";
+
+/** What the chosen Punch Method needs that is not filled in yet, with the field
+    each gap belongs on so `missing` can report it on the step that holds it.
+
+    A machine punch with no Machine Code is dropped by the bridge without a
+    word (docs/NEW_EMPLOYEE.md). An app punch needs a login, and the login is
+    matched to the Employee on its email (tools/setup_phone_punch.py) — so a
+    phone user with no email is a phone user who can never sign in. */
+export function punchGaps(f) {
+	const m = f.custom_punch_method;
+	const out = [];
+	if (punchesOnMachine(m) && !typed(f.attendance_device_id)) {
+		out.push({ on: "attendance_device_id", label: "Machine Code (needed for Fingerprint Machine)" });
+	}
+	if (punchesOnApp(m) && !typed(f.company_email) && !typed(f.personal_email)) {
+		out.push({ on: "company_email", label: "Company Email or Personal Email (needed for Mobile App)" });
+	}
+	return out;
 }
 
 /** The dates that cannot all be true at once.

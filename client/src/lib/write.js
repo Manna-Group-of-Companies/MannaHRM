@@ -44,6 +44,9 @@ export const NEVER_WRITE = {
 	"Salary Slip": "Produced by a payroll run. A hand-made slip is a payment with no run behind it.",
 	"Stock Ledger Entry": "ERPNext's own ledger, written by the transactions above it.",
 	"Version": "Frappe's audit trail of every change. It is the record of what happened.",
+	"Attendance Device User": "Read off the machine by the bridge. A row made here would claim "
+		+ "somebody can punch at a gate that has never seen their finger — enrol them on the machine "
+		+ "instead, and link them by filling Attendance Device ID on their Employee record.",
 };
 
 /**

@@ -183,6 +183,11 @@ export async function load() {
 			letters: letters.rows || [],
 			letterCols: letters.full,
 			companies: companies || [],
+			/* A company-locked login (tools/create_company_users.py) gets exactly one
+			   Company back, so the picker is set to it rather than left on "All" —
+			   which for that login would read the same rows and say the wrong name
+			   above them. The lock itself is the site's User Permission. */
+			...((companies || []).length === 1 ? { company: companies[0].name } : {}),
 			holidayLists: holidays || [],
 			/* The names as well as the count: Apply Leave fills its type dropdown
 			   from this, and the six in Factor HR are not necessarily the six here. */

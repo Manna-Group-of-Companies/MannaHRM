@@ -72,6 +72,12 @@ that frozen summary, and the record cannot be deleted once salary is processed.
 **Frappe HR has no equivalent gate.** Payroll reads `Attendance` directly, live.
 That is a real control your HR team currently has and would lose.
 
+*Built 11 September 2026, live with the app install:* `Attendance Submission`
+and `manna_hr/freeze.py`. The gate and the no-delete-after-salary rule are
+there; the summary it freezes is counts by status, not yet Factor HR's full
+breakdown of week-offs, holidays, late and early counts and LOP — those need the
+attendance policy engine in Layer 2. See docs/DOCTYPES.md §5.
+
 ### Regularization
 
 Employee raises it from ESS with a date, an In or Out time, a reason from a

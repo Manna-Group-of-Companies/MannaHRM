@@ -76,6 +76,7 @@ export const CHOICES = {
 	gender: ["", "Male", "Female", "Other"],
 	marital_status: ["", "Single", "Married", "Divorced", "Widowed"],
 	salutation: ["", "Mr", "Ms", "Mrs", "Dr"],
+	custom_punch_method: ["", "Fingerprint Machine", "Mobile App", "Both"],
 };
 
 /**

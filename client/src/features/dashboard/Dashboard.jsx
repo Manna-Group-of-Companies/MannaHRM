@@ -47,7 +47,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "@/store";
 import { listAll } from "@/api/client";
 import { loadCandidates } from "@/api/load";
-import { active, scoped } from "@/lib/scope";
+import { active, companyView, scoped } from "@/lib/scope";
 import { dmy, fmt, initials, isoAgo, MON, tally, tidyDept, todayIso } from "@/lib/format";
 import {
 	attendanceToday, byStanding, celebrations, findPeople, futureLeave, joinersByMonth,
@@ -138,8 +138,13 @@ function when(at) {
 	return dmy(day);
 }
 
-export default function Dashboard() {
-	const s = useApp();
+/** `company` pins this page to one company and takes the top-bar picker out of
+    the decision — that is what the per-company dashboards pass and it is the
+    only thing that makes them different from this one. Left out, the picker
+    decides, which is what Start Up wants. `companyView` is where the narrowing
+    is, including the four person-keyed lists this page used to read unscoped. */
+export default function Dashboard({ company }) {
+	const s = companyView(useApp(), company);
 	const all = scoped(s);
 	const a = active(s);
 

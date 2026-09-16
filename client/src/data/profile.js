@@ -211,6 +211,7 @@ export const PROFILE_PANES = {
 	attendance: {
 		groups: [
 			["How this person's punches are judged", [
+				["Punch Method", "custom_punch_method"],
 				["Machine Code", "attendance_device_id"],
 				["Default Shift", "default_shift"],
 				["Holiday List", "holiday_list"],

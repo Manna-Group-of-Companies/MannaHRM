@@ -1,0 +1,171 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:{device_id}-{device_user_id}",
+ "creation": "2026-09-15 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "device_id",
+  "attendance_device",
+  "device_user_id",
+  "name_on_device",
+  "privilege",
+  "column_break_person",
+  "employee",
+  "employee_name",
+  "on_device",
+  "section_break_when",
+  "enrolled_at",
+  "first_seen",
+  "column_break_when",
+  "removed_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "device_id",
+   "fieldtype": "Data",
+   "label": "Device ID",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "read_only": 1,
+   "description": "The machine, as its punches name it in `Employee Checkin.device_id`. A string rather than only a Link, because the bridge reads a machine's users whether or not anybody has registered the machine yet."
+  },
+  {
+   "fieldname": "attendance_device",
+   "fieldtype": "Link",
+   "label": "Attendance Device",
+   "options": "Attendance Device",
+   "read_only": 1,
+   "description": "Filled when this machine is on the Attendance Device list, which is what puts these people under it."
+  },
+  {
+   "fieldname": "device_user_id",
+   "fieldtype": "Data",
+   "label": "User ID on Machine",
+   "reqd": 1,
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "The number the machine calls this person. `Employee.attendance_device_id` has to be this same number, or every punch they make is refused."
+  },
+  {
+   "fieldname": "name_on_device",
+   "fieldtype": "Data",
+   "label": "Name on Machine",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "As typed at the machine when they were enrolled. Only a clue to who this is — the machine's keypad is not where names get spelt right."
+  },
+  {
+   "fieldname": "privilege",
+   "fieldtype": "Select",
+   "label": "Role on Machine",
+   "options": "User\nAdmin",
+   "default": "User",
+   "read_only": 1,
+   "description": "An Admin can open the machine's menu, which includes deleting its punch log. Worth knowing who they are."
+  },
+  {
+   "fieldname": "column_break_person",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "Whoever has this number as Attendance Device ID. **Blank is the row that matters**: somebody who can punch and whose punches match nobody, so they read as absent every day."
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "fetch_from": "employee.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "on_device",
+   "fieldtype": "Check",
+   "label": "Still Enrolled",
+   "default": "1",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "Unticked when they are removed from the machine. The row stays, because their past punches still name this user id."
+  },
+  {
+   "fieldname": "section_break_when",
+   "fieldtype": "Section Break",
+   "label": "When"
+  },
+  {
+   "fieldname": "enrolled_at",
+   "fieldtype": "Datetime",
+   "label": "Enrolled At",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "When they appeared on the machine, to within one bridge poll. **Blank for anybody already enrolled when the bridge first read this machine** — the machine keeps no enrolment date, and a guessed one would be believed."
+  },
+  {
+   "fieldname": "first_seen",
+   "fieldtype": "Datetime",
+   "label": "First Seen by Bridge",
+   "read_only": 1,
+   "description": "When the bridge first found them on the machine."
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "removed_at",
+   "fieldtype": "Datetime",
+   "label": "Removed At",
+   "read_only": 1,
+   "description": "When they disappeared from the machine, to within one poll."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Attendance Device User",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR User"
+  }
+ ],
+ "search_fields": "device_user_id,name_on_device,employee_name",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "name_on_device",
+ "track_changes": 0
+}

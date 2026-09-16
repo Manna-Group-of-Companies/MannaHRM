@@ -59,11 +59,11 @@ exists — a private bench is not a preference here.
 |---|---|
 | `manna_hr/` | The Frappe app. Installed onto the site. |
 | `client/` | The React HR dashboard. **ERPNext is its server** — see `client/README.md` |
-| `client/src/lib/write.js` | What the dashboard may create, change and delete — and the five doctypes it never writes |
+| `client/src/lib/write.js` | What the dashboard may create, change and delete — and the six doctypes it never writes |
 | `client/src/features/records/` | One form and one list, for every doctype this app installs |
 | `client/worker/` | The Cloudflare Worker: the bundle, and the site behind the same hostname. A pipe, never a rule |
 | `manna_hr/rules.py` | Pure rules — no `frappe` import. Testable without a bench. |
-| `manna_hr/manna_hr/doctype/` | The schema **and** its controllers. 21 doctypes; `client/scripts/schema.mjs` generates the client's copy from these |
+| `manna_hr/manna_hr/doctype/` | The schema **and** its controllers. 24 doctypes; `client/scripts/schema.mjs` generates the client's copy from these |
 | `manna_hr/loans.py` | Staff loans — the parts that need a site. The arithmetic is in `rules.py` |
 | `tools/export_from_site.py` | The site's doctype definitions, back into the repo's JSON layout |
 | `tools/check_schema.py` | What the code assumes, checked against the live site |
@@ -72,7 +72,10 @@ exists — a private bench is not a preference here.
 | `manna_hr/letters.py` | The letter merge, ported from `client/src/lib/letter.js` |
 | `manna_hr/geo.py` | Distance arithmetic, ported from the sales app's `proximity.dart` |
 | `manna_hr/checkin.py` | The punch validation. The backstop. |
+| `manna_hr/freeze.py` | Submit Attendance's month freeze — what a submitted `Attendance Submission` refuses |
 | `bridge/` | The on-premise agent. Reads the fingerprint machines, and listens for the ones that push (`--adms`) |
+| `bridge/mannabridge/roster.py` | Who is enrolled on each machine, sent as `Attendance Device User`. Kept apart from punches: nothing in it may cost a pass of them |
+| `bridge/INSTALL.bat`, `install.sh` | Put a bridge on a new PC: Python, the key, the machines, a service. `package.ps1` builds the zip that carries it — never zip the folder, it holds a key |
 | `app/` | The phone app. Punch in, punch out, the month, and the correction — see `app/README.md` |
 | `docs/` | Runbook, schema, migration, open questions |
 
@@ -91,9 +94,9 @@ The explicit `manna_hr` argument matters — without it bench clones into
 ## 3. Tests
 
 ```bash
-python -m pytest manna_hr/tests -q        # 536 tests, no bench needed
+python -m pytest manna_hr/tests -q        # 579 tests, no bench needed
 python tools/check_schema.py              # the site, against what the code assumes
-cd client && npm test                     # 2,635 tests, jsdom
+cd client && npm test                     # 2,675 tests, jsdom
 cd client && npm run contrast             # both palettes, every pairing, AA
 cd client && npm run shots                # the app in a real browser, light and dark
 cd app && flutter test                    # 50 tests, no site and no handset
@@ -221,6 +224,13 @@ you add one, copy all the standard rows across in the same transaction.
 `HR User` with no Company permission sees every company. The default is open,
 so an omission is a leak rather than a lockout, and it will not announce itself.
 
+**Refuse an `Attendance` write with a `DuplicateAttendanceError`, or not at all.**
+hrms's shift job marks absentees through `mark_attendance`, which catches that
+and `OverlappingShiftAttendanceError` and nothing else; any other exception ends
+the run for every shift after it, group-wide. The month freeze raises
+`FrozenMonthError`, a subclass, for exactly this reason — see
+`manna_hr/freeze.py`, and the test that pins its base class.
+
 **Night shifts crossing midnight belong to the day they started.** Get the Shift
 Type window wrong and a night worker is marked absent two days running. Test it
 with real punches before anyone is paid from it.
@@ -289,6 +299,14 @@ existing `Attendance Log` history should be migrated is still open.
   install above, not a commit. `flutter test` covers the rules that can be
   argued about without a site: 50 tests, no bench and no handset. Who gets it
   is [docs/APP_USERS.md](docs/APP_USERS.md) — seventeen people, not the group.
+- **Submit Attendance is built and waits on the install.** `Attendance
+  Submission` (11 September 2026) is the monthly close: Add submits a company's
+  month, Preview Data reads it first, Reopen cancels it. The freeze behind it is
+  `manna_hr/freeze.py`, and it exists only once the app is installed — the
+  doctype is not on the site, and must never be made there by hand as a custom
+  one, which would submit and freeze nothing. Until then the page says so and
+  the site refuses Add. What it freezes beside the rows is counts by status, not
+  yet Factor HR's LOP and late/early breakdown, which needs the policy engine.
 - **No leave or payroll on the phone.** The app reads leave to colour a day and
   writes none of it.
 - **The dashboard is in `client/`** and runs against the live

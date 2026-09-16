@@ -7,6 +7,10 @@ be argued about, and tested, without a bench.
 Nothing here imports `frappe`. That is the point, and it is worth keeping.
 """
 
+import calendar
+import re
+from datetime import date, datetime
+
 # ---------------------------------------------------------------- statuses ---
 
 PRESENT = "present"
@@ -603,3 +607,190 @@ def live_announcements(rows, on, kind=None):
 	if kind:
 		live = [r for r in live if str(r.get("kind") or "") == kind]
 	return sorted(live, key=lambda r: str(r.get("from_date") or ""), reverse=True)
+
+
+# --------------------------------------------------- attendance submission ---
+#
+# Factor HR's monthly close. HR submits one company's month, payroll is run
+# from it, and from then on nothing in that month may change underneath the
+# payslips. Frappe HR has no such gate — payroll reads `Attendance` live — so
+# the gate is these rules and `manna_hr/freeze.py`, which is where they meet a
+# site.
+#
+# A period is `YYYY-MM`, the spelling the loan schedule already uses, because
+# it sorts and compares as a string exactly as it does as a month.
+
+_PERIOD = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
+
+_MON = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+#: hrms's Attendance statuses, each counted under its own figure.
+ATT_COUNTED = {
+	"Present": "present",
+	"Half Day": "half_day",
+	"Absent": "absent",
+	"On Leave": "on_leave",
+	"Work From Home": "work_from_home",
+}
+
+
+def period_bounds(period):
+	"""`YYYY-MM` → (first day, last day) as `datetime.date`, or None.
+
+	The real last day, not the 31st. A freeze that ran to the 31st of a
+	thirty-day month would claim the 1st of the next one, and the person whose
+	punch on that day was refused would be the one to find out.
+	"""
+	m = _PERIOD.match(str(period or "").strip())
+	if not m:
+		return None
+	year, month = int(m.group(1)), int(m.group(2))
+	return date(year, month, 1), date(year, month, calendar.monthrange(year, month)[1])
+
+
+def period_label(period):
+	"""`2026-08` → `Aug-26`, which is how Factor HR writes a period."""
+	bounds = period_bounds(period)
+	if not bounds:
+		return str(period or "")
+	return "{0}-{1:02d}".format(_MON[bounds[0].month - 1], bounds[0].year % 100)
+
+
+def period_problem(period, today):
+	"""Why this month cannot be submitted on `today`, or "" when it can.
+
+	**Not until its last day is over.** Submitting on the 30th freezes the 30th
+	and the 31st before anybody has worked them: nothing punched on those days
+	could then become a day of attendance, and they would reach payroll as
+	absences. Waiting a day costs HR a day; the other way round costs somebody
+	two days' pay. `today` is the server's, never the browser's.
+	"""
+	bounds = period_bounds(period)
+	if not bounds:
+		return "The period has to be a month, written YYYY-MM — 2026-08 for August 2026."
+	if _as_date(today) <= bounds[1]:
+		return (
+			"{0} has not ended yet — its last day is {1}. A month is submitted once every day "
+			"in it has been worked; submitting it now would freeze the days still to come as "
+			"days nobody attended."
+		).format(period_label(period), bounds[1].isoformat())
+	return ""
+
+
+def months_touched(from_date, to_date=None):
+	"""Every `YYYY-MM` a date range touches, in order.
+
+	A leave from 28 August to 3 September is in two months, and a freeze on
+	either of them is a freeze on it.
+	"""
+	a = _as_date(from_date)
+	b = _as_date(to_date or from_date)
+	if b < a:
+		a, b = b, a
+	out = []
+	year, month = a.year, a.month
+	while (year, month) <= (b.year, b.month):
+		out.append("{0:04d}-{1:02d}".format(year, month))
+		year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+	return out
+
+
+def attendance_summary(rows):
+	"""A month's Attendance, counted — the figures a submission keeps beside itself.
+
+	`rows` are submitted Attendance rows, each with `employee` and `status`.
+	Kept on the submission so that anything that later changes the month without
+	passing through the freeze — a `db_set`, a console — leaves figures that no
+	longer match the rows, which is something a person can see.
+
+	**A status this does not know is counted, under `other`, rather than
+	dropped.** A total that silently omits rows is a total that does not add up
+	and nobody can find out why.
+	"""
+	out = {"employees": 0, "rows": 0, "other": 0}
+	for key in ATT_COUNTED.values():
+		out[key] = 0
+	people = set()
+	for row in rows or []:
+		out["rows"] += 1
+		people.add(_get(row, "employee"))
+		out[ATT_COUNTED.get(str(_get(row, "status") or ""), "other")] += 1
+	people.discard(None)
+	people.discard("")
+	out["employees"] = len(people)
+	return out
+
+
+def submission_blockers(attendance_rows, open_corrections=0, open_leave=0):
+	"""Why a month cannot be frozen yet, as sentences. Empty when it can.
+
+	Each is a thing that would change a day after the month had been paid from.
+	The setup advice on the page — Shift Types, who has a shift — is not here,
+	deliberately: those are reasons the figures might be poor, and refusing on
+	them would leave a company unable to close a month at all until a
+	configuration project finished.
+	"""
+	out = []
+	if _int(attendance_rows) <= 0:
+		out.append(
+			"No attendance has been generated for this month. Submitting it would freeze a "
+			"month of nothing and hand it to payroll as fact."
+		)
+	corrections = _int(open_corrections)
+	if corrections:
+		out.append(
+			"{0} attendance correction{1} for this month {2} still open — waiting for a decision, "
+			"or approved and not yet rebuilt. Each one changes a day; settle them first.".format(
+				corrections, "" if corrections == 1 else "s", "is" if corrections == 1 else "are"
+			)
+		)
+	leave = _int(open_leave)
+	if leave:
+		out.append(
+			"{0} leave application{1} touching this month {2} still Open. Once the month is "
+			"frozen nobody could approve {3}, so decide {3} first.".format(
+				leave, "" if leave == 1 else "s", "is" if leave == 1 else "are",
+				"it" if leave == 1 else "them",
+			)
+		)
+	return out
+
+
+def reopen_problem(salary_slips):
+	"""Why a submitted month cannot be reopened, or "" when it can.
+
+	Factor HR's own rule: once salary has been processed from a month, the month
+	stays shut. Reopening would change the attendance under payslips that have
+	already been paid, and nothing would then say which of the two was right.
+	"""
+	slips = _int(salary_slips)
+	if slips:
+		return (
+			"Salary has already been processed from this month — {0} submitted salary slip{1}. "
+			"Reopening it would change the attendance under pay that has gone out. Cancel {2} "
+			"first, or put the difference through next month."
+		).format(slips, "" if slips == 1 else "s", "that slip" if slips == 1 else "those slips")
+	return ""
+
+
+def frozen_message(period, company, submission, what):
+	"""The sentence a write into a submitted month is refused with.
+
+	**It carries the submission's name in brackets, and that is load-bearing.**
+	hrms writes this sentence onto every punch it sets aside because of it, and
+	reopening the month finds those punches again by searching for exactly that
+	bracketed name — see `freeze.release_held_punches`.
+	"""
+	return (
+		"{0} is submitted for {1} ({2}), so {3} is refused. If no salary has been processed "
+		"from it, reopen the month by cancelling {2}; otherwise put the change through next month."
+	).format(period_label(period), company or "this company", submission, what)
+
+
+def _as_date(value):
+	"""A `date` out of a date, a datetime, or the string Frappe sends."""
+	if isinstance(value, datetime):
+		return value.date()
+	if isinstance(value, date):
+		return value
+	return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()

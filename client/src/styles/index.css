@@ -912,6 +912,9 @@
     @apply opacity-[.55] cursor-not-allowed;
   }
   .rfield .ro { @apply text-read text-ink-2 py-[.4rem]; }
+  /* The records that belong to the open one — the people on a machine. Ruled
+     off from the fields above, because nothing in it is part of this form. */
+  .related { @apply mt-[1.2rem] pt-[.8rem] border-t border-line; }
   .rfield .hint { @apply text-fine text-ink-3; }
   /* What changing this field costs. Not a colour on the box — the box is fine,
      and it is the consequence that needs saying. */

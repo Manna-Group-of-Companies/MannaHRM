@@ -272,6 +272,99 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Attendance Device User": {
+		name: "Attendance Device User",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 0,
+		autoname: "format:{device_id}-{device_user_id}",
+		title: "name_on_device",
+		fields: [
+			{
+				name: "device_id",
+				label: "Device ID",
+				kind: "readonly",
+				reqd: 1,
+				hint: "The machine, as its punches name it in `Employee Checkin.device_id`. A string rather than only a Link, because the bridge reads a machine's users whether or not anybody has registered the machine yet.",
+				list: 1
+			},
+			{
+				name: "attendance_device",
+				label: "Attendance Device",
+				kind: "readonly",
+				link: "Attendance Device",
+				hint: "Filled when this machine is on the Attendance Device list, which is what puts these people under it."
+			},
+			{
+				name: "device_user_id",
+				label: "User ID on Machine",
+				kind: "readonly",
+				reqd: 1,
+				hint: "The number the machine calls this person. `Employee.attendance_device_id` has to be this same number, or every punch they make is refused.",
+				list: 1
+			},
+			{
+				name: "name_on_device",
+				label: "Name on Machine",
+				kind: "readonly",
+				hint: "As typed at the machine when they were enrolled. Only a clue to who this is — the machine's keypad is not where names get spelt right.",
+				list: 1
+			},
+			{
+				name: "privilege",
+				label: "Role on Machine",
+				kind: "readonly",
+				choices: [
+					"User",
+					"Admin"
+				],
+				def: "User",
+				hint: "An Admin can open the machine's menu, which includes deleting its punch log. Worth knowing who they are."
+			},
+			{
+				name: "employee",
+				label: "Employee",
+				kind: "readonly",
+				link: "Employee",
+				hint: "Whoever has this number as Attendance Device ID. **Blank is the row that matters**: somebody who can punch and whose punches match nobody, so they read as absent every day.",
+				list: 1
+			},
+			{
+				name: "employee_name",
+				label: "Employee Name",
+				kind: "readonly",
+				from: "employee.employee_name"
+			},
+			{
+				name: "on_device",
+				label: "Still Enrolled",
+				kind: "readonly",
+				def: "1",
+				hint: "Unticked when they are removed from the machine. The row stays, because their past punches still name this user id.",
+				list: 1
+			},
+			{
+				name: "enrolled_at",
+				label: "Enrolled At",
+				kind: "readonly",
+				hint: "When they appeared on the machine, to within one bridge poll. **Blank for anybody already enrolled when the bridge first read this machine** — the machine keeps no enrolment date, and a guessed one would be believed.",
+				list: 1
+			},
+			{
+				name: "first_seen",
+				label: "First Seen by Bridge",
+				kind: "readonly",
+				hint: "When the bridge first found them on the machine."
+			},
+			{
+				name: "removed_at",
+				label: "Removed At",
+				kind: "readonly",
+				hint: "When they disappeared from the machine, to within one poll."
+			}
+		]
+	},
 	"Attendance Submission": {
 		name: "Attendance Submission",
 		module: "Manna HR",

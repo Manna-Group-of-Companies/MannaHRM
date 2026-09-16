@@ -13,10 +13,13 @@
  */
 
 import { SECTIONS } from "@/data/sections";
+import { COMPANY_PAGES } from "@/data/companies";
 import { OVERVIEW, DEFAULT_SECTION } from "@/routes/paths";
 
 import Dashboard from "@/features/dashboard/Dashboard";
 import Updates from "@/features/dashboard/Updates";
+import { AttendanceDash, HrDash, PayrollDash } from "@/features/dashboard/CompanyDash";
+import companyDashboard from "@/features/dashboard/companyDashboard";
 import moduleAll from "@/features/shared/ModuleAll";
 import report from "@/features/reports/makeReport";
 import { blueprintPages } from "@/features/reports/makeBlueprint";
@@ -88,9 +91,20 @@ const TABS = {
 	   Mood Analysis, Wish Celebration, CEO Speak, Announcements and Important
 	   Files are all panels on Start Up itself. So the Engagement page here went
 	   and its contents moved onto the front page, which is where somebody
-	   comparing the two screens will look for them. */
+	   comparing the two screens will look for them.
+
+	   **Their three come first and the four company dashboards are appended**,
+	   not interleaved — the reason the Employees and Leave menus below give, that
+	   the items Factor HR also has should still compare item for item. These four
+	   have no counterpart there at all, because Factor HR is one tenant per
+	   company and this is one site for the whole group; that difference is the
+	   entire reason these pages exist. `data/companies.js` is the table. */
 	dashboard: [["overview", "Start Up"], ["approvals", "Approvals"],
-		...managedTabs("dashboard"), ["updates", "Product Updates"]],
+		/* The three company dashboards, asked for 16 Sep 2026 — no Factor HR menu
+		   item behind them, so they sit after Approvals rather than among theirs. */
+		["hr", "HR Dashboard"], ["attendance", "Attendance Dashboard"], ["payroll", "Payroll Dashboard"],
+		...managedTabs("dashboard"), ["updates", "Product Updates"],
+		...COMPANY_PAGES.map((c) => [c.slug, c.label])],
 	onboard: [["overview", "Create Letter / Form"], ["documents", "Document Entry"],
 		["assets", "Assets Details"], ["assignment", "Assets Assignment"],
 		...managedTabs("onboard"), ["all", "All"]],
@@ -160,7 +174,12 @@ const TABS = {
    page here falls back to the module's overview rather than blanking. */
 const PAGES = {
 	dashboard: { overview: Dashboard, approvals: Approvals, updates: Updates,
-		...managedPages("dashboard") },
+		hr: HrDash, attendance: AttendanceDash, payroll: PayrollDash,
+		...managedPages("dashboard"),
+		/* One page per company, at `/dashboard/<abbr>` — `/dashboard/mt` is Manna
+		   Treads. Each is the same Start Up with its company pinned instead of
+		   read off the top-bar picker; see features/dashboard/companyDashboard. */
+		...Object.fromEntries(COMPANY_PAGES.map((c) => [c.slug, companyDashboard(c)])) },
 	/* `overview` is Create Letter / Form, the first tab: clicking On Board resets
 	   to the one page with real work on it. Candidate Master was dropped on
 	   3 Sep 2026 — no doctype behind it — and is now a row on All rather than a

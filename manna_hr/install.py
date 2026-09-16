@@ -20,11 +20,24 @@ CUSTOM_FIELDS = {
 			"collapsible": 1,
 		},
 		{
+			# Chosen on Create Employee (16 Sep 2026). Recorded, not enforced:
+			# refusing a punch that did arrive is the expensive mistake
+			# (CLAUDE.md §4), so a machine punch from a "Mobile App" person is
+			# still stored.
+			"fieldname": "custom_punch_method",
+			"label": "Punch Method",
+			"fieldtype": "Select",
+			"options": "\nFingerprint Machine\nMobile App\nBoth",
+			"insert_after": "custom_hr_section",
+			"in_standard_filter": 1,
+			"description": "How this person punches in: the fingerprint machine, the phone app, or both.",
+		},
+		{
 			"fieldname": "custom_work_location",
 			"label": "Work Location",
 			"fieldtype": "Link",
 			"options": "Work Location",
-			"insert_after": "custom_hr_section",
+			"insert_after": "custom_punch_method",
 			"description": "Where this person is expected to punch from. Blank means their punches are never measured.",
 		},
 		{

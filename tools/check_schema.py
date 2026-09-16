@@ -42,7 +42,7 @@ MODULE = "Manna HR"
 #: What this app expects to be on the site. The list is here because there is
 #: no longer a folder of JSON to count.
 EXPECTED = [
-	"Asset Assignment", "Attendance Device", "Employee Attendance Regularization",
+	"Asset Assignment", "Attendance Device", "Attendance Device User", "Employee Attendance Regularization",
 	"Employee Category Type", "Employee Category Value", "Employee Document",
 	"Employee Document Type", "Employee Letter", "Employee Loan Application",
 	"Employee Loan Repayment", "Employee Loan Repayment Schedule", "Employee Loan Type",
@@ -50,6 +50,12 @@ EXPECTED = [
 	"Employee Survey Answer", "Employee Survey Question", "Employee Survey Response",
 	"Letter Type", "Manna HR Settings", "Work Location",
 ]
+
+#: Doctypes that must arrive **only** with `bench install-app`, never as a
+#: custom doctype made in Desk. Each one is nothing but its controller: a custom
+#: `Attendance Submission` is a form that saves, submits, says "Submitted", and
+#: freezes nothing, because the rules that do the freezing never run.
+INSTALL_ONLY = ["Attendance Submission"]
 
 problems = []
 notes = []
@@ -80,6 +86,21 @@ def check_everything_is_there():
 			problems.append("{0} is not on the site".format(name))
 		elif there[name] != MODULE:
 			problems.append("{0} is in module {1!r}, not {2!r}".format(name, there[name], MODULE))
+
+
+def check_the_install_only_doctypes_are_not_custom():
+	"""Absent is expected until the app is installed. Custom is a problem."""
+	for name in INSTALL_ONLY:
+		try:
+			doc = doctype(name)
+		except urllib.error.HTTPError:
+			notes.append("{0} is not on the site yet — it arrives with the app install".format(name))
+			continue
+		if doc.get("custom"):
+			problems.append(
+				"{0} is a custom doctype on the site, so its controller does not run and a "
+				"submitted month freezes nothing. Delete it and install the app".format(name)
+			)
 
 
 def check_the_short_name_is_not_ours():
@@ -179,6 +200,7 @@ def main():
 
 	for check in (
 		check_everything_is_there,
+		check_the_install_only_doctypes_are_not_custom,
 		check_the_short_name_is_not_ours,
 		check_the_workflow_and_the_field_agree,
 		check_the_dashboard_gets_the_fields_it_asks_for,
