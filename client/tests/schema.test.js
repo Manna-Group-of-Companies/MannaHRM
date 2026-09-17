@@ -34,8 +34,9 @@ describe("what the schema carries", () => {
 		// behind them. One doctype with a kind, because the two differ in a word.
 		// Attendance Submission on 11 September — Submit Attendance's month freeze.
 		// Attendance Device User on 15 September — who is enrolled on each machine.
-		expect(Object.keys(SCHEMA)).toHaveLength(24);
-		expect(RECORD_DOCTYPES).toHaveLength(18);
+		// Employee Overtime on 16 September — the OT HR grants, a day at a time.
+		expect(Object.keys(SCHEMA)).toHaveLength(25);
+		expect(RECORD_DOCTYPES).toHaveLength(19);
 	});
 
 	it("keeps child tables and Singles out of the record list", () => {

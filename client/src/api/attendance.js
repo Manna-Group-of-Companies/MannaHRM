@@ -41,8 +41,14 @@ import { getState, set } from "@/store";
    screen good and the short list is what the screen needs; asking for the
    second when the first is refused is the same bargain `api/load.js` makes
    eight times over. */
-const PUNCH_FIELDS = ["name", "employee", "time", "log_type", "device_id", "shift"];
+const PUNCH_FIELDS = ["name", "employee", "time", "log_type", "device_id", "shift", "skip_auto_attendance"];
 const PUNCH_MIN = ["name", "employee", "time", "log_type"];
+
+/** Employee Overtime — one row per person per day HR granted overtime. */
+export const OT_FIELDS = ["name", "employee", "ot_date", "hours", "reason", "entered_by"];
+
+/** Shift Assignment — a shift for a person between two dates. */
+export const ASG_FIELDS = ["name", "employee", "shift_type", "start_date", "end_date", "status", "docstatus"];
 
 const LEAVE_FIELDS = ["name", "employee", "leave_type", "from_date", "to_date",
 	"half_day", "half_day_date", "status", "description"];
@@ -70,6 +76,9 @@ const monthRange = (ym) => [ym + "-01", ym + "-31"];
  * is a screen that reports a permission problem as missing attendance, so each
  * read carries its own failure and the page says which of them came back empty.
  */
+/* `force` as "quiet" re-reads without swapping the table for "Reading…" first —
+   what a refresh after a Request wants, where the rows on screen are still
+   right and blanking them made every Request look slow (17 September 2026). */
 export async function loadRegMonth(emp, ym, force) {
 	if (!emp || !ym) return set({ regMonth: { key: "", state: "", err: "", punches: [], leave: [], ar: [] } });
 
@@ -78,7 +87,9 @@ export async function loadRegMonth(emp, ym, force) {
 	/* The guard is set before the first await, so the re-render it causes
 	   cannot start the same four reads again. */
 	if (cur.key === key && cur.state && !force) return;
-	set({ regMonth: { ...cur, key, state: "loading", err: "" } });
+	if (!(force === "quiet" && cur.key === key && cur.state === "ok")) {
+		set({ regMonth: { ...cur, key, state: "loading", err: "" } });
+	}
 
 	const [from, to] = monthRange(ym);
 	const doctype = getState().regDoctype || "Employee Attendance Regularization";
@@ -89,7 +100,7 @@ export async function loadRegMonth(emp, ym, force) {
 			.catch(() => listAll(dt, short, filters))
 			.catch(() => null);
 
-	const [punches, leave, ar] = await Promise.all([
+	const [punches, leave, ar, overtime, assignments] = await Promise.all([
 		/* Punch times are `YYYY-MM-DD HH:MM:SS`, and the range is compared
 		   lexicographically against exactly that shape — see client/README.md on
 		   why every date on this site is a string. */
@@ -104,6 +115,14 @@ export async function loadRegMonth(emp, ym, force) {
 
 		read(doctype, AR_FIELDS, AR_MIN,
 			[["employee", "=", emp], ["attendance_date", ">=", from], ["attendance_date", "<=", to]]),
+
+		/* Overtime HR has granted — the only OT this app shows (16 Sep 2026). */
+		read("Employee Overtime", OT_FIELDS, OT_FIELDS,
+			[["employee", "=", emp], ["ot_date", ">=", from], ["ot_date", "<=", to]]),
+
+		/* Dated shifts that touch the month: submitted, active, started by its end. */
+		read("Shift Assignment", ASG_FIELDS, ASG_FIELDS,
+			[["employee", "=", emp], ["docstatus", "=", 1], ["status", "=", "Active"], ["start_date", "<=", to]]),
 	]);
 
 	/* Which of the three could not be read, in the site's own terms rather than
@@ -123,6 +142,9 @@ export async function loadRegMonth(emp, ym, force) {
 			punches: punches || [],
 			leave: leave || [],
 			ar: ar || [],
+			overtime: overtime || [],
+			/* An assignment that ended before the month has nothing to say about it. */
+			assignments: (assignments || []).filter((a) => !a.end_date || String(a.end_date) >= from),
 		},
 	});
 }
@@ -143,7 +165,9 @@ export async function loadRegGrid(ym, force) {
 	if (!ym) return;
 	const cur = getState().regGrid;
 	if (cur.key === ym && cur.state && !force) return;
-	set({ regGrid: { ...cur, key: ym, state: "loading", err: "" } });
+	if (!(force === "quiet" && cur.key === ym && cur.state === "ok")) {
+		set({ regGrid: { ...cur, key: ym, state: "loading", err: "" } });
+	}
 
 	const [from, to] = monthRange(ym);
 	const doctype = getState().regDoctype || "Employee Attendance Regularization";
@@ -152,13 +176,15 @@ export async function loadRegGrid(ym, force) {
 			.catch(() => listAll(dt, short, filters, 1000))
 			.catch(() => null);
 
-	const [punches, leave, ar] = await Promise.all([
-		read("Employee Checkin", PUNCH_MIN, PUNCH_MIN,
+	const [punches, leave, ar, overtime] = await Promise.all([
+		read("Employee Checkin", PUNCH_MIN.concat(["skip_auto_attendance"]), PUNCH_MIN,
 			[["time", ">=", from + " 00:00:00"], ["time", "<=", to + " 23:59:59"]]),
 		read("Leave Application", LEAVE_FIELDS, LEAVE_MIN,
 			[["from_date", "<=", to], ["to_date", ">=", from]]),
 		read(doctype, AR_FIELDS, AR_MIN,
 			[["attendance_date", ">=", from], ["attendance_date", "<=", to]]),
+		read("Employee Overtime", OT_FIELDS, OT_FIELDS,
+			[["ot_date", ">=", from], ["ot_date", "<=", to]]),
 	]);
 
 	/* A second answer for a month already left behind is dropped: paging back
@@ -179,6 +205,7 @@ export async function loadRegGrid(ym, force) {
 			punches: punches || [],
 			leave: leave || [],
 			ar: ar || [],
+			overtime: overtime || [],
 		},
 	});
 }
@@ -203,7 +230,12 @@ export async function loadShiftWindows() {
 /** `"08:30:00"` → `"08:30"`. Frappe stores a Time as `HH:MM:SS`; the seconds
     are always zero on a shift and are two characters of noise on a row that
     already carries four times. */
-export const hhmm = (t) => (t ? String(t).slice(0, 5) : "");
+export const hhmm = (t) => {
+	/* `8:30:00` is how this site stores one shift's start. Sliced, it reads
+	   `8:30:`; padded, it reads what it means. */
+	const m = /^(\d{1,2}):(\d{2})/.exec(String(t || "").trim());
+	return m ? `${m[1].padStart(2, "0")}:${m[2]}` : "";
+};
 
 /** How a shift reads on a roster row: the name, and the window where it is
     known. Their row prints both. */
@@ -213,4 +245,55 @@ export function shiftLabel(name, windows) {
 	return w && w.start_time && w.end_time
 		? `${name} (${hhmm(w.start_time)}-${hhmm(w.end_time)})`
 		: name;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Daily Detail Attendance Report's read — the range the report was generated
+   for, into `ddaData`. See lib/dailydetail.js for what each doctype answers.
+
+   Keyed on `from|to|employee`, and made only on Generate. One person narrows
+   all three reads on the site rather than in the browser; everybody is paged a
+   thousand at a time, which is a month of this group in a handful of requests.
+   Never throws: a read that failed is named on the report, because "nobody
+   punched" and "the punches could not be read" are opposite findings.
+   --------------------------------------------------------------------------- */
+const DDA_ATT_FIELDS = ["name", "employee", "attendance_date", "status", "in_time", "out_time",
+	"working_hours", "late_entry", "early_exit", "shift", "docstatus"];
+const DDA_ATT_MIN = ["name", "employee", "attendance_date", "status", "docstatus"];
+
+export async function loadDda(from, to, emp, force) {
+	if (!from || !to || to < from) return;
+	const key = `${from}|${to}|${emp || ""}`;
+	const cur = getState().ddaData;
+	if (cur.key === key && cur.state && !force) return;
+	set({ ddaData: { ...cur, key, state: "loading", err: "" } });
+
+	const who = emp ? [["employee", "=", emp]] : [];
+	const read = (dt, long, short, filters) =>
+		listAll(dt, long, filters, 1000)
+			.catch(() => listAll(dt, short, filters, 1000))
+			.catch(() => null);
+
+	const [attendance, punches, leave, overtime] = await Promise.all([
+		read("Attendance", DDA_ATT_FIELDS, DDA_ATT_MIN,
+			who.concat([["attendance_date", ">=", from], ["attendance_date", "<=", to], ["docstatus", "=", 1]])),
+		read("Employee Checkin", PUNCH_MIN.concat(["skip_auto_attendance", "device_id", "latitude", "longitude"]), PUNCH_MIN,
+			who.concat([["time", ">=", from + " 00:00:00"], ["time", "<=", to + " 23:59:59"]])),
+		read("Leave Application", LEAVE_FIELDS, LEAVE_MIN,
+			who.concat([["from_date", "<=", to], ["to_date", ">=", from]])),
+		read("Employee Overtime", OT_FIELDS, OT_FIELDS,
+			who.concat([["ot_date", ">=", from], ["ot_date", "<=", to]])),
+	]);
+
+	if (getState().ddaData.key !== key) return;
+	const refused = [attendance === null && "attendance", punches === null && "punches", leave === null && "leave"]
+		.filter(Boolean);
+	set({
+		ddaData: {
+			key, state: "ok",
+			err: refused.length ? `The site would not answer for ${refused.join(", ")}.` : "",
+			attendance: attendance || [], punches: punches || [], leave: leave || [], overtime: overtime || [],
+		},
+	});
 }

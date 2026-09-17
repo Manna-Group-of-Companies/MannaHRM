@@ -3,7 +3,8 @@ import { go } from "@/routes/router";
 import { dayOf, dmy, fmt, monthCells, tally, thisMonth, todayIso, weekNo, ymd } from "@/lib/format";
 import { download, save, toCsv } from "@/lib/csv";
 import { gcalUrl, icsFor, icsName } from "@/lib/gcal";
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
+import { canDo } from "@/api/client";
 import {
 	calDelAsk, CAL_BRUSHES, CAL_DEL_WHY, CAL_DOW, CAL_DT, CAL_EDIT_ID, CAL_EDIT_SAVE_WHY,
 	CAL_EDIT_WHY, CAL_IMPORT_COLS, CAL_MONTHS, CAL_NEW_BLANK, CAL_NEW_WHY, CAL_OFF, CAL_PAID_WHY,
@@ -188,11 +189,17 @@ function CalDelete({ s, list }) {
    opens the same job on the site. New makes an empty document; Edit and Delete
    open the list the month below is drawn from, so the toolbar acts on what is
    on screen rather than on whatever the site opens first. */
-function CalToolbar({ s }) {
+function CalToolbar({ s, can }) {
 	const busy = s.holidayLists.length > 0 && !Object.keys(s.holidays).length;
 	const list = calList(s);
 	return (
 		<div className="embar calbar">
+			{/* View only for anybody the site would not let write this calendar:
+			    New, Edit, Delete and the import are admin controls. Search, Close
+			    and the export read what is already on screen, so everybody keeps
+			    them. */}
+			{can && <>
+
 			{/* Their New opens the create screen rather than the site — see CalNew.
 			    The other two still open the site: they act on a list that already
 			    exists, and changing one changes who is expected at the gate. */}
@@ -237,6 +244,7 @@ function CalToolbar({ s }) {
 					{t.label}
 				</Desk>
 			))}
+			</>}
 			<button
 				className="embtn"
 				aria-pressed={s.cal.search}
@@ -259,6 +267,10 @@ function CalToolbar({ s }) {
 			</button>
 			<span className="ml-auto inline-flex gap-[.4rem] items-center">
 				{busy && <span className="n text-mini text-ink-3">reading the holiday dates…</span>}
+				{!can && <span className="n text-mini text-ink-3"
+					title="Changing a calendar changes who is expected at the gate, so it is for logins the site lets write a Holiday List.">
+					view only
+				</span>}
 				{/* The one control on this bar that neither writes on the site nor
 				    needs it to be reachable — it works off what the page already
 				    holds, which is why it stays live when every Desk button beside
@@ -267,7 +279,7 @@ function CalToolbar({ s }) {
 				{/* Their caret, and it is a menu rather than a button — the same two
 				    items Categories carries, drawn by the same control. See
 				    `calTemplate` for what the second one writes. */}
-				<ImportMenu
+				{can && <ImportMenu
 					open={s.calimp}
 					onToggle={() => set({ calimp: !s.calimp })}
 					onClose={() => set({ calimp: false })}
@@ -284,7 +296,7 @@ function CalToolbar({ s }) {
 						})
 						: null}
 					templateDead={CAL_TEMPLATE_DEAD}
-				/>
+				/>}
 			</span>
 		</div>
 	);
@@ -763,12 +775,35 @@ function CalNew({ s }) {
 	);
 }
 
+/* Asked for on 17 September 2026: New, Edit, Delete and the import are hr@'s
+   alone, the group's HR admin. The company logins are HR Managers and the site
+   would let them write a Holiday List, so the site's answer is not enough on its
+   own — this narrows the controls, and is still only a menu (CLAUDE.md §1). */
+export const CAL_EDITORS = ["hr@mannarubber.com"];
+export const calEditor = (user) => CAL_EDITORS.includes(String(user || "").trim().toLowerCase());
+
 export default function Calendar() {
 	const s = useApp();
 	const a = active(s);
 	const noList = a.filter((e) => !e.holiday_list);
 	const lists = s.holidayLists;
 	const read = lists.filter((h) => s.holidays[h.name]);
+
+	/* Asked of the site rather than decided from a role name here: whoever may
+	   write a Holiday List there is who this page calls an admin, so the two
+	   cannot disagree. */
+	const list = calList(s);
+	const key = (s.user || "") + "|" + list;
+	useEffect(() => {
+		if (!s.user || s.calCan.key === key) return undefined;
+		let live = true;
+		set({ calCan: { key, ok: null } });
+		canDo("Holiday List", list, list ? "write" : "create")
+			.then((ok) => { if (live) set({ calCan: { key, ok } }); });
+		return () => { live = false; };
+		/* eslint-disable-next-line */
+	}, [key]);
+	const can = calEditor(s.user) && s.calCan.key === key && s.calCan.ok === true;
 
 	return (
 		<>
@@ -788,9 +823,9 @@ export default function Calendar() {
 			{/* New takes the whole screen, the way Salary Revision and Create
 			    Employee do: a half-picked month sitting under a toolbar that can
 			    switch calendars is a month somebody loses to a mis-click. */}
-			{s.cal.mk.on ? <CalNew s={s} /> : (
+			{s.cal.mk.on && can ? <CalNew s={s} /> : (
 				<div className="calwrap">
-					<CalToolbar s={s} />
+					<CalToolbar s={s} can={can} />
 					{/* What Delete did, or what the site said when it refused. Under the
 					    toolbar it came from, and the refusal is shown as it arrived —
 					    the count in it is the site's and is the point. */}

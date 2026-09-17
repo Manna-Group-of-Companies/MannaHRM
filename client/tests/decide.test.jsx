@@ -46,6 +46,11 @@ vi.mock("@/api/client", async (importOriginal) => {
 	};
 });
 
+vi.mock("@/data/approver", () => ({
+	ATTENDANCE_APPROVER: "hr@example.invalid",
+	isAttendanceApprover: (u) => u === "hr@example.invalid",
+}));
+
 vi.mock("@/api/load", async (importOriginal) => ({
 	...(await importOriginal()),
 	load: () => Promise.resolve(),
@@ -272,5 +277,49 @@ describe("the tick on the card", () => {
 		const dlg = view.container.querySelector('[role="dialog"]');
 		expect(dlg).toBeTruthy();
 		expect(dlg.textContent).toContain("Workflow State transition not allowed");
+	});
+});
+
+describe("approving a moved time sets aside the punch it replaces", () => {
+	it("marks the earlier machine IN Skip Auto Attendance, and deletes nothing", async () => {
+		lists = (label, fields, filters) => Promise.resolve(label === "Employee Checkin" && filters.some((f) => f[1] === ">=")
+			? [{ name: "EMP-CKIN-OLD", time: "2026-09-10 08:02:00", log_type: "IN", skip_auto_attendance: 0 }]
+			: []);
+		const res = await decideCorrection(REQ, "Approve");
+
+		expect(res.ok).toBe(true);
+		expect(calls.wrote.slice(1)).toEqual([["Employee Checkin", "EMP-CKIN-OLD", { skip_auto_attendance: 1 }]]);
+		expect(res.msg).toContain("Set aside, kept on record: IN 08:02");
+	});
+
+	it("sets nothing aside for a missed punch-out being added", async () => {
+		lists = (label) => Promise.resolve(label === "Employee Checkin"
+			? [{ name: "EMP-CKIN-OLD", time: "2026-09-10 08:02:00", log_type: "IN", skip_auto_attendance: 0 }]
+			: []);
+		await decideCorrection({ ...REQ, requested_in: "" }, "Approve");
+		expect(calls.wrote).toHaveLength(1);
+	});
+});
+
+describe("a decision is seen on Attendance Regularization without a refresh", () => {
+	it("approving drops the month and register read before it", async () => {
+		set({
+			regMonth: { ...getState().regMonth, key: "HR-EMP-00002|2026-09", state: "ok" },
+			regGrid: { ...getState().regGrid, key: "2026-09", state: "ok" },
+		});
+		const res = await decideCorrection(REQ, "Approve");
+		expect(res.ok).toBe(true);
+		expect(getState().regMonth.state).toBe("");
+		expect(getState().regGrid.state).toBe("");
+	});
+});
+
+describe("only the named approver decides", () => {
+	it("refuses anybody else before writing anything", async () => {
+		set({ user: "clerk@example.invalid" });
+		const res = await decideCorrection({ ...REQ, owner: "priya@example.invalid" }, "Approve");
+		expect(res.ok).toBe(false);
+		expect(res.msg).toContain("Only hr@example.invalid approves");
+		expect(calls.wrote).toHaveLength(0);
 	});
 });

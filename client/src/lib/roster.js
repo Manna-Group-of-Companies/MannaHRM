@@ -99,6 +99,11 @@ export function dayPunches(rows) {
 	for (const c of rows) {
 		const t = String(c.time || "");
 		if (!t) continue;
+		/* A punch HR superseded on Attendance Regularization. It is kept — a
+		   punch is evidence and is never deleted — but marked the way hrms's
+		   shift job reads it, so the day is built without it. See
+		   lib/punchedit.js. */
+		if (Number(c.skip_auto_attendance)) continue;
 		if (c.log_type === "OUT") {
 			if (!outAt || t > outAt) outAt = t;
 		} else if (!inAt || t < inAt) {
@@ -154,7 +159,55 @@ function leaveOn(iso, leave) {
  * `today` is passed rather than read, so a test does not have to freeze the
  * clock and a day is not "not yet" only because the suite ran before midnight.
  */
-export function monthRoster({ ym, punches, leave, holidays, corrections, shift, today }) {
+/** `"8:30:00"` → 510. Padded or not — this site stores one shift as `8:30:00`. */
+export function clockMinutes(t) {
+	const m = /^(\d{1,2}):(\d{2})/.exec(String(t || "").trim());
+	return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+/** Minutes as `H:MM`, or "" for none. */
+export const minutesText = (m) => (m > 0 ? `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, "0")}` : "");
+
+/** Late and early minutes for a day's pair against a shift window, and the
+    hours worked. **No overtime** — since 16 September 2026 OT is only what HR
+    enters (Employee Overtime, see `overtimeByDay`); a late punch-out is hours
+    worked. Nothing is claimed for a pair whose out is not after its in. The
+    six-hour ceiling keeps a night worker's evening punch from reading as nine
+    hours late. */
+export function dayMinutes(inAt, outAt, window) {
+	const w = window || {};
+	const start = clockMinutes(w.start_time);
+	const end = clockMinutes(w.end_time);
+	const inM = inAt ? clockMinutes(String(inAt).slice(11, 16)) : null;
+	const outM = outAt ? clockMinutes(String(outAt).slice(11, 16)) : null;
+	const a = inAt ? Date.parse(String(inAt).replace(" ", "T")) : NaN;
+	const b = outAt ? Date.parse(String(outAt).replace(" ", "T")) : NaN;
+	const work = isFinite(a) && isFinite(b) && b > a ? Math.round((b - a) / 60000) : 0;
+	const paired = work > 0;
+	return {
+		workMin: work,
+		lateMin: start != null && inM != null && inM > start && inM - start < 360 ? inM - start : 0,
+		earlyMin: end != null && outM != null && paired && outM < end && end - outM < 360 ? end - outM : 0,
+	};
+}
+
+/** HR's overtime rows by day, `YYYY-MM-DD` → the row. */
+export function overtimeByDay(rows) {
+	const m = new Map();
+	for (const r of rows || []) m.set(String(r.ot_date || "").slice(0, 10), r);
+	return m;
+}
+
+/** The shift assignment covering a day, if any — the latest-starting one wins,
+    which is what hrms does when two overlap. */
+export function assignmentOn(iso, assignments) {
+	return (assignments || [])
+		.filter((a) => String(a.start_date) <= iso && (!a.end_date || iso <= String(a.end_date)))
+		.sort((x, y) => String(y.start_date).localeCompare(String(x.start_date)))[0] || null;
+}
+
+export function monthRoster({ ym, punches, leave, holidays, corrections, shift, today, window, overtime, assignments, windows }) {
+	const otDay = overtimeByDay(overtime);
 	const byDay = new Map();
 	for (const c of punches || []) {
 		const d = String(c.time || "").slice(0, 10);
@@ -171,6 +224,29 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 	const ar = new Map();
 	for (const r of corrections || []) {
 		ar.set(String(r.attendance_date || "").slice(0, 10), r);
+	}
+
+	/* A night shift ends the next morning, and the day it belongs to is the
+	   day it started (CLAUDE.md §5). So on a day whose shift runs past
+	   midnight, the next morning's punch-outs — before noon — are that
+	   night's, and are moved back to it. Without this a night worker reads as
+	   ½ on every day of the month: an in with no out, and an out with no in. */
+	const shiftOf = (iso) => {
+		const a = assignmentOn(iso, assignments);
+		return a ? (windows || {})[a.shift_type] || null : window;
+	};
+	for (const iso of daysOf(ym)) {
+		const w = shiftOf(iso);
+		const s = clockMinutes(w && w.start_time);
+		const e = clockMinutes(w && w.end_time);
+		if (s == null || e == null || e > s) continue;
+		const d = new Date(iso + "T00:00:00");
+		d.setDate(d.getDate() + 1);
+		const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+		const morning = (byDay.get(next) || []).filter((c) => c.log_type === "OUT" && String(c.time).slice(11, 13) < "12");
+		if (!morning.length) continue;
+		byDay.set(iso, (byDay.get(iso) || []).concat(morning));
+		byDay.set(next, (byDay.get(next) || []).filter((c) => !morning.includes(c)));
 	}
 
 	const rows = daysOf(ym).map((iso) => {
@@ -193,14 +269,27 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 		   are the same answer to that question. */
 		const display = status === HOLIDAY && h && h.weekly_off ? "weekoff" : DISPLAY[status];
 
+		/* A dated Shift Assignment beats the default shift for its days. */
+		const asg = assignmentOn(iso, assignments);
+		const dayShift = asg ? asg.shift_type : shift;
+		const dayWindow = asg ? (windows || {})[asg.shift_type] || null : window;
+
 		return {
 			iso,
 			status,
 			display,
-			shift,
+			shift: dayShift,
+			assigned: Boolean(asg),
 			inAt,
 			outAt,
 			hours: spanHours(inAt, outAt),
+			/* Against the shift's window, where one was given — see dayMinutes. */
+			...dayMinutes(inAt, outAt, dayWindow),
+			/* Overtime is what HR granted for the day, and nothing else. */
+			otMin: otDay.has(iso) ? Math.round(Number(otDay.get(iso).hours || 0) * 60) : 0,
+			/* The same, to the second, for the OT clock — totals stay in minutes. */
+			otSec: otDay.has(iso) ? Math.round(Number(otDay.get(iso).hours || 0) * 3600) : 0,
+			otEntry: otDay.get(iso) || null,
 			/* Every punch of the day, so a row that looks wrong can be opened
 			   rather than argued about. A double-read shows as four stamps. */
 			punches: mine.length,
@@ -213,6 +302,13 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 	const counts = {};
 	for (const st of ROSTER_STATES) counts[st.key] = 0;
 	for (const r of rows) counts[r.display] = (counts[r.display] || 0) + 1;
+	/* The month's time, beside its days: hours worked, overtime, and how many
+	   days started late and ended early. */
+	counts.workMin = rows.reduce((a, r) => a + r.workMin, 0);
+	counts.otMin = rows.reduce((a, r) => a + r.otMin, 0);
+	counts.lateDays = rows.filter((r) => r.lateMin > 0).length;
+	counts.lateMin = rows.reduce((a, r) => a + r.lateMin, 0);
+	counts.earlyDays = rows.filter((r) => r.earlyMin > 0).length;
 
 	return { rows, counts };
 }
@@ -251,7 +347,8 @@ const byEmployee = (rows) => {
  * person — their own where the record names one, otherwise their company's —
  * and a group-wide register spans companies whose holidays differ.
  */
-export function monthRegister({ ym, people, punches, leave, corrections, holidaysOf, today }) {
+export function monthRegister({ ym, people, punches, leave, corrections, holidaysOf, today, windowOf, overtime }) {
+	const o = byEmployee(overtime);
 	const p = byEmployee(punches);
 	const l = byEmployee(leave);
 	const c = byEmployee(corrections);
@@ -265,6 +362,8 @@ export function monthRegister({ ym, people, punches, leave, corrections, holiday
 			holidays: holidaysOf ? holidaysOf(emp) : [],
 			shift: emp.default_shift || "",
 			today,
+			window: windowOf ? windowOf(emp) : null,
+			overtime: o.get(emp.name) || [],
 		}),
 	}));
 }

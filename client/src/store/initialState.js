@@ -69,6 +69,8 @@ const initial = {
 	    `Attendance Regularization` (no prefix) is the sales system's and is
 	    never written to from here. See pendingRegularizations. */
 	regDoctype: "Employee Attendance Regularization",
+	/* The site's reason when the approval queue could not be read at all. */
+	regQueueErr: "",
 
 	/* ---- connection ---- */
 	conn: "connecting…",
@@ -81,6 +83,9 @@ const initial = {
 	/** Who is signed in. `null` until the session has been asked, "" for
 	    nobody (the sign-in screen), otherwise the ERPNext user id. */
 	user: null,
+	/** Whether `user` is an admin, as the site answered it — see `isAdmin` in
+	    api/client.js and USER_ONLY in data/menus.js. `null` until it answers. */
+	admin: null,
 
 	/* ---- chrome ---- */
 	section: "dashboard",
@@ -170,6 +175,12 @@ const initial = {
 	    this control, so it is drawn as a finding rather than as an error. */
 	calDel: "", calMsg: "", calBad: false,
 
+	/** Whether this login may change the calendar on screen — the site's answer
+	    to a write check on `Holiday List`, keyed by user and list so a sign-in
+	    as somebody else is never drawn with the last person's editor. `ok` is
+	    null until the site has answered, and is treated as no. */
+	calCan: { key: "", ok: null },
+
 	/** The ⭳ Data Import caret on the calendar toolbar. Its own flag rather
 	    than sharing Categories' `catimp`: two menus on two screens that can
 	    never be open at once still must not be able to open each other, and a
@@ -220,6 +231,8 @@ const initial = {
 	/** The rendered report, held while Preview is open — the same document
 	    Print, PDF and Word are handed. */
 	ddaDoc: "",
+	/** Daily Detail's range, as read on Generate — see api/attendance.js loadDda. */
+	ddaData: { key: "", state: "", err: "", attendance: [], punches: [], leave: [] },
 
 	/* Factor HR's Salary Master is one person at a time, like their
 	   regularization screen — who is picked is state, not a scroll position.

@@ -108,7 +108,7 @@ export const FACTOHR_MENU = [
 	["employees", "Reports", "Employee Detail",
 		"Weekoff Holiday Report", "Employee wise weekoff holiday report", ["employees", "weekoff"]],
 	["employees", "Reports", "Employee Detail",
-		"Employee Birthday", "Employee birthday report", ["employees", "birthdays"]],
+		"Employee Birthday", "Employee birthday report", null],
 	["employees", "Reports", "Employee Detail",
 		"Employee Identity Report", "Employee identity register report", null],
 	["employees", "Reports", "Employee Detail",

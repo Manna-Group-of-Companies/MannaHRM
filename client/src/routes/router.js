@@ -48,6 +48,7 @@
  */
 
 import { MODULES } from "@/routes/registry";
+import { isHidden } from "@/data/sections";
 import { set, getState } from "@/store";
 import { OVERVIEW, DEFAULT_SECTION, pathFor as buildPath, parsePath } from "@/routes/paths";
 
@@ -100,7 +101,13 @@ export const pathFor = (section, subtab) => MOUNT + buildPath(section, subtab, k
     erroring — `parsePath` falls back to the front page for anything it does not
     recognise, and this site has no addresses worth telling somebody they got
     wrong. */
-export const routeFromPath = (pathname) => parsePath(unmount(pathname), knownPages());
+export function routeFromPath(pathname) {
+	const r = parsePath(unmount(pathname), knownPages());
+	/* A hidden module's address lands on the front page, not on a page with no
+	   rail entry to say where you are. See `hidden` in data/sections.js. */
+	if (isHidden(r.section)) return { section: DEFAULT_SECTION, subtab: OVERVIEW, canonical: false };
+	return isHidden(r.section, r.subtab) ? { section: r.section, subtab: OVERVIEW, canonical: false } : r;
+}
 
 /** `/hr/employees` → `/employees`. `/hr` → `/`, because the mount on its own is
     the front page and not a section called nothing. */
@@ -136,6 +143,8 @@ function apply({ section, subtab }) {
  * would walk through six copies of the same screen.
  */
 export function navigate(section, subtab = OVERVIEW) {
+	if (isHidden(section)) [section, subtab] = [DEFAULT_SECTION, OVERVIEW];
+	else if (isHidden(section, subtab)) subtab = OVERVIEW;
 	const s = getState();
 	if (s.section === section && s.subtab === subtab) return;
 	const path = pathFor(section, subtab);

@@ -3770,6 +3770,26 @@
   .rshift { @apply whitespace-normal; min-width: 15rem; }
   .rshift b { @apply block text-fine text-ink font-semibold; }
   .rnote { @apply block text-mini text-ink-3; }
+  /* Attendance Regularization's editable Time In / Time Out (16 Sep 2026). */
+  .rtime { @apply font-mono text-fine bg-card border border-line rounded px-[.3rem] py-[.15rem] w-[6.2rem]; }
+  .rtime:disabled { @apply border-transparent bg-transparent; }
+  .rnote.bad { @apply text-bad; }
+  .regedit { @apply mb-[.6rem]; }
+  .regedit label { @apply text-fine text-ink-2; }
+  .rreason { @apply text-fine bg-card border border-line rounded px-[.4rem] py-[.2rem] w-[14rem]; }
+  table.rgrid .rgedit { @apply w-full h-full bg-transparent border-0 cursor-pointer font-mono text-tiny; color: inherit; }
+  table.rgrid .rgedit:hover { @apply underline; }
+  /* A time on somebody's month is a button that opens the day's popup (17 Sep
+     2026). Bordered on hover and focus only — thirty-one boxed times a column
+     read as a form nobody asked to fill in. */
+  .rtbtn { @apply font-mono text-fine text-ink bg-transparent border border-dashed border-line rounded px-[.35rem] py-[.15rem] cursor-pointer; min-width: 3.6rem; }
+  .rtbtn:hover, .rtbtn:focus-visible { @apply bg-wash border-solid border-ink-3; }
+  .daypop { @apply flex flex-col gap-[.7rem] text-read text-ink-2; }
+  .daypop p { @apply m-0; }
+  .daypop label { @apply flex flex-col gap-[.25rem] text-fine text-ink-2; }
+  .daypop .dpgrid { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
+  .daypop .rtime { @apply w-full text-read py-[.35rem]; }
+  .daypop .dpreason input { @apply text-read bg-card border border-line rounded px-[.5rem] py-[.35rem] w-full; }
   /* **The pencil pins to the right edge.** Eleven columns is wider than any
      window this is read in, so the one control on the row would otherwise sit
      off the end of a sideways scroll — findable only by somebody who already

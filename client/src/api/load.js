@@ -68,15 +68,26 @@ const REG_FIELDS = [
 	"creation", "owner", "modified", "modified_by",
 ];
 
-async function pendingRegularizations() {
-	/* `listAll` hands back `null` when the read was refused and `[]` when it
-	   succeeded and found nothing, and those are opposite findings — a site with
-	   this doctype and no open corrections is the normal state. Only the first
-	   means the doctype is not there. */
-	const rows = await listAll(REG_DOCTYPE, REG_FIELDS, [["status", "=", "Pending Approval"]])
-		.catch(() => null);
+/* What the queue falls back to when the site refuses REG_FIELDS. The site holds
+   this doctype as `custom: 1`, built by hand, and one field it lacks — say
+   `decision_note` — is a 417 on the whole read. Without this, every request a
+   company login raised was saved and then invisible to the approver, which
+   reads as "the request never arrived" (17 September 2026). */
+const REG_MIN = ["name", "employee", "attendance_date", "requested_in", "requested_out",
+	"reason", "status", "creation", "owner"];
 
-	set({ regDoctype: rows ? REG_DOCTYPE : "" });
+export async function pendingRegularizations() {
+	/* A refused read is `null` and an empty queue is `[]`, and those are opposite
+	   findings — a site with this doctype and no open corrections is the normal
+	   state. The site's own reason is kept, so the page can say it rather than
+	   guess at permissions. */
+	const open = [["status", "=", "Pending Approval"]];
+	let why = "";
+	const rows = await listAll(REG_DOCTYPE, REG_FIELDS, open)
+		.catch(() => listAll(REG_DOCTYPE, REG_MIN, open))
+		.catch((e) => { why = (e && e.message) || String(e); return null; });
+
+	set({ regDoctype: rows ? REG_DOCTYPE : "", regQueueErr: why });
 	return rows || [];
 }
 

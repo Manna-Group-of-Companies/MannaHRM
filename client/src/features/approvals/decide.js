@@ -1,7 +1,9 @@
 import { apiCreate, apiWrite, listAll } from "@/api/client";
 import { load, REG_DOCTYPE } from "@/api/load";
-import { getState } from "@/store";
+import { getState, set } from "@/store";
 import { dmy } from "@/lib/format";
+import { supersededBy } from "@/lib/punchedit";
+import { ATTENDANCE_APPROVER, isAttendanceApprover } from "@/data/approver";
 
 /* ---------------------------------------------------------------------------
    Deciding one time correction — the tick and the cross on a card.
@@ -114,6 +116,15 @@ export function localStamp(d = new Date()) {
 
 const said = (p) => `${p.log_type} ${p.time.slice(11, 16)}`;
 
+/** Drop what Attendance Regularization read before this decision. Its month and
+    register are cached by key, so without this an approved time stays hidden
+    behind the old punch until somebody presses Refresh — which reads as the
+    approval not having worked. Emptying `state` makes the next visit read again. */
+export function forgetAttendanceReads() {
+	const s = getState();
+	set({ regMonth: { ...s.regMonth, state: "" }, regGrid: { ...s.regGrid, state: "" } });
+}
+
 /**
  * Approve or reject one correction, and read the queue back.
  *
@@ -132,6 +143,9 @@ export async function decideCorrection(r, action, note) {
 
 	if (!r || !r.name) return fail("This request has no document behind it, so there is nothing to decide.");
 	if (r.status !== OPEN) return fail(`${r.name} is ${r.status || "not open"} — only a pending request is decided.`);
+	if (!isAttendanceApprover(user)) {
+		return fail(`Only ${ATTENDANCE_APPROVER} approves time corrections. ${r.name} is waiting for them.`);
+	}
 
 	const wanted = punchesFor(r);
 	if (approve && !wanted.length) {
@@ -157,6 +171,7 @@ export async function decideCorrection(r, action, note) {
 	if (!res.ok) return fail(`The site refused to ${verb} ${r.name}: ${res.error || "no reason given"}.`);
 
 	if (!approve) {
+		forgetAttendanceReads();
 		await load();
 		return { ok: true, persisted: true, msg: `${r.name} rejected. Nothing was written to attendance.` };
 	}
@@ -172,16 +187,58 @@ export async function decideCorrection(r, action, note) {
 		back.ok ? false : true);
 	};
 
+	const w = await writeCorrection(r, user);
+	if (!w.ok) return undo(w.error);
+
+	forgetAttendanceReads();
+	await load();
+	return { ok: true, persisted: true, msg: `${r.name} approved. ${correctionSummary(w, day)}` };
+}
+
+/**
+ * Write the punches a decided correction records, and set aside the ones they
+ * replace. Shared by Approve and by saving a time straight from Attendance
+ * Regularization (17 September 2026), so the two can never write a day
+ * differently.
+ *
+ * **Approving writes the missing punch, never `Attendance`**, and a punch is
+ * never deleted — the one replaced is marked `skip_auto_attendance`.
+ *
+ * @param {object} r  the correction: `employee`, `attendance_date`, `requested_in`, `requested_out`
+ * @param {string} user  who decided it, for the punch's `device_id`
+ * @returns {Promise<{ok: boolean, error?: string, made: object[], kept: object[], setAside: object[], stuck: string[], marked: object[]}>}
+ */
+export async function writeCorrection(r, user) {
+	const day = String(r.attendance_date || "").slice(0, 10);
+	const wanted = punchesFor(r);
+	const made = [];
+	const restored = [];
+	const none = { made, restored, kept: [], setAside: [], stuck: [], marked: [] };
+	if (!wanted.length) return { ...none, ok: false, error: "there is neither a punch-in nor a punch-out time to record." };
+
 	let existing;
 	try {
-		existing = await listAll("Employee Checkin", ["name", "time", "log_type"],
+		existing = await listAll("Employee Checkin", ["name", "time", "log_type", "skip_auto_attendance"],
 			[["employee", "=", r.employee], ["time", "in", wanted.map((p) => p.time)]]);
 	} catch (e) {
-		return undo(`the day's punches could not be read, so writing them could have doubled one (${e.message}).`);
+		return { ...none, ok: false, error: `the day's punches could not be read, so writing them could have doubled one (${e.message}).` };
 	}
 
-	const todo = missingPunches(wanted, existing);
-	const made = [];
+	/* **A punch set aside is not a punch on the day.** Counting it as "already on
+	   the site" left a time HR saved twice hidden for good: saved once, set aside
+	   by a later save, then skipped on the third as present (17 September 2026,
+	   07-Sep-2026 showed its old times after "Already on the site: IN 08:22").
+	   Such a punch is put back rather than written a second time. */
+	const live = existing.filter((c) => !Number(c.skip_auto_attendance));
+	const todo = [];
+	for (const p of missingPunches(wanted, live)) {
+		const aside = existing.find((c) => Number(c.skip_auto_attendance)
+			&& String(c.time || "").slice(0, 19) === p.time
+			&& (c.log_type === "OUT") === (p.log_type === "OUT"));
+		if (aside && (await apiWrite("Employee Checkin", aside.name, { skip_auto_attendance: 0 })).ok) restored.push(p);
+		else todo.push(p);
+	}
+
 	for (const p of todo) {
 		try {
 			await apiCreate("Employee Checkin", {
@@ -189,14 +246,36 @@ export async function decideCorrection(r, action, note) {
 				time: p.time,
 				log_type: p.log_type,
 				device_id: regDevice(user),
-				// The shift job must see these. An approved punch it skips changes nothing.
+				// The shift job must see these. A written punch it skips changes nothing.
 				skip_auto_attendance: 0,
 			});
 			made.push(p);
 		} catch (e) {
-			return undo(`the site refused the ${said(p)} punch (${e.message}).`
-				+ (made.length ? ` ${made.map(said).join(", ")} did land and will be skipped next time.` : ""));
+			return { ...none, ok: false, error: `the site refused the ${said(p)} punch (${e.message}).`
+				+ (made.length ? ` ${made.map(said).join(", ")} did land and will be skipped next time.` : "") };
 		}
+	}
+
+	/* The punches the new times replace, set aside rather than deleted —
+	   without this, a later Time In changes nothing, because the earlier punch
+	   still wins the day. Only after every new punch landed, so a day is never
+	   left with neither. A failure here does not undo anything: the new punches
+	   are right, and the old one is named for HR. */
+	const inAt = (wanted.find((p) => p.log_type === "IN") || {}).time || "";
+	const outAt = (wanted.find((p) => p.log_type === "OUT") || {}).time || "";
+	const dayPunches = await listAll("Employee Checkin", ["name", "time", "log_type", "skip_auto_attendance"],
+		[["employee", "=", r.employee], ["time", ">=", day + " 00:00:00"], ["time", "<=", day + " 23:59:59"]])
+		.catch(() => null);
+	const setAside = [];
+	const stuck = [];
+	/* Said, not swallowed: a read that fails here leaves the old punch winning
+	   the day, which looks exactly like the save not working. */
+	if (!dayPunches) stuck.push("the day's other punches (they could not be read), so an old time may still show — save again");
+	for (const c of supersededBy(dayPunches || [], inAt, outAt)) {
+		const w = await apiWrite("Employee Checkin", c.name, { skip_auto_attendance: 1 });
+		const p = { log_type: c.log_type, time: String(c.time).slice(0, 19) };
+		if (w.ok) setAside.push(p);
+		else stuck.push(`${c.name} (${said(p)}): ${w.error}`);
 	}
 
 	/* `hrms` will not rebuild a day it has already marked — it returns quietly
@@ -206,18 +285,18 @@ export async function decideCorrection(r, action, note) {
 		[["employee", "=", r.employee], ["attendance_date", "=", day], ["docstatus", "=", 1]])
 		.catch(() => []);
 
-	await load();
+	return { ok: true, made, restored, kept: wanted.filter((p) => !made.includes(p) && !restored.includes(p)), setAside, stuck, marked };
+}
 
-	const kept = wanted.filter((p) => !made.includes(p));
-	return {
-		ok: true,
-		persisted: true,
-		msg: `${r.name} approved. `
-			+ (made.length ? `Punches written for ${dmy(day)}: ${made.map(said).join(", ")}. ` : "")
-			+ (kept.length ? `Already on the site: ${kept.map(said).join(", ")}. ` : "")
-			+ (marked.length
-				? `${marked[0].name} already marks the day ${marked[0].status || "decided"}, and the shift job `
-					+ "will not rebuild it until that row is cancelled on the desk."
-				: "Attendance for the day is built from these when the shift job next runs."),
-	};
+/** What `writeCorrection` did, in the sentences the page shows. */
+export function correctionSummary(w, day) {
+	return (w.made.length ? `Punches written for ${dmy(day)}: ${w.made.map(said).join(", ")}. ` : "")
+		+ ((w.restored || []).length ? `Put back from set aside: ${w.restored.map(said).join(", ")}. ` : "")
+		+ (w.kept.length ? `Already on the site: ${w.kept.map(said).join(", ")}. ` : "")
+		+ (w.setAside.length ? `Set aside, kept on record: ${w.setAside.map(said).join(", ")}. ` : "")
+		+ (w.stuck.length ? `Could not set aside ${w.stuck.join("; ")} — mark it Skip Auto Attendance on the desk. ` : "")
+		+ (w.marked.length
+			? `${w.marked[0].name} already marks the day ${w.marked[0].status || "decided"}, and the shift job `
+				+ "will not rebuild it until that row is cancelled on the desk."
+			: "Attendance for the day is built from these when the shift job next runs.");
 }

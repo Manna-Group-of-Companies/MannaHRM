@@ -1,7 +1,9 @@
 import { getState, patch, set, useApp } from "@/store";
-import { listAll } from "@/api/client";
+import { loadDda, loadShiftWindows } from "@/api/attendance";
+import { dailyRows } from "@/lib/dailydetail";
+import { useEffect } from "react";
 import { scoped } from "@/lib/scope";
-import { DAY, dmy, fmt, nowStamp, tidyDept, ymd } from "@/lib/format";
+import { DAY, dmy, fmt, nowStamp, tidyDept, todayIso, ymd } from "@/lib/format";
 import { Fragment } from "react";
 import { download, save, toCsv } from "@/lib/csv";
 import { esc, paper, printPaper } from "@/lib/doc";
@@ -90,7 +92,10 @@ function mbOpens(people, i, keys) {
 const mbPeople = (s) => {
 	const keys = mbKeys(s.mb);
 	return scoped(s)
-		.filter((e) => !s.mb.status || e.status === s.mb.status)
+		/* A person picked by name is shown whatever Employee Status says: the
+		   picker lists everybody, and somebody who left mid-month still has a
+		   month to read. */
+		.filter((e) => s.mb.emp || !s.mb.status || e.status === s.mb.status)
 		.filter((e) => !s.mb.emp || e.name === s.mb.emp)
 		.slice()
 		.sort((a, b) => {
@@ -115,12 +120,57 @@ function mbHead(people, i, keys, level) {
 	};
 }
 
-/** What one cell says, and what it is worth. `got` is a row that came off the
-    site; anything else is either the weekly off or nothing at all. */
+/* ---------------------------------------------------------------------------
+   What a cell says — since 16 September 2026, the same day every other
+   attendance report reads (lib/dailydetail.js): hrms's Attendance where the day
+   was processed, the day's punches where it was not, approved leave, and the
+   holiday list (the person's, else their company's) for weekly offs and
+   holidays. Before that the grid waited for Generate, read Attendance a
+   hundred rows at a time without its docstatus, and called every Sunday a
+   weekly off whatever the calendar said.
+   --------------------------------------------------------------------------- */
+
+const STATUS_LETTER = {
+	...MB_LETTER, "Weekly Off": "WO", "In Only": "MP", "Out Only": "MP", "Leave Applied": "LA", "—": "",
+};
+
+let mbCache = { key: null, map: null };
+
+/** Every person's day in the range, by `employee|YYYY-MM-DD`, built once per read. */
+function mbMap(s) {
+	const [from, till] = mbRange(s.mb);
+	const d = s.ddaData;
+	if (d.key !== `${from}|${till}|` || d.state !== "ok") return null;
+	const people = mbPeople(s);
+	/* Who, not how many. Keyed on the count, picking one employee and then
+	   another reused the first one's rows and drew the second as blank dots —
+	   and so did switching to a company with the same headcount. */
+	const who = people.map((e) => e.name).join("|");
+	const key = [d, s.employees, s.companies, s.holidays, s.shiftWindows, who, from, till];
+	if (mbCache.key && mbCache.key.every((v, i) => v === key[i])) return mbCache.map;
+	const { rows } = dailyRows({
+		people, from, to: till, attendance: d.attendance, punches: d.punches, leave: d.leave, overtime: d.overtime,
+		holidaysOf: (e) => {
+			const co = s.companies.find((c) => c.name === e.company);
+			return s.holidays[e.holiday_list || (co && co.default_holiday_list) || ""] || [];
+		},
+		windows: s.shiftWindows, today: todayIso(), limit: 100000,
+	});
+	const map = {};
+	for (const r of rows) map[r.emp.name + "|" + r.date] = r;
+	mbCache = { key, map };
+	return map;
+}
+
+/** What one cell says, and whether the site told us anything about the day. */
 function mbCell(s, e, d) {
-	const got = s.mbRows[e.name + "|" + ymd(d)];
-	if (got) return { letter: MB_LETTER[got] || String(got).slice(0, 1).toUpperCase(), known: true };
-	return { letter: d.getDay() === 0 && !s.mb.weekoff ? "WO" : "", known: false };
+	const map = mbMap(s);
+	const r = map && map[e.name + "|" + ymd(d)];
+	if (!r) return { letter: "", known: false };
+	let letter = STATUS_LETTER[r.status];
+	if (letter == null) letter = r.dayType ? (r.dayType === "weekoff" ? "WO" : "H") : String(r.status).slice(0, 1).toUpperCase();
+	if (letter === "WO" && s.mb.weekoff) letter = "";
+	return { letter, known: r.status !== "—", row: r };
 }
 
 /* Only a row that came off the site counts as knowing something. The weekly off
@@ -138,20 +188,14 @@ function mbPayable(s, e, days) {
 	return real ? String(Math.round(paid * 2) / 2) : "";
 }
 
-async function mbGenerate() {
+async function mbGenerate(force = true) {
 	const [from, till] = mbRange(getState().mb);
 	patch("mb", { busy: true, err: "", from, till });
-	try {
-		const rows = await listAll("Attendance", ["name", "employee", "attendance_date", "status"],
-			[["attendance_date", ">=", from], ["attendance_date", "<=", till]]);
-		const map = {};
-		rows.forEach((r) => {
-			map[r.employee + "|" + String(r.attendance_date).slice(0, 10)] = r.status || "";
-		});
-		set({ mbRows: map });
-		patch("mb", { count: rows.length, when: nowStamp() });
-	} catch (err) {
-		patch("mb", { err: String(err.message || err) });
+	void loadShiftWindows();
+	await loadDda(from, till, "", force);
+	const d = getState().ddaData;
+	if (d.key === `${from}|${till}|`) {
+		patch("mb", { count: d.attendance.length, when: nowStamp(), err: d.err || "" });
 	}
 	patch("mb", { busy: false });
 }
@@ -229,8 +273,8 @@ function mbPaper(s) {
 		<table>
 			<thead><tr>${cols.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
 			<tbody>${body}</tbody>
-			<tfoot><tr><td colspan="${cols.length}">Generated ${esc(nowStamp())}. WO weekly off · P present
-				· A absent · HD half day · L leave · a dot is a day nothing was generated for.
+			<tfoot><tr><td colspan="${cols.length}">Generated ${esc(nowStamp())}. P present · A absent · HD half day
+				· L leave · LA leave applied · WO weekly off · H holiday · MP one punch only · a dot is a day not yet over.
 				<b>Payable is filled only for somebody with at least one real Attendance row</b>, and it adds up
 				what the grid holds rather than applying a policy — because the policy has not been
 				stated.</td></tr></tfoot>
@@ -529,12 +573,20 @@ export default function MonthlyBasic() {
 	const named = f.emp ? s.byName[f.emp]?.employee_name : "";
 	const woDays = days.filter((d) => d.getDay() === 0).length;
 
+	/* Read on open and whenever the range changes, rather than waiting for
+	   Generate — an empty grid on arrival read as a broken page. Keyed, so a
+	   re-render does not read twice; Generate and ↻ still force a fresh read. */
+	useEffect(() => {
+		if (days.length) void mbGenerate(false);
+	}, [from, till]);
+	const reading = f.busy || s.ddaData.key !== `${from}|${till}|` || s.ddaData.state !== "ok";
+
 	return (
 		<>
 			<div className="legend">
 				<b className="font-display">Monthly Basic Attendance Report</b>
-				<span className={"cov " + (f.count ? "live" : "none")}>
-					{f.count ? `${fmt(f.count)} rows` : "Nothing to fill it with"}
+				<span className={"cov " + (reading ? "part" : "live")}>
+					{reading ? "Reading…" : `${fmt(f.count)} attendance rows`}
 				</span>
 				<span>
 					{named ? <b>{named}</b> : `${fmt(people.length)} ${people.length === 1 ? "person" : "people"}`}
@@ -563,7 +615,10 @@ export default function MonthlyBasic() {
 				<span><b>A</b> absent</span>
 				<span><b>HD</b> half day</span>
 				<span><b>L</b> leave</span>
-				<span className="muted">· nothing generated</span>
+				<span><b>H</b> holiday</span>
+				<span><b>LA</b> leave applied</span>
+				<span><b>MP</b> one punch only</span>
+				<span className="muted">· blank: not over yet</span>
 			</div>
 
 			{!days.length ? (

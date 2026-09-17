@@ -9,7 +9,8 @@
  *  AppShell. All this component does is press the button.
  */
 
-import { NAV_GROUPS, SECTIONS, COV_LABEL, groupOf } from "@/data/sections";
+import { VISIBLE_SECTIONS, COV_LABEL, groupOf } from "@/data/sections";
+import { sectionFor } from "@/data/menus";
 import { useApp, set } from "@/store";
 import { initials } from "@/lib/format";
 import Link from "@/routes/Link";
@@ -24,7 +25,7 @@ const RAIL_GLYPH = {
 };
 
 export default function Sidebar() {
-	const { section, rail, drawer, user, conn, connState } = useApp();
+	const { section, rail, drawer, user, conn, connState, admin } = useApp();
 	const slim = rail === "slim";
 
 	/* The whole rail in one pass, so a heading is drawn by the first item under
@@ -33,7 +34,7 @@ export default function Sidebar() {
 	   `display: none` and the links are already in the right order. */
 	const rows = [];
 	let group = "";
-	for (const s of SECTIONS) {
+	for (const s of VISIBLE_SECTIONS.filter((m) => sectionFor(m.key, admin, user))) {
 		const g = groupOf(s.key);
 		if (g && g !== group) {
 			group = g;

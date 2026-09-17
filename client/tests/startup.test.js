@@ -121,8 +121,8 @@ describe("their whole menu", () => {
 		// Not a threshold to pass — a number to look at. If this fails because
 		// somebody built a page, change it and be pleased.
 		const built = FACTOHR_MENU.filter((r) => r[5]).length;
-		expect(built).toBe(54);
-		expect(FACTOHR_MENU.length - built).toBe(106);
+		expect(built).toBe(53);
+		expect(FACTOHR_MENU.length - built).toBe(107);
 	});
 
 	it("gives every module on the rail an All page carrying its menu", () => {

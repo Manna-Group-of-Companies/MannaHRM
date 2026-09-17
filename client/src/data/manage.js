@@ -35,6 +35,12 @@ export const MANAGED = [
 		"Who is holding which asset. Ours rather than stock, because ERPNext's Asset Movement has "
 		+ "nowhere to keep the condition and the acknowledgement Factor HR's form carries."],
 
+	/* ---- Attendance ---- */
+	["attendance", "overtime", "Overtime Entries", "Employee Overtime",
+		"Every day of overtime HR has granted, one row per person per day. This is the only OT the "
+		+ "attendance reports show — a late punch-out is hours worked until a row here says otherwise. "
+		+ "Usually entered by clicking a day on Attendance Regularization."],
+
 	/* ---- Employees ---- */
 	["employees", "cattypes", "Category Types", "Employee Category Type",
 		"Factor HR's Categories: the master lists an employee record is filed against. Adding a "

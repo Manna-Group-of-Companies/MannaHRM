@@ -123,11 +123,15 @@ export const DDA_MONTH_COLS = [
 	["Weekly Off",    r => r.off,                            "mono"],
 	["Holidays",      r => r.hol,                            "mono"],
 	["Working Days",  r => r.working,                        "mono"],
+	["Present",       r => r.present,                        "mono"],
+	["Half Day",      r => r.half,                           "mono"],
+	["Absent",        r => r.absent,                         "mono"],
+	["On Leave",      r => r.leave,                          "mono"],
 	["Days Punched",  r => r.punched,                        "mono"],
 	["Work Duration", r => r.work||"—",                "mono"],
-	["Late Coming By",() => "—",                       "mono"],
-	["Early Going By",() => "—",                       "mono"],
-	["Overtime",      () => "—",                       "mono"],
+	["Late Coming By",r => r.late||"—",                "mono"],
+	["Early Going By",r => r.early||"—",               "mono"],
+	["Overtime",      r => r.ot||"—",                  "mono"],
 ];
 
 export const DDA_LAYOUT = [["group","Show Employee Grouping"],["logo","With Logo"]];
@@ -154,19 +158,20 @@ export const DDA_COLS = [
   ["Employee",       r => r.emp.employee_name||"",     ""],
   ["Date",           r => dmy(r.date),                 "mono"],
   ["Day",            r => dayOf(r.date),               "muted"],
-  ["Shift",          r => r.emp.default_shift||"—",    ""],
+  ["Shift",          r => (r.shift||"—") + (r.shiftWindow ? ` (${r.shiftWindow})` : ""), ""],
   ["In",             r => r.in||"—",                   "mono"],
   /* Ours, not theirs: where a phone punch-in was made. The fourth entry names
      the punch, so the page can open it on a map. */
   ["In Location",    r => coordText(r.inAt)||"—",      "mono", r => r.inAt],
   ["Out",            r => r.out||"—",                  "mono"],
-  ["Work Duration",  r => r.work||"—",                 "mono"],
-  ["Late Coming By", () => "—",                         "mono"],
-  ["Early Going By", () => "—",                         "mono"],
-  ["Overtime",       () => "—",                         "mono"],
-  ["Break",          () => "—",                         "mono"],
-  ["Personal Break", () => "—",                         "mono"],
-  ["Day Status",     r => r.status,                    ""],
+  /* Hours as H:MM — hrms's working hours where the day was processed, else the
+     span of the day's punches. A pair whose out is not after its in has none. */
+  ["Work Duration",  r => r.work||(r.crossed ? "check" : "—"), "mono"],
+  /* Against the shift's own window, read off Shift Type. */
+  ["Late Coming By", r => r.late||"—",                 "mono"],
+  ["Early Going By", r => r.early||"—",                "mono"],
+  ["Overtime",       r => r.ot||"—",                   "mono"],
+  ["Day Status",     r => r.status + (r.source === "punches" ? " *" : ""), ""],
 ];
 
 export const MB_LAYOUT = [["logo","With Logo"], ["shift","Show Shift Code"]];

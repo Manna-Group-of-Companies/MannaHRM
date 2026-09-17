@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import AppShell from "@/layout/AppShell";
 import Sidebar from "@/layout/Sidebar";
 import TopBar from "@/layout/TopBar";
-import { SECTIONS, NAV_GROUPS } from "@/data/sections";
+import { VISIBLE_SECTIONS, NAV_GROUPS } from "@/data/sections";
 import { store, set, getState, resetStore } from "@/store";
 import { DEFAULT_RAIL, saveRail, storedRail } from "@/lib/rail";
 import { loadedState } from "./fixture";
@@ -37,18 +37,19 @@ afterEach(() => {
 });
 
 describe("the rail", () => {
-	it("draws every module in SECTIONS, in that order", () => {
+	it("draws every module not hidden, in SECTIONS order", () => {
 		/* Read off the same table the router reads, so a module added to the app
 		   is a case here without anybody remembering to add one. */
 		const { container } = draw(<Sidebar />);
 		const labels = [...container.querySelectorAll(".nav .lab")].map((el) => el.textContent);
-		expect(labels).toEqual(SECTIONS.map((s) => s.label));
+		expect(labels).toEqual(VISIBLE_SECTIONS.map((s) => s.label));
 	});
 
 	it("puts a heading over each group without moving an item out of Factor HR's order", () => {
 		const { container } = draw(<Sidebar />);
 		const headings = [...container.querySelectorAll(".navgroup")].map((el) => el.textContent);
-		expect(headings).toEqual(NAV_GROUPS.map((g) => g.title));
+		const shown = new Set(VISIBLE_SECTIONS.map((s) => s.key));
+		expect(headings).toEqual(NAV_GROUPS.filter((g) => g.keys.some((k) => shown.has(k))).map((g) => g.title));
 	});
 
 	it("marks the open module as the current page and nothing else", () => {
@@ -65,7 +66,7 @@ describe("the rail", () => {
 		   dot carrying that as a class inherited all of it. */
 		const { container } = draw(<Sidebar />);
 		const dots = [...container.querySelectorAll(".nav .cdot")];
-		expect(dots.map((d) => d.dataset.cov)).toEqual(SECTIONS.map((s) => s.cov));
+		expect(dots.map((d) => d.dataset.cov)).toEqual(VISIBLE_SECTIONS.map((s) => s.cov));
 		expect(container.querySelector(".cdot.skip")).toBeNull();
 	});
 

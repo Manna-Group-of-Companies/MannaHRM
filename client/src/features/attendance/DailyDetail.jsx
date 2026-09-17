@@ -1,7 +1,7 @@
 
 import { patch, set, useApp } from "@/store";
 import { scoped } from "@/lib/scope";
-import { DAY, MON, fmt, hrsMin, monthEnd, monthStart, nowStamp, spanOf, tidyDept, ymd } from "@/lib/format";
+import { DAY, MON, fmt, monthEnd, monthStart, nowStamp, tidyDept, todayIso } from "@/lib/format";
 import { download, save, toCsv } from "@/lib/csv";
 import { esc, paper, printPaper } from "@/lib/doc";
 import { CTC_BY } from "@/data/masters";
@@ -13,6 +13,9 @@ import { deskImport } from "@/lib/desk";
 import ScheduleReport, { openSchedule } from "@/features/attendance/ScheduleReport";
 import ScheduleList, { openScheduleList } from "@/features/attendance/ScheduleList";
 import { load } from "@/api/load";
+import { loadDda, loadShiftWindows } from "@/api/attendance";
+import { dailyRows, monthRollup } from "@/lib/dailydetail";
+import { useEffect } from "react";
 import People from "@/components/People";
 import { LocCell } from "@/components/PunchMap";
 
@@ -33,11 +36,11 @@ const longDate = (iso) => {
 	return p.length === 3 && MON[+p[1] - 1] ? `${MON[+p[1] - 1]} ${+p[2]}, ${p[0]}` : "—";
 };
 
-/* One row per person per day, which is what the report is. Everything it can
-   answer today comes from three places: the holiday list says which days nobody
-   was expected, Employee Checkin says who punched, and the shift says what they
-   were measured against. Two of the three are empty on this site, so most cells
-   come out as a dash — and a dash here is the report working, not failing. */
+/* One row per person per day, which is what the report is. The arithmetic is
+   lib/dailydetail.js: hrms's Attendance where the day has been processed, the
+   day's punches where it has not, and leave and the holiday list for why a day
+   with no punch is not an absence. Read for the whole range on Generate —
+   api/attendance.js loadDda. */
 /** Who the report would run over, before it is run. The same three filters
     ddaRows() starts from — kept beside it so the listing and the report cannot
     disagree about who is in scope. */
@@ -51,72 +54,28 @@ function ddaPeople(s) {
 
 function ddaRows(s) {
 	const f = s.dda;
-	let people = scoped(s);
-	if (f.status) people = people.filter((e) => e.status === f.status);
-	if (f.emp) people = people.filter((e) => e.name === f.emp);
 	const from = f.from || monthStart();
 	const to = f.to || monthEnd();
+	const d = s.ddaData;
+	/* Nothing is drawn from a read made for other criteria — a report headed
+	   September over August's punches is worse than "reading…". */
 	if (to < from) return { rows: [], people: 0, capped: 0, bad: true };
-
-	/* Punches are loaded for today only — see load(). So In and Out can only ever
-	   be filled for today, and the report says which day that was rather than
-	   leaving a reader to wonder why one row differs. */
-	const punch = {};
-	s.checkins.forEach((c) => {
-		const k = c.employee + "|" + String(c.time).slice(0, 10);
-		(punch[k] ||= []).push(c);
+	if (d.key !== `${from}|${to}|${f.emp || ""}` || d.state !== "ok") {
+		return { rows: [], people: 0, capped: 0, bad: false, waiting: true };
+	}
+	const people = ddaPeople(s);
+	const out = dailyRows({
+		people, from, to,
+		attendance: d.attendance, punches: d.punches, leave: d.leave, overtime: d.overtime,
+		holidaysOf: (e) => {
+			const co = s.companies.find((c) => c.name === e.company);
+			return s.holidays[e.holiday_list || (co && co.default_holiday_list) || ""] || [];
+		},
+		windows: s.shiftWindows,
+		today: todayIso(),
+		dow: f.dow, punch: f.punch,
 	});
-
-	const rows = [];
-	let capped = 0;
-	const LIMIT = 1500;
-
-	people.forEach((e) => {
-		const hol = {};
-		(s.holidays[e.holiday_list] || []).forEach((h) => {
-			hol[String(h.holiday_date).slice(0, 10)] = h;
-		});
-		for (const d = new Date(from + "T00:00:00"); ymd(d) <= to; d.setDate(d.getDate() + 1)) {
-			if (rows.length >= LIMIT) {
-				capped++;
-				continue;
-			}
-			const k = ymd(d);
-			const h = hol[k];
-
-			/* The two Advance filters that can be answered, applied here rather than
-			   after the fact: they decide which days exist, and a cap counted over
-			   days that were then filtered away would report the wrong number. */
-			if (f.dow.length && !f.dow.includes(d.getDay())) continue;
-			if (f.punch === "req" && h) continue;
-			if (f.punch === "not" && !h) continue;
-
-			const p = punch[e.name + "|" + k] || [];
-			const inRows = p.filter((x) => x.log_type === "IN")
-				.sort((a, b) => String(a.time).localeCompare(String(b.time)));
-			const ins = inRows.map((x) => x.time);
-			const outs = p.filter((x) => x.log_type === "OUT").map((x) => x.time).sort();
-			const both = ins.length && outs.length;
-			rows.push({
-				emp: e,
-				date: k,
-				in: ins.length ? String(ins[0]).slice(11, 16) : "",
-				inAt: inRows[0] || null,
-				out: outs.length ? String(outs[outs.length - 1]).slice(11, 16) : "",
-				work: both ? spanOf(ins[0], outs[outs.length - 1]) : "",
-				/* The same duration as a number, because Month Wise has to add them
-				   up and "8 hrs 30 minutes" does not add. */
-				ms: both
-					? new Date(String(outs[outs.length - 1]).replace(" ", "T")).getTime()
-						- new Date(String(ins[0]).replace(" ", "T")).getTime()
-					: 0,
-				/* Weekly off and holidays are the only day status this site can state.
-				   Present, Absent and Half Day are outputs of the policy engine. */
-				status: h ? (h.weekly_off ? "Weekly Off" : h.description || "Holiday") : "—",
-			});
-		}
-	});
-	return { rows, people: people.length, capped, bad: false };
+	return { ...out, people: people.length, err: d.err };
 }
 
 /* ---------------------------------------------------------------------------
@@ -134,28 +93,10 @@ function ddaRows(s) {
     off nor a holiday. It is not payable days. Payable days needs leave and the
     policy engine, and reporting one as the other is how somebody gets paid for
     the wrong month. */
-function ddaMonths(rows) {
-	const m = new Map();
-	rows.forEach((r) => {
-		const key = r.emp.name + "|" + r.date.slice(0, 7);
-		const g = m.get(key)
-			|| { emp: r.emp, month: r.date.slice(0, 7), days: 0, off: 0, hol: 0, punched: 0, ms: 0 };
-		g.days++;
-		if (r.status === "Weekly Off") g.off++;
-		else if (r.status !== "—") g.hol++;
-		if (r.in || r.out) g.punched++;
-		g.ms += r.ms || 0;
-		m.set(key, g);
-	});
-	return [...m.values()].map((g) => ({
-		...g,
-		working: g.days - g.off - g.hol,
-		label: `${MON[+g.month.slice(5, 7) - 1] || "?"} ${g.month.slice(0, 4)}`,
-		/* Zero worked hours is written as a dash, not as "0 hrs 0 minutes": on this
-		   site it means no punches were loaded, not that nobody worked. */
-		work: g.ms ? hrsMin(g.ms) : "",
-	}));
-}
+const ddaMonths = (rows) => monthRollup(rows).map((g) => ({
+	...g,
+	label: `${MON[+g.month.slice(5, 7) - 1] || "?"} ${g.month.slice(0, 4)}`,
+}));
 
 /** Which columns the output carries: the period decides the base list, and Show
     Categories appends that many category columns to it. One list, which the
@@ -256,10 +197,7 @@ function ddaPaper(s, list) {
 		<table>
 			<thead><tr>${cols.map((c) => `<th>${esc(c[0])}</th>`).join("")}</tr></thead>
 			<tbody>${body}</tbody>
-			<tfoot><tr><td colspan="${cols.length}">Generated ${esc(nowStamp())}. Late Coming By, Early Going By,
-				Overtime and the two break columns are outputs of the attendance policy engine and are dashes here
-				for everybody. In and Out can only be filled for the one day this page loads punches for. Day Status
-				is the holiday list, which is the only part of a day this site can state on its own.</td></tr></tfoot>
+			<tfoot><tr><td colspan="${cols.length}">Generated ${esc(nowStamp())}. Day Status, In, Out and Work Duration are hrms's Attendance where the day has been processed; a status marked * comes from the day's punches because it has not been processed yet. Late, Early and Overtime are against the shift's window.</td></tr></tfoot>
 		</table>`);
 }
 
@@ -448,7 +386,7 @@ function DdaForm({ s }) {
 							onToggle={() => patch("dda", { fmenu: !f.fmenu, gmenu: false })}
 							onPick={(kind) => ddaRun(s, kind)} />
 						<button className="embtn ic" title="Reload from the site" aria-label="Refresh"
-							onClick={() => void load()}>↻</button>
+							onClick={() => { void load(); if (s.dda.run) void loadDda(s.dda.from || monthStart(), s.dda.to || monthEnd(), s.dda.emp, true); }}>↻</button>
 
 						{/* Their Generate is a split button too, and the three items behind it
 						    are all about a queue. There is no queue here — but two of the three
@@ -737,7 +675,17 @@ const Table = ({ list, cols }) => (
     flat when it is taken off — which is what that chip does over there. */
 function DdaReport({ s }) {
 	const f = s.dda;
-	const { rows, people, capped, bad } = ddaRows(s);
+	const from = f.from || monthStart();
+	const to = f.to || monthEnd();
+	useEffect(() => {
+		void loadShiftWindows();
+		if (to >= from) void loadDda(from, to, f.emp);
+	}, [from, to, f.emp]);
+	const { rows, people, capped, bad, waiting, err } = ddaRows(s);
+
+	if (waiting) {
+		return <div className="regload">Reading attendance and punches for {longDate(from)} – {longDate(to)}…</div>;
+	}
 
 	if (bad) {
 		return (
@@ -818,6 +766,7 @@ function DdaReport({ s }) {
 				</div>
 			)}
 
+			{err ? <div className="deerr" role="alert"><b>{err}</b></div> : null}
 			<div className="ddacount">
 				{fmt(list.length)} {month ? "months" : "rows"} · {fmt(people)}{people === 1 ? " person" : " people"}
 				{capped ? (

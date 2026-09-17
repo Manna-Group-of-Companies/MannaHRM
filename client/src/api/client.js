@@ -214,6 +214,28 @@ export async function whoami() {
 	}
 }
 
+/** Whether the signed-in person may `perm` a document, in the site's own words.
+
+    For drawing controls only — a button hidden here is a courtesy, and the
+    write it would have made is still refused or allowed by the site. Rounds to
+    `false` on any failure: showing an editor to somebody the site will refuse
+    costs them a form's worth of work, hiding it from an admin costs a reload. */
+export async function canDo(doctype, name = "", perm = "write") {
+	try {
+		const r = await http.get("/api/method/frappe.client.has_permission", {
+			params: { doctype, docname: name, perm_type: perm },
+		});
+		return r.data?.message?.has_permission === true;
+	} catch {
+		return false;
+	}
+}
+
+/** Whether this login is an admin, for the menus: somebody the site lets create
+    an Employee. HR User, HR Manager and System Manager can; a login holding only
+    the Employee role cannot. A failed check is `false` — the narrower menu. */
+export const isAdmin = () => canDo("Employee", "", "create");
+
 /** Sign in with an ERPNext user. Everything the dashboard reads and writes
     afterwards runs under that user's roles, which is the whole security model. */
 export async function login(usr, pwd) {
@@ -318,8 +340,32 @@ export async function apiCreate(label, doc) {
 
 /** Remove one document. The site's link validation refuses a master that
     anything still points at, with the count in the message. */
+/** Create a document **submitted** — used for one doctype only, Shift
+    Assignment (16 Sep 2026). A draft assignment rosters nobody, so creating one
+    and leaving it would read as done and change nothing, which is the worst of
+    the outcomes. It decides which shift somebody is measured against, not what
+    they are paid; the site still validates overlaps and permissions (HR User
+    and HR Manager may submit it). Throws what the site said. */
+export async function apiCreateSubmitted(label, doc) {
+	if (label !== "Shift Assignment") throw new Error(`${label} is not created submitted from here.`);
+	const body = { ...doc, docstatus: 1 };
+	delete body.doctype;
+	const r = await http.post(`/api/resource/${dt(label)}`, body, {
+		headers: { "Content-Type": "application/json" },
+	});
+	return r.data?.data ?? r.data;
+}
+
 export async function apiDelete(label, name) {
 	await http.delete(`/api/resource/${dt(label)}/${encodeURIComponent(name)}`);
+}
+
+/** One whitelisted method, POSTed. Throws, like apiCreate. */
+export async function apiCall(method, body) {
+	const r = await http.post(`/api/method/${method}`, body, {
+		headers: { "Content-Type": "application/json" },
+	});
+	return r.data?.message;
 }
 
 /* ---------------------------------------------------------------------------

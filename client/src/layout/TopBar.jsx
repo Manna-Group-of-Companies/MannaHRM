@@ -159,7 +159,9 @@ export default function TopBar() {
 					<span aria-hidden="true">{modeIcon(mode)}</span>
 				</button>
 
-				<span className="empdrop">
+				{/* The bell and the gear both lead off a user's menu (data/menus.js
+				    USER_ONLY), so a login that is not an admin is not offered them. */}
+				{s.admin !== false && <span className="empdrop">
 					<button
 						type="button"
 						className="tbicon"
@@ -206,11 +208,11 @@ export default function TopBar() {
 							</Link>
 						) : null}
 					</div>
-				</span>
+				</span>}
 
-				<Link section="settings" className="tbicon" aria-label="Settings" title="Settings">
+				{s.admin !== false && <Link section="settings" className="tbicon" aria-label="Settings" title="Settings">
 					<Glyph d={ICON.gear} />
-				</Link>
+				</Link>}
 
 				<span className="empdrop">
 					<button
@@ -235,11 +237,11 @@ export default function TopBar() {
 							<b>Employee profile</b>
 							<span>The record behind a person</span>
 						</Link>
-						<Link section="settings" role="menuitem" className="tbnote"
+						{s.admin !== false && <Link section="settings" role="menuitem" className="tbnote"
 							onClick={() => set({ tbme: false })}>
 							<b>Settings</b>
 							<span>Appearance, and what this site is set up for</span>
-						</Link>
+						</Link>}
 						<button type="button" role="menuitem" className="tbnote foot" onClick={signOut}>
 							<b>Sign out</b>
 							<span>Ends the Frappe session on this site</span>

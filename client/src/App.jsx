@@ -12,7 +12,7 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { set, getState, useApp } from "@/store";
-import { whoami } from "@/api/client";
+import { isAdmin, whoami } from "@/api/client";
 import Login from "@/features/auth/Login";
 import { loadAll } from "@/store/thunks";
 import { startRouter } from "@/routes/router";
@@ -49,6 +49,16 @@ export default function App() {
 	useEffect(() => {
 		if (user) void dispatch(loadAll());
 	}, [dispatch, user]);
+
+	/* Asked again for every sign-in, and cleared first, so the next person is
+	   never drawn with the last one's menu. */
+	useEffect(() => {
+		set({ admin: null });
+		if (!user) return undefined;
+		let live = true;
+		isAdmin().then((admin) => { if (live) set({ admin }); });
+		return () => { live = false; };
+	}, [user]);
 
 	/* Every drop-down that opens over the page — the status dots on Employee
 	   Master, regularization, daily detail and salary, and the export list on

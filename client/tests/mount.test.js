@@ -61,8 +61,8 @@ describe("mounted under a prefix, which is the site", () => {
 
 	it("takes the prefix off a path the browser gives it", async () => {
 		const r = await routerWith("/hr");
-		expect(r.routeFromPath("/hr/employees/salary"))
-			.toMatchObject({ section: "employees", subtab: "salary" });
+		expect(r.routeFromPath("/hr/employees/detail"))
+			.toMatchObject({ section: "employees", subtab: "detail" });
 	});
 
 	/* The mount on its own is the front page — the same answer `/` gives at the
@@ -86,13 +86,24 @@ describe("mounted under a prefix, which is the site", () => {
 	it("round-trips every page it can build", async () => {
 		const r = await routerWith("/hr");
 		const { MODULES } = await import("@/routes/registry");
+		const { isHidden } = await import("@/data/sections");
 		for (const [section, m] of Object.entries(MODULES)) {
+			if (isHidden(section)) continue;
 			for (const subtab of Object.keys(m.pages)) {
+				if (isHidden(section, subtab)) continue;
 				const path = r.pathFor(section, subtab);
 				expect(path.startsWith("/hr/")).toBe(true);
 				expect(r.routeFromPath(path)).toMatchObject({ section, subtab });
 			}
 		}
+	});
+
+	it("sends a hidden module's address to the front page", async () => {
+		const r = await routerWith("/hr");
+		for (const path of ["/hr/payroll", "/hr/loans", "/hr/survey"]) {
+			expect(r.routeFromPath(path)).toMatchObject({ section: r.DEFAULT_SECTION, subtab: r.OVERVIEW });
+		}
+		expect(r.routeFromPath("/hr/employees/salary")).toMatchObject({ section: "employees", subtab: r.OVERVIEW });
 	});
 
 	/* Both spellings anybody would reach for, because the value is typed into a

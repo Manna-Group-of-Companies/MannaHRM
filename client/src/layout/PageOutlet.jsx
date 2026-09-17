@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useApp } from "@/store";
 import { loadOnBoard, loadShiftAssignments } from "@/api/load";
 import { pageFor, fullPage } from "@/routes/registry";
+import { USER_HOME, landingFor, sectionFor } from "@/data/menus";
+import { navigate, pathFor } from "@/routes/router";
 
 export default function PageOutlet() {
 	const s = useApp();
@@ -26,8 +28,22 @@ export default function PageOutlet() {
 		}
 	}, [section, subtab, shMaster, shAssignState]);
 
+	/* A login with a narrowed menu (data/menus.js) that lands on a page off it —
+	   the rail's link to a module's overview, or an old bookmark — is moved to
+	   its first page, in the address bar too, so the strip and the page agree.
+	   A user who is not an admin and lands in a module they are not shown at all
+	   goes to Employee Master the same way. */
+	const [home, homeTab] = sectionFor(section, s.admin, s.user) ? [section, null] : USER_HOME;
+	const shown = homeTab || landingFor(section, subtab, s.user, s.admin);
+	useEffect(() => {
+		if (home !== section || shown !== subtab) {
+			window.history.replaceState({}, "", pathFor(home, shown));
+			navigate(home, shown);
+		}
+	}, [home, section, subtab, shown]);
+
 	const full = fullPage(s);
-	const Page = pageFor(section, subtab);
+	const Page = pageFor(home, shown);
 	return (
 		<main className="content" id="page" tabIndex={-1}>
 			{full || <Page />}

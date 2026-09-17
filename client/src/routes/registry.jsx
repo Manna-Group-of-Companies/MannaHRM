@@ -40,6 +40,8 @@ import EmployeeMaster from "@/features/employees/EmployeeMaster";
 import CreateEmployee from "@/features/employees/CreateEmployee";
 import ImportOnboarding from "@/features/employees/ImportOnboarding";
 import Regularization from "@/features/attendance/Regularization";
+import { AbsentReport, OtReport, WeeklyReport } from "@/features/attendance/RangeReports";
+import WorkingTime from "@/features/attendance/WorkingTime";
 import SubmitAttendance from "@/features/attendance/SubmitAttendance";
 import InOut from "@/features/attendance/InOut";
 import DailyDetail from "@/features/attendance/DailyDetail";
@@ -125,7 +127,7 @@ const TABS = {
 		["profile", "Employee Profile"],
 		/* Five of their Employees reports, built 8 Sep 2026 off data the site
 		   already holds. Their menu titles, so the tab reads as theirs. */
-		["joining", "New Joining"], ["birthdays", "Employee Birthday"],
+		["joining", "New Joining"],
 		["directory", "Employees Directory"], ["weekoff", "Weekoff Holiday Report"],
 		["orgchart", "Organization Chart"], ...managedTabs("employees"), ["all", "All"]],
 	/* Factor HR's own Attendance menu, captured 28 Aug 2026, item for item and
@@ -138,7 +140,9 @@ const TABS = {
 		["shifts", "Manage Shift"],
 		["present", "Present Report"], ["absent", "Absent Report"], ["msp", "MSP Report"],
 		["iocount", "In / Out Count Report"], ["shiftrep", "Employee Shift Report"],
-		["headcount", "Head Count And Attendance"], ...managedTabs("attendance"), ["all", "All"]],
+		["headcount", "Head Count And Attendance"],
+		/* Two of ours, asked for 16 Sep 2026 — see features/attendance/RangeReports. */
+		["ot", "OT Report"], ["weekly", "Weekly Report"], ["worktime", "Employee Working Time"], ...managedTabs("attendance"), ["all", "All"]],
 	/* Factor HR's own Leave menu, captured 29 Aug 2026 — three items where
 	   Attendance has eight, which is the finding rather than a gap on our side.
 	   `overview` is Apply Leave because it is the first item on their menu, so
@@ -196,7 +200,7 @@ const PAGES = {
 	employees: { overview: EmployeeMaster, salary: SalaryMaster, detail: EmployeeDetail, ctc: Ctc,
 		categories: Categories, calendar: Calendar,
 		profile: EmployeeProfile, new: CreateEmployee, import: ImportOnboarding,
-		joining: report("employees", "joining"), birthdays: report("employees", "birthdays"),
+		joining: report("employees", "joining"),
 		directory: report("employees", "directory"), weekoff: report("employees", "weekoff"),
 		orgchart: report("employees", "orgchart"),
 		all: moduleAll("employees", "Employees"),
@@ -204,7 +208,10 @@ const PAGES = {
 	attendance: { overview: Regularization, submit: SubmitAttendance, inout: InOut,
 		daily: DailyDetail, monthly: MonthlyBasic, statutory: Statutory,
 		shifts: Shifts,
-		present: report("attendance", "present"), absent: report("attendance", "absent"),
+		/* Absent reads the day it is asked about; the spec version read today's
+		   punches whatever date was picked. */
+		present: report("attendance", "present"), absent: AbsentReport,
+		ot: OtReport, weekly: WeeklyReport, worktime: WorkingTime,
 		msp: report("attendance", "msp"), iocount: report("attendance", "iocount"),
 		shiftrep: report("attendance", "shiftrep"), headcount: report("attendance", "headcount"),
 		all: moduleAll("attendance", "Attendance"),

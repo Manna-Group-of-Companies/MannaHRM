@@ -1451,6 +1451,74 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Employee Overtime": {
+		name: "Employee Overtime",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 0,
+		autoname: "naming_series:",
+		title: "employee_name",
+		fields: [
+			{
+				name: "naming_series",
+				label: "Series",
+				kind: "select",
+				choices: [
+					"HR-OT-.YYYY.-"
+				],
+				def: "HR-OT-.YYYY.-"
+			},
+			{
+				name: "employee",
+				label: "Employee",
+				kind: "link",
+				link: "Employee",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "employee_name",
+				label: "Employee Name",
+				kind: "readonly",
+				from: "employee.employee_name",
+				list: 1
+			},
+			{
+				name: "company",
+				label: "Company",
+				kind: "readonly",
+				link: "Company",
+				from: "employee.company"
+			},
+			{
+				name: "ot_date",
+				label: "Date",
+				kind: "date",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "hours",
+				label: "OT Hours",
+				kind: "float",
+				reqd: 1,
+				hint: "Hours of overtime granted for the day, e.g. 1.5 for an hour and a half. Six places, so a clock's seconds survive (1 s = 0.000278 h).",
+				list: 1
+			},
+			{
+				name: "reason",
+				label: "Reason",
+				kind: "long"
+			},
+			{
+				name: "entered_by",
+				label: "Entered By",
+				kind: "readonly",
+				link: "User"
+			}
+		]
+	},
 	"Employee Profile Change Item": {
 		name: "Employee Profile Change Item",
 		module: "Manna HR",

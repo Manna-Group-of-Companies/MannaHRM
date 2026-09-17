@@ -1,7 +1,7 @@
 import { clock, dmy, tidyDept } from "../lib/format.js";
 import { coordText, placeText } from "../lib/punchplace.js";
 import {
-	absent, availedLeave, birthdays, directory, headCount, inOutCount, leaveHistory,
+	absent, availedLeave, directory, headCount, inOutCount, leaveHistory,
 	missedPunches, monthlyLeave, newJoiners, orgChart, pendingLeave, present, shiftReport, weekoffs,
 } from "../lib/reports.js";
 
@@ -66,18 +66,6 @@ export const REPORTS = [
 		note: "Off <code>date_of_joining</code>, and it counts people still on the books — somebody who "
 			+ "joined in April and left in June is not here. Their report counts the joining, not the "
 			+ "person, so the two disagree by exactly the leavers.",
-	},
-	{
-		id: "birthdays", section: "employees", title: "Employee Birthday", ico: "🎂", ask: "month",
-		build: (s, a) => birthdays(s.rows, a.month),
-		cols: WHO.concat([
-			["Birthday", "birthday", "mono", (e) => dmy(e.date_of_birth).slice(0, 6)],
-			["Company", "company", "muted", (e) => e.company || ""],
-		]),
-		empty: "No birthdays on file for this month.",
-		note: "The year is thrown away and the day is kept, because a birthday recurs and the stored "
-			+ "date does not. <b>A blank birthday is the commonest gap on a migrated record</b>, so an "
-			+ "empty month is worth checking against the master before it is believed.",
 	},
 	{
 		id: "directory", section: "employees", title: "Employees Directory", ico: "📇", ask: "",

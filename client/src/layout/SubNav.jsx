@@ -4,12 +4,15 @@ import { useEffect, useRef } from "react";
 import { useApp } from "@/store";
 import { MODULES, fullPage, offMenu } from "@/routes/registry";
 import Link from "@/routes/Link";
+import { tabsFor } from "@/data/menus";
+import { isHidden } from "@/data/sections";
 
 export default function SubNav() {
 	const s = useApp();
 	const { section, subtab } = s;
 	const bar = useRef(null);
-	const tabs = MODULES[section]?.tabs || [];
+	const tabs = tabsFor(section, MODULES[section]?.tabs || [], s.user, s.admin)
+		.filter((t) => !isHidden(section, t[0]));
 	/* A full page takes the strip with it — see fullPage() and OFF_MENU, which
 	   are the two ways a page says it is not one of the module's tabs. Read
 	   before the effect below so the hook order cannot change with it. */

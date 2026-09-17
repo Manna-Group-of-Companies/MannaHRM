@@ -108,3 +108,48 @@ describe("create employee: company and punch method", () => {
 		expect(punchGaps({ custom_punch_method: "Both" })).toHaveLength(2);
 	});
 });
+
+import { editPlan } from "@/lib/punchedit";
+import { dayPunches } from "@/lib/roster";
+
+describe("editing a day's punches on Attendance Regularization", () => {
+	const D = "2026-09-10";
+	const day = [
+		{ name: "c1", time: D + " 08:05:00", log_type: "IN" },
+		{ name: "c2", time: D + " 13:00:00", log_type: "OUT" },
+		{ name: "c3", time: D + " 13:30:00", log_type: "IN" },
+		{ name: "c4", time: D + " 17:40:00", log_type: "OUT" },
+	];
+
+	it("moving Time In earlier writes one punch and sets nothing aside", () => {
+		const p = editPlan(D, day, { in: "08:00", out: "17:40" });
+		expect(p.add).toEqual([{ log_type: "IN", time: D + " 08:00:00" }]);
+		expect(p.skip).toEqual([]);
+	});
+
+	it("moving Time In later sets aside every IN that would still win, and no later one", () => {
+		const p = editPlan(D, day, { in: "09:00", out: "17:40" });
+		expect(p.skip.map((c) => c.name)).toEqual(["c1"]);
+	});
+
+	it("moving Time Out earlier sets aside the later OUT and keeps the lunch one", () => {
+		const p = editPlan(D, day, { in: "08:05", out: "17:30" });
+		expect(p.add).toEqual([{ log_type: "OUT", time: D + " 17:30:00" }]);
+		expect(p.skip.map((c) => c.name)).toEqual(["c4"]);
+	});
+
+	it("an out before the in is refused rather than guessed across midnight", () => {
+		expect(editPlan(D, day, { in: "22:00", out: "06:00" }).ok).toBe(false);
+	});
+
+	it("an unchanged row writes nothing", () => {
+		expect(editPlan(D, day, { in: "08:05", out: "17:40" })).toMatchObject({ ok: false, add: [], skip: [] });
+	});
+
+	it("a set-aside punch no longer decides the day, but is still there", () => {
+		const after = day.map((c) => (c.name === "c1" ? { ...c, skip_auto_attendance: 1 } : c))
+			.concat([{ name: "n", time: D + " 09:00:00", log_type: "IN" }]);
+		expect(dayPunches(after).inAt).toBe(D + " 09:00:00");
+		expect(editPlan(D, after, { in: "09:00", out: "17:40" }).ok).toBe(false);
+	});
+});
