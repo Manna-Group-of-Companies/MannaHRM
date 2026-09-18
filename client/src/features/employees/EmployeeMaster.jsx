@@ -99,8 +99,13 @@ export function masterRows(s) {
 	const q = s.q.trim().toLowerCase();
 	const all = scoped(s);
 	let rows = all.filter(
-		(e) => !q || [e.employee_number, e.employee_name, e.designation, e.department]
-			.some((v) => (v || "").toLowerCase().includes(q)),
+		(e) => !q || [
+			e.employee_number, e.employee_name, e.designation, e.department,
+			/* The machine code — a punch missing on a report is looked up by it,
+			   and until now that meant opening candidates one at a time to find
+			   who is enrolled under it. See ATTENDANCE DEVICE ID on EmployeeList. */
+			e.attendance_device_id,
+		].some((v) => (v || "").toLowerCase().includes(q)),
 	);
 	if (s.empstatus) rows = rows.filter((e) => e.status === s.empstatus);
 	if (s.empdept) rows = rows.filter((e) => e.department === s.empdept);
@@ -341,8 +346,8 @@ export default function EmployeeMaster() {
 					    two cannot disagree. */}
 					<input
 						type="search"
-						placeholder="Search employee…"
-						aria-label="Search employees"
+						placeholder="Search employee or machine code…"
+						aria-label="Search employees, by name or machine code"
 						value={s.q}
 						onChange={(e) => set({ q: e.target.value })}
 					/>

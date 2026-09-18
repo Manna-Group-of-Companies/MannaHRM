@@ -114,7 +114,7 @@ export default function TopBar() {
 				<Glyph d={ICON.find} />
 				<input
 					type="search"
-					placeholder="Search name, code, designation…"
+					placeholder="Search name, code, machine code, designation…"
 					aria-label="Search"
 					value={q}
 					onChange={(e) => set({ q: e.target.value })}
