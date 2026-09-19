@@ -109,10 +109,21 @@ def suggest_name(prefix, serial=None, host=None):
 	return (prefix or DEFAULT_PREFIX) + (tail or "GATE1")
 
 
+def month_start(today):
+	return today.replace(day=1)
+
+
 def parse_start(text, today):
-	"""The first day to send. Blank is today; day-first, as dates are written here."""
+	"""The first day to send. Day-first, as dates are written here.
+
+	Blank or "month" is the first of this month: a PC installed on the 17th
+	otherwise leaves the month's first sixteen days on the machine, and the
+	month is what gets paid. "today" is still today, for a zip that asks for it.
+	"""
 	text = (text or "").strip()
-	if not text:
+	if not text or text.lower() == "month":
+		return month_start(today)
+	if text.lower() == "today":
 		return today
 	for pattern in ("%d-%m-%Y", "%d/%m/%Y", "%d.%m.%Y", "%Y-%m-%d"):
 		try:
@@ -672,7 +683,7 @@ def choose_start(today):
 	print("  A machine holds years of punches. Only punches from this day on are sent;")
 	print("  older ones stay on the machine, untouched.")
 	while True:
-		start = parse_start(ask("First day to send (DD-MM-YYYY)", today.strftime("%d-%m-%Y")), today)
+		start = parse_start(ask("First day to send (DD-MM-YYYY)", month_start(today).strftime("%d-%m-%Y")), today)
 		if start is None:
 			print("  x write it like {0}".format(today.strftime("%d-%m-%Y")))
 		elif start > today:
@@ -956,7 +967,7 @@ def run_auto(config_path, auto_path, today=None, interactive=None):
 			"run INSTALL.bat again."
 		)
 
-	start = parse_start("" if str(machines.get("start", "today")).lower() == "today" else str(machines["start"]), today)
+	start = parse_start(str(machines.get("start", "month")), today)
 	if start is None or start > today:
 		start = today
 

@@ -842,6 +842,7 @@ export default function EmployeeProfile() {
 				designations: s.designations,
 				holidayLists: s.holidayLists,
 				shiftTypes: s.shiftTypes,
+				workLocations: s.workLocations,
 			},
 		}
 		: null;

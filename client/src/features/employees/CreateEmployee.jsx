@@ -4,6 +4,8 @@ import { load } from "@/api/load";
 import { scoped, uniq } from "@/lib/scope";
 import { NEW_EMP_BLANK, isBlank, missing, problemsOf } from "@/lib/newemp";
 import { Desk } from "@/components/ui";
+import OnMachine from "@/components/OnMachine";
+import MachineNumber from "@/components/MachineNumber";
 import { deskUrl } from "@/lib/desk";
 import { createEmployee } from "@/api/employee";
 import {
@@ -99,6 +101,9 @@ function optionsFor(s, all, f) {
 		shift:           [s.shiftTypes.map((x) => x.name), true],
 		holiday:         [s.holidayLists.map((x) => x.name), true],
 		reports_to:      [managers, true],
+		/* A location switched off is a gate that closed — see workLocations in
+		   initialState.js, which is already filtered to the active ones. */
+		worklocation:    [s.workLocations.map((x) => [x.name, x.location_name || x.name]), true],
 	};
 }
 
@@ -256,6 +261,9 @@ export default function CreateEmployee() {
 									(<code>tools/setup_phone_punch.py --apply</code>).</> : null}
 						</p>
 					) : null}
+					{done.custom_punch_method !== "Mobile App" && done.attendance_device_id
+						? <OnMachine number={done.attendance_device_id} employee={id}
+							employeeName={done.employee_name} /> : null}
 					{/* What this form did not ask for and hrms needs before the record
 					    does anything. Named rather than implied — a new Employee with
 					    none of it looks finished and is not. */}
@@ -344,6 +352,14 @@ export default function CreateEmployee() {
 										onChange={(v) => setF(row[0], v)} />
 								))}
 							</div>
+							{/* Under the group holding Machine Code, and only when this person
+							    punches on a machine. The number is the one field on this form
+							    that can be wrong in a way nobody sees: free here and already
+							    somebody's at the gate. */}
+							{rows.some((r) => r[0] === "attendance_device_id") && f.custom_punch_method !== "Mobile App" ? (
+								<MachineNumber value={f.attendance_device_id} employees={all}
+									onPick={(n) => setF("attendance_device_id", n)} />
+							) : null}
 						</section>
 					))}
 

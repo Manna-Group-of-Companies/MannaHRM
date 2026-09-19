@@ -10,6 +10,8 @@ bridge/*.log.1
 # The setup's backups and the runner it moves aside: the second can hold a key.
 bridge/*.bak
 bridge/*.old
+# machine.py's backups: fingerprint templates and keypad passwords.
+bridge/machine-backups/
 # package.ps1's output, rebuilt from the files above it.
 bridge/dist/
 

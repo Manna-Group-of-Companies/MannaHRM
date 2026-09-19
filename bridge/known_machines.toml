@@ -20,3 +20,16 @@
 # Manna Rubber Products gate. Reports IN/OUT (checked 2026-08: 39,453 in, 39,563
 # out), and all three MRP shifts pair strictly on log type.
 CGKK211561350 = { name = "BIO-MRP-GATE1", report_direction = true }
+
+# Manna Tyre Retreads, on the J8000 PC since 16 September 2026. **No entry on
+# purpose**: they were named from their serials by the automatic install, those
+# names are what every punch of theirs already carries on the site, and a name
+# added here later would split one machine's history across two device ids.
+#
+# Neither may have report_direction on until somebody checks the machines:
+#   6426150300692 - 28 punches, every one of them IN. That is exactly what a
+#                   machine never set up for in/out looks like, and it reads as
+#                   a day on which nobody ever left.
+#   6426150300688 - reports both, but 9am arrivals come through as OUT, so the
+#                   direction is whatever key the person pressed.
+# A guessed direction is worse than none (CLAUDE.md §5).

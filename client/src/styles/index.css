@@ -953,6 +953,30 @@
   }
   .note b { @apply font-display; }
 
+  /* The Machine Code check under that box on Create Employee, and the "is this
+     person on the machine" box after it. Coloured by what the answer costs: a
+     number somebody else holds is red, a number nothing could check is amber,
+     and a clean one is the brand note. */
+  .machinenum {
+    @apply rounded px-[.8rem] py-[.7rem] text-read border border-l-4 mt-[.6rem] flex flex-col gap-[.5rem] items-start;
+    border-color: rgb(var(--brand-tint)); border-left-color: rgb(var(--brand)); color: rgb(var(--brand-deep));
+    background: rgb(var(--brand-soft));
+  }
+  .machinenum p { @apply m-0; }
+  .machinenum b { @apply font-display; }
+  .machinenum[data-kind="site"], .machinenum[data-kind="machine"], .machinenum[data-kind="bad"] {
+    background: rgb(var(--bad-wash)); border-color: rgb(var(--bad-tint));
+    border-left-color: rgb(var(--bad)); color: rgb(var(--bad-deep));
+  }
+  /* `part` has only the two tokens, so the border and the words are the same
+     role colour rather than a tint and a deep one that do not exist. */
+  .machinenum[data-kind="unchecked"] {
+    background: rgb(var(--part-wash)); border-color: rgb(var(--part) / 0.4);
+    border-left-color: rgb(var(--part)); color: rgb(var(--part));
+  }
+  .onmachine { @apply flex flex-col gap-[.5rem] items-start mt-[.4rem]; }
+  .onmachine .wizlist { @apply m-0; }
+
   .rows  { @apply flex flex-col gap-[.4rem]; }
   .row   { @apply grid gap-y-[.1rem] gap-x-[.7rem] items-center text-read; grid-template-columns: 1fr auto; }
   .row .val { @apply font-mono text-fine text-ink-2 tabular-nums; }

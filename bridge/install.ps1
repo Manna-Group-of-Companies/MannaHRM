@@ -31,12 +31,20 @@
 .PARAMETER Uninstall
 	Stop the bridge and remove its task. Every file is left where it is,
 	including punches that have not reached ERPNext yet.
+
+.PARAMETER Replace
+	Remove the installed bridge before installing this one, rather than copying
+	over it. Kept: config.toml, bridge.env, punches.sqlite3 and machine-backups
+	- the setup, the key, the punches that have not reached ERPNext, and the
+	fingerprint backups, none of which can be made again from here. The
+	auto-install zip does this by itself.
 #>
 param(
 	[string]$InstallDir = 'C:\MannaBridge',
 	[switch]$Reconfigure,
 	[switch]$Status,
-	[switch]$Uninstall
+	[switch]$Uninstall,
+	[switch]$Replace
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,7 +56,8 @@ $InstallDir = $InstallDir.TrimEnd('\')
 # a queue of somebody else's punches.
 $Files = @(
 	'mannabridge', 'probe.py', 'check_push.py', 'requirements.txt', 'config.example.toml',
-	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1'
+	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1',
+	'machine.py', 'machine_menu.py', 'push_users.py', 'employee_tools.py', 'MACHINE.bat'
 )
 
 # An auto-install zip (package.ps1 -Auto) carries this beside the installer, and
@@ -57,6 +66,11 @@ $Files = @(
 # key, so it is deleted once the key is in bridge.env and locked.
 $AutoFile = Join-Path $PSScriptRoot 'autoinstall.toml'
 $Auto = (Test-Path $AutoFile) -and -not $Reconfigure -and -not $Status -and -not $Uninstall
+
+# The zip replaces whatever is on the PC: nobody is there to be asked, and a
+# file left behind by an older version is the failure nobody would connect to
+# this install. What is kept is in $Keep - the key, the config and the punches.
+if ($Auto) { $Replace = $true }
 
 function Test-Administrator {
 	$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -72,6 +86,7 @@ if (-not (Test-Administrator)) {
 	if ($Reconfigure) { $arguments += '-Reconfigure' }
 	if ($Status) { $arguments += '-Status' }
 	if ($Uninstall) { $arguments += '-Uninstall' }
+	if ($Replace) { $arguments += '-Replace' }
 	Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $arguments
 	exit
 }
@@ -200,6 +215,29 @@ function Show-Status {
 	}
 }
 
+# Never removed by -Replace, whatever else goes. The first two are the only copy
+# of this PC's setup and its key; the third holds punches that have not reached
+# ERPNext yet, and deleting it is deleting somebody's day. The backups hold
+# fingerprint templates that cannot be made again from here.
+# `.venv` is kept as well, and checked rather than rebuilt: a plant on a slow
+# line pays for that download, and a venv whose Python has gone is detected and
+# replaced a few steps below anyway.
+$Keep = @('config.toml', 'bridge.env', 'punches.sqlite3', 'punches.sqlite3-wal',
+	'punches.sqlite3-shm', 'machine-backups', 'run-bridge.bat.old', '.venv')
+
+function Remove-OldBridge {
+	# The code, and nothing else. A version that dropped a module leaves it
+	# behind on a plain upgrade, and an import that still finds it runs code
+	# nobody shipped.
+	if (-not (Test-Path $InstallDir)) { return }
+	foreach ($item in Get-ChildItem -Force $InstallDir) {
+		if ($Keep -contains $item.Name) { continue }
+		if ($item.Extension -in @('.log', '.1')) { continue }
+		Remove-Item -Recurse -Force $item.FullName -ErrorAction SilentlyContinue
+	}
+	Write-Host "  The old bridge is removed. Kept: the config, the key, and $((Join-Path $InstallDir 'punches.sqlite3'))."
+}
+
 function Copy-Bridge {
 	$from = [IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\')
 	New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -281,6 +319,25 @@ function Register-BridgeTask {
 	Start-ScheduledTask -TaskName $TaskName
 }
 
+function Install-MachineTools {
+	# Backups hold fingerprint templates and every user's keypad password, so
+	# the folder is locked the way bridge.env is: SYSTEM and Administrators, by SID.
+	$backups = Join-Path $InstallDir 'machine-backups'
+	New-Item -ItemType Directory -Force -Path $backups | Out-Null
+	& icacls.exe $backups /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+	if ($LASTEXITCODE -ne 0) { Write-Warning 'Could not restrict machine-backups. Restrict it by hand.' }
+
+	# The Public desktop, so it is there for whoever logs in to look after the gate.
+	$desktop = [Environment]::GetFolderPath('CommonDesktopDirectory')
+	$shell = New-Object -ComObject WScript.Shell
+	$link = $shell.CreateShortcut((Join-Path $desktop 'Manna Machine Tools.lnk'))
+	$link.TargetPath = Join-Path $InstallDir 'MACHINE.bat'
+	$link.WorkingDirectory = $InstallDir
+	$link.Description = 'The fingerprint machines: users, fingers, clock, backup and restore'
+	$link.Save()
+	Write-Host "  'Manna Machine Tools' is on the desktop. Backups go to $backups"
+}
+
 function Install-Bridge {
 	Write-Host ''
 	Write-Host 'Manna attendance bridge - installer' -ForegroundColor Cyan
@@ -314,6 +371,11 @@ function Install-Bridge {
 
 	Step "Copying the bridge to $InstallDir"
 	Stop-Bridge
+	if ($Replace) {
+		# After Stop-Bridge, never before: files held open by a running bridge
+		# are the ones that fail to delete, and the queue is one of them.
+		Remove-OldBridge
+	}
 	Copy-Bridge
 
 	Step 'Installing libraries'
@@ -395,6 +457,10 @@ function Install-Bridge {
 	} finally {
 		Pop-Location
 	}
+
+	# Before the boot question, which returns early when it is answered no.
+	Step 'Machine tools'
+	Install-MachineTools
 
 	Step 'Running it at every boot'
 	if (-not (Ask-Yes 'Start the bridge now, and at every boot from now on?')) {

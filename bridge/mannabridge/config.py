@@ -24,6 +24,16 @@ class Config:
 	devices: list = field(default_factory=list)
 	queue_path: str = "punches.sqlite3"
 	poll_seconds: int = 300
+	# How often the site is asked whether somebody left a `Machine Command` —
+	# "is 851 on the gate?", asked from the dashboard and waited on by whoever
+	# asked. Short, because a person is watching; one small GET each time.
+	command_seconds: int = 20
+	# **On by default.** These machines drift minutes a month and nothing else
+	# notices: BIO-MRP-GATE1 was 7m43s slow when it was first measured, three
+	# years in, which wrote everybody's arrival earlier than it happened. Off is
+	# for a site whose machines are kept right by something else.
+	fix_clocks: bool = True
+	clock_tolerance: int = 120
 	retain_days: int = 90
 	log_level: str = "INFO"
 	# --- the ADMS server, for machines that push instead of being read ---
@@ -182,6 +192,14 @@ def load_config(path):
 		devices=devices,
 		queue_path=bridge.get("queue_path", "punches.sqlite3"),
 		poll_seconds=int(bridge.get("poll_seconds", 300)),
+		# Floored at five seconds: a smaller number is thousands of requests a
+		# day against a site with a daily compute limit, for no gain a person
+		# standing at a gate could notice.
+		command_seconds=max(5, int(bridge.get("command_seconds", 20))),
+		fix_clocks=bool(bridge.get("fix_clocks", True)),
+		# Floored at 30 seconds: a tighter tolerance writes the clock on the
+		# ordinary jitter of a network read, every pass, for nothing.
+		clock_tolerance=max(30, int(bridge.get("clock_tolerance_seconds", 120))),
 		retain_days=int(bridge.get("retain_days", 90)),
 		log_level=bridge.get("log_level", "INFO"),
 		adms_enabled=bool(adms.get("enabled", False)),

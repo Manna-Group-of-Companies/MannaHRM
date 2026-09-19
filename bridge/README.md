@@ -62,7 +62,8 @@ INSTALL.bat -Uninstall     stop it; every file is kept
 - **The key goes in `bridge.env`**, locked to SYSTEM and Administrators (or
   `chmod 600`), never in `config.toml`. `config.py` reads it; the environment
   still wins when both are set.
-- **Each new machine starts from a date you give**, today by default. Without
+- **Each new machine starts from a date you give**, the first of the current
+  month by default, because the month is what gets paid. Without
   that the first pass posts the machine's whole history. A machine this PC
   already reads keeps its cursor whatever date is typed — moving it would skip
   punches not yet sent.
@@ -87,12 +88,17 @@ The auto zip carries `autoinstall.toml` — the site and the API key, checked
 against the site before the zip is built. On the other PC, double-click
 `INSTALL.bat`: after Windows' administrator prompt nothing else is asked. It
 installs Python (winget, or python.org's signed installer where there is no
-winget), searches the network, names every machine it finds, starts from today,
+winget), searches the network, names every machine it finds, starts from the 1st of the month,
 runs a test pass, registers the task, turns sleep off, deletes the key file,
 and closes itself a minute later. `sudo sh install.sh` does the same on Linux.
 
 - **The auto zip is a key.** Send it the way a password is sent and delete it
   after. It is never committed: `dist/` and `autoinstall.toml` are ignored.
+- **It replaces whatever bridge is on the PC.** The code goes; `config.toml`,
+  `bridge.env`, `punches.sqlite3` and `machine-backups` stay, because they are
+  this PC's setup, its key, the punches that have not reached ERPNext yet and
+  fingerprint backups that cannot be made again. By hand that is
+  `INSTALL.bat -Replace`.
 - **Names, with nobody to choose them:** a serial listed in
   `known_machines.toml` keeps the name its punches already carry
   (`CGKK211561350` is `BIO-MRP-GATE1`); then a name from the Attendance Device
@@ -121,6 +127,65 @@ Users, and on each Attendance Device's own form.
 - Separate from punches. The doctype missing from the site, or a key that may
   not write it, is logged and the punches deliver exactly as before. What was
   read waits in the queue file and goes once it can.
+
+## What the dashboard asks for
+
+A browser cannot reach a fingerprint machine: they sit on the plant's LAN and
+the dashboard talks to ERPNext and nothing else. This box can reach both, so the
+dashboard leaves a **`Machine Command`** on the site and the bridge does it.
+
+```
+dashboard  ──►  ERPNext: Machine Command (Pending)
+                      ▲            │
+                      │            ▼  every ~20s
+              answer written   bridge picks it up  ──►  the machine
+```
+
+- **Three actions and no more:** Check User, Add User, List Users. The list is
+  closed on the server (`manna_hr/machinecmd.py`) and again in
+  `mannabridge/commands.py` — there is nothing here that clears a punch log,
+  wipes a machine or switches it off, and adding one would take an edit in both
+  places. `manna_hr/tests/test_machine_command.py` fails if the two lists drift.
+- **A number the machine already holds is never written over.** It may carry
+  somebody's fingerprints. That answers "already there", which is not a failure:
+  the gate usually enrols the finger first.
+- **`command_seconds`** in `[bridge]` is how often the site is asked, 20 by
+  default and never under 5 — somebody is watching the answer, and the site has
+  a daily compute limit.
+- **A command still Pending minutes later means no bridge is running** for that
+  machine, not that the machine refused. It runs when the bridge comes back.
+- Nothing here can cost a pass of the punches: it has its own try, like the
+  enrolment list, and a site without the doctype is noted once and left alone.
+
+## Changing a machine by hand
+
+The bridge only reads. Everything that changes a machine is a separate tool, run
+by a person, installed beside the bridge by `INSTALL.bat` with a **Manna Machine
+Tools** shortcut on the desktop. The shortcut opens `MACHINE.bat`: pick a
+machine, pick a job, answer the questions.
+
+| Tool | What |
+|---|---|
+| `machine.py` | info, clock, users, punch log, backup, add / edit / delete a user, enroll a finger, restore, open the door, restart |
+| `push_users.py` | every active Employee with an Attendance Device ID, as a user on the machine |
+| `employee_tools.py` | `list`: every user on the machine beside the Employee their number belongs to, flagging whose punches are refused. `create`: a new Employee on the site and the same number on the machine |
+| `machine_menu.py` | the numbered menu over both |
+
+- **Nothing is written without `--apply`.** The menu runs every change once
+  without it, shows the result, and runs it for real only when somebody types
+  `YES`.
+- **Edit, delete and restore take a backup first**, fingerprints included, into
+  `machine-backups`. The installer locks that folder to administrators, and
+  `package.ps1` refuses to zip it: a backup holds every template and keypad
+  password on the machine.
+- **Restore adds only who the machine lacks**, and refuses templates from a
+  different fingerprint algorithm. It is how a replacement machine gets
+  everybody's finger without anybody walking to it.
+- **There is no command to clear the log, wipe the machine, power it off or
+  disable it**, and `tests/test_machine_tools.py` fails if one appears.
+- It runs as administrator because `bridge.env` is locked. Connecting while
+  the bridge is mid-pass can fail on firmware that takes one connection at a
+  time; wait a minute and try again.
 
 ## Machines that push (ADMS, "Cloud Server")
 

@@ -82,6 +82,13 @@ describe("which control each field gets", () => {
 		expect(controlFor("holiday_list", "set")).toBe("link");
 	});
 
+	it("gives Work Location a link too, so it can be assigned without the desk", () => {
+		// The only way this field was writable before was a Custom Field editor
+		// on the site. A punch is geofenced against whichever Work Location this
+		// resolves to, so this is where "which gate is this person's" gets set.
+		expect(controlFor("custom_work_location", "set")).toBe("link");
+	});
+
 	it("gives CTC a number box", () => {
 		expect(controlFor("ctc", "set")).toBe("number");
 	});

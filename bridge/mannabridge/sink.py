@@ -32,6 +32,15 @@ NO_EMPLOYEE = "no employee found"
 # safely on the site.
 ALREADY_THERE = "already has a log with the same timestamp"
 
+# hrms refuses any transaction for an employee whose status is not Active. That
+# is master data exactly like NO_EMPLOYEE — somebody still punches at the gate
+# every morning and the record says they left — and it stays refused until a
+# person fixes the record. **It must not be a DeliveryError**: that ends the
+# whole pass at the first one (a dead line fails for everything, so stopping is
+# right there), and on 18 Sep 2026 one Inactive employee held up 198 punches for
+# everybody else at that gate.
+INACTIVE_EMPLOYEE = "inactive employee"
+
 
 class DeliveryError(Exception):
 	"""Transient. Worth retrying."""
@@ -97,6 +106,12 @@ class ErpSink:
 				"device user {0} on {1} matches no Employee.attendance_device_id".format(
 					device_user, device_id
 				)
+			)
+
+		if INACTIVE_EMPLOYEE in body.lower():
+			raise UnmappedEmployee(
+				"device user {0} on {1} is linked to an Employee who is not Active — "
+				"they punch every day and the record says they left".format(device_user, device_id)
 			)
 
 		if response.status_code in (401, 403):
@@ -179,6 +194,26 @@ class ErpSink:
 				return None
 			return r.json().get("message")
 		except (requests.RequestException, ValueError):
+			return None
+
+	def now(self, base_url):
+		"""The site's own clock, in this PC's timezone, or None.
+
+		Off the `Date` header rather than an endpoint, because every answer
+		carries one and nothing has to be installed on the site for it. The
+		machines store a local time with no zone, so it is converted here; a
+		bridge whose PC is in the wrong timezone would otherwise correct every
+		machine to the wrong hour.
+		"""
+		from email.utils import parsedate_to_datetime
+
+		try:
+			r = self._session.head(base_url, timeout=self._timeout, allow_redirects=True)
+			stamp = r.headers.get("Date")
+			if not stamp:
+				return None
+			return parsedate_to_datetime(stamp).astimezone().replace(tzinfo=None)
+		except (requests.RequestException, ValueError, TypeError):
 			return None
 
 	def heartbeat(self, base_url):

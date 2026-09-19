@@ -41,7 +41,8 @@ $ErrorActionPreference = 'Stop'
 
 $Files = @(
 	'mannabridge', 'probe.py', 'check_push.py', 'requirements.txt', 'config.example.toml',
-	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1'
+	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1',
+	'machine.py', 'machine_menu.py', 'push_users.py', 'employee_tools.py', 'MACHINE.bat'
 )
 
 if (-not $Out) {
@@ -88,7 +89,9 @@ try {
 	# next. None of these may ever leave this PC inside the zip.
 	$leaks = Get-ChildItem $root -Recurse -File | Where-Object {
 		$_.Name -in @('config.toml', 'bridge.env', 'run-bridge.bat', 'autoinstall.toml') -or
-		$_.Extension -in @('.sqlite3', '.log', '.bak', '.old')
+		$_.Extension -in @('.sqlite3', '.log', '.bak', '.old') -or
+		# Fingerprint templates and keypad passwords, from machine.py backup.
+		$_.FullName -match '\\machine-backups\\'
 	}
 	if ($leaks) { throw ('refusing to package ' + (($leaks | ForEach-Object { $_.Name }) -join ', ')) }
 
@@ -125,8 +128,9 @@ comm_keys = [$($keys -join ', ')]
 # Machines the network search cannot see - another subnet of the same plant -
 # by IP address, e.g. hosts = ["192.168.5.40"].
 hosts = []
-# The first day sent: "today", or a date like "15-09-2026".
-start = "today"
+# The first day sent: "month" (the 1st of the month it is installed in),
+# "today", or a date like "15-09-2026".
+start = "month"
 "@
 		[IO.File]::WriteAllText((Join-Path $root 'autoinstall.toml'), ($autoText -replace "`r?`n", "`n"), (New-Object Text.UTF8Encoding $false))
 	}

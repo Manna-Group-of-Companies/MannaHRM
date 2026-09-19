@@ -135,7 +135,7 @@ export async function load() {
 	try {
 		const today = todayIso();
 		const [emps, companies, checkins, shifts, holidays, leavetypes, attendance, depts, desigs,
-			regs, leaves, ltypes, letters] = await Promise.all([
+			regs, leaves, ltypes, letters, worklocs] = await Promise.all([
 			/* Categories, CTC and Calendar each count a field the directory never
 			   needed. Asking for a field a site does not have is a 417 on the whole
 			   call, and the whole call is the dashboard — so the richer list is tried
@@ -181,6 +181,11 @@ export async function load() {
 				.catch(() => listAll("Employee Letter", LETTER_FIELDS_MIN)
 					.then((rows) => ({ rows, full: false })))
 				.catch(() => ({ rows: [], full: false })),
+			/* The custom doctypes are not installed on every site yet (CLAUDE.md
+			   §7), so a site still holding them as `custom: 1` — or not at all —
+			   answers this with nothing rather than a 417 that would take the
+			   whole load down with it. */
+			listAll("Work Location", ["name", "location_name", "is_active"]).catch(() => []),
 		]);
 
 		set({
@@ -206,6 +211,8 @@ export async function load() {
 			shiftTypes: shifts || [],
 			departments: depts || [],
 			designations: desigs || [],
+			// Active only — see initialState.js.
+			workLocations: (worklocs || []).filter((l) => l.is_active !== 0),
 			counts: {
 				companies: companies.length, shift: shifts.length, holiday: holidays.length,
 				leavetype: leavetypes.length, attendance: attendance.length,

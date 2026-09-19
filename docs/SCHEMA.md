@@ -79,7 +79,7 @@ Every tunable number, in one place, editable without a deploy.
 | Fieldname | Type | Default | Notes |
 |---|---|---|---|
 | `enforce_geofence` | Check | 1 | Off means coordinates are recorded but never refuse a punch |
-| `default_radius_metres` | Int | 300 | Used when a Work Location leaves it blank |
+| `default_radius_metres` | Int | 1000 | Used when a Work Location leaves it blank |
 | `punch_in_from` | Time | 05:00:00 | Earlier is refused; regularize instead |
 | `punch_out_until` | Time | 21:30:00 | Later is refused; regularize instead |
 | `enforce_punch_window` | Check | 1 | |
@@ -88,9 +88,11 @@ Every tunable number, in one place, editable without a deploy.
 
 **`radius_metres` is generous on purpose.** The sales app uses 2 km for visits,
 because that is a check the rep is *at the place they say*, not that they are in
-the doorway. A factory gate is a fixed, known point, so 300 m is right — but it
-is 300 and not 50 because a phone against a metal shed reads badly, and the
-failure that matters is refusing someone who did turn up.
+the doorway. A factory gate is a fixed, known point, so a tighter figure would
+say more — but the default was raised from 300 m to 1000 m on 19 September 2026
+once employees started being assigned across five Work Locations rather than
+one gate, and a phone against a metal shed reads badly regardless. Set
+`radius_metres` on the Work Location itself wherever 1 km is too generous.
 
 ### `Employee Attendance Regularization`
 

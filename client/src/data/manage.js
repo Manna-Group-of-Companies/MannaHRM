@@ -66,6 +66,13 @@ export const MANAGED = [
 		+ "punch whose number is nobody's Attendance Device ID, so every punch they make is refused. "
 		+ "Enrolled At is when they appeared, to within one poll — blank for anybody already on the "
 		+ "machine when the bridge first read it, because the machine keeps no enrolment date."],
+	["attendance", "machinecommands", "Machine Commands", "Machine Command",
+		"What somebody asked a fingerprint machine to do from here, and what it answered. A browser "
+		+ "cannot reach a machine — the bridge on the gate PC picks these up about every twenty "
+		+ "seconds, does it at the machine and writes the answer back. **A command still Pending "
+		+ "minutes later means no bridge is running for that machine**, not that the machine refused. "
+		+ "The list of actions is closed on the server and again in the bridge: nothing here clears a "
+		+ "punch log, wipes a machine or switches it off."],
 	["attendance", "locations", "Work Locations", "Work Location",
 		"The geofence: a coordinate and a radius per site. This is what a mobile punch is measured "
 		+ "against, so a radius typed too wide is a punch accepted from the next town — and one "

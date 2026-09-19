@@ -231,7 +231,11 @@ def _check_geofence(doc, settings):
 	)
 	doc.custom_distance_metres = round(distance, 1)
 
-	radius = location.radius_metres or settings.default_radius_metres or 300
+	# 1000m rather than the gate-sized 300m this used to fall back to: with five
+	# Work Locations now in play, a location nobody has set a radius on yet is
+	# more likely to be a yard or a compound than a single gate. Set
+	# radius_metres on the Work Location itself for anywhere that is smaller.
+	radius = location.radius_metres or settings.default_radius_metres or 1000
 
 	if distance <= radius:
 		doc.custom_geofence_result = GEO_INSIDE

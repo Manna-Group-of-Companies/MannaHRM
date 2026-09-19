@@ -23,7 +23,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-from mannabridge import adms
+from mannabridge import adms, clock, commands
 from mannabridge.config import load_config
 from mannabridge.device import Device
 from mannabridge.queue import PunchQueue
@@ -75,7 +75,11 @@ def poll_devices(devices, queue):
 
 
 def _waiting_on_employee(row):
-	return "matches no Employee" in (row.get("last_error") or "")
+	# Both are one thing: a punch that needs a person to change a record, not a
+	# line that needs time. Neither is ever retired by the attempt cap, which is
+	# what makes "fix the record and they go on the next pass" true.
+	error = row.get("last_error") or ""
+	return "matches no Employee" in error or "not Active" in error
 
 
 def drain(queue, sink, batch=500, by_serial=None):
@@ -136,7 +140,14 @@ def drain(queue, sink, batch=500, by_serial=None):
 	return sent, failed
 
 
-def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None):
+def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fix_clocks=True, tolerance=clock.TOLERANCE_SECONDS):
+	if fix_clocks and erp_url:
+		try:
+			keep_clocks(devices, queue, sink.now(erp_url), tolerance)
+		except Exception:
+			# A clock is a report about the punches; the punches are the pay.
+			log.exception("unexpected failure checking the clocks")
+
 	found = poll_devices(devices, queue)
 	sent, failed = drain(queue, sink, by_serial=by_serial)
 
@@ -167,6 +178,87 @@ def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None):
 		log.error("backlog is %d punches — something is wrong, not just slow", backlog)
 
 	return backlog
+
+
+def keep_clocks(devices, queue, site_now, tolerance=clock.TOLERANCE_SECONDS):
+	"""Put each machine's clock back on the site's. Returns how many were set.
+
+	Before the punches are read, so a correction and the read cannot disagree
+	about what time it was. Its own try per machine: a clock that cannot be
+	written is a report, and the punches on that machine still have to come.
+	"""
+	if site_now is None:
+		# No site clock, no correction. This PC's own clock is only as right as
+		# whoever set it, and the site's is what judges the punch.
+		return 0
+
+	fixed = 0
+	for device in devices:
+		try:
+			machine_time = device.clock()
+			if machine_time is None:
+				continue
+			action, drift = clock.decide(machine_time, site_now, tolerance=tolerance)
+			if action == "leave":
+				continue
+			if action == "refuse":
+				log.error(
+					"%s: clock is %.0f s out (%s against the site's %s) — too far to correct quietly. "
+					"Somebody has to look at the machine.",
+					device.name, drift, machine_time, site_now,
+				)
+				continue
+
+			# Backwards first: the cursor has to move before the machine starts
+			# reusing timestamps, or the punches in between are read and judged
+			# old. Re-sending is free; losing one is somebody's day.
+			if drift > 0:
+				cursor = queue.last_seen(device.name)
+				rewound = clock.rewound_cursor(cursor, drift)
+				if rewound and rewound != cursor:
+					queue.set_last_seen(device.name, rewound)
+					log.info("%s: cursor moved back to %s so nothing is skipped", device.name, rewound)
+
+			after = device.set_clock(site_now)
+			fixed += 1
+			log.warning(
+				"%s: clock was %.0f s %s; set to the site's %s (machine now reads %s)",
+				device.name, abs(drift), "fast" if drift > 0 else "slow", site_now, after,
+			)
+		except Exception:
+			log.exception("%s: could not check or set the clock", device.name)
+	return fixed
+
+
+def run_commands(devices, site, once=False):
+	"""What somebody asked for on the dashboard, done at the machine.
+
+	Its own try, like the enrolment list and for the same reason: this is a
+	convenience and the punch queue is somebody's pay. Nothing that goes wrong
+	in here may cost a pass of the punches.
+
+	A site with no `Machine Command` doctype — which is every site until the app
+	is installed — says so once and is not asked again, because the alternative
+	is a 404 in the log every twenty seconds for ever.
+	"""
+	if site is None or _commands_off:
+		return 0
+	try:
+		return commands.work(devices, site)
+	except commands.NotOnSite:
+		log.info("ERPNext has no Machine Command doctype yet; dashboard requests are off until it exists")
+		_commands_off.add(True)
+	except commands.Unavailable as exc:
+		# The site, not a machine. Quiet: the same line already appears when
+		# punches cannot be delivered, and this is the lesser of the two.
+		log.debug("could not read Machine Command: %s", exc)
+	except Exception:
+		log.exception("unexpected failure running dashboard commands")
+	return 0
+
+
+#: Set once a site has answered "no such doctype", so the ask stops.
+_commands_off = set()
 
 
 def status(config, queue, sink, by_serial):
@@ -257,6 +349,7 @@ def main():
 	sink = ErpSink(config.erp_url, config.api_key, config.api_secret)
 	enrolments = EnrolmentStore(config.queue_path)
 	enrolment_site = EnrolmentSite(config.erp_url, config.api_key, config.api_secret)
+	command_site = commands.CommandSite(config.erp_url, config.api_key, config.api_secret)
 	devices = [Device(**d) for d in config.pollable]
 	by_serial = {d["serial"]: d["name"] for d in config.devices if d.get("serial")}
 
@@ -311,7 +404,8 @@ def main():
 
 	while True:
 		try:
-			run_once(devices, queue, sink, config.retain_days, config.erp_url, by_serial)
+			run_once(devices, queue, sink, config.retain_days, config.erp_url, by_serial,
+			         config.fix_clocks, config.clock_tolerance)
 		except Exception:
 			log.exception("unexpected failure in poll cycle")
 
@@ -324,17 +418,29 @@ def main():
 			log.exception("unexpected failure reading enrolments")
 
 		if args.once:
+			run_commands(devices, command_site, once=True)
 			return
 
 		# **Woken by a punch, or by the clock.** A pushed punch sets the event and
 		# reaches the site in seconds instead of at the next poll — the whole
 		# point of push. The timeout stays because machines that are *read* need
 		# pacing, and a site that was unreachable has to be retried on a quiet night.
-		if wake.wait(config.poll_seconds):
-			wake.clear()
-			# A machine sends a batch as several posts a moment apart; settling
-			# turns a burst into one pass.
-			time.sleep(WAKE_SETTLE_SECONDS)
+		#
+		# The wait is taken in slices so commands left on the site by somebody at
+		# the dashboard are picked up in seconds rather than at the next pass:
+		# the person who asked "is 851 on the gate?" is watching the answer.
+		deadline = time.monotonic() + config.poll_seconds
+		while True:
+			left = deadline - time.monotonic()
+			if left <= 0:
+				break
+			if wake.wait(min(config.command_seconds, left)):
+				wake.clear()
+				# A machine sends a batch as several posts a moment apart;
+				# settling turns a burst into one pass.
+				time.sleep(WAKE_SETTLE_SECONDS)
+				break
+			run_commands(devices, command_site)
 
 
 if __name__ == "__main__":

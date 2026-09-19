@@ -53,6 +53,47 @@ class Device:
 			ommit_ping=True,
 		)
 
+	def clock(self):
+		"""What the machine thinks the time is, or None if it will not say."""
+		conn = None
+		try:
+			conn = self._zk.connect()
+			return conn.get_time()
+		finally:
+			if conn:
+				try:
+					conn.disconnect()
+				except Exception:
+					log.exception("%s: failed to disconnect cleanly", self.name)
+
+	def set_clock(self, when):
+		"""Write the machine's clock. The one thing the bridge changes on a device.
+
+		Everything else here reads. This writes because a drifting clock decides
+		whether somebody was late, and nothing else in the system was noticing —
+		see `mannabridge/clock.py` for what is refused and why.
+		"""
+		conn = None
+		try:
+			conn = self._zk.connect()
+			conn.set_time(when)
+			return conn.get_time()
+		finally:
+			if conn:
+				try:
+					conn.disconnect()
+				except Exception:
+					log.exception("%s: failed to disconnect cleanly", self.name)
+
+	def open(self):
+		"""An open connection, for the caller to use and disconnect.
+
+		Only `commands.py` uses this: a command has to read the machine and
+		sometimes write to it in one session, which neither `read` nor `users`
+		can express. The machine is not disabled here either — see `read`.
+		"""
+		return self._zk.connect()
+
 	def read(self, since=None):
 		"""Every attendance record on the device, newest last.
 

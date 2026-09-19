@@ -41,6 +41,17 @@ def test_a_device_user_nobody_is_linked_to_is_not_retried():
 		send(sink_answering(Answer(417, "No Employee found for the given employee field value")))
 
 
+def test_a_punch_from_somebody_marked_inactive_does_not_end_the_pass():
+	# Master data, not a dead line: they punch every morning and the record says
+	# they left. Raised as UnmappedEmployee, because a DeliveryError breaks the
+	# drain - one Inactive employee held up 198 punches for a whole gate on
+	# 18 Sep 2026, and every one of them was somebody else's day.
+	body = ('{"exception": "erpnext.setup.doctype.employee.employee.InactiveEmployeeStatusError: '
+	        'Transactions cannot be created for an Inactive Employee HR-EMP-00478."}')
+	with pytest.raises(UnmappedEmployee, match="not Active"):
+		send(sink_answering(Answer(417, body)))
+
+
 def test_a_refused_key_is_loud_rather_than_retried_in_silence():
 	with pytest.raises(DeliveryError, match="authentication refused"):
 		send(sink_answering(Answer(401, "")))

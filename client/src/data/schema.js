@@ -1952,6 +1952,114 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Machine Command": {
+		name: "Machine Command",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 0,
+		autoname: "hash",
+		title: "device_user_id",
+		fields: [
+			{
+				name: "device_id",
+				label: "Device ID",
+				kind: "text",
+				reqd: 1,
+				hint: "The machine this is for, as its punches name it in `Employee Checkin.device_id`. A bridge runs only the commands for machines in its own config.toml.",
+				list: 1
+			},
+			{
+				name: "action",
+				label: "Action",
+				kind: "select",
+				choices: [
+					"Check User",
+					"Add User",
+					"List Users"
+				],
+				reqd: 1,
+				hint: "What the bridge will do at the machine. The list is closed on the server and again in the bridge: there is no action here that clears the punch log, wipes the machine or switches it off.",
+				list: 1
+			},
+			{
+				name: "device_user_id",
+				label: "Machine Number",
+				kind: "text",
+				hint: "The number the machine calls this person, which is `Employee.attendance_device_id`. Digits only. Not needed by List Users.",
+				list: 1
+			},
+			{
+				name: "name_on_device",
+				label: "Name on Machine",
+				kind: "text",
+				hint: "What the machine will show beside the number. Cut to 24 characters, because the machine cuts it anyway and silently."
+			},
+			{
+				name: "employee",
+				label: "Employee",
+				kind: "link",
+				link: "Employee",
+				hint: "Who this is about, when it was raised from a person's record. The machine is told a number and never a name it could match."
+			},
+			{
+				name: "status",
+				label: "Status",
+				kind: "select",
+				choices: [
+					"Pending",
+					"Running",
+					"Done",
+					"Failed",
+					"Cancelled"
+				],
+				reqd: 1,
+				def: "Pending",
+				hint: "Pending until a bridge picks it up. Nothing ever goes back to Pending: a finished command sent round again would add a second user, or answer a question somebody has already acted on.",
+				list: 1
+			},
+			{
+				name: "found",
+				label: "Found on Machine",
+				kind: "readonly",
+				hint: "Check User's answer, as a tick: whether the machine holds that number."
+			},
+			{
+				name: "attempts",
+				label: "Attempts",
+				kind: "readonly",
+				hint: "How many times a bridge has picked this up. More than one means a machine that would not answer, not a command run twice."
+			},
+			{
+				name: "result",
+				label: "Result",
+				kind: "readonly",
+				hint: "The machine's answer in words, or the reason it could not be reached. Written by the bridge."
+			},
+			{
+				name: "requested_by",
+				label: "Requested By",
+				kind: "readonly",
+				link: "User"
+			},
+			{
+				name: "requested_at",
+				label: "Requested At",
+				kind: "readonly"
+			},
+			{
+				name: "started_at",
+				label: "Picked Up At",
+				kind: "readonly",
+				hint: "When a bridge claimed it. A command still Pending minutes later means no bridge is running for that machine."
+			},
+			{
+				name: "finished_at",
+				label: "Finished At",
+				kind: "readonly"
+			}
+		]
+	},
 	"Manna Announcement": {
 		name: "Manna Announcement",
 		module: "Manna HR",

@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-09-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "device_id",
+  "action",
+  "device_user_id",
+  "name_on_device",
+  "employee",
+  "column_break_state",
+  "status",
+  "found",
+  "attempts",
+  "section_break_answer",
+  "result",
+  "section_break_when",
+  "requested_by",
+  "requested_at",
+  "column_break_when",
+  "started_at",
+  "finished_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "device_id",
+   "fieldtype": "Data",
+   "label": "Device ID",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "description": "The machine this is for, as its punches name it in `Employee Checkin.device_id`. A bridge runs only the commands for machines in its own config.toml."
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "label": "Action",
+   "options": "Check User\nAdd User\nList Users",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "What the bridge will do at the machine. The list is closed on the server and again in the bridge: there is no action here that clears the punch log, wipes the machine or switches it off."
+  },
+  {
+   "fieldname": "device_user_id",
+   "fieldtype": "Data",
+   "label": "Machine Number",
+   "in_list_view": 1,
+   "description": "The number the machine calls this person, which is `Employee.attendance_device_id`. Digits only. Not needed by List Users."
+  },
+  {
+   "fieldname": "name_on_device",
+   "fieldtype": "Data",
+   "label": "Name on Machine",
+   "description": "What the machine will show beside the number. Cut to 24 characters, because the machine cuts it anyway and silently."
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "description": "Who this is about, when it was raised from a person's record. The machine is told a number and never a name it could match."
+  },
+  {
+   "fieldname": "column_break_state",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nRunning\nDone\nFailed\nCancelled",
+   "default": "Pending",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "description": "Pending until a bridge picks it up. Nothing ever goes back to Pending: a finished command sent round again would add a second user, or answer a question somebody has already acted on."
+  },
+  {
+   "fieldname": "found",
+   "fieldtype": "Check",
+   "label": "Found on Machine",
+   "read_only": 1,
+   "description": "Check User's answer, as a tick: whether the machine holds that number."
+  },
+  {
+   "fieldname": "attempts",
+   "fieldtype": "Int",
+   "label": "Attempts",
+   "read_only": 1,
+   "description": "How many times a bridge has picked this up. More than one means a machine that would not answer, not a command run twice."
+  },
+  {
+   "fieldname": "section_break_answer",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Small Text",
+   "label": "Result",
+   "read_only": 1,
+   "description": "The machine's answer in words, or the reason it could not be reached. Written by the bridge."
+  },
+  {
+   "fieldname": "section_break_when",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "requested_by",
+   "fieldtype": "Link",
+   "label": "Requested By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "requested_at",
+   "fieldtype": "Datetime",
+   "label": "Requested At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Picked Up At",
+   "read_only": 1,
+   "description": "When a bridge claimed it. A command still Pending minutes later means no bridge is running for that machine."
+  },
+  {
+   "fieldname": "finished_at",
+   "fieldtype": "Datetime",
+   "label": "Finished At",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Machine Command",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR User",
+   "write": 1
+  }
+ ],
+ "search_fields": "device_id,device_user_id,status",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "device_user_id",
+ "track_changes": 1
+}

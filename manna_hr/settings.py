@@ -13,7 +13,11 @@ import frappe
 # punch in the group.
 DEFAULTS = {
 	"enforce_geofence": 1,
-	"default_radius_metres": 300,
+	# 1000m rather than 300: with five Work Locations now in play, a location
+	# nobody has set a radius on yet is more likely to be a yard or a compound
+	# than a single gate. Set radius_metres on the Work Location itself for
+	# anywhere smaller. See docs/OPEN_QUESTIONS.md.
+	"default_radius_metres": 1000,
 	"punch_in_from": "05:00:00",
 	"punch_out_until": "21:30:00",
 	"enforce_punch_window": 1,

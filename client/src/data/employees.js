@@ -250,6 +250,7 @@ export const NEW_EMP_STEPS = [
 		["How their attendance is judged", [
 			["default_shift", "Default Shift", "select", 0, "shift",   12],
 			["holiday_list",  "Holiday List",  "select", 0, "holiday", 12],
+			["custom_work_location", "Work Location", "select", 0, "worklocation", 12],
 		]],
 		["Punching from a phone", [
 			["custom_allow_remote_punch", "Punch From Anywhere", "check", 0, "", 24],
@@ -303,6 +304,8 @@ export const NEW_EMP_HINT = {
 		+ "usually an email address — and not the name in the box beside it.",
 	"Default Shift": "What decides whether a punch is late, and which day a night shift belongs to. "
 		+ "Left empty, nothing generates attendance for this person.",
+	"Work Location": "The gate a phone punch is measured against. Left empty, a mobile punch is "
+		+ "recorded but never checked against a distance — see custom_geofence_result on the punch.",
 	"Punch From Anywhere": "Lets this person punch from a phone, geofenced. Off is the safe default: "
 		+ "a device id that does not start with the trusted prefix is treated as a mobile punch.",
 };

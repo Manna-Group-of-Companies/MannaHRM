@@ -469,7 +469,9 @@ class _PunchScreenState extends State<PunchScreen> {
         (place['latitude'] as num).toDouble(),
         (place['longitude'] as num).toDouble(),
       );
-      final radius = (place['radius_metres'] as num?)?.toDouble() ?? 300;
+      // Advisory only — matches manna_hr/checkin.py's fallback so this reads
+      // the same as the server's answer; the server still decides. CLAUDE.md §1.
+      final radius = (place['radius_metres'] as num?)?.toDouble() ?? 1000;
       final inside = metres <= radius;
       return Text(
         '${formatDistance(metres)} from ${place['location_name']} '

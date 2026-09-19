@@ -50,9 +50,15 @@ def test_a_date_is_read_day_first_as_it_is_written_here():
 	assert parse_start("2026-09-01", TODAY) == date(2026, 9, 1)
 
 
-def test_a_blank_start_is_today_and_nonsense_is_nobody():
-	assert parse_start("", TODAY) == TODAY
+def test_a_blank_start_is_the_first_of_this_month_and_nonsense_is_nobody():
+	# The month is what gets paid; installing on the 14th must not lose the 1st to the 13th.
+	assert parse_start("", TODAY) == date(2026, 9, 1)
+	assert parse_start("month", TODAY) == date(2026, 9, 1)
 	assert parse_start("next monday", TODAY) is None
+
+
+def test_today_still_means_today_for_a_zip_that_asks_for_it():
+	assert parse_start("today", TODAY) == TODAY
 
 
 def test_the_cursor_is_the_last_second_before_the_first_day_sent():
@@ -280,7 +286,8 @@ def test_the_automatic_install_asks_nothing_and_writes_a_bridge_that_loads(tmp_p
 	config = load_config(str(tmp_path / "config.toml"))
 	assert (config.api_key, config.api_secret) == ("k3y", "s3cret")
 	assert [(d["name"], d["password"]) for d in config.devices] == [("BIO-MRP-GATE1", 0), ("BIO-NEW999", 1234)]
-	assert PunchQueue(str(tmp_path / "punches.sqlite3")).last_seen("BIO-NEW999") == "2026-09-13 23:59:59"
+	# No start in the file: the first of the month, so the cursor is the last second of August.
+	assert PunchQueue(str(tmp_path / "punches.sqlite3")).last_seen("BIO-NEW999") == "2026-08-31 23:59:59"
 
 
 def test_the_automatic_install_stops_when_no_machine_answers(tmp_path, monkeypatch):

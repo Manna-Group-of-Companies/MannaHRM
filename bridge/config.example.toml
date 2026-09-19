@@ -12,6 +12,18 @@ queue_path   = "punches.sqlite3"
 # Five minutes. The whole device log comes over the wire on every poll, so
 # seconds would hammer a machine that also has to answer the door.
 poll_seconds = 300
+# How often the site is asked whether somebody left a Machine Command on the
+# dashboard - "is 851 on the gate?", asked by a person who is waiting for the
+# answer. One small request each time; never goes below 5.
+command_seconds = 20
+# Put each machine's clock back on the site's clock when it has drifted, before
+# the punches are read. These machines drift minutes a month and nothing else
+# notices - BIO-MRP-GATE1 was 7m43s slow when it was first measured, three years
+# in, which wrote everybody's arrival earlier than it happened. A drift smaller
+# than the tolerance is left alone; one larger than six hours is logged and
+# refused, because a machine that far out needs a person.
+fix_clocks = true
+clock_tolerance_seconds = 120
 # Delivered punches are kept this long, then pruned. Undelivered ones are never
 # pruned, however old.
 retain_days  = 90

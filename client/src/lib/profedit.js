@@ -66,6 +66,7 @@ export const LINK_LISTS = {
 	designation: "designations",
 	holiday_list: "holidayLists",
 	default_shift: "shiftTypes",
+	custom_work_location: "workLocations",
 };
 
 /** Select fields, and their options. Only where the site's own list is short,

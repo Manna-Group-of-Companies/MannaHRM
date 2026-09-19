@@ -64,6 +64,12 @@ const initial = {
 	   Category — that one lists them by name. */
 	departments: [],
 	designations: [],
+	/** The gates a punch is judged against — `manna_hr/geo.py`'s `Work Location`.
+	    Employee Profile's Work Location box picks from this; Create Employee's
+	    does too. Active only: a location switched off is a gate that closed,
+	    and offering it here would let somebody be assigned to one the site's
+	    own geofence check has already stopped honouring. */
+	workLocations: [],
 	/** The correction doctype that answered, or "" when none did — it decides
 	    where a decision would later be written, and the desk links read it.
 	    `Attendance Regularization` (no prefix) is the sales system's and is
