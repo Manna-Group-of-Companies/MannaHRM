@@ -28,11 +28,15 @@ class Config:
 	# "is 851 on the gate?", asked from the dashboard and waited on by whoever
 	# asked. Short, because a person is watching; one small GET each time.
 	command_seconds: int = 20
-	# **On by default.** These machines drift minutes a month and nothing else
-	# notices: BIO-MRP-GATE1 was 7m43s slow when it was first measured, three
-	# years in, which wrote everybody's arrival earlier than it happened. Off is
-	# for a site whose machines are kept right by something else.
-	fix_clocks: bool = True
+	# **Off by default, asked for by IT on 19 September 2026.** The bridge reads
+	# the machines and does not set their clocks. A gate's clock is somebody's
+	# decision — eSSL syncs some of them, and one gate is deliberately kept a
+	# few minutes behind — and a bridge quietly correcting that would move
+	# everybody's arrival time on a morning nobody chose.
+	#
+	# The drift is still shown: on the console's Machines screen, and by
+	# `machine.py time`. Setting a clock is a person typing --apply.
+	fix_clocks: bool = False
 	clock_tolerance: int = 120
 	retain_days: int = 90
 	log_level: str = "INFO"
@@ -196,7 +200,7 @@ def load_config(path):
 		# day against a site with a daily compute limit, for no gain a person
 		# standing at a gate could notice.
 		command_seconds=max(5, int(bridge.get("command_seconds", 20))),
-		fix_clocks=bool(bridge.get("fix_clocks", True)),
+		fix_clocks=bool(bridge.get("fix_clocks", False)),
 		# Floored at 30 seconds: a tighter tolerance writes the clock on the
 		# ordinary jitter of a network read, every pass, for nothing.
 		clock_tolerance=max(30, int(bridge.get("clock_tolerance_seconds", 120))),

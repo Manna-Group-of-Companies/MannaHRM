@@ -157,6 +157,32 @@ dashboard  ──►  ERPNext: Machine Command (Pending)
 - Nothing here can cost a pass of the punches: it has its own try, like the
   enrolment list, and a site without the doctype is noted once and left alone.
 
+## The console on the gate PC
+
+`CONSOLE.bat`, or **Manna HR Console** on the desktop. A web page served by
+`console.py` on `127.0.0.1` and nowhere else — this PC is the only place that
+can reach both the machines and ERPNext, which is the whole reason it exists.
+
+| Screen | What |
+|---|---|
+| Machines | every machine, its address, how many users, its clock and how far off the site it is |
+| People on a machine | each user beside the Employee their number belongs to, and what is wrong where something is |
+| Punch log | the machine's own memory, read only |
+| Attendance | first in and last out per person per day, from what reached ERPNext, with the Attendance status beside it |
+| New employee | a free number, the record on the site, and the user on the machine — in that order |
+
+- **It listens on `127.0.0.1` only** and refuses anything else. It reads
+  `bridge.env`, whose key writes attendance for the whole group, and it drives
+  the machines; on the network it would hand both to whoever is on the LAN.
+- **It decides nothing.** Every rule is `employee_tools.py`'s and `machine.py`'s
+  — a number nobody else holds, the mandatory fields, the closed list of what a
+  machine may be asked. The page shows what they answered.
+- **The site is written before the machine**, so a record ERPNext refuses leaves
+  the gate untouched.
+- A fingerprint still cannot be created from here. The template is made by the
+  sensor; the console gets the number and the name onto the machine so that
+  somebody at the gate only has to add the finger.
+
 ## Changing a machine by hand
 
 The bridge only reads. Everything that changes a machine is a separate tool, run

@@ -95,6 +95,79 @@ def site_insert(config, doctype, doc):
 	return response.json()["data"]
 
 
+def site_update(config, doctype, name, patch):
+	"""Change the named fields on one record, and nothing else.
+
+	A patch rather than the whole document: sending a document back whole
+	re-sends every field the read returned, which quietly undoes anything
+	somebody else changed in between.
+	"""
+	response = requests.put(
+		config.erp_url.rstrip("/") + "/api/resource/" + doctype + "/" + requests.utils.quote(name),
+		json=patch,
+		headers=_headers(config),
+		timeout=60,
+	)
+	if response.status_code in (401, 403):
+		raise SystemExit("The site refused: this PC's key may not change {0}.".format(doctype))
+	if response.status_code != 200:
+		raise SystemExit("The site refused the change to {0}: {1}".format(name, site_error(response)))
+	return response.json()["data"]
+
+
+def set_machine_code(config, employee, number, name_on_device="", force=False):
+	"""Put a machine number on an Employee who has none.
+
+	The one write that closes the gap this whole folder is about: a person the
+	machine lets punch, whose number is nobody's Attendance Device ID, reads as
+	absent every day. Three refusals stand in front of it:
+
+	  * a number some other Employee holds, whatever their status — two holders
+	    is one person's attendance landing on the other,
+	  * an Employee who already has a different number, which is somebody about
+	    to lose the punches filed under the old one,
+	  * a machine name that shares no word with the record's name, unless the
+	    person says to go ahead. `docs/NEW_EMPLOYEE.md`: a wrong link pays one
+	    person for another's attendance, and nothing on any screen will say so.
+	"""
+	number = str(number or "").strip()
+	check_user_id(number)
+
+	holders = [h for h in everybody_with_a_number(config) if str(h.get("attendance_device_id") or "").strip() == number]
+	others = [h for h in holders if h["name"] != employee]
+	if others:
+		raise SystemExit(
+			"{0} already belongs to {1}. Nothing was changed.".format(
+				number, ", ".join("{0} ({1}, {2})".format(h["name"], h.get("employee_name", ""), h.get("status", "")) for h in others)
+			)
+		)
+
+	rows = site_list(config, "Employee", ["name", "employee_name", "attendance_device_id", "status"], [["name", "=", employee]])
+	if not rows:
+		raise SystemExit("No Employee called {0}.".format(employee))
+	record = rows[0]
+	held = str(record.get("attendance_device_id") or "").strip()
+	if held and held != number and not force:
+		raise SystemExit(
+			"{0} already punches as {1}. Changing it to {2} leaves the punches under {1} pointing at nobody."
+			.format(record["employee_name"] or employee, held, number)
+		)
+	if name_on_device and looks_like_somebody_else(name_on_device, record["employee_name"]) and not force:
+		raise SystemExit(
+			"The machine calls {0} '{1}' and this record is '{2}'. If they are the same person, say so and it "
+			"will be linked.".format(number, name_on_device, record["employee_name"])
+		)
+
+	site_update(config, "Employee", employee, {"attendance_device_id": number})
+	return {
+		"employee": employee,
+		"employee_name": record["employee_name"],
+		"number": number,
+		"said": "{0} ({1}) now punches as {2}. Punches already waiting on this go on the bridge's next pass."
+		        .format(record["employee_name"] or employee, employee, number),
+	}
+
+
 def everybody_with_a_number(config):
 	# Every status. A Left employee still holding a number still catches its punches.
 	return site_list(
@@ -170,6 +243,25 @@ def not_on_machine(users, people):
 	)
 
 
+def aadhaar_digits(text):
+	"""Twelve digits, spaces and dashes forgiven, or a refusal.
+
+	People read an Aadhaar off a card in groups of four, so "1234 5678 9012"
+	is what gets typed and is the same number. Anything that is not twelve
+	digits is refused rather than stored: a number one digit short is worse
+	than a blank, because a blank is visibly missing and a wrong one is not,
+	and this one goes on PF and ESI returns.
+	"""
+	digits = "".join(c for c in str(text or "") if c.isdigit())
+	if not digits:
+		return ""
+	if len(digits) != 12:
+		raise SystemExit(
+			"An Aadhaar number is twelve digits; {0!r} has {1}. Left blank rather than stored wrong.".format(text, len(digits))
+		)
+	return digits
+
+
 def parse_date(text, label):
 	for fmt in ("%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d"):
 		try:
@@ -202,14 +294,25 @@ def employee_doc(args):
 		"company": args.company.strip(),
 		"attendance_device_id": args.user_id,
 	}
+	# Everything here is optional and everything here exists on this site's
+	# Employee — checked against the doctype on 19 September 2026. **A key the
+	# doctype has not got is accepted and dropped without a word**, so a field
+	# added to this table without being added to the site would take what
+	# somebody typed and lose it. There is no Aadhaar field; it needs a Custom
+	# Field on the site before it can be collected here.
 	for field, value in (
 		("last_name", args.last_name),
 		("default_shift", args.shift),
 		("employee_number", args.employee_number),
 		("branch", args.branch),
+		("cell_number", getattr(args, "mobile", "")),
+		("personal_email", getattr(args, "email", "")),
+		("current_address", getattr(args, "address", "")),
+		("permanent_address", getattr(args, "permanent_address", "")),
+		("custom_aadhaar_no", aadhaar_digits(getattr(args, "aadhaar", ""))),
 	):
-		if value and value.strip():
-			doc[field] = value.strip()
+		if value and str(value).strip():
+			doc[field] = str(value).strip()
 	return doc
 
 
@@ -394,6 +497,10 @@ def parser():
 	p.add_argument("--shift", help="Default Shift - without one no Attendance is ever generated")
 	p.add_argument("--employee-number", help="the company's own code, e.g. MRP-307")
 	p.add_argument("--branch")
+	p.add_argument("--mobile", help="Employee.cell_number")
+	p.add_argument("--email", help="personal email")
+	p.add_argument("--address", help="current address")
+	p.add_argument("--aadhaar", help="twelve digits; spaces are ignored")
 	p.set_defaults(func=cmd_create)
 	return top
 

@@ -57,7 +57,8 @@ $InstallDir = $InstallDir.TrimEnd('\')
 $Files = @(
 	'mannabridge', 'probe.py', 'check_push.py', 'requirements.txt', 'config.example.toml',
 	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1',
-	'machine.py', 'machine_menu.py', 'push_users.py', 'employee_tools.py', 'MACHINE.bat'
+	'machine.py', 'machine_menu.py', 'push_users.py', 'employee_tools.py', 'MACHINE.bat',
+	'console.py', 'console.html', 'CONSOLE.bat', 'MannaHRConsole.vbs'
 )
 
 # An auto-install zip (package.ps1 -Auto) carries this beside the installer, and
@@ -225,6 +226,54 @@ function Show-Status {
 $Keep = @('config.toml', 'bridge.env', 'punches.sqlite3', 'punches.sqlite3-wal',
 	'punches.sqlite3-shm', 'machine-backups', 'run-bridge.bat.old', '.venv')
 
+# Other attendance software on the same PC. **Only looked for, never touched.**
+# eSSL is what enrols the fingers at several of these gates and Factor HR is the
+# system being replaced; both read the same machines perfectly well beside this
+# bridge, because a machine's log is not consumed by reading it. An installer
+# that stopped either would take out the enrolment desk to fix attendance.
+$OtherSoftware = @('eTimeTrackLite*', 'eSSL*', 'ZKAccess*', 'ZKTime*', 'FactorHR*', 'Factor HR*')
+
+function Show-WhatIsHere {
+	Step 'What is already on this PC'
+
+	$task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+	if ($task) {
+		Write-Host "  Bridge:    installed, task is $($task.State)"
+	} elseif (Test-Path $InstallDir) {
+		Write-Host "  Bridge:    files in $InstallDir, no task registered"
+	} else {
+		Write-Host '  Bridge:    not installed here'
+	}
+
+	# The one number that decides whether replacing is safe. Undelivered punches
+	# live in the queue and the queue is kept, but somebody should see the count
+	# before anything is replaced - it is the count of days not yet on the site.
+	$queue = Join-Path $InstallDir 'punches.sqlite3'
+	$venv = Join-Path $InstallDir '.venv\Scripts\python.exe'
+	if ((Test-Path $queue) -and (Test-Path $venv)) {
+		try {
+			$waiting = & $venv -c "import sqlite3,sys; print(sqlite3.connect(sys.argv[1]).execute('select count(*) from punch where sent_at is null').fetchone()[0])" $queue
+			if ($waiting -match '^\d+$' -and [int]$waiting -gt 0) {
+				Write-Host "  Punches:   $waiting have not reached ERPNext yet - kept, and sent on the first pass after this" -ForegroundColor Yellow
+			} else {
+				Write-Host '  Punches:   nothing waiting'
+			}
+		} catch {
+			Write-Host '  Punches:   the queue could not be read; it is kept either way'
+		}
+	}
+
+	$others = @()
+	foreach ($pattern in $OtherSoftware) {
+		$others += @(Get-Process -Name $pattern -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ProcessName)
+		$others += @(Get-Service -Name $pattern -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+	}
+	$others = $others | Sort-Object -Unique
+	if ($others) {
+		Write-Host "  Also here: $($others -join ', ') - left alone. This installer stops nothing but its own bridge."
+	}
+}
+
 function Remove-OldBridge {
 	# The code, and nothing else. A version that dropped a module leaves it
 	# behind on a plain upgrade, and an import that still finds it runs code
@@ -319,6 +368,41 @@ function Register-BridgeTask {
 	Start-ScheduledTask -TaskName $TaskName
 }
 
+$ConsoleTask = 'Manna HR Console'
+
+function Register-ConsoleTask {
+	# The console, running in the background from boot, so the icon opens a
+	# window that is already warm instead of starting a server.
+	#
+	# As SYSTEM, like the bridge: it reads bridge.env, which is locked to SYSTEM
+	# and Administrators. **That is why the token exists** - a server always up
+	# on 127.0.0.1 is reachable by anybody signed in at this PC, and at a gate
+	# that may be whoever was nearest, so every request has to carry a key kept
+	# in a file only an administrator can read.
+	$pythonw = Join-Path $InstallDir '.venv\Scripts\pythonw.exe'
+	if (-not (Test-Path $pythonw)) { return }
+
+	$token = Join-Path $InstallDir 'console-token.txt'
+	$arguments = '"{0}" --no-browser --token-file "{1}" --log "{2}"' -f `
+		(Join-Path $InstallDir 'console.py'), $token, (Join-Path $InstallDir 'console.log')
+	$action = New-ScheduledTaskAction -Execute $pythonw -Argument $arguments -WorkingDirectory $InstallDir
+	$trigger = New-ScheduledTaskTrigger -AtStartup
+	$principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+	$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+		-StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew `
+		-RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+	Register-ScheduledTask -TaskName $ConsoleTask -Action $action -Trigger $trigger -Principal $principal `
+		-Settings $settings -Force -Description 'The Manna HR Console, on 127.0.0.1 for this PC only.' | Out-Null
+	Start-ScheduledTask -TaskName $ConsoleTask
+
+	# The key, as soon as it exists: same lock as bridge.env, by SID.
+	for ($i = 0; $i -lt 10 -and -not (Test-Path $token); $i++) { Start-Sleep -Seconds 1 }
+	if (Test-Path $token) {
+		& icacls.exe $token /inheritance:r /grant:r '*S-1-5-18:F' '*S-1-5-32-544:F' | Out-Null
+	}
+	Write-Host "  The console runs in the background from boot. Its key is $token, locked to administrators."
+}
+
 function Install-MachineTools {
 	# Backups hold fingerprint templates and every user's keypad password, so
 	# the folder is locked the way bridge.env is: SYSTEM and Administrators, by SID.
@@ -335,13 +419,46 @@ function Install-MachineTools {
 	$link.WorkingDirectory = $InstallDir
 	$link.Description = 'The fingerprint machines: users, fingers, clock, backup and restore'
 	$link.Save()
-	Write-Host "  'Manna Machine Tools' is on the desktop. Backups go to $backups"
+
+	# The console is the same jobs with a screen in front of them, for whoever
+	# is not going to open a menu in a black window. Both are installed: the
+	# menu still works when a browser will not open.
+	#
+	# On the Start menu as well as the desktop, because a desktop shortcut is
+	# the first thing somebody tidies away and then nobody can find the app.
+	$startMenu = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'Manna HR'
+	New-Item -ItemType Directory -Force -Path $startMenu | Out-Null
+	foreach ($where in @($desktop, $startMenu)) {
+		$page = $shell.CreateShortcut((Join-Path $where 'Manna HR Console.lnk'))
+		# wscript, not the .bat: the .bat leaves a black window open beside the
+		# app for as long as it runs, and people close it. The script asks for
+		# administrator once, then starts pythonw, which has no window at all.
+		$page.TargetPath = 'wscript.exe'
+		$page.Arguments = '"' + (Join-Path $InstallDir 'MannaHRConsole.vbs') + '"'
+		$page.WorkingDirectory = $InstallDir
+		$page.Description = 'The machines and ERPNext on one screen: people, punches, attendance, new employee'
+		# Shell32's building, which is what Windows itself uses for a site. A .ico
+		# of our own would be one more file to keep in step with the zip.
+		$page.IconLocation = "$env:SystemRoot\System32\SHELL32.dll,14"
+		$page.Save()
+	}
+	$tools = $shell.CreateShortcut((Join-Path $startMenu 'Manna Machine Tools.lnk'))
+	$tools.TargetPath = Join-Path $InstallDir 'MACHINE.bat'
+	$tools.WorkingDirectory = $InstallDir
+	$tools.Description = 'The fingerprint machines, as a numbered menu'
+	$tools.IconLocation = "$env:SystemRoot\System32\SHELL32.dll,21"
+	$tools.Save()
+
+	Write-Host "  'Manna HR Console' is on the desktop and under Start > Manna HR. Backups go to $backups"
+	Write-Host "  It opens as its own window. If it ever opens nothing, run CONSOLE.bat to see why."
 }
 
 function Install-Bridge {
 	Write-Host ''
 	Write-Host 'Manna attendance bridge - installer' -ForegroundColor Cyan
 	Write-Host "Installs into $InstallDir and runs at every boot, whoever is logged in."
+
+	Show-WhatIsHere
 
 	Step 'Python'
 	$python = Find-Python
@@ -459,8 +576,9 @@ function Install-Bridge {
 	}
 
 	# Before the boot question, which returns early when it is answered no.
-	Step 'Machine tools'
+	Step 'Machine tools and the console'
 	Install-MachineTools
+	Register-ConsoleTask
 
 	Step 'Running it at every boot'
 	if (-not (Ask-Yes 'Start the bridge now, and at every boot from now on?')) {
@@ -500,7 +618,16 @@ try {
 	if ($Uninstall) {
 		Stop-Bridge
 		Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
-		Write-Host "Stopped, and the task is removed. Every file is still in $InstallDir, including"
+		# The console goes with it: it is this bridge's window onto the machines,
+		# and leaving it serving after the bridge is stopped would be a door with
+		# nothing behind it.
+		if (Get-ScheduledTask -TaskName $ConsoleTask -ErrorAction SilentlyContinue) {
+			Stop-ScheduledTask -TaskName $ConsoleTask -ErrorAction SilentlyContinue
+			Unregister-ScheduledTask -TaskName $ConsoleTask -Confirm:$false -ErrorAction SilentlyContinue
+		}
+		Write-Host "Stopped, and the task is removed. Nothing else on this PC was touched - eSSL and any"
+		Write-Host "other attendance software are still running, and the machines are untouched."
+		Write-Host "Every file is still in $InstallDir, including"
 		Write-Host 'punches.sqlite3, which holds any punch not yet in ERPNext. Delete that folder only'
 		Write-Host 'after the log has said "0 waiting".'
 	} elseif ($Status) {

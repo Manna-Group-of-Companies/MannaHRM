@@ -77,6 +77,7 @@ exists — a private bench is not a preference here.
 | `bridge/` | The on-premise agent. Reads the fingerprint machines, and listens for the ones that push (`--adms`) |
 | `bridge/mannabridge/roster.py` | Who is enrolled on each machine, sent as `Attendance Device User`. Kept apart from punches: nothing in it may cost a pass of them |
 | `bridge/mannabridge/commands.py` | `Machine Command`: what the dashboard asked a machine to do, done at the machine and answered. Kept apart from punches, like the roster |
+| `bridge/console.py`, `console.html` | The gate PC's console, on `127.0.0.1` only: machines, who is on them, the punch log, attendance, and a new employee on the site and the machine at once. Calls the tools below rather than repeating their rules |
 | `bridge/machine.py`, `push_users.py`, `employee_tools.py` | The only code that writes to a machine: run by hand from the Machine Tools menu, dry run first, never the log. `employee_tools.py create` also writes the Employee, site first |
 | `bridge/INSTALL.bat`, `install.sh` | Put a bridge on a new PC: Python, the key, the machines, a service. `package.ps1` builds the zip that carries it — never zip the folder, it holds a key |
 | `app/` | The phone app. Punch in, punch out, the month, and the correction — see `app/README.md` |
@@ -328,16 +329,19 @@ existing `Attendance Log` history should be migrated is still open.
   `/private` to the site. That Worker sees every password and session cookie,
   and must stay a pipe — no rule goes in it. Mixing the builds up publishes a
   page that 404s every script. See `client/README.md`.
-- **Device clock drift is handled from 19 September 2026.** Every pass, before
-  the punches are read, the bridge puts each machine's clock back on the
-  *site's* — `bridge/mannabridge/clock.py`, `[bridge] fix_clocks`. It was found
-  by measuring: BIO-MRP-GATE1 was 7m43s slow three years in, so every arrival
-  there was written earlier than it happened and no late was late. **A backward
-  correction moves that machine's cursor back with it**, because the bridge
-  reads what is newer than the cursor and the machine is about to reuse those
-  timestamps — re-sending a punch is free, losing one is somebody's day. A drift
-  beyond six hours is refused and logged instead: that is a machine whose date
-  was typed in wrong, and moving it quietly could hide months.
+- **Device clock drift is measured and reported, and nothing sets a clock.**
+  BIO-MRP-GATE1 was found 7m43s slow on 19 September 2026, three years in, so
+  every arrival there is written earlier than it happened and no late is late.
+  The drift is on the console's Machines screen and in `machine.py time`.
+  **`[bridge] fix_clocks` is off by default, asked for by IT the same day**: a
+  gate's clock is somebody's decision — eSSL syncs some of them, one gate is
+  deliberately kept behind — and a bridge correcting that would move everybody's
+  arrival on a morning nobody chose. Turning it on is `bridge/mannabridge/clock.py`,
+  and note what it does beyond setting the clock: **a backward correction moves
+  that machine's cursor back with it**, because the bridge reads what is newer
+  than the cursor and the machine is about to reuse those timestamps —
+  re-sending a punch is free, losing one is somebody's day. A drift beyond six
+  hours is refused and logged either way.
 - **Payroll and shift rosters are untouched** — attendance first. Leave is one
   write: Apply Leave raises a Leave Application as an **Open draft**
   (`client/src/features/leave/raise.js`), and approving and submitting stay

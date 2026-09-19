@@ -16,13 +16,17 @@ poll_seconds = 300
 # dashboard - "is 851 on the gate?", asked by a person who is waiting for the
 # answer. One small request each time; never goes below 5.
 command_seconds = 20
-# Put each machine's clock back on the site's clock when it has drifted, before
-# the punches are read. These machines drift minutes a month and nothing else
-# notices - BIO-MRP-GATE1 was 7m43s slow when it was first measured, three years
-# in, which wrote everybody's arrival earlier than it happened. A drift smaller
-# than the tolerance is left alone; one larger than six hours is logged and
-# refused, because a machine that far out needs a person.
-fix_clocks = true
+# **The bridge does not touch a machine's clock.** Off on purpose: a gate's
+# clock is somebody's decision - eSSL syncs some of them, and one gate is
+# deliberately kept a few minutes behind - and a bridge quietly correcting that
+# would move everybody's arrival time on a morning nobody chose. The drift is
+# still shown on the console's Machines screen and by `machine.py time`, and
+# setting a clock is a person typing --apply.
+#
+# Turning this on makes the bridge correct a drift larger than the tolerance
+# before each pass. It also moves that machine's cursor back when it sets a
+# clock back, or the punches in between are read, judged old and never sent.
+fix_clocks = false
 clock_tolerance_seconds = 120
 # Delivered punches are kept this long, then pruned. Undelivered ones are never
 # pruned, however old.

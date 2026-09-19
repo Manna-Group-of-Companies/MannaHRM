@@ -81,6 +81,20 @@ def test_dates_are_taken_day_first_and_sent_to_the_site_as_iso():
 	assert doc["status"] == "Active"
 
 
+def test_an_aadhaar_is_stored_as_twelve_digits_however_it_was_typed():
+	# It is read off a card in groups of four, so that is what gets typed.
+	assert employee_tools.aadhaar_digits("1234 5678 9012") == "123456789012"
+	assert employee_tools.aadhaar_digits("1234-5678-9012") == "123456789012"
+	assert employee_tools.aadhaar_digits("") == ""
+
+
+def test_an_aadhaar_that_is_not_twelve_digits_is_refused_rather_than_stored():
+	# A number one digit short is worse than a blank: the blank is visibly
+	# missing, and this one goes on PF and ESI returns.
+	with pytest.raises(SystemExit, match="twelve digits"):
+		employee_tools.aadhaar_digits("1234 5678 901")
+
+
 def test_a_birth_date_that_makes_them_a_child_at_joining_is_refused_as_a_typo():
 	with pytest.raises(SystemExit):
 		employee_tools.employee_doc(create_args(date_of_birth="01-10-2026"))

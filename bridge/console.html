@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manna HR Console</title>
+<!-- The mark in the taskbar and the window, and what lets Edge install this as
+     a Windows app: Settings > Apps > Install this site as an app. Both are
+     served by console.py, so there is no icon file to lose. -->
+<link rel="icon" href="/icon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1668b3">
+<!--
+  The gate PC's console. Served by console.py from 127.0.0.1 and nowhere else.
+
+  One file, no build step and no libraries: this is opened on a shop-floor PC
+  where the only thing installed is the bridge's Python, and a page that needed
+  npm would be a page nobody could fix at the gate.
+
+  Nothing here decides anything. Every rule — a number somebody else holds, the
+  mandatory fields, what may be asked of a machine — is enforced in employee_tools.py
+  and machine.py, and this page shows what they answered.
+-->
+<style>
+	:root {
+		--ink: #1b1d21; --ink-2: #4a4f57; --ink-3: #7b828c;
+		--line: #dfe3e8; --card: #fff; --page: #f5f6f8;
+		--brand: #1668b3; --bad: #b91c1c; --bad-wash: #fef2f2; --warn: #af4e04; --warn-wash: #fff7ed;
+		--ok: #15803d; --ok-wash: #f0fdf4;
+	}
+	/* Dark, twice, and the order is the whole cascade.
+	   - The media block is the PC's own setting, but only while nobody has
+	     asked for light: `:not([data-theme="light"])` is what lets the switch
+	     win over Windows.
+	   - The attribute block is the switch asking for dark on a PC set to light.
+	   `:root` and an attribute selector have the same specificity, so the later
+	   block wins — which is why this one comes last. */
+	@media (prefers-color-scheme: dark) {
+		:root:not([data-theme="light"]) {
+			--ink: #e9ecf1; --ink-2: #b6bcc6; --ink-3: #868d98;
+			--line: #2c3138; --card: #191c21; --page: #111418;
+			--brand: #5aa9f0; --bad: #f87171; --bad-wash: #341a1a; --warn: #fb923c; --warn-wash: #2b1a10;
+			--ok: #4ade80; --ok-wash: #14241a;
+		}
+	}
+	:root[data-theme="dark"] {
+		--ink: #e9ecf1; --ink-2: #b6bcc6; --ink-3: #868d98;
+		--line: #2c3138; --card: #191c21; --page: #111418;
+		--brand: #5aa9f0; --bad: #f87171; --bad-wash: #341a1a; --warn: #fb923c; --warn-wash: #2b1a10;
+		--ok: #4ade80; --ok-wash: #14241a;
+	}
+	* { box-sizing: border-box; }
+	body { margin: 0; background: var(--page); color: var(--ink);
+		font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+	header { background: var(--card); border-bottom: 1px solid var(--line); padding: .8rem 1rem;
+		display: flex; align-items: center; gap: 1rem; }
+	header .grow { flex: 1; min-width: 0; }
+	#theme { border: 1px solid var(--line); background: var(--page); color: var(--ink-2);
+		border-radius: 6px; padding: .35rem .7rem; cursor: pointer; font: inherit; white-space: nowrap; }
+	h1 { font-size: 1.05rem; margin: 0 0 .2rem; }
+	.sub { color: var(--ink-3); font-size: .85rem; }
+	nav { display: flex; gap: .3rem; flex-wrap: wrap; padding: .6rem 1rem 0; }
+	nav button { background: none; border: 1px solid transparent; border-bottom: none;
+		padding: .45rem .8rem; border-radius: 6px 6px 0 0; cursor: pointer; color: var(--ink-2); font: inherit; }
+	nav button.on { background: var(--card); border-color: var(--line); color: var(--ink); font-weight: 600; }
+	main { background: var(--card); border-top: 1px solid var(--line); padding: 1rem; min-height: 70vh; }
+	table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+	th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+	th { color: var(--ink-3); font-weight: 600; white-space: nowrap; }
+	.mono { font-family: Consolas, monospace; }
+	.bad { color: var(--bad); } .warn { color: var(--warn); } .ok { color: var(--ok); }
+	.box { border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 6px;
+		padding: .6rem .8rem; margin: .6rem 0; }
+	.box.bad { border-left-color: var(--bad); background: var(--bad-wash); color: var(--bad); }
+	.box.warn { border-left-color: var(--warn); background: var(--warn-wash); color: var(--warn); }
+	.box.ok { border-left-color: var(--ok); background: var(--ok-wash); color: var(--ok); }
+	button.go { background: var(--brand); color: #fff; border: 0; border-radius: 6px;
+		padding: .45rem .9rem; cursor: pointer; font: inherit; }
+	button.go[disabled] { opacity: .5; cursor: default; }
+	label { display: block; font-size: .8rem; color: var(--ink-3); margin: .5rem 0 .15rem; }
+	input, select { width: 100%; padding: .4rem .5rem; border: 1px solid var(--line); border-radius: 5px;
+		background: var(--page); color: var(--ink); font: inherit; }
+	.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0 .8rem; }
+	.bar { display: flex; gap: .5rem; align-items: end; flex-wrap: wrap; margin-bottom: .8rem; }
+	.bar > div { min-width: 150px; }
+	.counts { display: flex; gap: 1.2rem; flex-wrap: wrap; margin: .4rem 0 .8rem; font-size: .9rem; }
+	.counts b { font-size: 1.2rem; display: block; }
+</style>
+</head>
+<body>
+<header>
+	<div class="grow">
+		<h1>Manna HR Console</h1>
+		<div class="sub" id="where">reading this PC…</div>
+	</div>
+	<button id="theme" title="Light, dark, or whatever Windows is set to">Theme</button>
+</header>
+<nav id="tabs"></nav>
+<main id="view">Loading…</main>
+
+<script>
+const $ = (h) => { const d = document.createElement("div"); d.innerHTML = h; return d; };
+const esc = (s) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+const view = document.getElementById("view");
+let DEVICES = [], CHOICES = { companies: [], genders: [], shifts: [] };
+
+async function get(path, params) {
+	const q = new URLSearchParams(params || {}).toString();
+	const r = await fetch(path + (q ? "?" + q : ""));
+	return r.json();
+}
+async function post(path, body) {
+	const r = await fetch(path, { method: "POST", body: JSON.stringify(body) });
+	return r.json();
+}
+const box = (kind, text) => `<div class="box ${kind}">${esc(text)}</div>`;
+
+/* Which tab the screen belongs to. The machines screen takes seconds — it reads
+   every gate — and its answer used to arrive after somebody had moved on and
+   draw itself over whatever they had opened. Each tab takes a number on the way
+   in and drops its own answer if the number has moved. */
+let SEQ = 0;
+const claim = () => ++SEQ;
+const stale = (mine) => mine !== SEQ;
+
+/* The machines and the site's lists, fetched once and kept. Every tab that
+   draws a picker waits for this first: a tab opened while the first read was
+   still running used to draw an empty select, and the answer to the button
+   under it was "KeyError: 'device'". */
+async function ready() {
+	if (!DEVICES.length) {
+		const d = await get("/api/machines");
+		DEVICES = d.machines;
+		document.getElementById("where").textContent = `${d.site} · site clock ${d.site_clock || "unknown"}`;
+	}
+	if (!CHOICES.companies.length) CHOICES = await get("/api/choices");
+}
+
+const picker = (id) => `<div><label>Machine</label><select id="${id}">`
+	+ DEVICES.filter((d) => d.reads).map((d) => `<option value="${esc(d.name)}">${esc(d.name)}</option>`).join("")
+	+ `</select></div>`;
+
+/* ---- machines ---- */
+async function tabMachines() {
+	const mine = claim();
+	view.innerHTML = "Reading each machine…";
+	const d = await get("/api/machines");
+	DEVICES = d.machines;
+	document.getElementById("where").textContent = `${d.site} · site clock ${d.site_clock || "unknown"}`;
+	if (stale(mine)) return;
+	view.innerHTML = `<table><tr><th>Machine</th><th>Address</th><th>Users</th><th>Its clock</th><th>Drift</th><th></th></tr>`
+		+ d.machines.map((m) => {
+			const drift = m.drift === undefined ? "" : (Math.abs(m.drift) < 120
+				? `<span class="ok">${m.drift}s</span>`
+				: `<span class="bad">${m.drift}s — ${m.drift > 0 ? "fast" : "slow"}</span>`);
+			return `<tr><td><b>${esc(m.name)}</b></td><td class="mono">${esc(m.host || "pushes in")}</td>`
+				+ `<td>${m.users ?? ""}</td><td class="mono">${esc(m.clock || "")}</td><td>${drift}</td>`
+				+ `<td class="${m.reachable ? "ok" : "warn"}">${m.reachable ? "answering" : esc(m.why || "no answer")}</td></tr>`;
+		}).join("") + `</table>`;
+}
+
+/* ---- people on a machine ---- */
+async function tabPeople() {
+	const mine = claim();
+	view.innerHTML = "Reading the machines…";
+	await ready();
+	if (stale(mine)) return;
+	view.innerHTML = picker("dev") + `<button class="go" id="load">Read the machine</button><div id="out"></div>`;
+	document.getElementById("load").onclick = async () => {
+		const out = document.getElementById("out");
+		out.textContent = "Reading…";
+		const d = await get("/api/people", { device: document.getElementById("dev").value });
+		if (d.why) return out.innerHTML = box("bad", d.why);
+		out.innerHTML = `<div class="counts">
+			<div><b>${d.counts.users}</b> on the machine</div>
+			<div><b class="ok">${d.counts.clean}</b> linked, nothing wrong</div>
+			<div><b class="bad">${d.counts.problems}</b> need attention</div>
+			<div><b class="warn">${d.counts.not_here}</b> employees this machine has not got</div></div>`
+			+ `<table><tr><th>Number</th><th>Name on machine</th><th>Fp</th><th>Employee</th><th>In ERPNext</th><th>Problem</th></tr>`
+			+ d.rows.map((r) => `<tr><td class="mono">${esc(r.user_id)}</td><td>${esc(r.machine_name)}</td>`
+				+ `<td>${r.fingers}</td><td class="mono">${esc(r.employee)}</td><td>${esc(r.employee_name)}</td>`
+				+ `<td class="${r.problem ? "bad" : ""}">${esc(r.problem)}</td></tr>`).join("") + `</table>`;
+	};
+}
+
+/* ---- the machine's own log ---- */
+async function tabPunches() {
+	const mine = claim();
+	view.innerHTML = "Reading the machines…";
+	await ready();
+	const week = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+	view.innerHTML = `<div class="bar">${picker("dev")}
+		<div><label>From</label><input type="date" id="since" value="${week}"></div>
+		<div><label>One number only</label><input id="uid" placeholder="blank for everybody"></div>
+		<div><button class="go" id="load">Read the log</button></div></div><div id="out"></div>`;
+	document.getElementById("load").onclick = async () => {
+		const out = document.getElementById("out");
+		out.textContent = "Reading the machine — a full log takes a minute…";
+		const d = await get("/api/punches", {
+			device: document.getElementById("dev").value,
+			since: document.getElementById("since").value,
+			user_id: document.getElementById("uid").value,
+		});
+		if (d.why) return out.innerHTML = box("bad", d.why);
+		out.innerHTML = box("", `${d.total} punch(es)${d.cut ? " — showing the newest 500" : ""}. Read only: the machine's log is untouched.`)
+			+ `<table><tr><th>When</th><th>Number</th><th>Direction</th></tr>`
+			+ d.rows.map((r) => `<tr><td class="mono">${esc(r.time)}</td><td class="mono">${esc(r.user_id)}</td>`
+				+ `<td>${r.punch === 0 ? "in" : r.punch === 1 ? "out" : ""}</td></tr>`).join("") + `</table>`;
+	};
+}
+
+/* ---- attendance, as ERPNext has it ---- */
+async function tabAttendance() {
+	const mine = claim();
+	view.innerHTML = "Reading the machines…";
+	await ready();
+	const first = new Date().toISOString().slice(0, 8) + "01";
+	view.innerHTML = `<div class="bar">
+		<div><label>From</label><input type="date" id="from" value="${first}"></div>
+		<div><label>To</label><input type="date" id="to" value="${new Date().toISOString().slice(0, 10)}"></div>
+		<div><label>Company</label><select id="co"><option value="">every company</option>`
+		+ CHOICES.companies.map((c) => `<option>${esc(c)}</option>`).join("")
+		+ `</select></div><div><button class="go" id="load">Show</button></div></div><div id="out"></div>`;
+	document.getElementById("load").onclick = async () => {
+		const out = document.getElementById("out");
+		out.textContent = "Reading the site…";
+		const d = await get("/api/attendance", {
+			from: document.getElementById("from").value,
+			to: document.getElementById("to").value,
+			company: document.getElementById("co").value,
+		});
+		if (d.why) return out.innerHTML = box("bad", d.why);
+		out.innerHTML = (d.note ? box("warn", d.note) : "")
+			+ box("", `${d.days.length} person-day(s) with at least one punch.`)
+			+ `<table><tr><th>Day</th><th>Employee</th><th>First</th><th>Last</th><th>Punches</th><th>Machine</th><th>Attendance</th></tr>`
+			+ d.days.map((r) => `<tr><td class="mono">${esc(r.day)}</td><td>${esc(r.employee_name)}</td>`
+				+ `<td class="mono">${esc(r.first)}</td><td class="mono ${r.single ? "warn" : ""}">${r.single ? "—" : esc(r.last)}</td>`
+				+ `<td>${r.punches}</td><td class="mono">${esc(r.device)}</td>`
+				+ `<td class="${r.status ? "ok" : "warn"}">${esc(r.status || "none generated")}</td></tr>`).join("")
+			+ `</table>`;
+	};
+}
+
+/* ---- a new person, on the site and on the machine ---- */
+async function tabNew() {
+	const mine = claim();
+	view.innerHTML = "Reading the machines…";
+	await ready();
+	if (stale(mine)) return;
+	view.innerHTML = `<div class="bar">${picker("dev")}
+		<div><button class="go" id="free">Suggest a free number</button></div></div>
+		<div class="grid">
+			<div><label>Machine number *</label><input id="user_id" class="mono"></div>
+			<div><label>Emp code</label><input id="employee_number" placeholder="MRP-309"></div>
+			<div><label>First name *</label><input id="first_name"></div>
+			<div><label>Last name</label><input id="last_name"></div>
+			<div><label>Gender *</label><select id="gender">${CHOICES.genders.map((g) => `<option>${esc(g)}</option>`).join("")}</select></div>
+			<div><label>Date of birth * (DD-MM-YYYY)</label><input id="date_of_birth" placeholder="12-04-1994"></div>
+			<div><label>Date of joining * (DD-MM-YYYY)</label><input id="date_of_joining" placeholder="01-10-2026"></div>
+			<div><label>Company *</label><select id="company">${CHOICES.companies.map((c) => `<option>${esc(c)}</option>`).join("")}</select></div>
+			<div><label>Default shift</label><select id="shift"><option value="">none — no attendance will be generated</option>
+				${CHOICES.shifts.map((s) => `<option>${esc(s)}</option>`).join("")}</select></div>
+			<div><label>Mobile</label><input id="mobile" class="mono" placeholder="9876543210"></div>
+			<div><label>Personal email</label><input id="email" placeholder="blank if none"></div>
+			<div><label>Aadhaar</label><input id="aadhaar" class="mono" placeholder="1234 5678 9012"></div>
+		</div>
+		<label>Current address</label><textarea id="address" rows="2"
+			style="width:100%;padding:.4rem .5rem;border:1px solid var(--line);border-radius:5px;background:var(--page);color:var(--ink);font:inherit"></textarea>
+		<!-- Aadhaar goes in custom_aadhaar_no, a Custom Field added to this site on
+		     19 September 2026. Twelve digits or nothing: employee_tools refuses a
+		     short one rather than storing it, because a wrong identity number is
+		     invisible in a way a blank is not, and this one goes on PF and ESI
+		     returns. Spaces are forgiven - that is how it is read off the card.
+		     No backticks in here: this markup sits inside a JS template literal,
+		     and one backtick ends the string and takes the whole page with it. -->
+		<p class="sub" style="color:var(--ink-3)">Aadhaar is stored only because PF and ESI ask for it, and
+			anyone who can open an Employee record can read it. Twelve digits, or leave it blank.</p>
+		<p><button class="go" id="make">Create on the site and add to the machine</button>
+		<button class="go" id="addonly" title="For somebody already on the site">Add this number to the machine only</button></p>
+		<div id="out"></div>`;
+
+	const out = document.getElementById("out");
+	const val = (id) => document.getElementById(id).value.trim();
+
+	document.getElementById("free").onclick = async () => {
+		out.textContent = "Reading the machine…";
+		const d = await get("/api/free-number", { device: document.getElementById("dev").value });
+		if (!d.number) return out.innerHTML = box("bad", d.why || "No free number could be found.");
+		document.getElementById("user_id").value = d.number;
+		out.innerHTML = box("ok", `${d.number} is held by nobody — not by any of the ${d.on_machine} users on this machine, and not by any of the ${d.on_site} numbers on the site.`);
+	};
+
+	document.getElementById("make").onclick = async () => {
+		out.textContent = "Creating…";
+		const d = await post("/api/create-employee", {
+			device: document.getElementById("dev").value,
+			user_id: val("user_id"), first_name: val("first_name"), last_name: val("last_name"),
+			gender: val("gender"), date_of_birth: val("date_of_birth"), date_of_joining: val("date_of_joining"),
+			company: val("company"), shift: val("shift"), employee_number: val("employee_number"),
+			mobile: val("mobile"), email: val("email"), address: val("address"), aadhaar: val("aadhaar"),
+		});
+		out.innerHTML = d.ok ? box("ok", d.said) + (d.warn ? box("warn", d.warn) : "") : box("bad", d.why);
+	};
+
+	document.getElementById("addonly").onclick = async () => {
+		out.textContent = "Writing to the machine…";
+		const d = await post("/api/add-user", {
+			device: document.getElementById("dev").value,
+			user_id: val("user_id"),
+			name: (val("first_name") + " " + val("last_name")).trim(),
+		});
+		out.innerHTML = d.ok ? box("ok", d.said) : box("bad", d.why);
+	};
+}
+
+/* ---- give an existing employee the number the machine knows them by ---- */
+async function tabLink() {
+	const mine = claim();
+	view.innerHTML = "Reading the machines…";
+	await ready();
+	if (stale(mine)) return;
+	view.innerHTML = `<div class="bar">${picker("dev")}
+		<div><button class="go" id="load">Find the numbers nobody is linked to</button></div></div><div id="out"></div>`;
+
+	document.getElementById("load").onclick = async () => {
+		const out = document.getElementById("out");
+		out.textContent = "Reading the machine and the site…";
+		const d = await get("/api/unlinked", { device: document.getElementById("dev").value });
+		if (d.why) return out.innerHTML = box("bad", d.why);
+
+		/* One select, built once and cloned per row: with four hundred employees
+		   a fresh <select> per row is four hundred times the same markup, and the
+		   page takes seconds to draw. */
+		const options = `<option value="">— pick the employee —</option>` + d.employees.map((e) =>
+			`<option value="${esc(e.name)}">${esc(e.employee_name)} · ${esc(e.name)}`
+			+ `${e.status === "Active" ? "" : " · " + esc(e.status)}${e.company ? " · " + esc(e.company) : ""}</option>`).join("");
+
+		out.innerHTML = box("", `${d.numbers.length} number(s) on ${esc(d.device)} that reach nobody, and `
+			+ `${d.employees.length} employee(s) with no number. The ones that punched this month are first: `
+			+ `every one of those is somebody reading as absent every day.`)
+			+ `<table><tr><th>Number</th><th>Name on machine</th><th>Fp</th><th>This month</th><th>Who is it?</th><th></th></tr>`
+			+ d.numbers.map((r) => `<tr>
+				<td class="mono"><b>${esc(r.user_id)}</b></td>
+				<td>${esc(r.machine_name)}</td>
+				<td>${r.fingers}</td>
+				<td class="${r.punches ? "bad" : ""}">${r.punches || ""}</td>
+				<td><select data-pick="${esc(r.user_id)}">${options}</select></td>
+				<td><button class="go" data-link="${esc(r.user_id)}" data-name="${esc(r.machine_name)}">Link</button></td>
+			</tr><tr><td colspan="6" data-said="${esc(r.user_id)}"></td></tr>`).join("") + `</table>`;
+
+		out.querySelectorAll("[data-link]").forEach((button) => {
+			button.onclick = async () => {
+				const number = button.dataset.link;
+				const cell = out.querySelector(`[data-said="${number}"]`);
+				const employee = out.querySelector(`[data-pick="${number}"]`).value;
+				if (!employee) return cell.innerHTML = box("warn", "Pick the employee first.");
+				cell.textContent = "Writing…";
+				const send = (force) => post("/api/link", {
+					employee, user_id: number, name_on_device: button.dataset.name, force,
+				});
+				const d2 = await send(false);
+				if (d2.ok) return cell.innerHTML = box("ok", d2.said);
+				/* The server refuses a name that shares no word with the record's,
+				   and a record that already punches as something else. Both are
+				   worth a person looking rather than a silent overwrite, so the
+				   only way past is this second button. */
+				cell.innerHTML = box("bad", d2.why);
+				const again = document.createElement("button");
+				again.className = "go";
+				again.textContent = "Link anyway — they are the same person";
+				again.onclick = async () => {
+					cell.textContent = "Writing…";
+					const d3 = await send(true);
+					cell.innerHTML = d3.ok ? box("ok", d3.said) : box("bad", d3.why);
+				};
+				cell.appendChild(again);
+			};
+		});
+	};
+}
+
+/* ---- backup, restore, and the one thing here that takes something away ---- */
+async function tabKeep() {
+	const mine = claim();
+	view.innerHTML = "Reading the machines…";
+	await ready();
+	if (stale(mine)) return;
+	view.innerHTML = `<div class="bar">${picker("dev")}
+		<div><button class="go" id="take">Back up users and fingerprints</button></div></div>
+		<div id="took"></div>
+
+		<h3 style="margin:1.2rem 0 .3rem;font-size:1rem">Restore</h3>
+		<p class="sub" style="color:var(--ink-3)">Puts back only the people this machine has not got. Nobody
+			already on it is touched — they may have been enrolled again since the backup, and writing over
+			them is how a finger stops working.</p>
+		<div class="bar"><div style="min-width:420px"><label>Backup</label><select id="file"></select></div>
+			<div><button class="go" id="preview">Show what it would do</button></div></div>
+		<div id="restored"></div>
+
+		<h3 style="margin:1.4rem 0 .3rem;font-size:1rem">Remove somebody from a machine</h3>
+		<p class="sub" style="color:var(--ink-3)">Their finger stops working at once. The punches already in
+			the log stay, and a backup is taken first, so this can be undone by restoring it.</p>
+		<div class="bar"><div><label>Machine number</label><input id="del" class="mono"></div>
+			<div><button class="go" id="check">Check who that is</button></div></div>
+		<div id="gone"></div>`;
+
+	const dev = () => document.getElementById("dev").value;
+	const files = await get("/api/backups");
+	document.getElementById("file").innerHTML = files.files.length
+		? files.files.map((f) => `<option value="${esc(f.file)}">${esc(f.file)} · ${esc(f.device || "")} · `
+			+ `${f.users} users, ${f.fingers} fingerprints · ${esc(f.reason || "")}</option>`).join("")
+		: `<option value="">no backups yet</option>`;
+
+	document.getElementById("take").onclick = async () => {
+		const out = document.getElementById("took");
+		out.textContent = "Reading the machine…";
+		const d = await post("/api/backup", { device: dev() });
+		out.innerHTML = d.ok ? box("ok", d.said) : box("bad", d.why);
+		if (d.ok) tabKeep();
+	};
+
+	document.getElementById("preview").onclick = async () => {
+		const out = document.getElementById("restored");
+		out.textContent = "Reading the machine…";
+		const file = document.getElementById("file").value;
+		const d = await post("/api/restore", { device: dev(), file });
+		if (!d.ok) return out.innerHTML = box("bad", d.why);
+		out.innerHTML = box("", d.said) + (d.plan.length
+			? `<table><tr><th>Number</th><th>Name</th><th>Fingerprints</th></tr>` + d.plan.map((u) =>
+				`<tr><td class="mono">${esc(u.user_id)}</td><td>${esc(u.name)}${u.admin ? " · ADMIN" : ""}</td>`
+				+ `<td>${u.fingers}</td></tr>`).join("") + `</table>` : "");
+		if (!d.plan.length) return;
+		const go = document.createElement("button");
+		go.className = "go";
+		go.textContent = `Restore these ${d.plan.length} onto ${dev()}`;
+		go.onclick = async () => {
+			out.textContent = "Writing to the machine…";
+			const d2 = await post("/api/restore", { device: dev(), file, apply: true });
+			out.innerHTML = d2.ok ? box("ok", d2.said) : box("bad", d2.why);
+		};
+		out.appendChild(go);
+	};
+
+	document.getElementById("check").onclick = async () => {
+		const out = document.getElementById("gone");
+		const number = document.getElementById("del").value.trim();
+		out.textContent = "Reading the machine…";
+		/* Without `confirm` the server only says who it is. That answer is the
+		   whole safety of this: the name and the finger count come from the
+		   machine, so nobody deletes 912 thinking it is 9012. */
+		const d = await post("/api/delete-user", { device: dev(), user_id: number });
+		if (d.ok || !d.confirm) return out.innerHTML = box("bad", d.why || "Nothing to do.");
+		out.innerHTML = box("warn", d.why);
+		const type = document.createElement("input");
+		type.className = "mono";
+		type.placeholder = `type ${number} to confirm`;
+		type.style.maxWidth = "220px";
+		const go = document.createElement("button");
+		go.className = "go";
+		go.textContent = "Remove from the machine";
+		go.onclick = async () => {
+			out.textContent = "Backing up, then removing…";
+			const d2 = await post("/api/delete-user", { device: dev(), user_id: number, confirm: type.value.trim() });
+			out.innerHTML = d2.ok ? box("ok", d2.said) : box("bad", d2.why);
+		};
+		out.append(type, go);
+	};
+}
+
+/* ---- a machine at a new gate ---- */
+async function tabAdd() {
+	const mine = claim();
+	view.innerHTML = `<div class="bar">
+		<div><label>Address, if you know it</label><input id="host" class="mono" placeholder="192.168.1.40"></div>
+		<div><label>Comm key</label><input id="pw" class="mono" value="0" style="max-width:110px"></div>
+		<div><button class="go" id="look">Look at this address</button></div>
+		<div><button class="go" id="sweep">Search this network</button></div></div>
+		<p class="sub" style="color:var(--ink-3)">The machine shows its own address under Menu → Comm →
+			Ethernet. A comm key is only set on some machines; 0 means none.</p>
+		<div id="out"></div>`;
+
+	const show = async (params, note) => {
+		const out = document.getElementById("out");
+		out.textContent = note;
+		const d = await get("/api/find", params);
+		if (d.why) return out.innerHTML = box("bad", d.why);
+		const rows = d.found.filter((f) => f.serial || f.why || f.already);
+		if (!rows.length) return out.innerHTML = box("warn",
+			`Nothing answered on port 4370 (${d.scanned} address(es) tried). Check the machine is on and on `
+			+ `this network, then try its address directly.`);
+
+		out.innerHTML = `<table><tr><th>Address</th><th>Model</th><th>Serial</th><th>Users</th><th>Its clock</th><th></th></tr>`
+			+ rows.map((f, i) => `<tr><td class="mono">${esc(f.host)}</td><td>${esc(f.model || "")}</td>`
+				+ `<td class="mono">${esc(f.serial || "")}</td><td>${f.users ?? ""}</td>`
+				+ `<td>${f.drift_seconds === undefined ? "" : (Math.abs(f.drift_seconds) < 120
+					? `<span class="ok">right</span>` : `<span class="bad">${f.drift_seconds}s out</span>`)}</td>`
+				+ `<td>${f.already ? `<span class="ok">already here as ${esc(f.already)}</span>`
+					: f.why ? `<span class="warn">${esc(f.why)}</span>`
+					: `<input class="mono" data-name="${i}" value="${esc(f.suggested)}" style="max-width:190px">`
+						+ ` <button class="go" data-add="${i}">Add it</button>`}</td></tr>`
+				+ `<tr><td colspan="6" data-said="${i}"></td></tr>`).join("") + `</table>`;
+
+		out.querySelectorAll("[data-add]").forEach((button) => {
+			button.onclick = async () => {
+				const i = button.dataset.add, f = rows[i];
+				const cell = out.querySelector(`[data-said="${i}"]`);
+				cell.textContent = "Reading the machine, then writing config.toml…";
+				const d2 = await post("/api/add-machine", {
+					host: f.host, serial: f.serial, name: out.querySelector(`[data-name="${i}"]`).value.trim(),
+					password: Number(document.getElementById("pw").value || 0),
+				});
+				cell.innerHTML = d2.ok ? box("ok", d2.said) : box("bad", d2.why);
+				if (d2.ok) { DEVICES = []; void ready(); }
+			};
+		});
+	};
+
+	document.getElementById("look").onclick = () => show(
+		{ host: document.getElementById("host").value.trim(), password: document.getElementById("pw").value || 0 },
+		"Asking that address…");
+	document.getElementById("sweep").onclick = () => show(
+		{ password: document.getElementById("pw").value || 0 },
+		"Looking at every address on this PC's networks — about a minute…");
+}
+
+const TABS = [
+	["Machines", tabMachines], ["People on a machine", tabPeople], ["Link a number", tabLink],
+	["Punch log", tabPunches], ["Attendance", tabAttendance], ["New employee", tabNew],
+	["Backup & restore", tabKeep], ["Add a machine", tabAdd],
+];
+
+/* Light, dark, or whatever Windows says — and it is remembered, because a gate
+   PC is set up once and then used by whoever is on shift. Only this preference
+   is kept in the browser; nothing else here is. */
+function theme() {
+	const button = document.getElementById("theme");
+	const order = ["system", "light", "dark"];
+	const words = { system: "Theme: as Windows", light: "Theme: light", dark: "Theme: dark" };
+
+	const show = (choice) => {
+		if (choice === "system") delete document.documentElement.dataset.theme;
+		else document.documentElement.dataset.theme = choice;
+		button.textContent = words[choice];
+		try { localStorage.setItem("mannahr-theme", choice); } catch { /* a locked-down profile */ }
+	};
+
+	let now = "system";
+	try { now = localStorage.getItem("mannahr-theme") || "system"; } catch { /* as above */ }
+	show(order.includes(now) ? now : "system");
+	button.onclick = () => show(order[(order.indexOf(button.textContent.includes("light") ? "light"
+		: button.textContent.includes("dark") ? "dark" : "system") + 1) % order.length]);
+}
+
+async function start() {
+	theme();
+	const nav = document.getElementById("tabs");
+	TABS.forEach(([label, fn], i) => {
+		const b = document.createElement("button");
+		b.textContent = label;
+		b.onclick = () => {
+			[...nav.children].forEach((c) => c.classList.remove("on"));
+			b.classList.add("on");
+			fn();
+		};
+		nav.appendChild(b);
+		if (i === 0) b.classList.add("on");
+	});
+	await tabMachines();
+	void ready();
+}
+start();
+</script>
+</body>
+</html>

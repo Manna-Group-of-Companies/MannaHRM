@@ -37,6 +37,15 @@ class FakeDevice:
 # --- the decision -----------------------------------------------------------
 
 
+def test_the_bridge_does_not_touch_a_clock_unless_it_is_asked_to():
+	"""Asked for by IT on 19 September 2026. A gate's clock is somebody's
+	decision — eSSL syncs some of them, and one gate is kept deliberately
+	behind — so the bridge reads machines and leaves their clocks alone."""
+	from mannabridge.config import Config
+
+	assert Config(erp_url="x", api_key="k", api_secret="s").fix_clocks is False
+
+
 def test_a_clock_a_few_seconds_out_is_left_alone():
 	# Writing the clock every pass would be a write nobody asked for, five
 	# minutes apart, for ever.
