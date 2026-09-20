@@ -119,8 +119,17 @@ export const FIELD_LABEL = {name:"Record ID", employee_number:"Employee Code", c
 export const DATE_FIELD = /(date|dob|valid_upto|held_on)/;
 
 /* ---------------------------------------------------------------------------
-   Create Employee — Factor HR's three-step wizard, drawn in
-   features/employees/CreateEmployee.jsx.
+   Create Employee — Factor HR's three-step wizard, plus a fourth step this
+   side added on 19 September 2026, drawn in features/employees/CreateEmployee.jsx.
+
+   **The fourth step, Personal, Statutory & Insurance, is not theirs.** Nothing
+   about it has been screenshotted; it exists because Aadhaar, UAN, ESIC Number
+   and Insurance stopped being fields nothing here could store (see
+   CUSTOM_FIELDS in manna_hr/install.py) and asking for them once, on day one,
+   beats one Employee Profile pane at a time afterwards. Nothing on it is
+   required — none of it is a document hrms refuses without, and a number
+   typed from memory because the wizard insisted on it is the same mistake
+   Machine Code already avoids.
 
    **Step 1 is a copy.** Basic Details was screenshotted on 2 September 2026 and
    is reproduced field for field and in its order, red stars included. Steps 2
@@ -254,6 +263,49 @@ export const NEW_EMP_STEPS = [
 		]],
 		["Punching from a phone", [
 			["custom_allow_remote_punch", "Punch From Anywhere", "check", 0, "", 24],
+		]],
+	]],
+
+	/* Personal, Statutory & Insurance — added 19 September 2026, once Aadhaar,
+	   UAN, ESIC Number and Insurance stopped being fields nothing here could
+	   store (see CUSTOM_FIELDS in manna_hr/install.py). Nothing on this step is
+	   required: none of it is a document hrms refuses without, and asking for a
+	   PAN or an Aadhaar before somebody has physically produced the card is the
+	   same mistake this repo already avoids on Machine Code — a number typed
+	   from memory is a number typed wrong. What this step buys is that all of it
+	   can be typed once, on day one, instead of one pane at a time on Employee
+	   Profile afterwards.
+
+	   No photograph and no document scan here, on purpose: both are file
+	   attachments, and Frappe cannot attach a file to a record that does not
+	   exist yet. The done screen below this wizard is where they go, the moment
+	   after Create has given this person a name to attach one to. */
+	["personal", "Personal, Statutory & Insurance", [
+		["Identity documents", [
+			["custom_pan_no",         "PAN Number",      "text", 0, "", 8],
+			["custom_aadhaar_number", "Aadhaar Number",  "text", 0, "", 8],
+		]],
+		["PF & ESIC", [
+			["provident_fund_account", "PF Account",  "text", 0, "", 8],
+			["custom_uan",             "UAN",         "text", 0, "", 8],
+			["custom_esic_number",     "ESIC Number", "text", 0, "", 8],
+		]],
+		["Insurance", [
+			["custom_insurance_card_no",     "Insurance Card Number", "text", 0, "", 8],
+			["custom_insurance_expiry_date", "Insurance Expiry Date", "date", 0, "", 8],
+		]],
+		["Family", [
+			["custom_father_name", "Father's Name", "text", 0, "", 8],
+			["custom_mother_name", "Mother's Name", "text", 0, "", 8],
+			["custom_spouse_name", "Spouse's Name", "text", 0, "", 8],
+		]],
+		["Nationality and religion", [
+			["custom_nationality", "Nationality", "text", 0, "", 12],
+			["custom_religion",    "Religion",    "text", 0, "", 12],
+		]],
+		["Address", [
+			["current_address",   "Current Address",   "text", 0, "", 12],
+			["permanent_address", "Permanent Address", "text", 0, "", 12],
 		]],
 	]],
 ];

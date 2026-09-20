@@ -50,6 +50,14 @@ export const DOC_BACKFILL = [
   ["custom_mother_name",       "Mother&rsquo;s name", 0],
   ["custom_spouse_name",       "Spouse&rsquo;s name", 0],
   ["custom_religion",          "Religion",            0],
+  /* Added 19 September 2026, and none of these four were ever on the Factor HR
+     export — there is nothing to backfill them from, so every count starts at
+     0 rather than at a number copied from somewhere. */
+  ["custom_aadhaar_number",         "Aadhaar number",         0],
+  ["custom_uan",                    "UAN",                    0],
+  ["custom_esic_number",            "ESIC number",            0],
+  ["custom_insurance_card_no",      "Insurance card number",  0],
+  ["custom_insurance_expiry_date",  "Insurance expiry date",  0],
 ];
 
 /* ---------------------------------------------------------------------------
@@ -133,11 +141,10 @@ export const DOC_KINDS = [
 	   it is the only type here the site can hold that they do not offer.
 	   ------------------------------------------------------------------------ */
 	{
-		key: "national", label: "National Id", state: "build",
-		why: "Every one of the eleven documents on their screen is this type, and this site's Employee has "
-			+ "no field for it under any name — checked against the live doctype on 31 Aug 2026. Adding one "
-			+ "is a Custom Field and worth asking about first: it is the most sensitive identifier on the "
-			+ "form and the one with the most rules attached to holding it.",
+		key: "national", label: "National Id", state: "stock", num: "custom_aadhaar_number",
+		why: "Aadhaar, added as a Custom Field on 19 September 2026 — the Indian identifier this type actually "
+			+ "means for everybody outside `Manna Tyre UAE`. That company's own national id is closer to the "
+			+ "Resident Card below, which still has nowhere to land.",
 	},
 	{
 		key: "visa", label: "Visa", state: "build",
@@ -166,9 +173,11 @@ export const DOC_KINDS = [
 			+ "inspector and least likely to be in anybody's spreadsheet.",
 	},
 	{
-		key: "insurance", label: "Insurance Card", state: "build",
-		why: "The health insurance card number. No field here, and no obvious neighbour to put it beside — "
-			+ "ERPNext models insurance as a payroll component rather than as a document somebody carries.",
+		key: "insurance", label: "Insurance Card", state: "stock",
+		num: "custom_insurance_card_no", exp: "custom_insurance_expiry_date",
+		why: "The health insurance card number, added as a Custom Field on 19 September 2026 — ERPNext still "
+			+ "models insurance as a payroll component elsewhere, but this side no longer needs it to: the "
+			+ "card number and its renewal date are now fields of their own.",
 	},
 	{
 		key: "passport", label: "Passport", state: "live",

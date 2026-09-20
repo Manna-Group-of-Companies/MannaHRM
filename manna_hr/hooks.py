@@ -141,6 +141,22 @@ fixtures = [
 					"Employee-custom_religion",
 					"Employee-custom_pan_no",
 					"Employee-custom_confirmation_date",
+					# Aadhaar, UAN, ESIC Number and Insurance — 19 September 2026.
+					# See CUSTOM_FIELDS in install.py.
+					"Employee-custom_statutory_section",
+					"Employee-custom_aadhaar_number",
+					"Employee-custom_uan",
+					"Employee-custom_esic_number",
+					"Employee-custom_column_break_statutory",
+					"Employee-custom_insurance_card_no",
+					"Employee-custom_insurance_expiry_date",
+					# The six raised 20 September 2026 — see CUSTOM_FIELDS in install.py.
+					"Employee-custom_group_joining_date",
+					"Employee-custom_probation_period_days",
+					"Employee-custom_last_working_date",
+					"Employee-custom_emergency_address",
+					"Employee-custom_ifsc",
+					"Employee-custom_driving_licence",
 					# The candidate's own details, on hrms' `Employee Onboarding`
 					# rather than on a doctype of ours shadowing it — see
 					# CUSTOM_FIELDS in install.py.

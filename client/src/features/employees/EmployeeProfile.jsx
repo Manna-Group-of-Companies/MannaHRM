@@ -1,6 +1,7 @@
 import { getState, set, useApp } from "@/store";
 import { go } from "@/routes/router";
-import { loadOnBoard } from "@/api/load";
+import { loadEmployeeFiles, loadOnBoard } from "@/api/load";
+import { apiDeleteFile, apiUpload } from "@/api/client";
 import { forgetEmployeeDoc, useEmployeeDoc } from "@/features/employees/useEmployeeDoc";
 import { scoped } from "@/lib/scope";
 import { clock, dmy, filled, fmt, tidyDept } from "@/lib/format";
@@ -569,6 +570,145 @@ function AssetsPane({ s, emp }) {
 	);
 }
 
+/** Bytes as something a person reads, not the raw integer off the `File` row —
+    the only place that number is shown outside a CSV export. */
+function humanSize(n) {
+	if (n == null) return "—";
+	if (n < 1024) return `${n} B`;
+	if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+	return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** This person's own scans and photographs — a passport, a PAN card, an
+    appointment letter photographed on a phone — filed against `Employee`
+    with no field behind them, which is most of what actually gets attached
+    in practice. A file filed *against* a specific field (the profile
+    picture, an identity number's own scan) shows up here too, labelled with
+    the field it belongs to, because this pane's promise is "every file this
+    record holds" — the same promise All Fields makes for the columns, and
+    Employees → Download Documents already makes for a report over everybody.
+
+    Reads `s.empFiles`, the same flat list that dialog reads — one collection
+    read once, rather than a second index of the same rows. */
+function DocumentsPane({ s, emp }) {
+	const [busy, setBusy] = useState(false);
+	const [msg, setMsg] = useState(null);
+	const [confirm, setConfirm] = useState(null);
+
+	useEffect(() => {
+		if (!s.empFilesState) void loadEmployeeFiles();
+	}, [s.empFilesState]);
+
+	async function add(file) {
+		setBusy(true);
+		setMsg(null);
+		try {
+			/* No `field` — this is a document filed against the person, not
+			   against one box on their record, the same distinction apiUpload
+			   itself draws. */
+			await apiUpload(file, { doctype: "Employee", name: emp });
+			await loadEmployeeFiles(true);
+			setMsg({ ok: true, text: `${file.name} saved.` });
+		} catch (e) {
+			setMsg({ ok: false, text: `The site refused this: ${String(e.message || e)}` });
+		}
+		setBusy(false);
+	}
+
+	async function remove(row) {
+		setBusy(true);
+		try {
+			await apiDeleteFile(row.name);
+			await loadEmployeeFiles(true);
+			setMsg({ ok: true, text: `${row.file_name || row.name} deleted.` });
+		} catch (e) {
+			setMsg({ ok: false, text: `The site refused this: ${String(e.message || e)}` });
+		}
+		setConfirm(null);
+		setBusy(false);
+	}
+
+	const mine = (s.empFiles || [])
+		.filter((f) => f.attached_to_name === emp)
+		.sort((a, b) => String(b.creation || "").localeCompare(String(a.creation || "")));
+
+	return (
+		<>
+			<div className="mb-[.8rem]">
+				<label className={"embtn" + (busy ? " busy" : "")}
+					title="A scan or a photograph, filed against this record — private, the same as the profile picture.">
+					{busy ? "Uploading…" : "＋ Add a document"}
+					<input type="file" accept="image/*,application/pdf" disabled={busy}
+						style={{ display: "none" }}
+						onChange={(e) => {
+							const f = e.target.files?.[0];
+							/* Emptied so picking the same file again after a refusal is a
+							   change the browser reports, rather than a click that does
+							   nothing — the same reason the photo picker does this. */
+							e.target.value = "";
+							if (f) void add(f);
+						}} />
+				</label>
+			</div>
+
+			{msg && <div className={"pemsg" + (msg.ok ? " ok" : " bad")}>{msg.text}</div>}
+
+			{!s.empFilesState || s.empFilesState === "loading" ? (
+				<Empty title="reading the file register…" />
+			) : s.empFilesState === "error" ? (
+				<Empty title="The file register could not be read">{s.empFilesErr}</Empty>
+			) : !mine.length ? (
+				<Empty title="Nothing filed against this record yet">
+					Add a scan or a photograph above.
+				</Empty>
+			) : (
+				<Scroll>
+					<table style={{ minWidth: 560 }}>
+						<thead>
+							<tr><th>File</th><th>Filed against</th><th>Size</th><th>Uploaded</th><th /></tr>
+						</thead>
+						<tbody>
+							{mine.map((f) => (
+								<tr key={f.name}>
+									<td>
+										<a href={f.file_url} target="_blank" rel="noreferrer">
+											{f.file_name || f.name}
+										</a>
+									</td>
+									<td className="muted">
+										{f.attached_to_field ? fieldLabel(f.attached_to_field) : "General"}
+									</td>
+									<td className="mono muted">{humanSize(f.file_size)}</td>
+									<td className="mono muted">{f.creation ? dmy(f.creation) : "—"}</td>
+									<td>
+										{confirm === f.name ? (
+											<span className="flex gap-[.4rem]">
+												<button className="embtn" disabled={busy} onClick={() => void remove(f)}>
+													Delete
+												</button>
+												<button className="embtn" disabled={busy} onClick={() => setConfirm(null)}>
+													Cancel
+												</button>
+											</span>
+										) : (
+											<button className="embtn" title="Delete this file"
+												aria-label={`Delete ${f.file_name || f.name}`}
+												onClick={() => setConfirm(f.name)}>
+												🗑
+											</button>
+										)}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Scroll>
+			)}
+		</>
+	);
+}
+
+
 /** The avatar, and the ✎ that sets it.
 
     The ✎ picks a file and saves it straight away rather than waiting for the
@@ -940,6 +1080,12 @@ export default function EmployeeProfile() {
 							<ChildTable doc={doc} spec={spec} />
 						</Card>
 					))}
+
+					{tab === "document" && (
+						<Card title="Document" {...card}>
+							<DocumentsPane key={picked} s={s} emp={picked} />
+						</Card>
+					)}
 
 					{tab === "assets" && (
 						<Card title="Assets" {...card}>

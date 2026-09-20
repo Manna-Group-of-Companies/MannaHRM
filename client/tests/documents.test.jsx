@@ -51,10 +51,13 @@ describe("the document types", () => {
 		expect(labels[labels.length - 1]).toBe("PAN");
 	});
 
-	it("has a field behind exactly two of them", () => {
-		// Passport is read off the site; PAN is a Custom Field added 25 Aug 2026.
-		// Everything else on their list has nowhere to land, which is the finding.
-		expect(DOC_KINDS.filter((k) => k.num).map((k) => k.label)).toEqual(["Passport", "PAN"]);
+	it("has a field behind exactly four of them", () => {
+		// Passport is read off the site; PAN, National Id (Aadhaar) and Insurance
+		// Card are Custom Fields — PAN added 25 Aug 2026, the other two on
+		// 19 September 2026. Visa, Contract, Resident Card and Man Power Id still
+		// have nowhere to land.
+		expect(DOC_KINDS.filter((k) => k.num).map((k) => k.label))
+			.toEqual(["National Id", "Insurance Card", "Passport", "PAN"]);
 	});
 
 	it("gives every type with no field a reason somebody can read", () => {
@@ -72,14 +75,15 @@ describe("the document types", () => {
 			.toEqual(DOC_KINDS.map((k) => k.key));
 		/* Drawn and unselectable rather than left out. A choice disabled says
 		   "this exists there and not here"; a choice absent says nothing. */
-		expect(options.filter((o) => !o.disabled).map((o) => o.value)).toEqual(["passport", "pan"]);
+		expect(options.filter((o) => !o.disabled).map((o) => o.value))
+			.toEqual(["national", "insurance", "passport", "pan"]);
 	});
 
 	it("says on the dead ones that this site has no field", async () => {
 		const view = await openNew();
 		const dead = [...view.container.querySelectorAll("#de-type option")]
 			.filter((o) => o.disabled && o.value);
-		expect(dead.length).toBe(6);
+		expect(dead.length).toBe(4);
 		for (const o of dead) expect(o.textContent).toMatch(/no field on this site/i);
 	});
 });

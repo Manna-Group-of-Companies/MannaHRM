@@ -8,6 +8,7 @@ import OnMachine from "@/components/OnMachine";
 import MachineNumber from "@/components/MachineNumber";
 import { deskUrl } from "@/lib/desk";
 import { createEmployee } from "@/api/employee";
+import { openEmployee } from "@/features/employees/openEmployee";
 import {
 	ED_STATUSES, PUNCH_METHODS, NEW_EMP_COPIED, NEW_EMP_HINT, NEW_EMP_NOFIELD, NEW_EMP_STEPS,
 } from "@/data/employees";
@@ -264,11 +265,31 @@ export default function CreateEmployee() {
 					{done.custom_punch_method !== "Mobile App" && done.attendance_device_id
 						? <OnMachine number={done.attendance_device_id} employee={id}
 							employeeName={done.employee_name} /> : null}
+					{/* A photograph and any document scans could not be part of the form
+					    above — Frappe cannot attach a file to a record that does not
+					    exist yet, so there was nowhere to send one from until this
+					    moment. Named rather than left for somebody to notice missing
+					    later, the same reason the punch-method paragraph above exists. */}
+					{id ? (
+						<p>
+							This form could not ask for a photograph or a document scan — there was no record
+							yet to attach one to. <b>Add photo & documents</b> below opens their profile,
+							where the pencil on the photo and the Document Entry page under On Board both
+							take one now.
+						</p>
+					) : null}
+
 					{/* What this form did not ask for and hrms needs before the record
 					    does anything. Named rather than implied — a new Employee with
 					    none of it looks finished and is not. */}
 					<div className="wizacts">
-						<Desk className="btn tpl" href={s.site && id && deskUrl(s.site, "Employee", id)}
+						{id ? (
+							<button className="btn tpl" onClick={() => openEmployee(id)}
+								title="Open this person's Employee Profile, where a photograph and document scans can be attached.">
+								Add photo &amp; documents
+							</button>
+						) : null}
+						<Desk className="btn ghost" href={s.site && id && deskUrl(s.site, "Employee", id)}
 							title="Open the record that was just created, on the ERPNext site."
 							dead={id ? undefined : "The site answered without a record id."}>
 							Open on the site

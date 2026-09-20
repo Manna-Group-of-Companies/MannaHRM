@@ -174,7 +174,7 @@ export const PROFILE_PANES = {
 	},
 
 	past: {
-		tables: [["employee_external_work_history", "Employment before Manna", [
+		tables: [["external_work_history", "Employment before Manna", [
 			["company_name", "Company"], ["designation", "Designation"], ["salary", "Salary"],
 			["total_experience", "Experience"], ["address", "Address"], ["contact", "Contact"],
 		]]],
@@ -201,7 +201,7 @@ export const PROFILE_PANES = {
 				["Linked User", "user_id"],
 			]],
 		],
-		tables: [["employee_internal_work_history", "Transfer and promotion history", [
+		tables: [["internal_work_history", "Transfer and promotion history", [
 			["branch", "Branch"], ["department", "Department"], ["designation", "Designation"],
 			["from_date", "From"], ["to_date", "To"],
 		]]],
@@ -236,9 +236,7 @@ export const PROFILE_PANES = {
 			["Everything else on file", [
 				["PAN Number", ["custom_pan_no", "pan_number"]],
 				["Nationality", "custom_nationality"],
-				["Aadhaar", null,
-					"No field, standard or backfilled. It is the one identity document a Kerala payroll "
-					+ "actually needs and the export did not carry it."],
+				["Aadhaar", "custom_aadhaar_number"],
 				["Driving Licence", null, "No field. Factor HR's Identity section may hold more than this; only "
 					+ "the section name has been seen, not its contents."],
 			]],
@@ -252,19 +250,22 @@ export const PROFILE_PANES = {
 			["Statutory", [
 				["PF Account", "provident_fund_account"],
 				["PAN Number", ["custom_pan_no", "pan_number"]],
-				["UAN", null,
-					"The number that actually follows somebody between employers. No field on ERPNext's "
-					+ "Employee, and every EPF return needs it."],
-				["ESIC Number", null,
-					"No field. ESIC applies below a wage ceiling, so this is not needed for everybody — but "
-					+ "it is needed for the people it is needed for."],
+				["UAN", "custom_uan"],
+				["ESIC Number", "custom_esic_number"],
 				["PF Applicable", null, "hrms decides PF from the salary structure's components rather than "
 					+ "from a flag on the person."],
 				["ESIC Applicable", null, "As above."],
 			]],
+			["Insurance", [
+				["Insurance Card Number", "custom_insurance_card_no"],
+				["Insurance Expiry Date", "custom_insurance_expiry_date"],
+			]],
 		],
-		note: "<b>This pane is the statutory blocker in one screen.</b> Payroll cannot file a return without UAN "
-			+ "and ESIC, neither of which exists here. See docs/OPEN_QUESTIONS.md.",
+		note: "UAN and ESIC Number were added as Custom Fields on 19 September 2026 — Payroll can now file a "
+			+ "return for the people who need one. PF/ESIC Applicable are still not a flag on the person; hrms "
+			+ "decides both from the salary structure's components. Insurance is a new group rather than a row "
+			+ "in Statutory, because ERPNext otherwise models it as a payroll component and this is the number "
+			+ "printed on the card somebody actually carries.",
 	},
 
 	/* Personal Details' six sub-items, screenshotted expanded on 29 Aug 2026.
@@ -345,7 +346,7 @@ export const PROFILE_PANES = {
 	},
 
 	qualification: {
-		tables: [["employee_education", "Qualification Details", [
+		tables: [["education", "Qualification Details", [
 			["school_univ", "Institute"], ["qualification", "Qualification"], ["level", "Level"],
 			["year_of_passing", "Year"], ["class_per", "Score"], ["maj_opt_subj", "Subjects"],
 		]]],
@@ -390,11 +391,11 @@ export const PROFILE_PANES = {
 
 	document: {
 		groups: [],
-		note: "<b>Nothing is drawn here yet.</b> Attachments live on the <code>File</code> doctype, which this "
-			+ "dashboard does read — Employees &rarr; Download Documents and On Board &rarr; Document Entry both "
-			+ "list them — and this pane has simply not been built onto it. What ERPNext holds *about* documents — "
-			+ "passport, PAN, nationality — is on Employee Identity, and On Board → Document Entry counts how "
-			+ "much of it is filled in across everybody.",
+		note: "Every <code>File</code> filed against this record, and a place to add one — see "
+			+ "<code>DocumentsPane</code> in EmployeeProfile.jsx. What ERPNext holds <i>about</i> a document — a "
+			+ "passport number, a PAN, an expiry date — is on Employee Identity instead; this pane is the scan "
+			+ "itself. Employees &rarr; Download Documents reads the same file register for a report over "
+			+ "everybody, and On Board &rarr; Document Entry is where a scan gets tied to one of those fields.",
 	},
 
 	assets: { groups: [] },

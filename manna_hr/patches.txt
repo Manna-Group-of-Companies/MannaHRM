@@ -2,3 +2,4 @@
 manna_hr.patches.install_regularization_workflow
 manna_hr.patches.install_employee_documents
 manna_hr.patches.install_asset_assignments
+manna_hr.patches.install_statutory_fields

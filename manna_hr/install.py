@@ -118,6 +118,128 @@ CUSTOM_FIELDS = {
 			"insert_after": "custom_pan_no",
 			"description": "End of probation. Distinct from date of joining, and the date several of Factor HR's seventeen templates actually print.",
 		},
+		{
+			"fieldname": "custom_statutory_section",
+			"label": "Statutory & Insurance",
+			"fieldtype": "Section Break",
+			"insert_after": "custom_confirmation_date",
+			"collapsible": 1,
+		},
+		# The four raised on 19 September 2026: Aadhaar had no field of any name
+		# (Employee Profile's Identity pane and the Document register both
+		# carried it as null with a reason), and UAN / ESIC Number were the two
+		# `pf` pane rows the payroll return cannot be filed without — PF Account
+		# already existed, these did not. Insurance was a fourth gap the pane
+		# never had a row for at all, because ERPNext models insurance as a
+		# payroll component rather than as a document somebody carries — see
+		# `docs/OPEN_QUESTIONS.md`. None of these four are validated here: a
+		# wrong Aadhaar or UAN is a correction, not a reason to refuse the rest
+		# of somebody's record (same argument as `custom_pan_no` above).
+		{
+			"fieldname": "custom_aadhaar_number",
+			"label": "Aadhaar Number",
+			"fieldtype": "Data",
+			"insert_after": "custom_statutory_section",
+			"description": "The one identity document a Kerala payroll actually needs. Read by Employee "
+				"Profile's Identity pane and by the Document register's National Id row.",
+		},
+		{
+			"fieldname": "custom_uan",
+			"label": "UAN",
+			"fieldtype": "Data",
+			"insert_after": "custom_aadhaar_number",
+			"description": "The number that follows somebody between employers. Every EPF return needs it, "
+				"and PF Account (`provident_fund_account`) is not a substitute for it.",
+		},
+		{
+			"fieldname": "custom_esic_number",
+			"label": "ESIC Number",
+			"fieldtype": "Data",
+			"insert_after": "custom_uan",
+			"description": "ESIC applies below a wage ceiling, so this is empty for most people as a fact "
+				"rather than as a gap.",
+		},
+		{
+			"fieldname": "custom_column_break_statutory",
+			"fieldtype": "Column Break",
+			"insert_after": "custom_esic_number",
+		},
+		{
+			"fieldname": "custom_insurance_card_no",
+			"label": "Insurance Card Number",
+			"fieldtype": "Data",
+			"insert_after": "custom_column_break_statutory",
+			"description": "The health insurance card number. Read by the Document register's Insurance "
+				"Card row.",
+		},
+		{
+			"fieldname": "custom_insurance_expiry_date",
+			"label": "Insurance Expiry Date",
+			"fieldtype": "Date",
+			"insert_after": "custom_insurance_card_no",
+			"description": "Renewal date for the insurance card. The Document register's countdown chip "
+				"reads this the way it already reads a passport's `valid_upto`.",
+		},
+		# The six raised on 20 September 2026, against Employee Profile's own
+		# panes read off the live site: each of these is a row that pane already
+		# draws as "not on this site". Deliberately not the whole list — three
+		# more (Gratuity Start Date, Transfer Date, Pay Structure Applied From
+		# Date) are values hrms already computes or stores elsewhere (gratuity
+		# from date_of_joining, a transfer on Employee Transfer, a structure's
+		# from_date on Salary Structure Assignment), and PF/ESIC Applicable are
+		# derived from the salary structure's components rather than a flag on
+		# the person — a field here for any of those would give payroll two
+		# answers that can drift apart. See client/src/data/profile.js.
+		{
+			"fieldname": "custom_group_joining_date",
+			"label": "Group Joining Date",
+			"fieldtype": "Date",
+			"insert_after": "date_of_joining",
+			"description": "Manna is a group, and service is dated to the group as well as to the company "
+				"that employs a person. date_of_joining is one company's; this is not overwritten when "
+				"somebody moves between Manna companies.",
+		},
+		{
+			"fieldname": "custom_probation_period_days",
+			"label": "Probation Period In Days",
+			"fieldtype": "Int",
+			"insert_after": "scheduled_confirmation_date",
+			"description": "What Expected Confirmation Date would be computed from. Not added on its own — "
+				"scheduled_confirmation_date is already on the site, labelled Offer Date here, so a second "
+				"date field for the same idea would be the drift this list exists to avoid.",
+		},
+		{
+			"fieldname": "custom_last_working_date",
+			"label": "Last Working Date",
+			"fieldtype": "Date",
+			"insert_after": "relieving_date",
+			"description": "Distinct from relieving_date: the date a resignation takes effect versus the "
+				"last day somebody was actually at the gate.",
+		},
+		{
+			"fieldname": "custom_emergency_address",
+			"label": "Emergency Address",
+			"fieldtype": "Small Text",
+			"insert_after": "relation",
+			"description": "ERPNext holds a name, a relation and a phone number for the emergency contact, "
+				"and no address to go with them.",
+		},
+		{
+			"fieldname": "custom_ifsc",
+			"label": "IFSC",
+			"fieldtype": "Data",
+			"insert_after": "bank_ac_no",
+			"description": "The bank account and name were already fields; the branch code payroll needs "
+				"to pay by NEFT was not.",
+		},
+		{
+			"fieldname": "custom_driving_licence",
+			"label": "Driving Licence",
+			"fieldtype": "Data",
+			"insert_after": "place_of_issue",
+			"description": "Unverified against Factor HR's own Identity section — only the section name has "
+				"been seen, not its contents — but low-risk as a plain text field.",
+		},
 	],
 	# hrms ships `Employee Onboarding` and this is **not** a second copy of it.
 	# Theirs is a checklist wrapper round a Job Applicant; what the dashboard's
