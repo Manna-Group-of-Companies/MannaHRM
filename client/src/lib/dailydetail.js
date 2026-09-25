@@ -226,3 +226,21 @@ export function monthRollup(rows) {
 		ot: hm(g.otMin),
 	}));
 }
+
+/** The figures over Daily Detail: what the days came to. A day with one punch
+    is counted as a missed punch — In Only or Out Only — not as an absence; leave
+    applied for counts as leave, as Monthly Basic's tile counts it. */
+export function daySummary(rows) {
+	const n = { people: new Set(), days: rows.length, present: 0, absent: 0, half: 0, leave: 0, late: 0, missed: 0, off: 0 };
+	for (const r of rows) {
+		n.people.add(r.emp.name);
+		if (r.status === "Present" || r.status === "Work From Home") n.present++;
+		else if (r.status === "Absent") n.absent++;
+		else if (r.status === "Half Day") n.half++;
+		else if (r.status === "On Leave" || r.status === "Leave Applied") n.leave++;
+		else if (r.status === "In Only" || r.status === "Out Only") n.missed++;
+		if (r.dayType) n.off++;
+		if (r.lateMin || r.late === "late") n.late++;
+	}
+	return { ...n, people: n.people.size };
+}

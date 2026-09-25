@@ -53,6 +53,9 @@ async function loadShift(name) {
 		   what their form shows and an invented number would be worse. */
 		f: {
 			...f,
+			/* The shift's own company, never the top bar's: a shift made before
+			   the field existed is blank, and saying so is the truth about it. */
+			company: doc.custom_company || "",
 			start: toInput(doc.start_time) || f.start,
 			end: toInput(doc.end_time) || f.end,
 			early: String(doc.begin_check_in_before_shift_start_time ?? f.early),
@@ -68,7 +71,11 @@ async function loadShift(name) {
     it share the one definition of "open" — including the read, which is the
     half a caller would forget. */
 export function openShiftWizard(name = "") {
-	set({ shw: { ...SHW_BLANK(name), open: true } });
+	const blank = SHW_BLANK(name);
+	/* A new shift opens on the company the top bar is set to — the one a
+	   company-locked login is always on — and on nothing under "All". */
+	if (!name) blank.f.company = getState().company || "";
+	set({ shw: { ...blank, open: true } });
 }
 
 /** Save, and what the dialog does with the answer. The form stays open and
@@ -127,11 +134,24 @@ export default function ShiftWizard({ onClose }) {
 	   also creates on Save, and says so, but it is not "new" to the title. */
 	const fresh = !w.row;
 	const named = Boolean(f.name.trim());
+	/* Asked for on a new shift wherever the site can hold the answer. Not on an
+	   existing one: every shift made before the field existed is blank, and
+	   refusing to save its grace until somebody picks a company for it would be
+	   a change nobody asked for. */
+	const coField = s.shiftCo !== false;
+	const needCo = coField && w.ours !== true && !f.company;
+	/** Why Save and Next would refuse, or "" — the one definition of both. */
+	const missing = !named
+		? "A shift needs a name before the rest of it means anything — Shift Type is named by what "
+			+ "is typed here, not by a series."
+		: needCo ? "Which company is this shift for? Pick one before going on." : "";
 
 	/** What the site has nowhere to put, gathered once and shown before
 	    anything opens. Not silently dropped, and not written into a field that
 	    would make it look honoured. */
 	const dropped = [
+		!coField && f.company && `COMPANY (${f.company}) — this site's Shift Type has no company field `
+			+ "yet; `python tools/create_custom_fields.py \"Shift Type\" --apply` adds it",
 		f.isdefault && "IS DEFAULT — no such field on Shift Type; their own list shows it blank on "
 			+ "every row of the tenant this page was photographed from",
 		kind.state !== "live" && `${kind.label} — ${kind.why}`,
@@ -144,18 +164,48 @@ export default function ShiftWizard({ onClose }) {
 		/* Forward past step 1 needs a name, because the document is named by it —
 		   `Shift Type` is prompt-named on this site, so a blank here is a document
 		   that cannot be created rather than one named later. */
-		if (i > 0 && !f.name.trim()) {
-			return patch("shw", {
-				msg: "A shift needs a name before the rest of it means anything — Shift Type is named by "
-					+ "what is typed here, not by a series.",
-				bad: true,
-			});
-		}
+		if (i > 0 && missing) return patch("shw", { msg: missing, bad: true });
 		patch("shw", { step: k, msg: "", bad: false });
 	}
 
+	const overnight = f.end <= f.start ? (
+		/* Allowed, and said. An overnight shift is a real thing and their form
+		   does not stop you either; a form that silently accepted it would be
+		   the problem. */
+		<div className="note">
+			This shift ends at or before it starts, which the site reads as running <b>overnight</b> —
+			{" "}{f.start} to {f.end} the next day. Allowed here because it is allowed there; said
+			because a typo and a night shift look identical in two boxes.
+		</div>
+	) : null;
+
 	const stepKind = (
 		<>
+			{/* Who it is for and when it runs, first and together, so a plain day
+			    shift is one screen and a Save. The later steps are tolerances and
+			    grace, which open on working values. */}
+			<div className="shwgrid">
+				<label htmlFor="shw_company"
+					title="The company this shift is for — Shift Type's Company field, a Custom Field of ours.">
+					Company
+				</label>
+				<span className="ctl">
+					<select id="shw_company" value={f.company}
+						onChange={(e) => setF({ company: e.target.value })}>
+						<option value="">{w.ours === true ? "— any company —" : "— select company —"}</option>
+						{s.companies.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+					</select>
+					{!coField ? <span className="hint">no field on the site yet</span> : null}
+				</span>
+				{SHW_TIMING.filter((r) => r.kind === "time").map((r) => (
+					<Row key={r.key} row={r}>
+						<input id={"shw_" + r.key} type="time" value={f[r.key]}
+							onChange={(e) => setF({ [r.key]: e.target.value })} />
+					</Row>
+				))}
+			</div>
+			{overnight}
+
 			<div className="shwhead">
 				<div className="shwname">
 					<label htmlFor="shw_name">Name</label>
@@ -177,29 +227,10 @@ export default function ShiftWizard({ onClose }) {
 				</label>
 			</div>
 
-			{/* Their four kinds, each with its italic question under it. The ⓘ is
-			    theirs; what is behind it is ours — see data/shiftwizard.js. */}
-			<div className="shwkinds" role="radiogroup" aria-label="Kind of shift">
-				{SHW_KINDS.map((k) => (
-					<div key={k.key} className={"shwkind" + (k.key === f.kind ? " on" : "")}>
-						<label>
-							<input type="radio" name="shwkind" checked={k.key === f.kind}
-								onChange={() => setF({ kind: k.key })} />
-							{k.label}
-						</label>
-						<p>
-							{k.blurb}
-							<b className="shwi" title={k.why} aria-label={k.why} role="note">ⓘ</b>
-						</p>
-						{/* The finding, on the control rather than in a footnote: three of
-						    their four are a different answer to "what is a shift" than
-						    ERPNext has, and somebody choosing one should be told then. */}
-						{k.key === f.kind && k.state !== "live" ? (
-							<div className={k.state === "build" ? "gap" : "note"}>{k.why}</div>
-						) : null}
-					</div>
-				))}
-			</div>
+			{/* Factor HR's four kinds of shift are not drawn: ERPNext has one kind,
+			    Time Based, and the other three had nowhere to land — offering them
+			    was a choice that changed nothing. `f.kind` stays "time". The
+			    reasoning for each is kept in SHW_KINDS, data/shiftwizard.js. */}
 		</>
 	);
 
@@ -213,35 +244,22 @@ export default function ShiftWizard({ onClose }) {
 			<p className="blurb">{SHW_TIMING[0].blurb}</p>
 
 			<div className="shwgrid">
-				{SHW_TIMING.filter((r) => r.kind !== "check").map((r) => (
+				{/* Start and end are on the first step, beside the name. */}
+				{SHW_TIMING.filter((r) => r.kind === "mins").map((r) => (
 					<Row key={r.key} row={r}>
-						{r.kind === "time" ? (
-							<input id={"shw_" + r.key} type="time" value={f[r.key]}
-								onChange={(e) => setF({ [r.key]: e.target.value })} />
-						) : (
-							<>
-								<input id={"shw_" + r.key} type="number" min={0} value={f[r.key]}
-									onChange={(e) => setF({ [r.key]: e.target.value })} />
-								{/* Their label carries no unit and ERPNext's field is minutes.
-								    Said on the control, because the difference between 30
-								    minutes and 30 hours is a shift nobody is ever late for. */}
-								<b className="sfx">minutes</b>
-							</>
-						)}
+						<input id={"shw_" + r.key} type="number" min={0} value={f[r.key]}
+							onChange={(e) => setF({ [r.key]: e.target.value })} />
+						{/* Their label carries no unit and ERPNext's field is minutes.
+						    Said on the control, because the difference between 30
+						    minutes and 30 hours is a shift nobody is ever late for. */}
+						<b className="sfx">minutes</b>
 					</Row>
 				))}
 			</div>
 
-			{/* Allowed, and said. An overnight shift is a real thing and their form
-			    does not stop you either; a form that silently accepted it would be
-			    the problem. */}
-			{f.end <= f.start ? (
-				<div className="note">
-					This shift ends at or before it starts, which the site reads as running <b>overnight</b> —
-					{" "}{f.start} to {f.end} the next day. Allowed here because it is allowed there; said
-					because a typo and a night shift look identical in two boxes.
-				</div>
-			) : null}
+			<div className="note">
+				Runs {f.start} to {f.end}{f.end <= f.start ? " the next day" : ""} — set on the first step.
+			</div>
 		</>
 	);
 
@@ -287,12 +305,6 @@ export default function ShiftWizard({ onClose }) {
 			onClose={onClose}
 			extra={
 				<div className="shwform">
-					{/* Their line, on steps 2 and 3. Step 1 is where the selection is
-					    made, so it does not need telling. */}
-					{at > 0 ? (
-						<div className="shwsel">Current selection : <b>{kind.label}</b></div>
-					) : null}
-
 					{/* What Save is about to do. Before the form rather than after it:
 					    it changes what the button at the bottom means. */}
 					{fresh ? (
@@ -341,19 +353,20 @@ export default function ShiftWizard({ onClose }) {
 							</button>
 						) : null}
 						{at < SHW_STEPS.length - 1 ? (
-							<button className="btn tpl" onClick={() => go(SHW_STEPS[at + 1][0])}>
+							<button className="btn ghost" onClick={() => go(SHW_STEPS[at + 1][0])}>
 								Next
 							</button>
-						) : (
-							<button className="btn tpl" onClick={() => void save()}
-								disabled={!named || w.busy || w.state === "loading"}
-								title={!named ? "A shift needs a name — Shift Type is named by it."
-									: w.ours === true
-										? "Changes this Shift Type on the ERPNext site — only the boxes that were changed."
-										: "Creates this Shift Type on the ERPNext site, as you, under the site's own validation."}>
-								{w.busy ? "Saving…" : "Save"}
-							</button>
-						)}
+						) : null}
+						{/* On every step, not only the last: the later two open on
+						    working values, and a plain day shift should not take three
+						    screens to make. */}
+						<button className="btn tpl" onClick={() => void save()}
+							disabled={Boolean(missing) || w.busy || w.state === "loading"}
+							title={missing || (w.ours === true
+								? "Changes this Shift Type on the ERPNext site — only the boxes that were changed."
+								: "Creates this Shift Type on the ERPNext site, as you, under the site's own validation.")}>
+							{w.busy ? "Saving…" : "Save"}
+						</button>
 						<button className="btn ghost" disabled={w.busy}
 							title="Closes the wizard and empties it. Nothing typed since the last Save is sent."
 							onClick={() => { onClose(); patch("shw", SHW_BLANK()); }}>

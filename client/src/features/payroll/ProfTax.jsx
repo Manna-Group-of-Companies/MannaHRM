@@ -12,7 +12,6 @@ import {
 	PT_STATUSES, PT_STATUS_SEEN, PT_TYPES, fyOf, ptYears,
 } from "@/data/payroll";
 
-import { PayLegend } from "./shared";
 
 /* PROF. TAX STATEMENT, photographed 29 August 2026 and drawn here control for
    control: thirteen fields down one column, With Logo pinned beside Report
@@ -498,11 +497,6 @@ export default function ProfTax() {
 
 	return (
 		<>
-			<PayLegend what="Prof. Tax Statement">
-				Professional Tax — a state levy, deducted monthly and remitted to whoever the employer is
-				registered with. Frappe HR has the mechanism and no master.
-			</PayLegend>
-
 			<div className="mt-[.8rem]">
 				<PtForm s={s} />
 			</div>

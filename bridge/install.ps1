@@ -58,7 +58,10 @@ $Files = @(
 	'mannabridge', 'probe.py', 'check_push.py', 'requirements.txt', 'config.example.toml',
 	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1',
 	'machine.py', 'machine_menu.py', 'push_users.py', 'employee_tools.py', 'MACHINE.bat',
-	'console.py', 'console.html', 'CONSOLE.bat', 'MannaHRConsole.vbs'
+	'console.py', 'console.html', 'CONSOLE.bat', 'MannaHRConsole.vbs',
+	# Manna Attendance, the Windows program (desktop/ in the repo). Absent from a
+	# zip built before it was, which is why a missing item is skipped.
+	'app'
 )
 
 # An auto-install zip (package.ps1 -Auto) carries this beside the installer, and
@@ -441,6 +444,19 @@ function Install-MachineTools {
 		# of our own would be one more file to keep in step with the zip.
 		$page.IconLocation = "$env:SystemRoot\System32\SHELL32.dll,14"
 		$page.Save()
+	}
+	# The program, for the people who used eSSL and read a browser window as a
+	# website. It asks the console everything, so it needs the console task too.
+	$exe = Join-Path $InstallDir 'app\manna_attendance.exe'
+	if (Test-Path $exe) {
+		foreach ($where in @($desktop, $startMenu)) {
+			$app = $shell.CreateShortcut((Join-Path $where 'Manna Attendance.lnk'))
+			$app.TargetPath = $exe
+			$app.WorkingDirectory = Join-Path $InstallDir 'app'
+			$app.Description = 'Bridge, devices, people, logs, attendance, new employee, backup'
+			$app.Save()
+		}
+		Write-Host "  'Manna Attendance' is on the desktop and under Start > Manna HR."
 	}
 	$tools = $shell.CreateShortcut((Join-Path $startMenu 'Manna Machine Tools.lnk'))
 	$tools.TargetPath = Join-Path $InstallDir 'MACHINE.bat'

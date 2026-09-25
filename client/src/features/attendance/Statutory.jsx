@@ -405,15 +405,6 @@ export default function Statutory() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Statutory Reports</b>
-				<span className="cov none">Report Type never opened</span>
-				<span>
-					The panel was read on 28 Aug 2026 with <b>Report Type unselected</b>, so what this menu files
-					is still the open question.
-				</span>
-			</div>
-
 			<div className="mt-[.8rem]">
 				<SrForm s={s} />
 			</div>

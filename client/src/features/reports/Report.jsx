@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 import { useApp } from "@/store";
-import { active, scoped } from "@/lib/scope";
 import { download, toCsv } from "@/lib/csv";
 import { isoAgo, todayIso } from "@/lib/format";
 import { Empty, Html, Note, Scroll } from "@/components/ui";
 import { LocCell } from "@/components/PunchMap";
-import { daysBetween, reportFor } from "@/data/reports";
+import ExportButtons from "@/components/ExportButtons";
+import { askText, daysBetween, reportFor, reportInput, specSheet } from "@/data/reports";
 
 /* ---------------------------------------------------------------------------
    One page for fifteen of Factor HR's reports.
@@ -33,12 +33,6 @@ import { daysBetween, reportFor } from "@/data/reports";
      that has already quoted the number.
    --------------------------------------------------------------------------- */
 
-/** Their reports read "all employees" as everybody on the books; the
-    attendance ones only ever mean the active. Left and inactive people have no
-    shift, punch or leave, so including them would pad every count with rows
-    that can never be anything but empty. */
-const ROWS_FOR = { employees: scoped, attendance: active, leave: active };
-
 export default function Report({ section, id }) {
 	const s = useApp();
 	const spec = reportFor(section, id);
@@ -56,13 +50,7 @@ export default function Report({ section, id }) {
 
 	if (!spec) return <Empty title="No such report">Nothing is registered at this address.</Empty>;
 
-	const rows = spec.build(
-		{
-			rows: (ROWS_FOR[section] || scoped)(s), checkins: s.checkins, leave: s.approvals.leave || [],
-			holidays: s.holidays, places: s.workLocs,
-		},
-		ask,
-	);
+	const rows = spec.build(reportInput(s, section), ask);
 
 	const csv = () => download(
 		`${spec.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${todayIso()}.csv`,
@@ -86,6 +74,8 @@ export default function Report({ section, id }) {
 				<button type="button" className="embtn" onClick={csv} disabled={rows.length === 0}>
 					Export CSV
 				</button>
+				<ExportButtons name={spec.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")} disabled={rows.length === 0}
+					sheets={() => [specSheet(spec, rows, askText(spec, ask, s.company))]} />
 			</div>
 
 			{rows.length === 0 ? (

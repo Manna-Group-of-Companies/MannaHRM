@@ -316,6 +316,7 @@ export default function EmployeeMaster() {
 										exp: {
 											...EXP_BLANK(),
 											open: true,
+											company: s.company || "",
 											status: s.empstatus,
 											filterBy: s.empdept ? "department" : s.empdesig ? "designation" : "",
 											filterVal: s.empdept || s.empdesig || "",

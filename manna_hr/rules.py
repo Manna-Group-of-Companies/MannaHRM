@@ -794,3 +794,154 @@ def _as_date(value):
 	if isinstance(value, date):
 		return value
 	return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+
+
+# ------------------------------------------------------------- sandwich leave ---
+#
+# Factor HR's rule: a weekend or holiday run between two days of leave or
+# absence is swept into the leave, so a Friday-and-Monday application costs
+# four days, not two. Ours only when both sides say so — a Friday off with
+# nothing either side of the weekend is a long weekend, not a sandwich, and the
+# rule must never manufacture an absence out of one lonely day of leave.
+
+
+def sandwich_leave_dates(days):
+	"""Which of a run of off days get swept into leave, as their dates.
+
+	`days` is every day in the window under consideration, in date order, each
+	one `{"date": ..., "is_off": bool, "is_leave": bool}` — `is_off` for a
+	weekend or holiday, `is_leave` for a day already leave, applied-for leave,
+	or marked absent. The window has to reach at least one working day past
+	each end of a run under test, or that run is judged as if the calendar
+	stopped there and never swept.
+
+	**Both ends have to say so.** A run of off days is judged only by the
+	working day immediately before it and the working day immediately after —
+	one on leave and the other not is exactly the case this must leave alone,
+	because sweeping it would turn a Friday off into a Saturday absence nobody
+	applied for.
+
+	A run at either edge of the window, with no day beyond it to check, is left
+	alone rather than guessed at — the caller's window did not reach far enough
+	to answer, and an unanswerable day is not swept.
+	"""
+	out = []
+	n = len(days)
+	i = 0
+	while i < n:
+		if not days[i]["is_off"]:
+			i += 1
+			continue
+		j = i
+		while j < n and days[j]["is_off"]:
+			j += 1
+		before_ok = i > 0 and days[i - 1]["is_leave"]
+		after_ok = j < n and days[j]["is_leave"]
+		if before_ok and after_ok:
+			out.extend(d["date"] for d in days[i:j])
+		i = j
+	return out
+
+
+# ------------------------------------------------------- onboarding via form ---
+#
+# The Google Form an employee fills in themselves. It lands in a Sheet outside
+# this app's control, so a row of it is untrusted input in exactly the sense a
+# phone punch is (CLAUDE.md §1) — and the mapping below is the only thing that
+# decides what an answer is allowed to become on `Employee Onboarding`, so it is
+# argued about here rather than inside the Google API call that fetches it.
+
+#: The Google Form's question titles, in the order the Form should ask them,
+#: mapped to the field each answer becomes on `Employee Onboarding`. The Form
+#: must use these exact titles — Google Sheets names each column after the
+#: question it came from, and this is the only place that has to agree with
+#: that wording.
+ONBOARDING_FORM_FIELDS = {
+	"Full Name": "employee_name",
+	"Personal Email": "custom_personal_email",
+	"Mobile Number": "custom_cell_number",
+	"Date of Birth": "custom_date_of_birth",
+	"Date of Joining": "date_of_joining",
+	"Company": "company",
+	"Department": "department",
+	"Designation": "designation",
+	# The rest of the Form, as it stood on 24 September 2026. Each lands in a
+	# Custom Field of ours on Employee Onboarding (install.py).
+	"Timestamp": "custom_form_timestamp",
+	"Current Address": "custom_current_address",
+	"Permanent Address": "custom_permanent_address",
+	"Aadhaar Number": "custom_aadhaar_number",
+	"Other Identity Proof / ID Number": "custom_other_id_proof",
+	"Marital Status": "custom_marital_status",
+	"Family Members": "custom_family_members",
+	"Family Member Details": "custom_family_details",
+	"Is the Employee Covered by Other Insurance?": "custom_other_insurance",
+	"Insurance Provider": "custom_insurance_provider",
+	"Insurance Policy Number": "custom_insurance_policy_no",
+	"Highest Qualification": "custom_highest_qualification",
+}
+
+#: The one answer every row is matched on. Typed twice, it is the same person
+#: applying twice, not two candidates — an email is the one thing this Form
+#: asks for that does not need a machine code to disambiguate, the way
+#: `attendance_device_id` does for a punch.
+ONBOARDING_MATCH_FIELD = "custom_personal_email"
+
+#: The Sheet column `ONBOARDING_MATCH_FIELD` is read from — derived rather than
+#: repeated, so the header and the field it fills can never name two different
+#: questions.
+ONBOARDING_MATCH_HEADER = next(
+	h for h, f in ONBOARDING_FORM_FIELDS.items() if f == ONBOARDING_MATCH_FIELD
+)
+
+
+def map_onboarding_row(row):
+	"""One Sheet row, as `{question title: answer}`, into an `Employee
+	Onboarding` doc's fields.
+
+	Blank answers are left out rather than sent empty — the same rule
+	`employeeFromCandidate` follows on the client: writing "" for a field the
+	candidate never reached would overwrite whatever a fuller, later answer
+	set, and Google Forms never sends a question the person left blank as
+	anything else.
+	"""
+	doc = {}
+	for header, field in ONBOARDING_FORM_FIELDS.items():
+		raw = row.get(header, "")
+		if field in ONBOARDING_DATE_FIELDS:
+			raw = sheet_serial_to_iso(raw)
+		elif field == "custom_form_timestamp":
+			raw = sheet_serial_to_datetime(raw)
+		value = str(raw or "").strip()
+		if value:
+			doc[field] = value
+	return doc
+
+
+#: The answers that are dates. The Sheet is read with dates as serial numbers
+#: (onboard_sync._sheet_rows) because its display format is its locale's — the
+#: live one is a US Sheet, and its 9/13/2026 read as India's is a thirteenth
+#: month, which is what the first real import sent the site on 24 Sep 2026.
+ONBOARDING_DATE_FIELDS = ("custom_date_of_birth", "date_of_joining")
+
+
+def sheet_serial_to_datetime(value):
+	"""The Form's Timestamp column, a serial date with the time as its fraction,
+	as `YYYY-MM-DD HH:MM:SS`. Anything else is handed back untouched."""
+	import datetime
+
+	if isinstance(value, bool) or not isinstance(value, (int, float)):
+		return value
+	at = datetime.datetime(1899, 12, 30) + datetime.timedelta(seconds=round(value * 86400))
+	return at.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def sheet_serial_to_iso(value):
+	"""A Sheets serial date — days since 30 December 1899 — as `YYYY-MM-DD`.
+	Anything that is not a number is handed back untouched, so a date typed as
+	text reaches the site as typed and the site's refusal names it."""
+	import datetime
+
+	if isinstance(value, bool) or not isinstance(value, (int, float)):
+		return value
+	return (datetime.date(1899, 12, 30) + datetime.timedelta(days=int(value))).isoformat()

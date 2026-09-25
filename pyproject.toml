@@ -6,10 +6,18 @@ requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
 
-# Deliberately empty. `frappe` and `hrms` are supplied by the bench, and naming
-# them here makes pip try to resolve them from PyPI, where they are either
-# absent or a different project entirely.
-dependencies = []
+# `frappe` and `hrms` are supplied by the bench and are deliberately not named
+# here — naming them makes pip try to resolve them from PyPI, where they are
+# either absent or a different project entirely.
+#
+# The two below are real, ordinary PyPI packages this app's own code imports
+# (manna_hr/onboard_sync.py, reading the Onboarding page's Google Sheet) and
+# belong here for exactly the opposite reason: naming them is what makes
+# `bench get-app` install them automatically on every bench this app goes
+# onto, rather than leaving it to whoever notices ImportError first and runs
+# `pip install` by hand — which on a locked-down machine may not even be
+# possible (Application Control policies have refused it here before).
+dependencies = ["google-api-python-client", "google-auth"]
 
 [build-system]
 requires = ["flit_core >=3.4,<4"]

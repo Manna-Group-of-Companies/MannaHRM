@@ -5,7 +5,6 @@ import {
 } from "@/data/masters";
 import { Bars, Desk, Empty, Gap, Html, ImportMenu, Note, Scroll } from "@/components/ui";
 
-import { active } from "@/lib/scope";
 import { set, useApp } from "@/store";
 import { deskNew, deskUrl } from "@/lib/desk";
 import { writeCatTemplate } from "@/lib/catsheet";
@@ -149,7 +148,6 @@ function FhCategoryType({ s }) {
 		<div className="fhcat">
 			<header>
 				<h3>Category Type</h3>
-				<span className="cov part">Their screen, our data</span>
 				<span className="right">
 					{/* Their Create Category Type, opened rather than refused.
 
@@ -187,18 +185,18 @@ function FhCategoryType({ s }) {
 			) : null}
 
 			{/* **An empty list of ours means three things, and this says which.**
-			    `Custom Field` is System Manager's doctype to read as well as to write,
-			    so a perfectly good HR User session sees the three masters and none of
-			    the categories this screen created — which without this line reads as
-			    "nobody has ever added one", and sends somebody off to add a second copy
-			    of a category that already exists. */}
+			    `Custom Field` is System Manager's doctype to read, so an HR User's
+			    categories come from Employee's meta instead (api/categorytype.js).
+			    "denied" is both refused — which without this line reads as "nobody
+			    has ever added one", and sends somebody off to add a second copy of a
+			    category that already exists. */}
 			{s.empFieldsState === "denied" || s.empFieldsState === "bad" ? (
 				<div className="px-[.9rem] pt-[.6rem]">
 					<Gap>
 						{s.empFieldsState === "denied"
-							? "Your session may not read Custom Field, which is System Manager's doctype — so any "
-								+ "category type created from this screen is missing from the list below. What is left is "
-								+ "the masters the site ships with."
+							? "Your session may not read Custom Field, nor Employee's form definition that carries the "
+								+ "same fields — so any category type created from this screen is missing from the list "
+								+ "below. What is left is the masters the site ships with."
 							: "The site could not be asked which categories have been created on it, so the list below "
 								+ "is the masters it ships with and nothing else. ↻ reads again."}
 					</Gap>
@@ -310,19 +308,9 @@ function FhCategoryType({ s }) {
 
 export default function Categories() {
 	const s = useApp();
-	const a = active(s);
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Categories</b>
-				<span className="cov part">Their screen, our data</span>
-				<span>
-					Factor HR’s <b>Category Type</b> screen, over the masters this site holds — read
-					against the {fmt(a.length)} active people on it.
-				</span>
-			</div>
-
 			{/* Their screen and nothing under it. The grid of per-field cards that used
 			    to sit here — Department, Designation, Grade, Branch, Employment type —
 			    said the same thing the table already says, one row per field, and said

@@ -13,6 +13,7 @@ import 'package:manna_hr_app/screens/corrections_screen.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
 import 'package:manna_hr_app/services/api.dart';
 import 'package:manna_hr_app/services/location.dart';
+import 'package:manna_hr_app/services/photo.dart';
 
 /// The first letter of a name, for the avatar — or `?`.
 ///
@@ -142,22 +143,45 @@ class _PunchScreenState extends State<PunchScreen> {
       _error = '';
     });
     try {
+      // The photo first, while the person is still looking at the phone. Backing
+      // out of the camera is the only thing here that stops a punch, because it
+      // is the person's own choice — see services/photo.dart.
+      final snap = await takePunchPhoto();
+      if (snap.cancelled) {
+        if (mounted) _say('No photo taken, so the punch was not sent. Press again when ready.');
+        return;
+      }
+
       // The fix is asked for and never insisted on. A punch with no coordinate
       // is recorded or refused by the *site*, under HR's own
       // `require_location_for_mobile` setting — refusing it here would be this
       // app deciding somebody's pay, which is exactly what it must not do.
-      final fix = await currentFix();
+      // The upload runs beside it: both can take seconds at a gate, and neither
+      // needs the other.
+      final got = await Future.wait<Object?>([
+        currentFix(),
+        snap.has ? Api.uploadPunchPhoto(snap.path!) : Future<String?>.value(null),
+      ]);
+      final fix = got[0] as Fix;
+      final photoUrl = got[1] as String?;
       if (mounted) setState(() => _fix = fix);
 
       await Api.punch(
         logType: direction,
         latitude: fix.latitude,
         longitude: fix.longitude,
+        photoUrl: photoUrl,
       );
       if (!mounted) return;
+      final at = clockOf(stampOf(ServerClock.I.now()));
+      final photoNote = photoUrl != null
+          ? ''
+          : snap.problem.isNotEmpty
+              ? ' — ${snap.problem}'
+              : ' — the photo did not upload, so HR will see this punch without one.';
       _say(direction == kLogIn
-          ? 'Punched in at ${clockOf(stampOf(ServerClock.I.now()))} ✓'
-          : 'Punched out at ${clockOf(stampOf(ServerClock.I.now()))} ✓');
+          ? 'Punched in at $at ✓$photoNote'
+          : 'Punched out at $at ✓$photoNote');
       await _load(quiet: true);
     } catch (e) {
       if (!mounted) return;
@@ -455,7 +479,7 @@ class _PunchScreenState extends State<PunchScreen> {
     final style = TextStyle(fontSize: 12.5, color: Colors.black.withValues(alpha: .6));
 
     if (fix == null) {
-      return Text('Your location is read when you punch, and sent with it.',
+      return Text('A photo and your location are taken when you punch, and sent with it.',
           style: style);
     }
     if (!fix.has) {

@@ -2,10 +2,10 @@ import { FACTOHR_MENU } from "./factohr.js";
 
 /* ---------------------------------------------------------------------------
    An address for every one of Factor HR's menu items that has no page here
-   doing the work — 106 of their 160.
+   doing the work — 105 of their 160.
 
-   **The slug is derived, not written down.** A hand-kept list of 106 addresses
-   beside a hand-kept list of 106 menu items is two lists that drift, and the
+   **The slug is derived, not written down.** A hand-kept list of 105 addresses
+   beside a hand-kept list of 105 menu items is two lists that drift, and the
    drift shows up as a link that 404s on a page whose whole job is to prove
    nothing was left out. So the address comes from their own title, and if their
    title changes the address changes with it — which is the right failure,

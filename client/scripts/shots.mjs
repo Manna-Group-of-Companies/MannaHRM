@@ -147,6 +147,19 @@ const DATA = {
 		{ name: "Accountant" }, { name: "Storekeeper" }, { name: "Driver" }, { name: "Trainee" },
 	],
 	"Leave Application": LEAVE,
+	/* The monthly Casual Leave as hrms writes it: a credit a month, one
+	   carry-forward, one lapse — so the balance report has every column filled. */
+	"Leave Ledger Entry": [
+		...["HR-EMP-00001", "HR-EMP-00002", "HR-EMP-00004", "HR-EMP-00006"].flatMap((employee) =>
+			[210, 180, 150, 120, 90, 60, 30].map((d) => ({
+				employee, leave_type: "Casual Leave", leaves: 1, from_date: ago(d),
+				transaction_type: "Leave Allocation", is_carry_forward: 0, is_expired: 0, docstatus: 1,
+			}))),
+		{ employee: "HR-EMP-00002", leave_type: "Casual Leave", leaves: 3, from_date: ago(240),
+			transaction_type: "Leave Allocation", is_carry_forward: 1, is_expired: 0, docstatus: 1 },
+		{ employee: "HR-EMP-00001", leave_type: "Casual Leave", leaves: -2, from_date: ago(100),
+			transaction_type: "Leave Allocation", is_carry_forward: 0, is_expired: 1, docstatus: 1 },
+	],
 	"Employee Attendance Regularization": REGS,
 	"Letter Type": [
 		{ name: "Appointment Letter", category: "Onboarding", is_active: 1, fields_used: "" },
@@ -215,7 +228,9 @@ const PAGES = [
 	["employee-profile", "/employees/profile", "one person's record"],
 	["attendance", "/attendance", "the correction queue"],
 	["attendance-inout", "/attendance/inout", "In / Out activity"],
+	["attendance-daily", "/attendance/daily", "Daily Detail — one row per person per day, one table"],
 	["leave", "/leave", "Apply Leave"],
+	["leave-balances", "/leave/balances", "Leave Balance Report — assigned, availed, balance"],
 	["payroll", "/payroll", "Salary Process"],
 	["onboard", "/onboard", "Create Letter"],
 	["approvals", "/dashboard/approvals", "the approval queues"],
@@ -225,7 +240,7 @@ const PAGES = [
 	["payroll-all", "/payroll/all", "Payroll — all of their menu"],
 	["msp", "/attendance/msp", "MSP — the punches somebody has to fix"],
 	["present", "/attendance/present", "Present Report — with where each punch-in was made"],
-	["orgchart", "/employees/orgchart", "Organization Chart, off reports_to"],
+	["reports", "/reports", "All Reports — every one on Factor HR's Reports menu"],
 	["blueprint", "/attendance/manage-attendance-policy", "a blueprint — the biggest unbuilt item"],
 	["refused", "/attendance/online-attendance", "the one item that will not be built"],
 	["locations", "/attendance/locations", "Work Locations — new, edit, delete"],
@@ -300,6 +315,14 @@ async function main() {
 			if (url.includes("frappe.auth.get_logged_user")) {
 				return route.fulfill({ status: 200, contentType: "application/json",
 					body: JSON.stringify({ message: "hr@mannarubber.com" }) });
+			}
+			/* The admin check behind the menus (isAdmin in api/client.js). An
+			   empty answer there is "not an admin", which puts every module but
+			   Employees behind a redirect and photographs Employee Master
+			   twenty times over. */
+			if (url.includes("frappe.client.has_permission")) {
+				return route.fulfill({ status: 200, contentType: "application/json",
+					body: JSON.stringify({ message: { has_permission: true } }) });
 			}
 			if (url.includes("/api/resource/")) {
 				const a = answer(url);

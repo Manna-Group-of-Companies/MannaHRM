@@ -26,6 +26,10 @@ import { loadedState } from "./fixture";
 const calls = { created: [], listed: [] };
 let creates;          // what apiCreate does, per test
 let rowsAfter = [];   // what the read-back answers with
+let listRefused = false; // the Custom Field read 403s, as it does for an HR User
+let meta = null;      // Employee's meta docs, or null for a refused meta read
+
+const refused = () => Object.assign(new Error("Not permitted"), { status: 403 });
 
 vi.mock("@/api/client", async (importOriginal) => {
 	const actual = await importOriginal();
@@ -37,8 +41,11 @@ vi.mock("@/api/client", async (importOriginal) => {
 		},
 		listAll: (...a) => {
 			calls.listed.push(a);
-			return Promise.resolve(rowsAfter);
+			return listRefused ? Promise.reject(refused()) : Promise.resolve(rowsAfter);
 		},
+		api: (path, params) => path.includes("getdoctype")
+			? (meta ? Promise.resolve({ docs: meta }) : Promise.reject(refused()))
+			: actual.api(path, params),
 	};
 });
 
@@ -87,6 +94,8 @@ beforeEach(() => {
 	calls.created = [];
 	calls.listed = [];
 	rowsAfter = [];
+	listRefused = false;
+	meta = null;
 	creates = async () => CF();
 	act(() => set(loadedState()));
 });
@@ -185,6 +194,36 @@ describe("the new category on the screen", () => {
 	   minute ago not being on the employee records this page loaded, which is a
 	   property of the read rather than of any screen. If View Category comes
 	   back, they come back with it. */
+
+	it("lists an HR User's categories off Employee's meta when Custom Field is refused", async () => {
+		listRefused = true;
+		meta = [{
+			name: "Employee",
+			fields: [
+				{ ...CF(), name: "abc123", is_custom_field: 1 },
+				{ fieldname: "custom_pan_no", fieldtype: "Data", is_custom_field: 1 },
+				{ fieldname: "custom_cat_stock", fieldtype: "Data", is_custom_field: 0 },
+				{ fieldname: "custom_cat_break", fieldtype: "Section Break", is_custom_field: 1 },
+			],
+		}];
+		const { loadCategoryTypes } = await import("@/api/categorytype");
+		const rows = await loadCategoryTypes();
+		expect(getState().empFieldsState).toBe("ok");
+		expect(rows.map((r) => r.fieldname)).toEqual(["custom_cat_shift_group"]);
+		/* A meta row's `name` is the DocField's, not the Custom Field's. */
+		expect(rows[0].name).toBe("Employee-custom_cat_shift_group");
+		const view = draw();
+		expect(text(view)).toContain("Shift Group");
+		expect(text(view)).not.toContain("may not read Custom Field");
+	});
+
+	it("is denied only when Employee's meta is refused as well", async () => {
+		listRefused = true;
+		meta = null;
+		const { loadCategoryTypes } = await import("@/api/categorytype");
+		expect(await loadCategoryTypes()).toBeNull();
+		expect(getState().empFieldsState).toBe("denied");
+	});
 
 	it("says so when the site would not say which category types it holds", () => {
 		act(() => set({ empFieldsState: "denied" }));

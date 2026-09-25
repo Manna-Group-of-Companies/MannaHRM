@@ -1,23 +1,19 @@
 
-import { patch, set, useApp } from "@/store";
+import { getState, patch, set, useApp } from "@/store";
 import { scoped } from "@/lib/scope";
-import { DAY, MON, fmt, monthEnd, monthStart, nowStamp, tidyDept, todayIso } from "@/lib/format";
-import { download, save, toCsv } from "@/lib/csv";
+import { DAY, MON, fmt, nowStamp, tidyDept, todayIso } from "@/lib/format";
+import { save } from "@/lib/csv";
+import { sheetsPdf, sheetsXlsx } from "@/lib/export";
 import { esc, paper, printPaper } from "@/lib/doc";
 import { CTC_BY } from "@/data/masters";
-import {
-	CAT_GROUP_BY, DDA_CAT_COLS, DDA_COLS, DDA_LAYOUT, DDA_MONTH_COLS, DDA_PERIODS, DDA_PUNCH_TYPES,
-} from "@/data/attendance";
-import { Desk, Empty, ExportMenu, Html, Modal, Note, Scroll, panelProps, tabProps } from "@/components/ui";
-import { deskImport } from "@/lib/desk";
-import ScheduleReport, { openSchedule } from "@/features/attendance/ScheduleReport";
-import ScheduleList, { openScheduleList } from "@/features/attendance/ScheduleList";
-import { load } from "@/api/load";
+import { CAT_GROUP_BY, DDA_CAT_COLS, DDA_COLS, DDA_MONTH_COLS } from "@/data/attendance";
+import { Empty, Modal, Scroll } from "@/components/ui";
 import { loadDda, loadShiftWindows } from "@/api/attendance";
-import { dailyRows, monthRollup } from "@/lib/dailydetail";
+import { dailyRows, daySummary, monthRollup } from "@/lib/dailydetail";
 import { useEffect } from "react";
-import People from "@/components/People";
 import { LocCell } from "@/components/PunchMap";
+import ReportForm, { Tiles, pickable } from "@/components/ReportForm";
+import { HEAD_FILL, LATE_FILL, ZEBRA_FILL, statusFill } from "@/lib/fills";
 
 /* Factor HR's Daily Detail Attendance Report panel, photographed 28 Aug 2026:
    the title, one row of labelled controls — Particular Employee, Employee
@@ -25,11 +21,9 @@ import { LocCell } from "@/components/PunchMap";
    Generate — then two tabs, Report Criteria and Advance, holding a date range,
    layout-option chips and an Additional Filters funnel.
 
-   Two things about it are copied on purpose. **Nothing is listed until Generate
-   is pressed**: a report that runs on open is a report nobody chose the filters
-   for. And **the status filter appears twice** — the coloured dot beside the
-   search box and the Employee Status select — so both are bound to one value
-   here. Whether their dot means something else on this screen is unknown. */
+   Since 24 September 2026 the form is the same five questions as In / Out and
+   Monthly Basic — company, status, employee, dates, a file — and the report
+   reads on open, for today, the way those two do. */
 
 const longDate = (iso) => {
 	const p = String(iso || "").slice(0, 10).split("-");
@@ -46,7 +40,8 @@ const longDate = (iso) => {
     disagree about who is in scope. */
 function ddaPeople(s) {
 	const f = s.dda;
-	let people = scoped(s);
+	const co = f.co || s.company;
+	let people = co ? s.employees.filter((e) => e.company === co) : scoped(s);
 	if (f.status) people = people.filter((e) => e.status === f.status);
 	if (f.emp) people = people.filter((e) => e.name === f.emp);
 	return people.slice().sort((a, b) => (a.employee_name || "").localeCompare(b.employee_name || ""));
@@ -54,8 +49,8 @@ function ddaPeople(s) {
 
 function ddaRows(s) {
 	const f = s.dda;
-	const from = f.from || monthStart();
-	const to = f.to || monthEnd();
+	const from = f.from || todayIso();
+	const to = f.to || todayIso();
 	const d = s.ddaData;
 	/* Nothing is drawn from a read made for other criteria — a report headed
 	   September over August's punches is worse than "reading…". */
@@ -150,7 +145,7 @@ function ddaSplit(list, keys) {
    library here and is not going to be one.
    --------------------------------------------------------------------------- */
 
-const ddaStamp = (s) => `daily-detail-${s.dda.from || monthStart()}-to-${s.dda.to || monthEnd()}`;
+const ddaStamp = (s) => `daily-detail-${s.dda.from || todayIso()}-to-${s.dda.to || todayIso()}`;
 
 /** Every heading and every row, in order, flattened for the printed copy. */
 function ddaFlat(blocks, out = []) {
@@ -165,8 +160,8 @@ function ddaFlat(blocks, out = []) {
 function ddaPaper(s, list) {
 	const f = s.dda;
 	const cols = ddaColumns(f);
-	const from = f.from || monthStart();
-	const to = f.to || monthEnd();
+	const from = f.from || todayIso();
+	const to = f.to || todayIso();
 
 	/* The criteria line is not decoration. A printed attendance report gets filed
 	   and argued over months later, and one that does not say which filters
@@ -201,25 +196,41 @@ function ddaPaper(s, list) {
 		</table>`);
 }
 
-/** One of the five formats on their export menu. Nothing is exported before
-    Generate: the file would otherwise carry filters nobody has run. */
+/* The export's colours, off what a cell says: Day Status by status, and a late
+   arrival or an early leaving in orange. */
+const DDA_FILL = (v, head) => {
+	if (head === "Day Status") return statusFill(v);
+	if ((head === "Late Coming By" || head === "Early Going By") && v && v !== "—") return LATE_FILL;
+	return null;
+};
+
+/** One of the five formats on their export menu. */
 function ddaRun(s, kind) {
 	const f = s.dda;
 	const done = (msg) => patch("dda", { fmt: kind, fmenu: false, msg });
 
-	if (!f.run) return done("Press Generate first — there is nothing to export until the report has run.");
-
-	const { rows } = ddaRows(s);
+	const { rows, waiting } = ddaRows(s);
+	if (waiting) return done("Still reading the range — download again in a moment.");
 	if (!rows.length) return done("Nothing to export.");
 
 	const cols = ddaColumns(f);
 	const list = f.period === "month" ? ddaMonths(rows) : rows;
 
-	if (kind === "Excel") {
-		const name = ddaStamp(s) + ".csv";
-		download(name, toCsv(cols.map((c) => c[0]), list.map((r) => cols.map((c) => c[1](r)))));
-		return done(`Exported ${fmt(list.length)} rows to ${name}. Their button writes .xls; this one writes CSV, `
-			+ "which every spreadsheet opens and nothing has to be installed to read.");
+	if (kind === "Excel" || kind === "PDF") {
+		const name = ddaStamp(s) + (kind === "PDF" ? ".pdf" : ".xlsx");
+		const sheet = {
+			title: "Daily Detail Attendance Report",
+			sub: `${f.co || s.company || "All companies"} · ${f.from || todayIso()} to ${f.to || todayIso()}`,
+			headFill: HEAD_FILL,
+			zebra: ZEBRA_FILL,
+			cellFill: DDA_FILL,
+			head: cols.map((c) => c[0]),
+			rows: list.map((r) => cols.map((c) => { const v = c[1](r); return v == null ? "" : v; })),
+		};
+		(kind === "PDF" ? sheetsPdf : sheetsXlsx)([sheet], name)
+			.then(() => done(`Exported ${fmt(list.length)} rows to ${name}.`))
+			.catch((e) => done(`Could not build ${name}: ${e.message || e}`));
+		return undefined;
 	}
 
 	const html = ddaPaper(s, list);
@@ -237,412 +248,35 @@ function ddaRun(s, kind) {
 	}
 
 	printPaper(html);
-	done(kind === "PDF"
-		? "<b>PDF is the print dialog with <em>Save as PDF</em> as the destination.</b> It is the same document "
-			+ "Print and Preview show; a second renderer would only be a second chance to disagree with the screen."
-		: "Sent to the print dialog. Landscape A4 — fifteen columns do not fit on a portrait page.");
+	done("Sent to the print dialog. Landscape A4 — fifteen columns do not fit on a portrait page.");
 }
 
-/** Factor HR's coloured status dot, which on this screen means the same thing
-    as the Employee Status box beside it. */
-function StatusDot({ s }) {
-	const f = s.dda;
-	const opts = [
-		["Active", "on", "Active"], ["Inactive", "off", "InActive"], ["", "all", "All"],
-	];
-	const cur = opts.find((o) => o[0] === f.status) || opts[2];
-	return (
-		<span className="empdrop">
-			<button
-				className="embtn"
-				aria-haspopup="listbox"
-				aria-label="Filter by status"
-				aria-expanded={f.menu}
-				title={`Status: ${cur[2]} — the same filter as the Employee Status box beside it`}
-				onClick={(e) => {
-					e.stopPropagation();
-					patch("dda", { menu: !f.menu });
-				}}
-			>
-				<i className={"sdot " + cur[1]} />
-				<b className="cx">▾</b>
-			</button>
-			<div className="emmenu" role="listbox" aria-label="Status" hidden={!f.menu}>
-				{opts.map((o) => (
-					<button key={o[0] || "all"} role="option" aria-selected={o[0] === f.status}
-						onClick={(e) => {
-							e.stopPropagation();
-							patch("dda", { status: o[0], menu: false, run: false, msg: "" });
-						}}>
-						<i className={"sdot " + o[1]} />
-						{o[2]}
-					</button>
-				))}
-			</div>
-		</span>
-	);
+/* A new date only once all three parts are typed — the browser hands over ""
+   until then, and a half-date would read a range nobody asked for. */
+function ddaDate(p) {
+	if (Object.values(p).some((v) => !/^\d{4}-\d{2}-\d{2}$/.test(v || ""))) return;
+	patch("dda", { ...p, msg: "" });
 }
 
 function DdaForm({ s }) {
 	const f = s.dda;
-	const from = f.from || monthStart();
-	const to = f.to || monthEnd();
-	const picked = f.emp ? s.byName[f.emp] || null : null;
-
-	/* Generate is the only control that changes what is listed; everything else
-	   changes what Generate *would* list, which is why touching one clears the
-	   last run rather than quietly leaving a stale report on screen. */
-	const stale = (part) => patch("dda", { ...part, run: false, msg: "" });
-
-	// The search picker, offered under the bar as it is on their screen.
-	let hits = [];
-	const typing = !picked && (f.q || "").trim();
-	if (typing) {
-		const q = f.q.trim().toLowerCase();
-		let pool = scoped(s);
-		if (f.status) pool = pool.filter((e) => e.status === f.status);
-		hits = pool
-			.filter((e) => [e.employee_number, e.employee_name, e.designation]
-				.some((v) => (v || "").toLowerCase().includes(q)))
-			.slice(0, 8);
-	}
-
+	const co = f.co || s.company || "";
+	const { waiting } = ddaRows(s);
+	const from = f.from || todayIso();
+	const to = f.to || todayIso();
 	return (
-		<div className="fhscreen ddaform">
-			<div className="fhtitle">Daily Detail Attendance Report</div>
-
-			<div className="ddabar">
-				<div className="fld wide">
-					<span className="lab">Particular Employee</span>
-					<div className="ctl">
-						<StatusDot s={s} />
-						<span className="find rev">
-							<input
-								type="search"
-								placeholder="Search Employee"
-								aria-label="Search employee"
-								value={picked ? `${picked.employee_name} (${picked.employee_number || picked.name})` : f.q}
-								/* Typing over a chosen name clears the choice — otherwise the
-								   box says one person and the report runs for another. */
-								onChange={(e) => stale({ emp: "", q: e.target.value })}
-							/>
-							<svg className="stroke-ink-3" viewBox="0 0 24 24" width="15" height="15" fill="none"
-								strokeWidth="1.8" strokeLinecap="round">
-								<circle cx="11" cy="11" r="7" />
-								<path d="M20 20l-3.6-3.6" />
-							</svg>
-						</span>
-						<Desk className="embtn ic" href={s.site && deskImport(s.site)} label="Import employees from Excel"
-							title="Import Employees from Excel. Opens ERPNext's Data Import on the site, which previews the file before it writes — this dashboard has no importer of its own.">
-							<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none"
-								strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
-							</svg>
-						</Desk>
-					</div>
-				</div>
-
-				<div className="fld">
-					<span className="lab">Employee Status</span>
-					<div className="ctl">
-						<select value={f.status} onChange={(e) => stale({ status: e.target.value })}>
-							{["All", "Active", "Inactive", "Suspended", "Left"].map((v) => (
-								<option key={v} value={v === "All" ? "" : v}>{v}</option>
-							))}
-						</select>
-					</div>
-				</div>
-
-				<div className="fld grow">
-					<span className="lab">Filter By</span>
-					<div className="ctl">
-						<select className="wide" value={f.by} onChange={(e) => stale({ by: e.target.value })}>
-							{CTC_BY.map((b) => (
-								<option key={b[0]} value={b[0]}>{b[0] ? b[1] : ""}</option>
-							))}
-						</select>
-					</div>
-				</div>
-
-				<div className="fld">
-					<span className="lab">Report Period</span>
-					<div className="ctl">
-						<select
-							value={f.period}
-							title="Date Wise is one row per person per day. Month Wise rolls those same days up into one row per person per month — the same range, counted rather than listed."
-							onChange={(e) => stale({ period: e.target.value })}
-						>
-							{DDA_PERIODS.map((p) => (
-								<option key={p[0]} value={p[0]}>{p[1]}</option>
-							))}
-						</select>
-					</div>
-				</div>
-
-				<div className="fld">
-					<span className="lab">&nbsp;</span>
-					<div className="ctl">
-						<ExportMenu fmt={f.fmt} open={f.fmenu}
-							onToggle={() => patch("dda", { fmenu: !f.fmenu, gmenu: false })}
-							onPick={(kind) => ddaRun(s, kind)} />
-						<button className="embtn ic" title="Reload from the site" aria-label="Refresh"
-							onClick={() => { void load(); if (s.dda.run) void loadDda(s.dda.from || monthStart(), s.dda.to || monthEnd(), s.dda.emp, true); }}>↻</button>
-
-						{/* Their Generate is a split button too, and the three items behind it
-						    are all about a queue. There is no queue here — but two of the three
-						    have a real home on the site, where scheduling a report is one
-						    doctype, so they open it rather than explaining that they cannot. */}
-						<span className="empdrop">
-							<button className="embtn pri"
-								onClick={() => patch("dda", { run: true, msg: "", gmenu: false })}>Generate</button>
-							<button className="embtn pri split" aria-haspopup="menu" aria-expanded={f.gmenu}
-								aria-label="More ways to run it"
-								onClick={(e) => { e.stopPropagation(); patch("dda", { gmenu: !f.gmenu, fmenu: false }); }}>
-								▾
-							</button>
-							<div className="emmenu end" role="menu" hidden={!f.gmenu}>
-								<button role="menuitem"
-									onClick={(e) => {
-										e.stopPropagation();
-										patch("dda", {
-											run: true, gmenu: false,
-											msg: "<b>Run here instead, because there is no background to run in.</b> In Factor HR "
-												+ "this queues the report and mails it when it finishes. This page has no queue and "
-												+ "no worker: it holds the employees already read and does the arithmetic in the "
-												+ "browser, which is why it can answer at once. Scheduling lives on the site — the "
-												+ "two items below open it.",
-										});
-									}}>
-									Generate in Background
-								</button>
-								{/* Both were desk links until Factor HR's own two screens were
-								    photographed on 4 Sep 2026. They are the same two dialogs the
-								    In / Out report carries, opened for this report — one wizard
-								    and one list, keyed by the report they were opened from, so
-								    the two screens cannot come to say different things about the
-								    same doctype. See data/schedreport.js, where the pair of
-								    reports is the whole of the difference between them.
-
-								    The hand-off has not changed: nothing here schedules anything,
-								    and Create Schedule inside the wizard still opens ERPNext's
-								    Auto Email Report on the site. */}
-								<button role="menuitem"
-									title="Factor HR's Schedule Report wizard — Report Detail, then Scheduling Detail. The schedule itself is created on the site, by ERPNext's Auto Email Report, which runs on the site's scheduler — the only clock that keeps time when this browser is closed."
-									onClick={(e) => {
-										e.stopPropagation();
-										patch("dda", { gmenu: false });
-										openSchedule("dda");
-									}}>
-									Create Schedule Report
-								</button>
-								<button role="menuitem"
-									title="Factor HR's Schedule Report List. The rows would be ERPNext's Auto Email Report, which this server does not carry — so the list says why it is empty rather than saying there are none, and opens the site's own where they can be seen."
-									onClick={(e) => {
-										e.stopPropagation();
-										patch("dda", { gmenu: false });
-										openScheduleList("dda");
-									}}>
-									View Scheduled Reports
-								</button>
-							</div>
-						</span>
-					</div>
-				</div>
-			</div>
-
-			{typing && (
-				hits.length ? (
-					<div className="regfind">
-						{hits.map((e) => (
-							<button key={e.name} onClick={() => stale({ emp: e.name, q: "" })}>
-								<i className={"sdot " + (e.status === "Active" ? "on" : "off")} />
-								<b>{e.employee_name}</b>
-								<span className="mono">{e.employee_number || "—"}</span>
-								<span className="muted">{tidyDept(e.department)}</span>
-							</button>
-						))}
-						<button onClick={() => stale({ emp: "", q: "" })}>
-							<span className="muted">— everybody matching the filters —</span>
-						</button>
-					</div>
-				) : (
-					<div className="regfind">
-						<span className="none">Nobody matches. The report will run over everybody the filters allow.</span>
-					</div>
-				)
-			)}
-
-			<div className="ddatabs" role="tablist" aria-label="Report criteria">
-				{[["criteria", "Report Criteria"], ["advance", "Advance"]].map((t) => (
-					<button key={t[0]} {...tabProps("ddatab-" + t[0], "ddapane", f.tab === t[0])}
-						onClick={() => patch("dda", { tab: t[0] })}>
-						{t[1]}
-					</button>
-				))}
-			</div>
-
-			{f.tab === "advance" ? (
-				/* Photographed 29 August 2026: Group By, Day Of Week, Show Categories,
-				   Punch Type. Two of the four are ours to answer outright, one answers
-				   for three of its six values, and one answers for three of its four —
-				   and each says which it is where it is used, rather than in a footnote
-				   nobody scrolls to. */
-				<div className="ddapane" {...panelProps("ddapane", "ddatab-" + f.tab)}>
-					<div className="ddagrid">
-						<div className="ddafield">
-							<span className="lab">Group By</span>
-							<select
-								value={f.gby}
-								title="Factor HR's categories, not fields — the Category Type master behind the Categories screen."
-								onChange={(e) => {
-									const g = CAT_GROUP_BY.find((x) => x[0] === e.target.value);
-									stale({ gby: e.target.value });
-									patch("dda", { msg: g && g[3] ? g[3] : "" });
-								}}
-							>
-								{CAT_GROUP_BY.map((g) => (
-									<option key={g[0] || "none"} value={g[0]}>
-										{g[1]}{g[0] && !g[2] ? " — no field here" : ""}
-									</option>
-								))}
-							</select>
-							<span className="hint">
-								Sections the report by category. Stacks above <b>Filter By</b> on the bar, which is
-								what two grouping controls on two tabs has to mean.
-							</span>
-						</div>
-
-						<div className="ddafield">
-							<span className="lab">Day Of Week</span>
-							<div className="dow">
-								{DAY.map((d, i) => (
-									<button key={d} type="button" aria-pressed={f.dow.includes(i)}
-										title={`Only ${d}s`}
-										onClick={() => stale({
-											dow: f.dow.includes(i) ? f.dow.filter((x) => x !== i) : f.dow.concat(i).sort(),
-										})}>
-										{d.slice(0, 3)}
-									</button>
-								))}
-								{f.dow.length ? (
-									<button type="button" className="clr" onClick={() => stale({ dow: [] })}>clear</button>
-								) : null}
-							</div>
-							<span className="hint">
-								{f.dow.length
-									? `${f.dow.map((i) => DAY[i]).join(", ")} only.`
-									: "Every day in the range. Answered from the date itself, so this one is exact."}
-							</span>
-						</div>
-
-						<div className="ddafield">
-							<span className="lab">Show Categories</span>
-							<input type="number" min="0" max={DDA_CAT_COLS.length} value={f.cats}
-								title="How many category columns to append to the output."
-								onChange={(e) => {
-									const n = Math.max(0, Math.min(Number(e.target.value) || 0, DDA_CAT_COLS.length));
-									stale({ cats: n });
-									patch("dda", {
-										msg: Number(e.target.value) > DDA_CAT_COLS.length
-											? `Capped at ${DDA_CAT_COLS.length}. Only ${DDA_CAT_COLS.length} of Factor HR's `
-												+ "categories read onto a field on our side — Company, Department and "
-												+ "Designation. The rest would be columns of dashes, and a column that is "
-												+ "empty by construction is one somebody later writes a formula against."
-											: "",
-									});
-								}} />
-							<span className="hint">
-								{f.cats
-									? `${DDA_CAT_COLS.slice(0, f.cats).map((c) => c[0]).join(", ")} appended to every row.`
-									: "Their field held 0 and the label is a count, so it is read here as how many category columns to append."}
-							</span>
-						</div>
-
-						<div className="ddafield">
-							<span className="lab">Punch Type</span>
-							<select
-								value={f.punch}
-								onChange={(e) => {
-									stale({ punch: e.target.value });
-									patch("dda", {
-										msg: e.target.value === "single"
-											? "<b>Attendance Single Punch Required cannot be answered here.</b> It needs a flag "
-												+ "saying one punch is enough for a person or a shift, and nothing on this site "
-												+ "holds one — not <code>Employee</code>, not <code>Shift Type</code>. So the "
-												+ "report is left unfiltered rather than filtered to nothing: an empty report "
-												+ "reads as nobody qualifying, which is a different claim from not knowing."
-											: "",
-									});
-								}}
-							>
-								{DDA_PUNCH_TYPES.map((t) => (
-									<option key={t[0] || "all"} value={t[0]}>{t[1]}</option>
-								))}
-							</select>
-							<span className="hint">
-								Read as a property of the <b>day</b>, not of the person: the holiday list is what says a
-								punch was expected. A weekly off or a holiday is <em>not required</em>; every other day
-								is <em>required</em>.
-							</span>
-						</div>
-					</div>
-
-				</div>
-			) : (
-				<div className="ddapane" {...panelProps("ddapane", "ddatab-" + f.tab)}>
-					<div className="ddafield">
-						<span className="lab">Date Range</span>
-						<span className="daterange">
-							<svg className="stroke-ink-3" viewBox="0 0 24 24" width="15" height="15" fill="none" strokeWidth="1.7">
-								<path d="M3 5h18v16H3zM3 9h18M8 3v4M16 3v4" />
-							</svg>
-							<input type="date" value={from} aria-label="From" onChange={(e) => stale({ from: e.target.value })} />
-							<span className="sep">-</span>
-							<input type="date" value={to} aria-label="To" onChange={(e) => stale({ to: e.target.value })} />
-						</span>
-						<span className="hint">{longDate(from)} - {longDate(to)}</span>
-					</div>
-
-					<div className="ddafield">
-						<span className="lab">Layout Options</span>
-						<div className="chips">
-							{DDA_LAYOUT.filter((o) => f.layout[o[0]]).map((o) => (
-								<span className="chip" key={o[0]}>
-									{o[1]}
-									<button aria-label={"Remove " + o[1]}
-										onClick={() => patch("dda", { layout: { ...f.layout, [o[0]]: false } })}>×</button>
-								</span>
-							))}
-							{DDA_LAYOUT.some((o) => !f.layout[o[0]]) && (
-								<select
-									value=""
-									onChange={(e) =>
-										e.target.value && patch("dda", { layout: { ...f.layout, [e.target.value]: true } })
-									}
-								>
-									<option value="">+ add</option>
-									{DDA_LAYOUT.filter((o) => !f.layout[o[0]]).map((o) => (
-										<option key={o[0]} value={o[0]}>{o[1]}</option>
-									))}
-								</select>
-							)}
-						</div>
-					</div>
-
-					<div className="ddafield">
-						<button className="ddamore" aria-expanded={f.more} onClick={() => patch("dda", { more: !f.more })}>
-							<span className="lab">Additional Filters</span>
-							<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none"
-								strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M3 5h18l-7 8v6l-4 2v-8Z" />
-							</svg>
-						</button>
-					</div>
-				</div>
-			)}
-
-			{f.msg && <Note><Html html={f.msg} /></Note>}
-		</div>
+		<ReportForm
+			title="DAILY DETAIL ATTENDANCE REPORT"
+			state={waiting ? "reading the site…" : `${from} to ${to}`}
+			live={!waiting}
+			companies={s.companies} co={co} onCo={(v) => patch("dda", { co: v, emp: "", msg: "" })}
+			status={f.status} onStatus={(v) => patch("dda", { status: v, emp: "", msg: "" })}
+			people={pickable(s.employees, co, f.status)} who={f.emp} onWho={(v) => patch("dda", { emp: v, msg: "" })}
+			from={from} till={to} onDates={(p) => ddaDate(p.till !== undefined ? { to: p.till } : p)}
+			format={f.fmt} onFormat={(v) => patch("dda", { fmt: v })}
+			onDownload={() => ddaRun(getState(), f.fmt === "PDF" ? "PDF" : "Excel")} busy={waiting}
+			msg={f.msg}
+		/>
 	);
 }
 
@@ -671,12 +305,23 @@ const Table = ({ list, cols }) => (
 	</Scroll>
 );
 
-/** The output. Grouped per person when the Show Employee Grouping chip is on,
-    flat when it is taken off — which is what that chip does over there. */
+function DdaSummary({ rows }) {
+	const n = daySummary(rows);
+	return (
+		<Tiles items={[
+			["People", n.people], ["Present", n.present, "good"], ["Absent", n.absent, n.absent ? "bad" : ""],
+			["Half Day", n.half], ["On Leave", n.leave, "", "Approved leave, and leave applied for and not yet decided"], ["Late", n.late, n.late ? "warn" : ""],
+			["Missed punch", n.missed, n.missed ? "warn" : "good", "Days with only an in or only an out"],
+			["Off / Holiday", n.off],
+		]} />
+	);
+}
+
+/** The output, as one table — sections only when Group By or Filter By is set. */
 function DdaReport({ s }) {
 	const f = s.dda;
-	const from = f.from || monthStart();
-	const to = f.to || monthEnd();
+	const from = f.from || todayIso();
+	const to = f.to || todayIso();
 	useEffect(() => {
 		void loadShiftWindows();
 		if (to >= from) void loadDda(from, to, f.emp);
@@ -708,29 +353,15 @@ function DdaReport({ s }) {
 	const cols = ddaColumns(f);
 	const list = month ? ddaMonths(rows) : rows;
 
-	/* Show Employee Grouping is the chip; Filter By is the section above it, and
-	   Group By is the section above that. All three are theirs and they stack.
-	   Month Wise is the one exception: it is already one row per person, so a
-	   per-person panel around a single row is a box drawn round a fact. */
-	const body = (rows2) =>
-		f.layout.group && !month ? (
-			chunk(rows2, (r) => r.emp.name).map(([, rows3]) => {
-				const e = rows3[0].emp;
-				return (
-					<div className="ddagroup" key={e.name}>
-						<header>
-							<b>{e.employee_name}</b>
-							<span className="mono">{e.employee_number || "—"}</span>
-							<span className="muted">{tidyDept(e.department)} · {e.company}</span>
-							<span className="n">{fmt(rows3.length)} days</span>
-						</header>
-						<Table list={rows3} cols={cols} />
-					</div>
-				);
-			})
-		) : (
-			<Table list={rows2} cols={cols} />
-		);
+	/* **One table: every person-day a row, every field a column** (asked for
+	   25 Sep 2026). It used to be a boxed table per person, each with its own
+	   header row, so the columns wandered from box to box and a status cell
+	   could fall off the right edge of one box and not the next. The chip that
+	   turned the boxes off went with the form on 24 Sep, which left them stuck
+	   on. The Excel, PDF and printed copies were always one table; now the
+	   screen matches them. Emp Code and Employee lead every row, so a person's
+	   days still read together. */
+	const body = (rows2) => <Table list={rows2} cols={cols} />;
 
 	/* One nested walk for any number of section levels, so Group By and Filter By
 	   read the same whether one of them is set or both are. */
@@ -760,7 +391,7 @@ function DdaReport({ s }) {
 					</span>
 					<span>
 						<b>Daily Detail Attendance Report</b>
-						{longDate(f.from || monthStart())} - {longDate(f.to || monthEnd())}
+						{longDate(f.from || todayIso())} - {longDate(f.to || todayIso())}
 						{s.company ? ` · ${s.company}` : " · Manna Group"}
 					</span>
 				</div>
@@ -776,6 +407,8 @@ function DdaReport({ s }) {
 				{f.dow.length ? <> · {f.dow.map((i) => DAY[i]).join(", ")} only</> : null}
 			</div>
 
+			<DdaSummary rows={rows} />
+
 			{sections(ddaSplit(list, ddaSections(f)))}
 
 		</div>
@@ -787,35 +420,9 @@ export default function DailyDetail() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Daily Detail Attendance Report</b>
-				<span className="cov part">Export in hand</span>
-				<span>
-					One row per person per day. Factor HR’s panel, control for control — and this is the report
-					the only confirmed shift timing was read out of.
-				</span>
-			</div>
-
 			<DdaForm s={s} />
 
-			{s.dda.run ? (
-				<DdaReport s={s} />
-			) : (
-				/* Still nothing *generated* — a report that runs on open is a report
-				   nobody chose the filters for, and that is Factor HR's model as well as
-				   ours. But who it would run over is already in hand, so the screen says
-				   that instead of saying nothing. */
-				<People people={ddaPeople(s)}
-					note="Everybody this report would cover, at the criteria above. Generate turns each of them into a row per day; nothing is read from the site until it is pressed." />
-			)}
-
-			{s.srep.open ? (
-				<ScheduleReport onClose={() => set({ srep: { ...s.srep, open: false } })} />
-			) : null}
-
-			{s.sreplist.open ? (
-				<ScheduleList onClose={() => set({ sreplist: { ...s.sreplist, open: false } })} />
-			) : null}
+			<DdaReport s={s} />
 
 			{s.ddaDoc && (
 				<Modal

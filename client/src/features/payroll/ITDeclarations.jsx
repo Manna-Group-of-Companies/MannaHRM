@@ -6,7 +6,6 @@ import { deskImport, deskNew, deskUrl } from "@/lib/desk";
 import { Cols, Desk, Empty, Gap, Panel, Scroll } from "@/components/ui";
 import { fyOf } from "@/data/payroll";
 
-import { PayLegend } from "./shared";
 
 /* IT DECLARATIONS, photographed 29 August 2026 and drawn here control for
    control: one bar — the status dot, Search Employee, and a Select Options list
@@ -178,12 +177,6 @@ export default function ITDeclarations() {
 
 	return (
 		<>
-			<PayLegend what="IT Declarations">
-				What somebody claims against tax, and what they later produce for it. Frappe HR ships both
-				halves and an Income Tax Slab to compute against. Theirs is drawn below as photographed;{" "}
-				<b>no declaration exists on this site for anybody.</b>
-			</PayLegend>
-
 			<div className="fhscreen">
 				<div className="embar itdbar">
 					<ItdDot s={s} />

@@ -26,8 +26,10 @@ import { employeeDoc } from "@/lib/newemp";
     three-step form to keep on screen, and the site's own refusal — a mandatory
     field, a naming series that is not set up, a duplicate — is the useful half
     of a failure here. It arrives whole and the form shows it verbatim. */
-export async function createEmployee(f) {
-	return apiCreate("Employee", employeeDoc(f));
+export async function createEmployee(f, extra = {}) {
+	/* `extra` is what an onboarding candidate brought that the wizard has no box
+	   for (api/candidate.js wizardFromCandidate). The boxes win on a clash. */
+	return apiCreate("Employee", { ...extra, ...employeeDoc(f) });
 }
 
 /* ---------------------------------------------------------------------------

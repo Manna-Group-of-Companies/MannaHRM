@@ -1,5 +1,7 @@
 import { clock, dmy, tidyDept } from "../lib/format.js";
 import { coordText, placeText } from "../lib/punchplace.js";
+import { active, scoped } from "../lib/scope.js";
+import { plain } from "../lib/export.js";
 import {
 	absent, availedLeave, directory, headCount, inOutCount, leaveHistory,
 	missedPunches, monthlyLeave, newJoiners, orgChart, pendingLeave, present, shiftReport, weekoffs,
@@ -291,3 +293,45 @@ export function daysBetween(from, to, cap = 62) {
 /** The spec for a page, or undefined. */
 export const reportFor = (section, id) =>
 	REPORTS.find((r) => r.section === section && r.id === id);
+
+/* ---- What a report is built from, and what it exports as ---------------- */
+
+/** Their reports read "all employees" as everybody on the books; the
+    attendance ones only ever mean the active. Left and inactive people have no
+    shift, punch or leave, so including them would pad every count with rows
+    that can never be anything but empty. */
+const ROWS_FOR = { employees: scoped, attendance: active, leave: active };
+
+/** The store, as the `s` every spec's `build` reads. One function, so the
+    report's own page and the Reports page cannot build the same report off two
+    different lists of people. */
+export const reportInput = (store, section) => ({
+	rows: (ROWS_FOR[section] || scoped)(store), checkins: store.checkins, leave: store.approvals.leave || [],
+	holidays: store.holidays, places: store.workLocs,
+});
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August",
+	"September", "October", "November", "December"];
+
+/** What the reader chose, in words — the line under a report's title in a file,
+    which is read long after anybody remembers what was typed into the page. */
+export function askText(spec, ask, company) {
+	const who = company || "All companies";
+	if (spec.ask === "day") return `${who} · ${dmy(ask.day)}`;
+	if (spec.ask === "month") return `${who} · ${MONTHS[Number(ask.month) - 1] || ask.month}`;
+	if (spec.ask === "window") return `${who} · ${dmy(ask.from)} to ${dmy(ask.to)}`;
+	return who;
+}
+
+/** A report as `lib/export.js` takes it. Off the same `cols` the table draws,
+    and "" where the screen draws a dash — the rule the CSV already keeps. */
+export const specSheet = (spec, rows, sub) => ({
+	title: spec.title,
+	sub,
+	head: spec.cols.map((c) => c[0]),
+	rows: rows.map((r) => spec.cols.map((c) => {
+		const v = c[3](r);
+		return v == null ? "" : v;
+	})),
+	note: plain(spec.note),
+});

@@ -27,20 +27,40 @@ const asSent = (doc) => ({
 /** What to PUT for an existing shift: the fields that differ, and never the
     name — a PUT cannot rename, and one carrying a different name is refused.
     Pure. */
-export function shiftPatch(doc, f) {
-	const next = shiftDoc(f);
+export function shiftPatch(doc, f, opts) {
+	const next = shiftDoc(f, opts);
 	delete next.name;
 	return patchOf(asSent(doc || {}), next);
+}
+
+/** The shift list, with the company each one is for where the site has that
+    field. Asking for a field a site does not have is a 417 on the whole read,
+    and `custom_company` only exists once `create_custom_fields.py "Shift Type"`
+    or the app install has run — so the plain list is the fallback, and which of
+    the two answered is carried out as `company`, because a list of rows with
+    no company cannot tell "none set" from "no field". */
+export async function readShiftTypes() {
+	try {
+		const rows = await listAll("Shift Type", ["name", "custom_company"]);
+		return {
+			rows: (rows || []).map((r) => ({ name: r.name, company: r.custom_company || "" })),
+			company: true,
+		};
+	} catch {
+		const rows = await listAll("Shift Type", ["name"]);
+		return { rows: (rows || []).map((r) => ({ name: r.name, company: "" })), company: false };
+	}
 }
 
 /** The shift list, read back into the store. Read back rather than pushed
     locally: the site names the document, and a row invented here that disagrees
     with it by a character looks right until somebody clicks it. */
 export async function loadShiftTypes() {
-	const rows = await listAll("Shift Type", ["name"]);
+	const { rows, company } = await readShiftTypes();
 	set({
-		shiftTypes: rows || [],
-		counts: { ...getState().counts, shift: (rows || []).length },
+		shiftTypes: rows,
+		shiftCo: company,
+		counts: { ...getState().counts, shift: rows.length },
 		/* The roster reads the windows once and keeps them. A window that has
 		   just changed has to be read again, or the roster draws the old one. */
 		shiftWindowState: "",
@@ -55,17 +75,19 @@ export async function loadShiftTypes() {
  * @returns {Promise<{name: string, created: boolean, empty?: boolean}>}
  */
 export async function saveShiftType(w) {
+	const opts = { company: getState().shiftCo !== false };
 	if (w.ours === true) {
-		const patch = shiftPatch(w.doc, w.f);
+		const patch = shiftPatch(w.doc, w.f, opts);
 		if (!Object.keys(patch).length) return { name: w.row, created: false, empty: true };
 		const r = await apiWrite("Shift Type", w.row, patch);
 		if (!r.ok) throw Object.assign(new Error(r.error || "The site refused the change."), { status: r.status });
 		await reread();
 		return { name: w.row, created: false };
 	}
-	const made = await apiCreate("Shift Type", shiftDoc(w.f));
+	const doc = shiftDoc(w.f, opts);
+	const made = await apiCreate("Shift Type", doc);
 	await reread();
-	return { name: made?.name || shiftDoc(w.f).name, created: true };
+	return { name: made?.name || doc.name, created: true };
 }
 
 /** The read-back after a write that has already been accepted. A failure here

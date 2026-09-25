@@ -306,6 +306,8 @@ export async function getDoc(label, name) {
    submits and cancels `Attendance Submission`, because submitting it is the
    whole of what that page is for. It can, because that doctype's controller —
    not the page — is what checks the month and freezes it (manna_hr/freeze.py).
+   The other two are below, each on a short list: `apiCreateSubmitted` and
+   `apiDecide`.
    --------------------------------------------------------------------------- */
 
 /** One field change. Frappe's PUT is a partial update; a submitted document
@@ -340,20 +342,51 @@ export async function apiCreate(label, doc) {
 
 /** Remove one document. The site's link validation refuses a master that
     anything still points at, with the count in the message. */
-/** Create a document **submitted** — used for one doctype only, Shift
-    Assignment (16 Sep 2026). A draft assignment rosters nobody, so creating one
-    and leaving it would read as done and change nothing, which is the worst of
-    the outcomes. It decides which shift somebody is measured against, not what
-    they are paid; the site still validates overlaps and permissions (HR User
-    and HR Manager may submit it). Throws what the site said. */
+/** Create a document **submitted** — for three doctypes only.
+
+    Shift Assignment (16 Sep 2026): a draft assignment rosters nobody, so
+    creating one and leaving it would read as done and change nothing, which is
+    the worst of the outcomes.
+
+    Leave Policy and Leave Policy Assignment (24 Sep 2026, Give monthly leave):
+    the same shape. A draft policy grants nothing and a draft assignment creates
+    no allocation, so a person "given" leave that way still has every
+    application refused. **These do touch pay** — paid leave is paid — which is
+    why the amount is not in the document sent: it is the policy's twelve a
+    year, turned into one a month by hrms on the site, and the allocation
+    submit creates is hrms's own arithmetic. The site validates roles (HR User
+    and HR Manager) and overlaps. Throws what the site said. */
+const SUBMITTED_FROM_HERE = new Set(["Shift Assignment", "Leave Policy", "Leave Policy Assignment"]);
+
 export async function apiCreateSubmitted(label, doc) {
-	if (label !== "Shift Assignment") throw new Error(`${label} is not created submitted from here.`);
+	if (!SUBMITTED_FROM_HERE.has(label)) throw new Error(`${label} is not created submitted from here.`);
 	const body = { ...doc, docstatus: 1 };
 	delete body.doctype;
 	const r = await http.post(`/api/resource/${dt(label)}`, body, {
 		headers: { "Content-Type": "application/json" },
 	});
 	return r.data?.data ?? r.data;
+}
+
+/** Decide a request: set its status and submit it — for one doctype only.
+
+    Leave Application (25 Sep 2026): **deciding leave is a submit in hrms.** A
+    draft is Open; Approved and Rejected only take effect submitted, and hrms
+    refuses to submit one that is still Open. So this does what the desk's own
+    Submit button does — `savedocs` with the whole document — and hrms's
+    controller runs on it there: the balance, overlapping leave, the
+    approver's roles and HR Settings' self-approval rule are all checked on the
+    site, and an approval books the leave ledger and marks the days On Leave.
+    One request, so a refused submit leaves the status as it was. Throws what
+    the site said. */
+const DECIDED_FROM_HERE = new Set(["Leave Application"]);
+
+export async function apiDecide(label, name, status) {
+	if (!DECIDED_FROM_HERE.has(label)) throw new Error(`${label} is not decided from here.`);
+	const doc = await getDoc(label, name);
+	if (!doc) throw new Error(`${name} could not be read from the site.`);
+	if (Number(doc.docstatus) !== 0) throw new Error(`${name} is already ${doc.status || "decided"}.`);
+	return apiCall("frappe.desk.form.save.savedocs", { doc: JSON.stringify({ ...doc, status }), action: "Submit" });
 }
 
 export async function apiDelete(label, name) {

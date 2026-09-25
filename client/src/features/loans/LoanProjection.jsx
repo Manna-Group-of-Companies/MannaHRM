@@ -390,16 +390,6 @@ export default function LoanProjection() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Loan Projection</b>
-				<span className="cov part">Form captured 29 Aug 2026</span>
-				<span>
-					Recovery month by month. This one is an <b>output</b>, not a record — but their form is
-					the first Loans screen anybody has seen past the menu, and it answers two questions the
-					module had left open.
-				</span>
-			</div>
-
 			<LpForm s={s} />
 
 			{s.lp.run && <LpOut s={s} />}

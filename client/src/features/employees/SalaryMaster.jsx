@@ -160,15 +160,6 @@ export default function SalaryMaster() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Salary Master</b>
-				<span className="cov none">Not built</span>
-				<span>
-					Their screen is drawn; the payroll behind it has not been started, and this page will not
-					imply otherwise. <b>The only pay figure it can show is the one undated CTC on the person.</b>
-				</span>
-			</div>
-
 			<div className="fhscreen">
 				<div className="fhtitle row">
 					Salary Master

@@ -324,6 +324,95 @@ CUSTOM_FIELDS = {
 			"options": "Email",
 			"insert_after": "custom_cell_number",
 		},
+		# The rest of the Onboarding Google Form's answers (24 September 2026).
+		# Data rather than Select or Check even where Employee has a Select for
+		# the same thing (marital status): a Form answer is free text, and a Select
+		# refuses the whole candidate over one unexpected word. They are copied
+		# onto the Employee's own fields when the candidate is pulled.
+		{
+			"fieldname": "custom_form_section",
+			"label": "Google Form Answers",
+			"fieldtype": "Section Break",
+			"insert_after": "custom_personal_email",
+			"collapsible": 0,
+		},
+		{
+			"fieldname": "custom_form_timestamp",
+			"label": "Form Submitted At",
+			"fieldtype": "Data",
+			"insert_after": "custom_form_section",
+		},
+		{
+			"fieldname": "custom_current_address",
+			"label": "Current Address",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_form_timestamp",
+		},
+		{
+			"fieldname": "custom_permanent_address",
+			"label": "Permanent Address",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_current_address",
+		},
+		{
+			"fieldname": "custom_aadhaar_number",
+			"label": "Aadhaar Number",
+			"fieldtype": "Data",
+			"insert_after": "custom_permanent_address",
+		},
+		{
+			"fieldname": "custom_other_id_proof",
+			"label": "Other Identity Proof / ID Number",
+			"fieldtype": "Data",
+			"insert_after": "custom_aadhaar_number",
+		},
+		{
+			"fieldname": "custom_column_break_form",
+			"fieldtype": "Column Break",
+			"insert_after": "custom_other_id_proof",
+		},
+		{
+			"fieldname": "custom_marital_status",
+			"label": "Marital Status",
+			"fieldtype": "Data",
+			"insert_after": "custom_column_break_form",
+		},
+		{
+			"fieldname": "custom_family_members",
+			"label": "Family Members",
+			"fieldtype": "Data",
+			"insert_after": "custom_marital_status",
+		},
+		{
+			"fieldname": "custom_family_details",
+			"label": "Family Member Details",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_family_members",
+		},
+		{
+			"fieldname": "custom_other_insurance",
+			"label": "Covered by Other Insurance?",
+			"fieldtype": "Data",
+			"insert_after": "custom_family_details",
+		},
+		{
+			"fieldname": "custom_insurance_provider",
+			"label": "Insurance Provider",
+			"fieldtype": "Data",
+			"insert_after": "custom_other_insurance",
+		},
+		{
+			"fieldname": "custom_insurance_policy_no",
+			"label": "Insurance Policy Number",
+			"fieldtype": "Data",
+			"insert_after": "custom_insurance_provider",
+		},
+		{
+			"fieldname": "custom_highest_qualification",
+			"label": "Highest Qualification",
+			"fieldtype": "Data",
+			"insert_after": "custom_insurance_policy_no",
+		},
 	],
 	"Employee Checkin": [
 		{
@@ -354,6 +443,16 @@ CUSTOM_FIELDS = {
 			"insert_after": "custom_geofence_result",
 			"read_only": 1,
 		},
+		{
+			# The phone app's photo at the press, asked for 25 September 2026.
+			# Not read-only: the app sets it on the insert, and an employee may
+			# create a checkin but not edit one. `checkin.py::_check_photo`
+			# clears one that the person punching did not upload.
+			"fieldname": "custom_photo",
+			"label": "Punch Photo",
+			"fieldtype": "Attach Image",
+			"insert_after": "custom_distance_metres",
+		},
 	],
 	# ---- the box Assets Details draws dead ----
 	#
@@ -371,6 +470,22 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Small Text",
 			"insert_after": "asset_name",
 			"description": "A free-text note about this asset. Factor HR has one and ERPNext has none under any name, which is why both dashboard screens greyed the box.",
+		},
+	],
+	# hrms' Shift Type belongs to nobody — one list for the whole group — while
+	# Factor HR's is per company, and the dashboard asks for the company when a
+	# shift is made. Optional, so every shift that already exists stays valid;
+	# an empty one is a shift any company may use.
+	"Shift Type": [
+		{
+			"fieldname": "custom_company",
+			"label": "Company",
+			"fieldtype": "Link",
+			"options": "Company",
+			"insert_after": "end_time",
+			"in_list_view": 1,
+			"in_standard_filter": 1,
+			"description": "The company this shift is for. Blank means any company in the group may use it.",
 		},
 	],
 }
@@ -404,6 +519,7 @@ def after_install():
 	ensure_notifications()
 	_seed_settings()
 	_seed_asset_categories()
+	_seed_casual_leave()
 	frappe.db.commit()
 
 
@@ -459,3 +575,27 @@ def _seed_settings():
 	for field, value in DEFAULTS.items():
 		settings.set(field, value)
 	settings.save(ignore_permissions=True)
+
+
+def _seed_casual_leave():
+	"""Casual Leave, one a month, and the policy that grants it — see leavepolicy.py.
+
+	A Leave Type that already exists is left exactly as HR has it: this only
+	creates what is missing, and the live site is brought into line by
+	`tools/setup_monthly_leave.py`, which shows the change before making it.
+
+	**No assignments.** Who receives the policy, and from which month, is a
+	decision per person — hrms credits every month since `effective_from` the
+	moment an assignment is submitted, so an install that assigned it would be
+	handing out leave.
+	"""
+	from manna_hr.leavepolicy import LEAVE_POLICY, LEAVE_TYPE, LEAVE_TYPE_NAME, POLICY_TITLE
+
+	if not frappe.db.exists("Leave Type", LEAVE_TYPE_NAME):
+		frappe.get_doc(dict(LEAVE_TYPE, doctype="Leave Type")).insert(ignore_permissions=True)
+
+	if frappe.db.exists("Leave Policy", {"title": POLICY_TITLE, "docstatus": 1}):
+		return
+	policy = frappe.get_doc(dict(LEAVE_POLICY, doctype="Leave Policy"))
+	policy.insert(ignore_permissions=True)
+	policy.submit()

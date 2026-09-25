@@ -459,10 +459,17 @@ class Api {
   /// The site overwrites it anyway on a self-service punch — see
   /// `manna_hr/checkin.py::_apply_server_clock` — and sending the phone's would
   /// be sending a number the person being measured controls.
+  ///
+  /// [photoUrl] is what [uploadPunchPhoto] returned. It rides on the same
+  /// insert rather than a second write, because an employee may create a
+  /// checkin and may not edit one — and Frappe's own `attach_files_to_document`
+  /// hook, which runs on every insert, is what ties the uploaded file to this
+  /// row, so HR's read on the checkin is what lets them see the photo.
   static Future<Map<String, dynamic>> punch({
     required String logType,
     double? latitude,
     double? longitude,
+    String? photoUrl,
   }) async {
     final emp = Session.I.employeeId;
     if (emp.isEmpty) {
@@ -481,6 +488,7 @@ class Api {
       doc['latitude'] = latitude;
       doc['longitude'] = longitude;
     }
+    if ((photoUrl ?? '').isNotEmpty) doc[kPhotoField] = photoUrl;
 
     final r = await Session.I.dio.post(_res(kCheckinDoctype), data: doc);
     final ok = (r.statusCode ?? 0) >= 200 && (r.statusCode ?? 0) < 300;
@@ -492,6 +500,39 @@ class Api {
     }
     final made = (r.data is Map) ? r.data['data'] : null;
     return made is Map ? made.cast<String, dynamic>() : <String, dynamic>{};
+  }
+
+  /// Put the punch photo on the site, and say where it went.
+  ///
+  /// **Private**, because it is somebody's face: a private file is served only
+  /// to a session that may read the document it is attached to, and a public
+  /// one to anybody who guesses the URL. Uploaded unattached, before the punch
+  /// exists — [punch] carries the URL and the insert attaches it.
+  ///
+  /// Returns null rather than throwing on failure. A photo that did not upload
+  /// must not cost the punch it was meant to go with; the dashboard draws that
+  /// punch as having no photo, which is the flag a human reads.
+  static Future<String?> uploadPunchPhoto(String path) async {
+    try {
+      final stamp = stampOf(ServerClock.I.now()).replaceAll(RegExp(r'[^0-9]'), '');
+      final form = FormData.fromMap({
+        // `.jpg` in the name matters: the site decides what a non-desk user may
+        // upload from the extension, and an image is on that list.
+        'file': await MultipartFile.fromFile(path,
+            filename: 'punch-${Session.I.employeeId}-$stamp.jpg'),
+        'is_private': '1',
+      });
+      final r = await Session.I.dio.post(
+        '/api/method/upload_file',
+        data: form,
+        options: Options(sendTimeout: const Duration(seconds: 30)),
+      );
+      final msg = (r.data is Map) ? r.data['message'] : null;
+      final url = msg is Map ? '${msg['file_url'] ?? ''}' : '';
+      return url.isEmpty ? null : url;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Ask for the punch a day is missing.

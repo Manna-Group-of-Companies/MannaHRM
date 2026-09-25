@@ -43,6 +43,28 @@ def validate(doc, method=None):
 	_apply_server_clock(doc, settings)
 	_check_punch_window(doc, settings)
 	_check_geofence(doc, settings)
+	_check_photo(doc)
+
+
+# ------------------------------------------------------------------- photo ---
+
+
+def _check_photo(doc):
+	"""Keep a punch photo only if the person saving it is the one who uploaded it.
+
+	The photo is what tells HR who pressed the button, and a URL is only a
+	string: without this, a punch could carry a colleague's face from last
+	week. Cleared rather than refused, in the safe direction — a punch with no
+	photo is drawn as having none on the dashboard, which is the flag a human
+	reads, and the person still has their day.
+	"""
+	url = (doc.get("custom_photo") or "").strip()
+	if not url:
+		return
+	if not doc.is_new() and not doc.has_value_changed("custom_photo"):
+		return
+	if not frappe.db.exists("File", {"file_url": url, "owner": frappe.session.user}):
+		doc.custom_photo = None
 
 
 # ------------------------------------------------------------------ source ---

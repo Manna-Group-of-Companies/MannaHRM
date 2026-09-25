@@ -881,7 +881,6 @@ export default function Regularization() {
 	/* The register cell being edited, and the site's answer to the last save. */
 	const [pick, setPick] = useState(null);
 	const [saved, setSaved] = useState("");
-	const pend = (s.approvals.attendance || []).length;
 	const emp = s.reg.emp ? s.byName[s.reg.emp] : null;
 	const { rows: matches, all } = regMatches(s);
 	const cyc = s.reg.cycle || thisMonth();
@@ -923,17 +922,6 @@ export default function Regularization() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Attendance Regularization</b>
-				<span className={"cov " + (pend ? "live" : "part")}>
-					{pend ? `${fmt(pend)} pending` : "queue live, empty"}
-				</span>
-				<span>
-					<b>Everybody’s month</b> until somebody is picked — click a day, or a time on somebody's month, to change it in a popup.
-					A changed <b>Time In / Time Out</b> is saved at once, with the reason; the machine's punch is kept on record. Requests from the phone app still wait for approval, below and on <b>Dashboard → Approvals</b>.
-				</span>
-			</div>
-
 			<div className="fhscreen">
 				<div className="fhtitle">Attendance Regularization</div>
 				<RegBar s={s} cyc={cyc} />

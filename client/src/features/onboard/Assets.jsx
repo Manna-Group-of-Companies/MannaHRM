@@ -16,16 +16,6 @@ import AssetEntry from "@/features/onboard/AssetEntry";
 export default function Assets() {
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Assets Details</b>
-				<span className="cov part">Photographed 3 Sep 2026</span>
-				<span>
-					Factor HR’s screen, and it is a <b>record form</b> rather than a register — thirteen boxes,
-					one asset at a time, with the list behind Search. Drawn below, box for box. Read off
-					ERPNext’s own <code>Asset</code>, which is installed and free.
-				</span>
-			</div>
-
 			<AssetEntry />
 		</>
 	);

@@ -202,3 +202,139 @@ def test_nearest_returns_none_when_nothing_can_be_measured():
 def test_distance_reads_the_way_a_person_would_say_it():
 	assert geo.format_distance(240.4) == "240 m"
 	assert geo.format_distance(2400) == "2.4 km"
+
+
+# --------------------------------------------------------- sandwich leave ---
+
+from datetime import date, timedelta  # noqa: E402
+
+
+def _week(start, offs, leaves):
+	"""A run of days from `start`, `offs` and `leaves` given as day offsets."""
+	days = []
+	for n in range(max(offs + leaves, default=0) + 2):
+		d = start + timedelta(days=n)
+		days.append({"date": d, "is_off": n in offs, "is_leave": n in leaves})
+	return days
+
+
+def test_a_weekend_between_two_leave_days_is_swept():
+	# Fri(0) leave, Sat/Sun(1,2) weekend, Mon(3) leave.
+	start = date(2026, 9, 18)  # a Friday
+	days = _week(start, offs=(1, 2), leaves=(0, 3))
+	assert rules.sandwich_leave_dates(days) == [start + timedelta(days=1), start + timedelta(days=2)]
+
+
+def test_a_single_holiday_between_two_leave_days_is_swept():
+	start = date(2026, 9, 1)
+	days = _week(start, offs=(1,), leaves=(0, 2))
+	assert rules.sandwich_leave_dates(days) == [start + timedelta(days=1)]
+
+
+def test_consecutive_holidays_between_two_leave_days_are_all_swept():
+	start = date(2026, 9, 1)
+	days = _week(start, offs=(1, 2, 3), leaves=(0, 4))
+	assert rules.sandwich_leave_dates(days) == [
+		start + timedelta(days=1), start + timedelta(days=2), start + timedelta(days=3),
+	]
+
+
+def test_a_weekend_with_leave_on_only_one_side_is_not_swept():
+	# Friday off, nothing on Monday: a long weekend, not a sandwich.
+	start = date(2026, 9, 18)
+	days = _week(start, offs=(1, 2), leaves=(0,))
+	assert rules.sandwich_leave_dates(days) == []
+
+
+def test_a_weekend_with_no_leave_either_side_is_not_swept():
+	start = date(2026, 9, 18)
+	days = _week(start, offs=(1, 2), leaves=())
+	assert rules.sandwich_leave_dates(days) == []
+
+
+def test_a_run_of_off_days_at_the_edge_of_the_window_is_left_alone():
+	# The window never reaches a working day on the far side, so it cannot be
+	# answered — and an unanswerable day must not be guessed into a sweep.
+	start = date(2026, 9, 1)
+	days = [
+		{"date": start, "is_off": False, "is_leave": True},
+		{"date": start + timedelta(days=1), "is_off": True, "is_leave": False},
+	]
+	assert rules.sandwich_leave_dates(days) == []
+
+
+def test_two_leave_periods_either_side_of_one_holiday_sweep_it():
+	start = date(2026, 9, 1)
+	days = _week(start, offs=(2,), leaves=(0, 1, 3, 4))
+	assert rules.sandwich_leave_dates(days) == [start + timedelta(days=2)]
+
+
+def test_multiple_separate_sandwiches_in_one_window_are_each_swept():
+	# Two independent weekend sandwiches in the same lookaround window.
+	start = date(2026, 9, 1)
+	days = _week(start, offs=(1, 6), leaves=(0, 2, 5, 7))
+	swept = rules.sandwich_leave_dates(days)
+	assert swept == [start + timedelta(days=1), start + timedelta(days=6)]
+
+
+def test_a_working_day_with_nothing_off_is_never_swept():
+	start = date(2026, 9, 1)
+	days = _week(start, offs=(), leaves=(0, 1, 2))
+	assert rules.sandwich_leave_dates(days) == []
+
+
+# ------------------------------------------------------- onboarding via form ---
+
+
+def test_a_blank_answer_is_left_out_rather_than_written_empty():
+	# A candidate who never reached Designation must not have it blanked out —
+	# see map_onboarding_row's own docstring for why.
+	row = {"Full Name": "Asha Menon", "Personal Email": "asha@example.com", "Designation": ""}
+	doc = rules.map_onboarding_row(row)
+	assert doc == {"employee_name": "Asha Menon", "custom_personal_email": "asha@example.com"}
+	assert "designation" not in doc
+
+
+def test_every_answer_lands_on_the_field_the_form_promises():
+	row = {
+		"Full Name": "Ravi Kumar",
+		"Personal Email": "ravi@example.com",
+		"Mobile Number": "9000000000",
+		"Date of Birth": "1998-01-01",
+		"Date of Joining": "2026-10-01",
+		"Company": "Manna Treads",
+		"Department": "Production",
+		"Designation": "Operator",
+	}
+	doc = rules.map_onboarding_row(row)
+	assert doc == {
+		"employee_name": "Ravi Kumar",
+		"custom_personal_email": "ravi@example.com",
+		"custom_cell_number": "9000000000",
+		"custom_date_of_birth": "1998-01-01",
+		"date_of_joining": "2026-10-01",
+		"company": "Manna Treads",
+		"department": "Production",
+		"designation": "Operator",
+	}
+
+
+def test_the_match_header_is_the_one_that_fills_the_match_field():
+	# Derived rather than repeated — see ONBOARDING_MATCH_HEADER's own comment.
+	assert rules.ONBOARDING_FORM_FIELDS[rules.ONBOARDING_MATCH_HEADER] == rules.ONBOARDING_MATCH_FIELD
+
+
+def test_a_sheet_serial_date_is_read_whatever_the_sheets_locale():
+	from manna_hr.rules import map_onboarding_row, sheet_serial_to_iso
+
+	assert sheet_serial_to_iso(46278) == "2026-09-13"
+	assert sheet_serial_to_iso("13/09/2026") == "13/09/2026"
+	doc = map_onboarding_row({"Personal Email": "a@x", "Date of Joining": 46278})
+	assert doc["date_of_joining"] == "2026-09-13"
+
+
+def test_the_forms_timestamp_keeps_its_time_of_day():
+	from manna_hr.rules import sheet_serial_to_datetime
+
+	assert sheet_serial_to_datetime(46278.5) == "2026-09-13 12:00:00"
+	assert sheet_serial_to_datetime("9/13/2026 12:00:00") == "9/13/2026 12:00:00"

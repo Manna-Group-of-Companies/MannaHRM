@@ -20,6 +20,10 @@ dependencies:
   dio: ^5.10.0
   geolocator: ^14.0.3
   shared_preferences: ^2.5.5
+  # The punch photo. It hands off to the phone's own camera app, so no CAMERA
+  # permission is declared — declaring one and not being granted it is what
+  # makes that hand-off fail on Android.
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:

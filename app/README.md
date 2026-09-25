@@ -32,6 +32,12 @@ flutter build apk --release
 | `Employee Checkin` | the punch |
 | `Employee Attendance Regularization` | a *request* for a punch that is missing |
 
+It also uploads one private `File` per punch: the photo taken at the press,
+carried on the checkin as `custom_photo` and shown on the dashboard's App
+Punches page. Backing out of the camera stops the punch; a camera that will not
+open or an upload that fails does not — the punch goes without a photo and the
+dashboard draws it as having none. See `lib/services/photo.dart`.
+
 `Attendance` is generated from `Employee Checkin` by the shift job. A
 hand-written row is invisible to the thing that would have created it, and the
 two disagree the moment anything is reprocessed — what disagrees is somebody's

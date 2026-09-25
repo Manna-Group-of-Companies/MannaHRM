@@ -134,7 +134,7 @@ export const DDA_MONTH_COLS = [
 	["Overtime",      r => r.ot||"—",                  "mono"],
 ];
 
-export const DDA_LAYOUT = [["group","Show Employee Grouping"],["logo","With Logo"]];
+export const DDA_LAYOUT = [["logo","With Logo"]];
 
 /* The report's own columns, in Factor HR's order. The fourth entry is what
    fills it here — and five of the fourteen are filled by nothing, which is the
@@ -238,13 +238,13 @@ export const IO_MAXDAYS = 92;
     differently on two reports of the same site would be a bug wearing a
     feature's clothes. Each row is [name, glyph, what it actually does],
     and the third field is the tooltip because four of the five are not quite
-    what the word on them promises. There is no PDF writer and no Word writer
-    in this browser and there is not going to be one for a table: what there is
-    is one HTML document and the two things the platform already knows how to
-    do with it. */
+    what the word on them promises. Excel and PDF are real files since
+    24 Sep 2026 — `lib/export.js`, asked for by HR, who wanted a PDF they could
+    download rather than a print dialog to steer. Word, Print and Preview are
+    still the one HTML document. */
 export const EXPORT_FORMATS = [
-	["PDF", "📄", "the print dialog, with Save as PDF as the destination"],
-	["Excel", "📊", "a CSV — what Excel opens without a library shipped to the browser"],
+	["PDF", "📄", "a .pdf file, downloaded — the table, landscape A4"],
+	["Excel", "📊", "an .xlsx workbook, downloaded"],
 	["Word", "📝", "an HTML document Word opens and edits, the way its own Save as Web Page writes one"],
 	["Print", "🖨", "straight to the print dialog, landscape A4"],
 	["Preview", "🔍", "the same document on screen first, before it goes anywhere"],

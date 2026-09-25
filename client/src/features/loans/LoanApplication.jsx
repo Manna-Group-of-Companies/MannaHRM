@@ -527,15 +527,6 @@ export default function LoanApplication() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Loan Application</b>
-				<span className="cov part">Their form, captured 29 Aug 2026</span>
-				<span>
-					Drawn control for control. <b>Nothing here writes</b> — there is no loan doctype on this
-					site to write to. The schedule is the exception: it is arithmetic, so it runs.
-				</span>
-			</div>
-
 			<div className="fhscreen">
 				<div className="fhtitle row">
 					Loan Application

@@ -1,5 +1,6 @@
-import { NEW_EMP_STEPS, punchesOnApp, punchesOnMachine } from "../data/employees.js";
+import { NEW_EMP_ELSEWHERE, NEW_EMP_STEPS, punchesOnApp, punchesOnMachine } from "../data/employees.js";
 import { ageOn, todayIso } from "./format.js";
+import { LEAVE_TYPE_NAME, notMonthly, perMonthProblem } from "./monthlyleave.js";
 
 /* ---------------------------------------------------------------------------
    What the Create Employee wizard will send, and what it refuses to send,
@@ -25,14 +26,18 @@ import { ageOn, todayIso } from "./format.js";
 
     `status` is seeded rather than left empty because a new hire is Active, and
     that is true of every record this form will ever create — a required box
-    whose answer is never in doubt is a click charged for nothing. Nothing else
-    is: a default on a name, a code or a date would be a guess, and a guess
+    whose answer is never in doubt is a click charged for nothing. `leave_type`
+    is seeded for the same reason — Casual Leave is HR's rule for everybody
+    (24 September 2026) — and how many a month is left empty, because that is
+    the question. Nothing else is: a default on a name, a code or a date would be a guess, and a guess
     pre-filled into a form is a guess that gets saved.
 
     The store holds one of these and the page resets to another, which is why it
     is a function rather than an object — two screens sharing one mutable
     literal is how a cleared form comes back holding the last hire's typing. */
-export const NEW_EMP_BLANK = () => ({ step: 0, f: { status: "Active" }, busy: "", done: null, err: "" });
+export const NEW_EMP_BLANK = () => ({
+	step: 0, f: { status: "Active", leave_type: LEAVE_TYPE_NAME }, busy: "", done: null, err: "",
+});
 
 /** Whether nothing has been typed yet, seeded values not counting as typing.
 
@@ -58,10 +63,11 @@ export const fieldsOf = (step) => (NEW_EMP_STEPS[step]?.[2] || []).flatMap((g) =
     Built from the table rather than listed again, so a field added to a step
     reaches the payload without a second edit — the drift a second list
     guarantees. Rows with no fieldname are the ones this site has nowhere to
-    put; see NEW_EMP_NOFIELD. */
+    put; see NEW_EMP_NOFIELD. Rows stored on another document are left out
+    too; see NEW_EMP_ELSEWHERE. */
 export const NEW_EMP_FIELDS = NEW_EMP_STEPS
 	.flatMap((_, i) => fieldsOf(i))
-	.filter((r) => r[0])
+	.filter((r) => r[0] && !NEW_EMP_ELSEWHERE[r[0]])
 	.map((r) => r[0]);
 
 /** What is typed, as ERPNext wants it: trimmed, and blanks left out entirely.
@@ -189,6 +195,17 @@ export function clashes(f, employees) {
 	return out;
 }
 
+/** What is wrong with the leave once something is typed in it. Empty is a
+    gap, not a mistake — `missing` reports that one. A type that is not
+    monthly matters only when some leave is asked for: 0 of it writes nothing. */
+export function leaveProblems(f, leaveTypes) {
+	if (!typed(f.leaves_a_month)) return [];
+	const p = perMonthProblem(f.leaves_a_month);
+	if (p) return [p];
+	const t = Number(f.leaves_a_month) > 0 ? notMonthly(f.leave_type, leaveTypes) : null;
+	return t ? [t] : [];
+}
+
 /** Everything wrong with the form as it stands, whatever step it is on.
 
     One function across all three steps, so the last one cannot show a live
@@ -198,9 +215,9 @@ export function clashes(f, employees) {
     because they are answered differently: an empty field is filled in, and a
     duplicate machine code means somebody has to go and find out which of two
     people owns it. */
-export function problemsOf(f, employees) {
+export function problemsOf(f, employees, leaveTypes) {
 	return {
 		gaps: NEW_EMP_STEPS.flatMap((_, i) => missing(i, f)),
-		bad: dateProblems(f).concat(clashes(f, employees)),
+		bad: dateProblems(f).concat(clashes(f, employees), leaveProblems(f, leaveTypes)),
 	};
 }

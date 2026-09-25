@@ -25,6 +25,8 @@ import { loadedState } from "./fixture";
    two keys for that reason and the test says so.
    --------------------------------------------------------------------------- */
 
+const HR = "hr@mannarubber.com";
+
 const draw = (ui) => render(<Provider store={store}>{ui}</Provider>);
 
 beforeEach(() => {
@@ -39,10 +41,19 @@ afterEach(() => {
 describe("the rail", () => {
 	it("draws every module not hidden, in SECTIONS order", () => {
 		/* Read off the same table the router reads, so a module added to the app
-		   is a case here without anybody remembering to add one. */
+		   is a case here without anybody remembering to add one. Signed in as the
+		   HR login, the one that is shown On Board — see ONLY_FOR in data/menus. */
+		set({ user: HR });
 		const { container } = draw(<Sidebar />);
 		const labels = [...container.querySelectorAll(".nav .lab")].map((el) => el.textContent);
 		expect(labels).toEqual(VISIBLE_SECTIONS.map((s) => s.label));
+	});
+
+	it("leaves On Board off the rail for any login but the HR one", () => {
+		set({ user: "someone@mannarubber.com" });
+		const { container } = draw(<Sidebar />);
+		const labels = [...container.querySelectorAll(".nav .lab")].map((el) => el.textContent);
+		expect(labels).toEqual(VISIBLE_SECTIONS.filter((s) => s.key !== "onboard").map((s) => s.label));
 	});
 
 	it("puts a heading over each group without moving an item out of Factor HR's order", () => {
@@ -64,6 +75,7 @@ describe("the rail", () => {
 		/* `skip` is one of the four coverage states *and* the name of this app's
 		   skip-to-content link — a fixed pill parked off the top of the page. A
 		   dot carrying that as a class inherited all of it. */
+		set({ user: HR });
 		const { container } = draw(<Sidebar />);
 		const dots = [...container.querySelectorAll(".nav .cdot")];
 		expect(dots.map((d) => d.dataset.cov)).toEqual(VISIBLE_SECTIONS.map((s) => s.cov));

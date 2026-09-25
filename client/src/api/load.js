@@ -2,7 +2,9 @@ import { api, apiDelete, deskBase, listAll, whoami } from "./client";
 import { getState, patch, set, NO_APPROVALS } from "@/store";
 import { DOC_BACKFILL } from "@/data/onboard";
 import { loadCategoryTypes } from "@/api/categorytype";
-import { todayIso } from "@/lib/format";
+import { readShiftTypes } from "@/api/shifttype";
+import { lastOfMonth, todayIso } from "@/lib/format";
+import { LEAVE_TYPE_NAME } from "@/lib/monthlyleave";
 
 export const EMP_FIELDS_MIN = [
 	"name", "employee_name", "employee_number", "company", "department", "designation",
@@ -21,6 +23,9 @@ export const EMP_FIELDS = EMP_FIELDS_MIN.concat([
 	   that sends this read to the fallback. The bytes are not read here; the
 	   browser fetches each one as its card scrolls into view. */
 	"image",
+	/* The login, for Apply Leave's Leave Approver list — hrms takes a User
+	   there, not an Employee. Stock on Employee. */
+	"user_id",
 ]);
 
 /* The Create Letters register — see features/onboard/CreateLetters.jsx, which
@@ -152,9 +157,13 @@ export async function load() {
 			listAll("Employee Checkin", CHECKIN_FIELDS, [["time", ">=", today + " 00:00:00"]])
 				.catch(() => listAll("Employee Checkin", CHECKIN_FIELDS_MIN,
 					[["time", ">=", today + " 00:00:00"]])),
-			listAll("Shift Type", ["name"]),
+			readShiftTypes(),
 			listAll("Holiday List", ["name"]),
-			listAll("Leave Type", ["name"]),
+			/* Whether a type is earned monthly is what Create Employee needs to
+			   know before it offers "N a month" of it. Falls back to names like
+			   the reads around it: this read is the dashboard. */
+			listAll("Leave Type", ["name", "is_earned_leave", "earned_leave_frequency"])
+				.catch(() => listAll("Leave Type", ["name"])),
 			listAll("Attendance", ["name"]),
 			/* `disabled` is the Status column on the screen behind View Category.
 			   Department is the only one of these three masters that carries such a
@@ -208,7 +217,8 @@ export async function load() {
 			/* The names as well as the count: Apply Leave fills its type dropdown
 			   from this, and the six in Factor HR are not necessarily the six here. */
 			leaveTypes: leavetypes || [],
-			shiftTypes: shifts || [],
+			shiftTypes: shifts.rows,
+			shiftCo: shifts.company,
 			departments: depts || [],
 			designations: desigs || [],
 			// Active only — see initialState.js.
@@ -275,7 +285,8 @@ export async function load() {
     colour nobody can fill could not be fetched would be the tail wagging the
     dog. */
 export async function loadLeaveFor(emp, ym) {
-	if (!emp) return set({ applyHist: [], applyAtt: {} });
+	if (!emp) return set({ applyHist: [], applyAtt: {}, applyPunch: {}, applyBal: null });
+	void loadLeaveBalance(emp);
 	patch("apply", { busy: true, err: "" });
 	try {
 		const hist = await listAll("Leave Application",
@@ -285,19 +296,106 @@ export async function loadLeaveFor(emp, ym) {
 			[["employee", "=", emp]]);
 		set({ applyHist: hist || [] });
 	} catch (err) {
-		patch("apply", { err: String(err.message || err).slice(0, 220) });
-		set({ applyHist: [] });
+		/* Once more with only the columns the calendar and the table need. The
+		   site has answered the full list with a bare 500 — no message, nothing
+		   to tell which column it choked on — and a history that cannot be read
+		   must not also blank the calendar that reads it. */
+		const fewer = await listAll("Leave Application",
+			["name", "leave_type", "from_date", "to_date", "half_day", "half_day_date",
+				"total_leave_days", "posting_date", "status"],
+			[["employee", "=", emp]]).catch(() => null);
+		if (fewer) {
+			set({ applyHist: fewer });
+		} else {
+			patch("apply", { err: "Leave history could not be read — " + String(err.message || err).slice(0, 200) });
+			set({ applyHist: [] });
+		}
 	}
 
 	const att = {};
 	if (ym) {
 		const rows = await listAll("Attendance", ["name", "attendance_date", "status"],
-			[["employee", "=", emp], ["attendance_date", ">=", ym + "-01"], ["attendance_date", "<=", ym + "-31"]])
+			[["employee", "=", emp], ["attendance_date", ">=", ym + "-01"], ["attendance_date", "<=", lastOfMonth(ym)]])
 			.catch(() => []);
 		(rows || []).forEach((r) => { att[String(r.attendance_date).slice(0, 10)] = r.status || ""; });
 	}
 	set({ applyAtt: att });
+
+	/* The punches as well as the Attendance rows. Attendance is only written by
+	   hrms's shift job, and until that runs for somebody their month is blank
+	   even though the fingerprint machine saw them every morning. The first and
+	   last punch of each day are what the calendar shows; they are facts about
+	   the machine, not a status, and nothing here turns them into one. */
+	const punch = {};
+	if (ym) {
+		const rows = await listAll("Employee Checkin", ["name", "time"],
+			[["employee", "=", emp], ["time", ">=", ym + "-01 00:00:00"], ["time", "<=", lastOfMonth(ym) + " 23:59:59"]])
+			.catch(() => []);
+		(rows || []).forEach((r) => {
+			const t = String(r.time || "");
+			const day = t.slice(0, 10);
+			const hm = t.slice(11, 16);
+			if (!day || !hm) return;
+			const d = (punch[day] ||= { first: hm, last: hm, n: 0 });
+			if (hm < d.first) d.first = hm;
+			if (hm > d.last) d.last = hm;
+			d.n += 1;
+		});
+	}
+	set({ applyPunch: punch });
 	patch("apply", { busy: false });
+}
+
+/** What this person has left of each leave type, today, in hrms's own words.
+
+    `get_leave_details` is the same call the desk's Leave Application form makes
+    to fill its balance table, so the number here is the number the site will
+    measure an application against — computed there, from the Leave Allocation
+    and its ledger, and never re-derived here. Casual Leave grows by one on the
+    1st of each month once HR has run tools/setup_monthly_leave.py.
+
+    `null` is "not read yet"; `{ rows: [] }` is "the site has given this person
+    no leave at all", which the page says in words rather than drawing zeros. */
+export async function loadLeaveBalance(emp) {
+	set({ applyBal: null });
+	try {
+		const r = await api("/api/method/hrms.hr.doctype.leave_application.leave_application.get_leave_details",
+			{ employee: emp, date: todayIso() });
+		const alloc = r?.message?.leave_allocation || {};
+		/* The dates each allocation covers, which get_leave_details does not
+		   say. An application outside them is refused with "Application period
+		   cannot be outside leave allocation period", and the only way to make
+		   that sentence useful is to show the period beside the balance. */
+		const periods = await listAll("Leave Allocation", ["leave_type", "from_date", "to_date"],
+			[["employee", "=", emp], ["docstatus", "=", 1]]).catch(() => []);
+		const span = {};
+		for (const p of periods || []) {
+			const t = p.leave_type;
+			const a = String(p.from_date).slice(0, 10);
+			const b = String(p.to_date).slice(0, 10);
+			(span[t] ||= []).push([a, b]);
+		}
+		const rows = Object.entries(alloc).map(([type, a]) => ({
+			type,
+			total: Number(a.total_leaves) || 0,
+			taken: Number(a.leaves_taken) || 0,
+			pending: Number(a.leaves_pending_approval) || 0,
+			expired: Number(a.expired_leaves) || 0,
+			remaining: Number(a.remaining_leaves) || 0,
+			periods: (span[type] || []).sort((x, y) => x[0].localeCompare(y[0])),
+		}));
+		/* The monthly leave's ledger, for the calendar's carry line — see
+		   monthCarry in lib/monthlyleave.js. Read, never written: it is on
+		   NEVER_WRITE in lib/write.js. */
+		const ledger = await listAll("Leave Ledger Entry",
+			["leaves", "from_date", "to_date", "transaction_type", "is_expired"],
+			[["employee", "=", emp], ["leave_type", "=", LEAVE_TYPE_NAME], ["docstatus", "=", 1]]).catch(() => []);
+		if (getState().apply.emp === emp) set({ applyBal: { rows, ledger: ledger || [] } });
+	} catch (err) {
+		if (getState().apply.emp === emp) {
+			set({ applyBal: { rows: [], err: String(err.message || err).slice(0, 220) } });
+		}
+	}
 }
 
 /** The Leave Balance Report's own read: every *approved* leave application on
@@ -313,12 +411,11 @@ export async function loadLeaveFor(emp, ym) {
     read is. `lvbState` is set before the first await so the re-render it causes
     cannot ask again.
 
-    **This is only half of a balance, and deliberately so.** Availed comes off
-    Leave Application, which this reads. Entitlement comes off Leave Allocation,
-    which nothing here reads — and the site holds no entitlement to read in the
-    first place: see FH_LEAVE in `data/attendance.js`. Two separate reasons,
-    either of which alone is enough. The report says which of its columns that
-    leaves empty, where they are. */
+    **The entitlement half is the leave ledger**, read beside it since 24
+    September 2026, when Give monthly leave started putting allocations on the
+    site: see lib/leavebalance.js for how it is added up. It is its own catch —
+    a login refused the ledger still gets Availed, and the report says which
+    columns that leaves empty rather than drawing them as zero. */
 export async function loadLeaveBalances() {
 	if (getState().lvbState) return;
 	set({ lvbState: "loading" });
@@ -327,11 +424,15 @@ export async function loadLeaveBalances() {
 			["name", "employee", "employee_name", "company", "leave_type", "from_date", "to_date",
 				"half_day", "half_day_date", "total_leave_days", "status", "posting_date"],
 			[["status", "=", "Approved"]]);
-		set({ lvbRows: rows || [], lvbState: "done" });
+		/* Read, never written: it is on NEVER_WRITE in lib/write.js. */
+		const ledger = await listAll("Leave Ledger Entry",
+			["employee", "leave_type", "leaves", "from_date", "transaction_type", "is_carry_forward", "is_expired"],
+			[["docstatus", "=", 1]]).catch(() => null);
+		set({ lvbRows: rows || [], lvbLedger: ledger, lvbState: "done" });
 	} catch (err) {
 		/* An empty report and a report that could not be read are different
 		   things, and the screen says which. */
-		set({ lvbRows: [], lvbState: "error", lvbErr: String(err.message || err).slice(0, 220) });
+		set({ lvbRows: [], lvbLedger: null, lvbState: "error", lvbErr: String(err.message || err).slice(0, 220) });
 	}
 }
 
@@ -605,9 +706,15 @@ const ASSIGN_FIELDS = ["name", "employee", "employee_name", "company", "asset", 
 const ONB_OURS = ["salutation", "first_name", "last_name", "employee_number",
 	"employee_code_series", "date_of_birth", "cell_number", "personal_email"];
 
+/** The rest of the Google Form's answers — see EXTRA_FIELDS in
+    lib/onboardimport.js, which this is the unprefixed spelling of. */
+const ONB_EXTRA = ["form_timestamp", "current_address", "permanent_address", "aadhaar_number",
+	"other_id_proof", "marital_status", "family_members", "family_details", "other_insurance",
+	"insurance_provider", "insurance_policy_no", "highest_qualification"];
+
 /** Everything the card draws, and the parts it needs to create somebody. */
 const ONB_FULL = ["name", "employee_name", "date_of_joining", "company", "department",
-	"designation", "employee_grade", "job_applicant", "boarding_begins_on", "boarding_status",
+	"designation", "employee_grade", "job_applicant", "job_offer", "boarding_begins_on", "boarding_status",
 	"employee", "docstatus", "owner", "creation", "modified", "modified_by"]
 	.concat(ONB_OURS.map((f) => "custom_" + f));
 
@@ -618,7 +725,7 @@ const ONB_FULL = ["name", "employee_name", "date_of_joining", "company", "depart
     whole of `candTier` exists for. */
 function stripPrefix(row) {
 	const out = { ...row };
-	for (const field of ONB_OURS) {
+	for (const field of ONB_OURS.concat(ONB_EXTRA)) {
 		const prefixed = "custom_" + field;
 		if (prefixed in out) {
 			out[field] = out[prefixed];
@@ -641,8 +748,15 @@ export async function loadCandidates(force) {
 	if (getState().candState && !force) return;
 	set({ candState: "loading" });
 
-	const rows = await listAll("Employee Onboarding", ONB_FULL)
-		.then((r) => ({ rows: r.map(stripPrefix), tier: "full" }))
+	/* Three tiers now. `extra` is the rest of the Google Form's answers,
+	   added 24 September 2026 and not on the site until
+	   `create_custom_fields.py "Employee Onboarding"` has run again — so a site
+	   without them must still read as `full`, or Upload and Sync would switch
+	   off over fields they can do without. */
+	const rows = await listAll("Employee Onboarding", ONB_FULL.concat(ONB_EXTRA.map((f) => "custom_" + f)))
+		.then((r) => ({ rows: r.map(stripPrefix), tier: "extra" }))
+		.catch(() => listAll("Employee Onboarding", ONB_FULL)
+			.then((r) => ({ rows: r.map(stripPrefix), tier: "full" })))
 		/* The stock doctype, on a site where `manna_hr` has not added its custom
 		   fields — which is a real state and a different one from having no
 		   candidates. Nothing to strip: every field on this list is ERPNext's. */

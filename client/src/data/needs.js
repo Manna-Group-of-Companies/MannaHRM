@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------
    **What each unbuilt item of theirs would take.**
 
-   106 of Factor HR's 160 menu items have no page here that does the work. Every
+   105 of Factor HR's 160 menu items have no page here that does the work. Every
    one of them now has a page — `features/reports/Blueprint.jsx` — and this file
    is what those pages say.
 

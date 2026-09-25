@@ -25,6 +25,7 @@ import report from "@/features/reports/makeReport";
 import { blueprintPages } from "@/features/reports/makeBlueprint";
 import { managedPages, managedTabs } from "@/features/records/makeManaged";
 import Approvals from "@/features/approvals/Approvals";
+import Onboarding from "@/features/onboard/Onboarding";
 import LetterForm from "@/features/onboard/LetterForm";
 import Documents from "@/features/onboard/Documents";
 import Assets from "@/features/onboard/Assets";
@@ -41,11 +42,12 @@ import CreateEmployee from "@/features/employees/CreateEmployee";
 import ImportOnboarding from "@/features/employees/ImportOnboarding";
 import Regularization from "@/features/attendance/Regularization";
 import { AbsentReport, OtReport, WeeklyReport } from "@/features/attendance/RangeReports";
-import WorkingTime from "@/features/attendance/WorkingTime";
 import SubmitAttendance from "@/features/attendance/SubmitAttendance";
 import InOut from "@/features/attendance/InOut";
+import AppPunches from "@/features/attendance/AppPunches";
 import DailyDetail from "@/features/attendance/DailyDetail";
 import MonthlyBasic from "@/features/attendance/MonthlyBasic";
+import MonthlySummary from "@/features/attendance/MonthlySummary";
 import Statutory from "@/features/attendance/Statutory";
 import Shifts from "@/features/attendance/Shifts";
 import ApplyLeave from "@/features/leave/ApplyLeave";
@@ -63,6 +65,7 @@ import LoanApplication from "@/features/loans/LoanApplication";
 import LoanRegister from "@/features/loans/LoanRegister";
 import LoanProjection from "@/features/loans/LoanProjection";
 import Survey from "@/features/simple/Survey";
+import ReportsHub from "@/features/reports/ReportsHub";
 import Settings from "@/features/settings/Settings";
 import Coverage from "@/features/settings/Coverage";
 
@@ -107,8 +110,16 @@ const TABS = {
 		["hr", "HR Dashboard"], ["attendance", "Attendance Dashboard"], ["payroll", "Payroll Dashboard"],
 		...managedTabs("dashboard"), ["updates", "Product Updates"],
 		...COMPANY_PAGES.map((c) => [c.slug, c.label])],
-	onboard: [["overview", "Create Letter / Form"], ["documents", "Document Entry"],
-		["assets", "Assets Details"], ["assignment", "Assets Assignment"],
+	/* `overview` is now Onboarding, the employee's own Google Form entry point,
+	   asked for 22 September 2026 — see Onboarding.jsx. The three that used to
+	   be here are still real pages (`documents`, `assets`, `assignment` — Create
+	   Letter / Form moved under `letters`) but are hidden from this bar, per the
+	   same ask: one visible onboarding page rather than four. Nothing was
+	   deleted — `PAGES.onboard` below still answers all four addresses, so a
+	   bookmark or a link out of `all` still opens, and `OFF_MENU` is not the
+	   right list for them because they still have a strip on the pages that
+	   still reach them the ordinary way; they are simply not offered here. */
+	onboard: [["overview", "Onboarding"],
 		...managedTabs("onboard"), ["all", "All"]],
 	/* Employees is Factor HR's own menu, in its order, and then Employee Profile
 	   appended — that one exists there as a *record page* reached by clicking
@@ -123,7 +134,10 @@ const TABS = {
 	   Manager was the other appended page and went on 29 Aug 2026. So the seven
 	   below are their menu items plus Employee Profile, and nothing invented. */
 	employees: [["overview", "Employee Master"], ["salary", "Salary Master"], ["detail", "Employee Detail"],
-		["ctc", "CTC / Earnings"], ["categories", "Categories"], ["calendar", "Calendar"],
+		/* Categories was hidden from this bar on 24 Sep 2026, asked for by IT —
+		   the same way On Board's three are above: `PAGES.employees` still
+		   answers `/employees/categories`, so the link on All still opens it. */
+		["ctc", "CTC / Earnings"], ["calendar", "Calendar"],
 		["profile", "Employee Profile"],
 		/* Five of their Employees reports, built 8 Sep 2026 off data the site
 		   already holds. Their menu titles, so the tab reads as theirs. */
@@ -136,13 +150,17 @@ const TABS = {
 	   it — so clicking Attendance in the nav lands on it. */
 	attendance: [["overview", "Employee Attendance Regularization"], ["submit", "Submit Attendance"],
 		["inout", "In Out Activities Report"], ["daily", "Daily Detail Attendance Report"],
-		["monthly", "Monthly Basic Attendance"], ["statutory", "Statutory Reports"],
+		["monthly", "Monthly Basic Attendance"], ["summary", "Monthly Summary Attendance"],
+		["statutory", "Statutory Reports"],
 		["shifts", "Manage Shift"],
 		["present", "Present Report"], ["absent", "Absent Report"], ["msp", "MSP Report"],
 		["iocount", "In / Out Count Report"], ["shiftrep", "Employee Shift Report"],
 		["headcount", "Head Count And Attendance"],
-		/* Two of ours, asked for 16 Sep 2026 — see features/attendance/RangeReports. */
-		["ot", "OT Report"], ["weekly", "Weekly Report"], ["worktime", "Employee Working Time"], ...managedTabs("attendance"), ["all", "All"]],
+		/* Two of ours, asked for 16 Sep 2026 — see features/attendance/RangeReports.
+		   A third, asked for 21 Sep 2026: the phone app's own punches, sliced out
+		   of In Out Activities Report rather than read as a second query. */
+		["ot", "OT Report"], ["weekly", "Weekly Report"],
+		["app", "App Punches"], ...managedTabs("attendance"), ["all", "All"]],
 	/* Factor HR's own Leave menu, captured 29 Aug 2026 — three items where
 	   Attendance has eight, which is the finding rather than a gap on our side.
 	   `overview` is Apply Leave because it is the first item on their menu, so
@@ -170,6 +188,7 @@ const TABS = {
 	loans: [["overview", "Loan Application"], ["register", "Loan Register"],
 		["projection", "Loan Projection"], ...managedTabs("loans"), ["all", "All"]],
 	survey: [["overview", "Survey"], ...managedTabs("survey")],
+	reports: [["overview", "All Reports"]],
 	settings: [["overview", "Setup readiness"], ["coverage", "Module coverage"]],
 };
 
@@ -194,7 +213,7 @@ const PAGES = {
 	   the bar above". This one is Factor HR's whole menu for the module, read
 	   off their tenant, with what answers each item here — 160 items against
 	   this app's 39 pages. See components/ModuleMenu.jsx. */
-	onboard: { overview: LetterForm, documents: Documents,
+	onboard: { overview: Onboarding, letters: LetterForm, documents: Documents,
 		assets: Assets, assignment: AssetAssign, all: moduleAll("onboard", "On Board"),
 		...managedPages("onboard"), ...blueprintPages("onboard") },
 	employees: { overview: EmployeeMaster, salary: SalaryMaster, detail: EmployeeDetail, ctc: Ctc,
@@ -206,14 +225,15 @@ const PAGES = {
 		all: moduleAll("employees", "Employees"),
 		...managedPages("employees"), ...blueprintPages("employees") },
 	attendance: { overview: Regularization, submit: SubmitAttendance, inout: InOut,
-		daily: DailyDetail, monthly: MonthlyBasic, statutory: Statutory,
+		daily: DailyDetail, monthly: MonthlyBasic, summary: MonthlySummary, statutory: Statutory,
 		shifts: Shifts,
 		/* Absent reads the day it is asked about; the spec version read today's
 		   punches whatever date was picked. */
 		present: report("attendance", "present"), absent: AbsentReport,
-		ot: OtReport, weekly: WeeklyReport, worktime: WorkingTime,
+		ot: OtReport, weekly: WeeklyReport,
 		msp: report("attendance", "msp"), iocount: report("attendance", "iocount"),
 		shiftrep: report("attendance", "shiftrep"), headcount: report("attendance", "headcount"),
+		app: AppPunches,
 		all: moduleAll("attendance", "Attendance"),
 		...managedPages("attendance"), ...blueprintPages("attendance") },
 	leave: { overview: ApplyLeave, balances: LeaveBalances,
@@ -229,6 +249,7 @@ const PAGES = {
 		projection: LoanProjection, all: moduleAll("loans", "Loans"),
 		...managedPages("loans"), ...blueprintPages("loans") },
 	survey: { overview: Survey, ...managedPages("survey"), ...blueprintPages("survey") },
+	reports: { overview: ReportsHub },
 	settings: { overview: Settings, coverage: Coverage },
 };
 /* A page opened from another page rather than from a menu.

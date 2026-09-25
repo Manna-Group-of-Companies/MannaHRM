@@ -207,14 +207,6 @@ export default function EmployeeDetail() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Employee Detail</b>
-				<span className="cov part">Partial</span>
-				{/* One line, because the whole point of this page is that the form
-				    fits on a screen. The long version is at the head of this file. */}
-				<span>Their criteria form, and nothing else — <b>Generate Report</b> puts the rows underneath.</span>
-			</div>
-
 			<div className="repform">
 				{/* Their layout, and the reason it is two columns rather than one long
 				    one: the whole criteria screen fits on a laptop without scrolling,

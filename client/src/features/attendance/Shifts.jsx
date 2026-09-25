@@ -170,9 +170,15 @@ function ShiftPattern({ s }) {
 	const pattern = s.shMaster === "pattern";
 	const q = (s.shq || "").trim().toLowerCase();
 	const per = s.shper || 20;
-	const matched = q
-		? s.shiftTypes.filter((r) => (r.name || "").toLowerCase().includes(q))
+	/* Under a company in the top bar, that company's shifts and the ones left
+	   blank — blank is "any company may use it", not somebody else's. */
+	const coCol = s.shiftCo === true;
+	const inScope = coCol && s.company
+		? s.shiftTypes.filter((r) => !r.company || r.company === s.company)
 		: s.shiftTypes;
+	const matched = q
+		? inScope.filter((r) => `${r.name || ""} ${r.company || ""}`.toLowerCase().includes(q))
+		: inScope;
 	const rows = matched.slice(0, per);
 	/* How many people fall back to each shift, off the employee list that is
 	   already in hand. Scoped like every other page, so the number under a
@@ -254,8 +260,9 @@ function ShiftPattern({ s }) {
 				<table>
 					<thead>
 						<tr>
-							{["NAME", "EMPLOYEE COUNT", "ACTION"].map((h, i) => (
-								<th key={h} className={i ? "num" : undefined}>
+							{(coCol ? ["NAME", "COMPANY", "EMPLOYEE COUNT", "ACTION"]
+								: ["NAME", "EMPLOYEE COUNT", "ACTION"]).map((h) => (
+								<th key={h} className={h === "NAME" || h === "COMPANY" ? undefined : "num"}>
 									{h} <span className="sort">⇵</span>
 								</th>
 							))}
@@ -265,6 +272,12 @@ function ShiftPattern({ s }) {
 						{rows.map((r) => (
 							<tr key={r.name}>
 								<td><span className="fhname">{r.name}</span></td>
+								{coCol ? (
+									<td className={r.company ? undefined : "muted"}
+										title={r.company ? undefined : "No company set — any company may use this shift."}>
+										{r.company || "any"}
+									</td>
+								) : null}
 								{/* Their CATEGORY COUNT and IS DEFAULT columns are not drawn: a
 								    category is not how anybody is put on a shift here, and no
 								    field on Shift Type says one of them is the default. A column
@@ -318,24 +331,9 @@ function ShiftPattern({ s }) {
 
 export default function Shifts() {
 	const s = useApp();
-	const mine = s.counts.shift || 0;
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Manage Shift</b>
-				{/* Their 23 was a count off a screenshot of one company's page, and a
-				    denominator nothing here could ever reach. What is defined is what
-				    the site answered with. */}
-				<span className={"cov " + (mine ? "part" : "none")}>
-					{mine ? `${fmt(mine)} defined` : "none defined"}
-				</span>
-				<span>
-					Nothing can generate attendance until these are stated — a shift is what a punch is measured
-					against.
-				</span>
-			</div>
-
 			<div className="mt-[.8rem]">
 				<ShiftPattern s={s} />
 			</div>

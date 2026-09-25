@@ -261,16 +261,6 @@ export default function Ctc() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">CTC / Earnings</b>
-				{withCtc.length ? (
-					<span className="cov part">Partial</span>
-				) : (
-					<span className="cov none">No data</span>
-				)}
-				<span>Their criteria panel, control for control — <b>Generate</b> puts the report underneath.</span>
-			</div>
-
 			{/* Theirs is a menu, not a button: two items, both of them a file moving
 			    in or out, and both refused here for reasons that differ. Drawn as the
 			    menu it is — a single button would hide that there are two. */}

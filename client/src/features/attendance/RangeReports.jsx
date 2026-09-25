@@ -22,6 +22,7 @@ import { dailyRows, hm } from "@/lib/dailydetail";
 import { DAY, dmy, fmt, isoAgo, monthStart, tidyDept, todayIso, ymd } from "@/lib/format";
 import { download, toCsv } from "@/lib/csv";
 import { Empty, Note, Scroll } from "@/components/ui";
+import ExportButtons from "@/components/ExportButtons";
 
 /** The rows for a range, once the read for exactly that range is in. */
 function useRange(from, to) {
@@ -46,13 +47,18 @@ function useRange(from, to) {
 	return { ready, rows, people, err: d.key === `${from}|${to}|` ? d.err : "", company: s.company };
 }
 
-function Csv({ name, cols, rows }) {
+/** CSV, Excel and PDF of one table, off the one column list the table draws. */
+function Csv({ name, cols, rows, title, sub }) {
+	const cellsOf = (r) => cols.map((c) => { const v = c[1](r); return v == null ? "" : v; });
 	return (
-		<button type="button" className="embtn" disabled={!rows.length}
-			onClick={() => download(`${name}-${todayIso()}.csv`,
-				toCsv(cols.map((c) => c[0]), rows.map((r) => cols.map((c) => c[1](r)))))}>
-			Export CSV
-		</button>
+		<>
+			<button type="button" className="embtn" disabled={!rows.length}
+				onClick={() => download(`${name}-${todayIso()}.csv`, toCsv(cols.map((c) => c[0]), rows.map(cellsOf)))}>
+				Export CSV
+			</button>
+			<ExportButtons name={name} disabled={!rows.length}
+				sheets={() => [{ title, sub, head: cols.map((c) => c[0]), rows: rows.map(cellsOf) }]} />
+		</>
 	);
 }
 
@@ -128,7 +134,7 @@ export function OtReport() {
 				<label className="inline"><span>From</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
 				<label className="inline"><span>To</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
 				<span className="grow" />
-				<Csv name="ot-report" cols={OT_COLS} rows={ot} />
+				<Csv name="ot-report" cols={OT_COLS} rows={ot} title="OT Report" sub={`${dmy(from)} to ${dmy(to)}`} />
 			</div>
 			{err ? <div className="deerr" role="alert"><b>{err}</b></div> : null}
 			{!ready ? <div className="regload">Reading {dmy(from)} – {dmy(to)}…</div>
@@ -209,7 +215,7 @@ export function WeeklyReport() {
 				</label>
 				<button type="button" className="embtn" onClick={() => move(1)} aria-label="Next week">›</button>
 				<span className="grow" />
-				<Csv name="weekly-report" cols={csvCols} rows={ready ? list : []} />
+				<Csv name="weekly-report" cols={csvCols} rows={ready ? list : []} title="Weekly Report" sub={`${dmy(days[0])} to ${dmy(days[6])}`} />
 			</div>
 			{err ? <div className="deerr" role="alert"><b>{err}</b></div> : null}
 			{!ready ? <div className="regload">Reading the week…</div> : (
@@ -279,7 +285,7 @@ export function AbsentReport() {
 			<div className="embar">
 				<label className="inline"><span>Date</span><input type="date" value={day} onChange={(e) => setDay(e.target.value || todayIso())} /></label>
 				<span className="grow" />
-				<Csv name="absent-report" cols={ABSENT_COLS} rows={list} />
+				<Csv name="absent-report" cols={ABSENT_COLS} rows={list} title="Absent Report" sub={dmy(day)} />
 			</div>
 			{err ? <div className="deerr" role="alert"><b>{err}</b></div> : null}
 			{!ready ? <div className="regload">Reading {dmy(day)}…</div>

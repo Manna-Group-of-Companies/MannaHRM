@@ -55,24 +55,6 @@ export const MANAGED = [
 		+ "answer is a second letter."],
 
 	/* ---- Attendance ---- */
-	["attendance", "devices", "Attendance Devices", "Attendance Device",
-		"The fingerprint machines, and the thing that decides whether a punch is trusted. **A device "
-		+ "id that does not start with the trusted prefix is treated as a mobile punch and "
-		+ "geofenced** — so renaming one here breaks its punches, and inventing one lets an unknown "
-		+ "machine skip the fence. CLAUDE.md §5."],
-	["attendance", "deviceusers", "Machine Users", "Attendance Device User",
-		"Everybody enrolled on a fingerprint machine, as the bridge reads each machine's own user "
-		+ "list on every pass. **A blank Employee is the row to act on**: somebody the machine lets "
-		+ "punch whose number is nobody's Attendance Device ID, so every punch they make is refused. "
-		+ "Enrolled At is when they appeared, to within one poll — blank for anybody already on the "
-		+ "machine when the bridge first read it, because the machine keeps no enrolment date."],
-	["attendance", "machinecommands", "Machine Commands", "Machine Command",
-		"What somebody asked a fingerprint machine to do from here, and what it answered. A browser "
-		+ "cannot reach a machine — the bridge on the gate PC picks these up about every twenty "
-		+ "seconds, does it at the machine and writes the answer back. **A command still Pending "
-		+ "minutes later means no bridge is running for that machine**, not that the machine refused. "
-		+ "The list of actions is closed on the server and again in the bridge: nothing here clears a "
-		+ "punch log, wipes a machine or switches it off."],
 	["attendance", "locations", "Work Locations", "Work Location",
 		"The geofence: a coordinate and a radius per site. This is what a mobile punch is measured "
 		+ "against, so a radius typed too wide is a punch accepted from the next town — and one "
@@ -134,6 +116,29 @@ export const OWN_PAGES = [
 		"One company's month, closed. Submitting it is the freeze — from then on the site refuses any "
 		+ "attendance, approved leave or approved correction that would change a day in it — and "
 		+ "reopening it is refused once salary has been processed from the month. manna_hr/freeze.py."],
+];
+
+/* Installed, and deliberately given no page of its own. Each says why, because
+   the test that every doctype is managed somewhere reads this as the one
+   allowed exception.
+
+   `Machine Command` had a list at Attendance → Machine Commands until 24
+   September 2026, removed on request: the commands are left by the "on
+   machine" buttons (components/OnMachine.jsx) and answered by the bridge, so a
+   page of them was a log nobody needed to edit. The doctype stays — the bridge
+   reads it.
+
+   `Attendance Device` and `Attendance Device User` lost Attendance → Attendance
+   Devices and Machine Users the same day, also on request. Both doctypes stay:
+   the bridge writes the roster and the punch validation reads the devices'
+   trusted prefix. RELATED below still describes a device's form, so putting
+   the page back is its MANAGED row and nothing else. */
+export const NO_PAGE = [
+	["Machine Command", "Written by OnMachine.jsx and answered by the bridge; not edited by hand."],
+	["Attendance Device", "Hidden on request, 24 Sep 2026. Registered on the desk; a renamed device "
+		+ "id turns its punches into mobile ones (CLAUDE.md §5), so it is not a page to edit casually."],
+	["Attendance Device User", "Hidden on request, 24 Sep 2026. Written by the bridge from each "
+		+ "machine's own user list; read on the desk."],
 ];
 
 /* ---------------------------------------------------------------------------

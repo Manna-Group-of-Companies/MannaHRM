@@ -18,7 +18,7 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 		const tabs = tabsFor("attendance", MODULES.attendance.tabs, MRP);
 		expect(tabs.map((t) => t[1])).toEqual([
 			"Employee Attendance Regularization", "In Out Activities Report", "Monthly Basic Attendance", "OT Report",
-			"Daily Detail Attendance Report", "Absent Report", "Weekly Report", "Employee Working Time",
+			"Daily Detail Attendance Report", "Absent Report", "Weekly Report",
 		]);
 	});
 
@@ -40,7 +40,7 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 	it("the strip draws seven tabs for that login", async () => {
 		set({ ...loadedState(), user: MRP, section: "attendance", subtab: "inout" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link").map((a) => a.textContent)).toHaveLength(8);
+		expect(screen.getAllByRole("link").map((a) => a.textContent)).toHaveLength(7);
 	});
 
 	it.each([["OT", OtReport], ["Weekly", WeeklyReport], ["Absent", AbsentReport]])("%s report draws", async (_, C) => {
@@ -130,6 +130,22 @@ describe("a login that is not an admin", () => {
 		expect(sectionFor("leave", false, MRP)).toBe(false);
 	});
 
+	it("is not shown On Board unless it is the HR login, and neither is an admin", () => {
+		expect(sectionFor("onboard", false, "someone@mannarubber.com")).toBe(false);
+		expect(sectionFor("onboard", false, MRP)).toBe(false);
+		expect(sectionFor("onboard", true, "administrator")).toBe(false);
+		expect(sectionFor("onboard", null, "someone@mannarubber.com")).toBe(false);
+		expect(sectionFor("onboard", true, " HR@mannarubber.com ")).toBe(true);
+	});
+
+	it("the HR login is shown On Board's Onboarding page and none of its others", () => {
+		const HR = "hr@mannarubber.com";
+		expect(sectionFor("onboard", false, HR)).toBe(true);
+		expect(tabsFor("onboard", MODULES.onboard.tabs, HR, false).map((t) => t[0])).toEqual(["overview"]);
+		expect(landingFor("onboard", "letters", HR, false)).toBe("overview");
+		expect(allowedFor("employees", HR, false)).toEqual(["overview", "calendar", "profile", "joining"]);
+	});
+
 	it("lands on Employee Master from a page off the menu", () => {
 		expect(landingFor("employees", "detail", "", false)).toBe("overview");
 		expect(landingFor("employees", "calendar", "", false)).toBe("calendar");
@@ -191,28 +207,6 @@ describe("Monthly Basic Attendance fills itself from the site", () => {
 		});
 		await act(async () => { render(<Provider store={store}><MonthlyBasic /></Provider>); });
 		expect(document.querySelectorAll("table.muster tbody tr")).toHaveLength(1);
-	});
-});
-
-import { changesFor, shiftText, shiftsFor } from "@/lib/worktime";
-
-describe("Employee Working Time", () => {
-	const W = { Office: { start_time: "8:30:00", end_time: "17:30:00" }, Night: { start_time: "20:00:00", end_time: "08:00:00" } };
-
-	it("reads a shift as its hours, night shifts included", () => {
-		expect(shiftText("Office", W)).toBe("Office · 08:30–17:30 (9:00 hrs)");
-		expect(shiftText("Night", W)).toBe("Night · 20:00–08:00 (12:00 hrs)");
-	});
-
-	it("offers a company's own working times first", () => {
-		const emps = [{ company: "A", default_shift: "Night" }, { company: "B", default_shift: "Office" }, { company: "A", default_shift: "Night" }];
-		expect(shiftsFor("A", emps, [{ name: "Office" }, { name: "Night" }]).map((x) => [x.name, x.people]))
-			.toEqual([["Night", 2], ["Office", 0]]);
-	});
-
-	it("only changes ticked people whose time differs", () => {
-		const ppl = [{ name: "1", default_shift: "Office" }, { name: "2", default_shift: "Night" }, { name: "3" }];
-		expect(changesFor(ppl, new Set(["1", "2"]), "Office").map((e) => e.name)).toEqual(["2"]);
 	});
 });
 

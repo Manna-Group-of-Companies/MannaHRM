@@ -59,6 +59,9 @@ const initial = {
 	    HR's shifts, and whether a row of theirs exists here yet is the difference
 	    between a control that can open it and one that has nothing to open. */
 	shiftTypes: [],
+	/** Whether the site's Shift Type has our `custom_company` field — true,
+	    false, or null until the load has asked. See api/shifttype.js. */
+	shiftCo: null,
 	/* The two masters behind Category Type. Only their counts were kept before,
 	   which was enough for a tile and not enough for the screen behind View
 	   Category — that one lists them by name. */
@@ -224,7 +227,7 @@ const initial = {
 	   it back to false rather than leaving a stale report up. */
 	dda: {
 		emp: "", q: "", status: "Active", by: "", period: "date", from: "", to: "",
-		tab: "criteria", layout: { group: true, logo: true }, more: false, run: false,
+		tab: "criteria", layout: { logo: true }, more: false, run: false,
 		msg: "", menu: false,
 		/* The Advance tab, all four controls of it. `dow` holds weekday numbers
 		   the way `Date.getDay` gives them, so a filter written here and a date
@@ -244,27 +247,22 @@ const initial = {
 	   regularization screen — who is picked is state, not a scroll position.
 	   `list` is their List of Employees panel, which is a second way into the
 	   same choice rather than a different screen. */
-	/* Leave → Leave Balance Report. Factor HR's own form, control for control:
-	   the same toolbar the three attendance reports carry, then As On Date,
-	   Leave Type and Layout Options under Report Criteria, and Group By under
-	   Advance. Photographed 29 Aug 2026.
+	/* Leave → Leave Balance Report: employee, status, leave type, As On Date,
+	   and the file type Download writes. Rebuilt 24 Sep 2026 without Factor
+	   HR's toolbar — see LeaveBalances.jsx.
 
 	   `ason` rather than a range, because a balance is a position on a date and
-	   not a total over a period — that is the one way this form differs from the
-	   attendance reports it otherwise copies. Empty means today; it is resolved
-	   at render so the page does not go stale sitting open overnight. */
-	lvb: {
-		emp: "", q: "", status: "Active", by: "", tab: "criteria",
-		ason: "", ltype: "", layout: { logo: true }, gby: "",
-		run: false, msg: "", menu: false, fmt: "Excel", fmenu: false, gmenu: false,
-	},
+	   not a total over a period. Empty means today; it is resolved at render so
+	   the page does not go stale sitting open overnight. */
+	lvb: { emp: "", status: "Active", ltype: "", ason: "", fmt: "Excel" },
 	/** Approved leave applications, read once when the report is first opened.
 	    `lvbState` guards the read; `lvbErr` is why it failed, if it did. */
 	lvbRows: [],
+	/** The leave ledger, read with them — what each person was allocated.
+	    `null` when it has not been read or the site refused it. */
+	lvbLedger: null,
 	lvbState: "",
 	lvbErr: "",
-	/** The rendered report, held while Preview is open. */
-	lvbDoc: "",
 
 	sal: { emp: "", q: "", status: "", menu: false, list: false },
 
@@ -669,6 +667,11 @@ const initial = {
 	/** The rendered grid, held while Preview is open — the same document Print,
 	    PDF and Word are handed. */
 	mbDoc: "",
+	/* Monthly Summary Attendance — one row per person per month. See
+	   MonthlySummary.jsx and lib/monthlysummary.js. */
+	msum: {
+		emp: "", status: "Active", from: "", till: "", when: "", busy: false, err: "", msg: "",
+	},
 	/** The generated grid, keyed `employee|YYYY-MM-DD` to the Attendance status
 	    that day carries. The status, not the row: the grid draws one letter per
 	    cell, and holding the whole document would invite a second opinion about
@@ -690,7 +693,8 @@ const initial = {
 
 	/* The In / Out Activity report. Its date range is the one control on this
 	   page that has to reach the site — everything else filters what came back
-	   — so nothing is fetched until Generate is pressed. */
+	   — so a range other than today is fetched when it is picked. Today is
+	   answered from the punches the dashboard already loaded. */
 	io: {
 		emp: "", status: "Active", by: "", period: "Date Wise", from: "", till: "",
 		t1: "00:00", t2: "23:59", selfie: true, logo: true, logtype: "", stream: "",
@@ -703,13 +707,23 @@ const initial = {
 		   chosen format sticks, the way it does on their screen: somebody who
 		   prints this report prints it every week. */
 		fmt: "Excel", fmenu: false,
+		/* Every punch, or "day": one row per person per day, first and last. */
+		view: "",
 		/* Generate is a split button here too, and gmenu is its list. */
 		gmenu: false,
 	},
 	ioRows: null, ioState: "", ioMsg: "", ioRan: "",
+
+	/* App Punches — the phone app's own stream, sliced out of the same doctype
+	   In / Out Activities Report reads. See features/attendance/AppPunches. */
+	ap: { from: "", till: "", view: "" },
+	apRows: null, apState: "", apMsg: "", apRan: "",
 	/** The punch whose map is open — `{lat, lng, who, when, where}` — or null.
 	    One for the whole app: see components/PunchMap.jsx. */
 	punchMap: null,
+	/** The punch whose photo is open — `{src, who, when}` — or null. See
+	    components/PunchPhoto.jsx. */
+	punchPhoto: null,
 	/** Surveyed places, for "35 m from Main Gate". See loadWorkLocations. */
 	workLocs: [], workLocState: "",
 	/** The rendered report, held while Preview is open. It is the same document
@@ -779,6 +793,18 @@ const initial = {
 		type: "", from: "", till: "", fromval: "1", tillval: "1",
 		remarks: "", file: "", notify: "", notifyq: "", notifymenu: false,
 		month: "", busy: false, sending: false, msg: "", err: "",
+		/* The weekend/holiday dates a Sandwich Leave preview found, waiting on
+		   Cancel/Continue — null when there is nothing to confirm. */
+		sandwichDates: null,
+		/* True between the first and second click on the calendar: the first
+		   picked the From Date, the next picks the Till Date. */
+		picking: false,
+		/* Give monthly leave, while it runs and what it answered. */
+		giving: false, giveMsg: "",
+		/* The last Save was refused for want of an allocation. */
+		noAlloc: false,
+		/* The Leave Approver sent with the application, and why it is that one. */
+		approver: "", approverWhy: "",
 	},
 	/** Every Leave Application for the chosen person, any status — read when
 	    they are picked. The globally-loaded list holds only Open ones, because
@@ -788,6 +814,12 @@ const initial = {
 	/** That person's Attendance for the month on screen, keyed `YYYY-MM-DD` to
 	    its status, for the calendar's Absent colour. */
 	applyAtt: {},
+	/* First and last punch per day for the person on Apply Leave — see loadLeaveFor. */
+	applyPunch: {},
+	/* The person's leave balance per type, off hrms — see loadLeaveBalance. */
+	applyBal: null,
+	/* The Leave pane on Employee Profile — api/profileleave.js. `null` is not read yet. */
+	profLeave: null,
 
 	/* The queue toolbar's own state. */
 	apptab: "attendance",
@@ -803,7 +835,7 @@ const initial = {
 	    picked. Keyed on the month; see loadRegGrid. */
 	regGrid: { key: "", state: "", err: "", punches: [], leave: [], ar: [] },
 	/** The card whose tick or cross is waiting on its confirmation. */
-	appdecide: { name: "", action: "", note: "", busy: false },
+	appdecide: { name: "", action: "", note: "", busy: false, queue: "" },
 
 	/* The Other queue is a grid with its own filters and its own staged
 	   decisions; none of it belongs to the card queues. */

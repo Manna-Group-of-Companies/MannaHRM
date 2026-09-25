@@ -119,7 +119,6 @@ const DEAD_CONTROLS = {
 	"employees/detail": { empty: 13, loaded: 13 },
 	"employees/import": { empty: 1, loaded: 0 },
 	"employees/new": { empty: 1, loaded: 1 },
-	"leave/overview": { empty: 1, loaded: 1 },
 	"loans/overview": { empty: 3, loaded: 3 },
 	"onboard/assets": { empty: 12, loaded: 12 },
 	"onboard/assignment": { empty: 15, loaded: 15 },

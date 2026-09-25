@@ -189,6 +189,10 @@ export const SHW_BLANK = (name = "") => ({
 	err: "",
 	busy: false,
 	f: {
+		/* Which company the shift is for. The + seeds it from the company
+		   selector in the top bar, so somebody working inside one company is not
+		   asked twice. */
+		company: "",
 		name,
 		isdefault: false,
 		kind: "time",
@@ -231,7 +235,7 @@ const mins = (v) => Math.max(0, Math.round(Number(v) || 0));
  * drops an unknown key without a word, so sending one would be a value that
  * saved, reported success and was never there.
  */
-export function shiftDoc(f) {
+export function shiftDoc(f, { company = true } = {}) {
 	const doc = {
 		name: String(f.name || "").trim(),
 		start_time: toSite(f.start),
@@ -239,6 +243,10 @@ export function shiftDoc(f) {
 		begin_check_in_before_shift_start_time: mins(f.early),
 		allow_check_out_after_shift_end_time: mins(f.late),
 	};
+	/* `custom_company` is ours, a Custom Field on hrms' Shift Type (install.py).
+	   Not sent where the site is known not to have it — Frappe would drop it
+	   without a word and the save would report a company it never stored. */
+	if (company && f.company) doc.custom_company = f.company;
 	/* Grace by category has nowhere to land, so the two numbers only go over
 	   when they are meant to apply to everybody — which is what the field means
 	   on the site. */

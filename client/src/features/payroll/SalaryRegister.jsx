@@ -10,7 +10,6 @@ import {
 } from "@/data/payroll";
 import { Desk, Empty, Gap, Html, Note, Scroll, panelProps, tabProps } from "@/components/ui";
 import { load } from "@/api/load";
-import { PayLegend } from "./shared";
 
 /* SALARY REGISTER, photographed 29 August 2026 and drawn here control for
    control: two tabs with refresh and a Generate split button pinned to the tab
@@ -517,11 +516,6 @@ export default function SalaryRegister() {
 
 	return (
 		<>
-			<PayLegend what="Salary Register">
-				The same report, under the same name, on both sides — and the one Factor HR export the whole
-				of payroll is waiting on.
-			</PayLegend>
-
 			<SregForm s={s} />
 
 			{s.sreg.run && <SregOut s={s} />}

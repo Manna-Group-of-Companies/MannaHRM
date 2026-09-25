@@ -444,6 +444,17 @@ def port_open(host, port=ZK_PORT, timeout=0.5):
 		return False
 
 
+def subnet_hosts(nets):
+	"""Every address in each /24 that `private_subnets` names.
+
+	`scan` wants addresses, and `private_subnets` answers networks. Handing it
+	the networks is a search that asks "192.168.1" whether it is a machine and
+	reports that there are none, in a fifth of a second - which is what the
+	console's search did until this existed.
+	"""
+	return ["{0}.{1}".format(net, i) for net in nets for i in range(1, 255)]
+
+
 def scan(hosts, port=ZK_PORT):
 	with ThreadPoolExecutor(max_workers=64) as pool:
 		answers = list(pool.map(lambda host: (host, port_open(host, port)), hosts))
@@ -578,7 +589,7 @@ def choose_devices(site, prefix, existing):
 		for net in nets:
 			print("  searching {0}.1 to {0}.254 on port {1} ...".format(net, ZK_PORT))
 			known = {device.get("host") for device in devices}
-			found = [host for host in scan(["{0}.{1}".format(net, i) for i in range(1, 255)]) if host not in known]
+			found = [host for host in scan(subnet_hosts([net])) if host not in known]
 			if not found:
 				print("  nothing new answering on {0}.x".format(net))
 			for host in found:
@@ -938,7 +949,7 @@ def run_auto(config_path, auto_path, today=None, interactive=None):
 	hosts = []
 	for net in private_subnets(this_pcs_addresses()):
 		print("  searching {0}.1 to {0}.254 ...".format(net))
-		hosts += scan(["{0}.{1}".format(net, i) for i in range(1, 255)])
+		hosts += scan(subnet_hosts([net]))
 	# Named in the file: a machine on another subnet of the same plant, which
 	# the search cannot see but this PC can still reach.
 	hosts += [str(h).strip() for h in machines.get("hosts", []) if str(h).strip()]

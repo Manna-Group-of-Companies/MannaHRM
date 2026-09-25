@@ -8,6 +8,11 @@ import OnMachine from "@/components/OnMachine";
 import MachineNumber from "@/components/MachineNumber";
 import { deskUrl } from "@/lib/desk";
 import { createEmployee } from "@/api/employee";
+import { markCandidate } from "@/api/candidate";
+import { giveNewJoinerLeave } from "@/api/monthlyleave";
+import { todayIso } from "@/lib/format";
+import { LEAVE_TYPE_NAME, policyTitle } from "@/lib/monthlyleave";
+import { loadCandidates } from "@/api/load";
 import { openEmployee } from "@/features/employees/openEmployee";
 import {
 	ED_STATUSES, PUNCH_METHODS, NEW_EMP_COPIED, NEW_EMP_HINT, NEW_EMP_NOFIELD, NEW_EMP_STEPS,
@@ -102,6 +107,9 @@ function optionsFor(s, all, f) {
 		shift:           [s.shiftTypes.map((x) => x.name), true],
 		holiday:         [s.holidayLists.map((x) => x.name), true],
 		reports_to:      [managers, true],
+		/* Casual Leave is offered even on a site that has not got it yet —
+		   giving it is what creates it (api/monthlyleave.js). */
+		leavetype:       [uniq([{ n: LEAVE_TYPE_NAME }, ...s.leaveTypes.map((t) => ({ n: t.name }))], "n"), true],
 		/* A location switched off is a gate that closed — see workLocations in
 		   initialState.js, which is already filtered to the active ones. */
 		worklocation:    [s.workLocations.map((x) => [x.name, x.location_name || x.name]), true],
@@ -186,6 +194,8 @@ function Field({ row, opts, value, onChange }) {
 					<input id={id} type={type} value={value} required={Boolean(req)}
 						/* A negative notice period is not a shorter one. */
 						min={type === "number" ? 0 : undefined}
+						/* Half days are real leave; nothing else on this form is fractional. */
+						step={name === "leaves_a_month" ? 0.5 : undefined}
 						onChange={(e) => onChange(e.target.value)} />
 				)}
 			</span>
@@ -195,10 +205,10 @@ function Field({ row, opts, value, onChange }) {
 
 export default function CreateEmployee() {
 	const s = useApp();
-	const { step, f, busy, done, err } = s.newemp;
+	const { step, f, busy, done, err, from, fromName, extra, marked, leave: gave } = s.newemp;
 	const all = scoped(s);
 	const opts = optionsFor(s, all, f);
-	const { gaps, bad } = problemsOf(f, s.employees);
+	const { gaps, bad } = problemsOf(f, s.employees, s.leaveTypes);
 
 	const here = NEW_EMP_STEPS[step];
 	const last = step === NEW_EMP_STEPS.length - 1;
@@ -214,8 +224,31 @@ export default function CreateEmployee() {
 	async function create() {
 		patch("newemp", { busy: "creating", err: "", done: null });
 		try {
-			const doc = await createEmployee(f);
-			patch("newemp", { busy: "", done: doc });
+			const doc = await createEmployee(f, extra);
+			/* Filled from an onboarding candidate: say so on the candidate, after
+			   the Employee exists and never before — api/candidate.js says why
+			   that order. A refused mark is reported, not hidden: the person
+			   exists and the queue does not know it yet. */
+			let mark = null;
+			if (from && doc?.name) {
+				const r = await markCandidate(from, doc.name);
+				mark = r.ok ? "ok" : r.error || "refused";
+				void loadCandidates(true);
+			}
+			/* The leave after the Employee, because the assignment names the
+			   Employee — and never throws, because by here the person exists and
+			   a refusal is a sentence on the done screen, not a lost hire. 0 is
+			   an answer that writes nothing. */
+			const perMonth = Number(f.leaves_a_month);
+			let leave = { none: true };
+			if (doc?.name && perMonth > 0) {
+				patch("newemp", { busy: "giving leave" });
+				leave = await giveNewJoinerLeave(doc, perMonth, todayIso(), f.leave_type || LEAVE_TYPE_NAME);
+			}
+			patch("newemp", {
+				busy: "", done: doc, marked: mark,
+				leave: { ...leave, perMonth, type: f.leave_type || LEAVE_TYPE_NAME },
+			});
 			/* The directory behind this page is a list read at startup, and the
 			   person just hired is not in it. Re-read rather than splice one row in:
 			   the site names the record, fills the naming series and may have
@@ -246,11 +279,32 @@ export default function CreateEmployee() {
 				<div className="wizdone">
 					<b>{done.employee_name || "Employee"} is on the site.</b>
 					<span className="mono">{id}</span>
+					{from ? (
+						<p>
+							{marked === "ok"
+								? <>Onboarding candidate <b>{fromName}</b> is marked Completed and linked to this record.</>
+								: <>Created, but onboarding candidate <b>{fromName}</b> could not be marked as taken —
+									{" "}{marked}. Creating them again from Onboarding would make a second record.</>}
+						</p>
+					) : null}
 					<p>
 						Created as <b>{done.status || "Active"}</b>
 						{done.company ? <> in <b>{done.company}</b></> : null}. The directory is being
 						re-read, so they appear in Employee Master in a moment.
 					</p>
+					{gave ? (
+						<p>
+							{gave.none
+								? <>No {gave.type} given — 0 a month was asked for.</>
+								: gave.ok
+									? <>{gave.type}: <b>{gave.perMonth} a month</b>, credited from <b>{gave.from}</b> and
+										carried forward when not taken.</>
+									: <>Created, but the {gave.perMonth} a month {gave.type} was not given —
+										{" "}{gave.error}. Give it on the site as a Leave Policy Assignment on
+										{" "}<b>{policyTitle(gave.perMonth, gave.type)}</b> — Give monthly leave on Apply Leave
+										gives 1 Casual Leave a month, whatever was asked for here.</>}
+						</p>
+					) : null}
 					{done.custom_punch_method ? (
 						<p>
 							Punches on <b>{done.custom_punch_method}</b>.
@@ -313,6 +367,7 @@ export default function CreateEmployee() {
 			<div className="srback">
 				{back}
 				<span className="muted">
+					{from ? <>Filled from onboarding candidate <b>{fromName}</b> — check each step, then add the Emp Code and Machine Code · </> : null}
 					Create Employee · step {step + 1} of {NEW_EMP_STEPS.length}
 					{blank ? "" : " · typed here, nothing created yet — it keeps if you leave"}
 				</span>
@@ -434,7 +489,7 @@ export default function CreateEmployee() {
 										? "Fix what is listed above first."
 										: "Create this Employee on the site, as you and under your own ERPNext roles."}
 								onClick={() => void create()}>
-								{busy ? "Creating…" : "Create Employee"}
+								{busy === "giving leave" ? "Giving leave…" : busy ? "Creating…" : "Create Employee"}
 							</button>
 						</>
 					) : (

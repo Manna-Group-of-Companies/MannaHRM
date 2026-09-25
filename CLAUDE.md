@@ -81,6 +81,7 @@ exists — a private bench is not a preference here.
 | `bridge/machine.py`, `push_users.py`, `employee_tools.py` | The only code that writes to a machine: run by hand from the Machine Tools menu, dry run first, never the log. `employee_tools.py create` also writes the Employee, site first |
 | `bridge/INSTALL.bat`, `install.sh` | Put a bridge on a new PC: Python, the key, the machines, a service. `package.ps1` builds the zip that carries it — never zip the folder, it holds a key |
 | `app/` | The phone app. Punch in, punch out, the month, and the correction — see `app/README.md` |
+| `desktop/` | Manna Attendance, the gate PC's Windows program (Flutter): eSSL's screens, each one a question to `bridge/console.py`, which holds the rules. Ships in the bridge's zip as `app\` — see `desktop/README.md` |
 | `docs/` | Runbook, schema, migration, open questions |
 
 The repo root **is** the Frappe app root, so `bench get-app` works against it
@@ -104,6 +105,7 @@ cd client && npm test                     # 2,675 tests, jsdom
 cd client && npm run contrast             # both palettes, every pairing, AA
 cd client && npm run shots                # the app in a real browser, light and dark
 cd app && flutter test                    # 50 tests, no site and no handset
+cd desktop && flutter test                # 21 tests, no console, no machine, no site
 ```
 
 The Python ones cover `rules.py`, `geo.py`, the approval workflow's tables, the
@@ -345,6 +347,14 @@ existing `Attendance Log` history should be migrated is still open.
 - **Payroll and shift rosters are untouched** — attendance first. Leave is one
   write: Apply Leave raises a Leave Application as an **Open draft**
   (`client/src/features/leave/raise.js`), and approving and submitting stay
-  with the approver. Nothing allocates leave. The site refuses an application
-  with no Leave Allocation behind it, and until HR decides the entitlements
-  that is every application on a counted leave type.
+  with the approver. **Casual Leave is one a month, carried forward** (HR, 24
+  September 2026): hrms Earned Leave, defined in `manna_hr/leavepolicy.py` and
+  put on the site by `tools/setup_monthly_leave.py` — or by **Give monthly
+  leave** on Apply Leave, the same steps as the signed-in HR user
+  (`client/src/api/monthlyleave.js`; its values are pinned to the Python by
+  `client/tests/leave.test.js`). Either one assigns from the current month,
+  never retroactively. That button is why `Leave Policy` and `Leave Policy
+  Assignment` are on `apiCreateSubmitted`'s short list: a draft of either gives
+  nobody any leave. Factor HR's opening balances are not
+  loaded yet. The site refuses an application with no Leave Allocation behind
+  it, so until the tool has run, that is every Casual Leave application.

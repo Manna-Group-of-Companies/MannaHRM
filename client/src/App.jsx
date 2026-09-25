@@ -72,10 +72,9 @@ export default function App() {
 			const dda = s.dda.menu || s.dda.fmenu || s.dda.gmenu;
 			const mb = s.mb.fmenu || s.mb.gmenu;
 			const lv = s.apply.menu || s.apply.notifymenu;
-			const lvb = s.lvb.menu || s.lvb.fmenu || s.lvb.gmenu;
 			const sreg = s.sreg.menu || s.sreg.gmenu;
 			const psl = s.psl.menu || s.psl.gmenu;
-			if (s.empmenu || s.empnew || s.empmore || s.reg.menu || dda || mb || lv || lvb || sreg || psl || s.sal.menu
+			if (s.empmenu || s.empnew || s.empmore || s.reg.menu || dda || mb || lv || sreg || psl || s.sal.menu
 				|| s.adhoc.menu || s.io.menu || s.io.fmenu || s.io.gmenu || s.ctcMenu || s.asg.menu || s.catimp || s.calimp
 				|| s.tbnotif || s.tbme || s.catdlg.rcdopen || s.catnew.rcdopen) {
 				set({
@@ -115,9 +114,6 @@ export default function App() {
 					/* Two on Apply Leave: the employee search's dot and the one on Email
 					   Notification To, which filter the same list. */
 					apply: { ...s.apply, menu: false, notifymenu: false },
-					/* Three on the Leave Balance Report: the status dot, the export list
-					   and the Generate list — the same trio the attendance reports carry. */
-					lvb: { ...s.lvb, menu: false, fmenu: false, gmenu: false },
 					/* Two on the Salary Register: the status dot and the Generate list,
 					   which their form pins to the tab row rather than to a bar. */
 					sreg: { ...s.sreg, menu: false, gmenu: false },
@@ -136,9 +132,9 @@ export default function App() {
 			if (getState().appdialog) return set({ appdialog: "", dlgmsg: "" });
 			if (getState().ioDoc) return set({ ioDoc: "" });
 			if (getState().punchMap) return set({ punchMap: null });
+			if (getState().punchPhoto) return set({ punchPhoto: null });
 			if (getState().ddaDoc) return set({ ddaDoc: "" });
 			if (getState().mbDoc) return set({ mbDoc: "" });
-			if (getState().lvbDoc) return set({ lvbDoc: "" });
 			if (getState().pslDoc) return set({ pslDoc: "" });
 			closeMenus();
 		};

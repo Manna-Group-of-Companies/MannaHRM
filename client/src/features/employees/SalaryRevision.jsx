@@ -422,26 +422,6 @@ export default function SalaryRevision({ emp }) {
 				</div>
 			)}
 
-			<div className="legend">
-				<b className="font-display">Salary revision</b>
-				<span className="cov part">Saves as drafts</span>
-				<span>
-					Their form, control for control. <b>Both SAVE buttons write two drafts</b> — a Salary
-					Structure and a Salary Structure Assignment — and neither can submit them: this is the
-					one screen in Factor HR whose output is somebody&rsquo;s wages, so what makes them
-					payroll stays on the site.
-				</span>
-				<button className="btn ghost ml-auto" disabled={!touched.length}
-					title={ro
-						? "Pick somebody first — an export with no name on it is a file nobody can file."
-						: touched.length
-							? `Write the ${touched.length} row${touched.length === 1 ? "" : "s"} touched here to CSV. Blank rows are left out — thirty-four rows of nothing is not a revision.`
-							: "Nothing has been typed yet."}
-					onClick={() => revCsv(emp, d)}>
-					⬇ Export CSV
-				</button>
-			</div>
-
 			<Scroll>
 				<table className={"salrev" + (ro ? " ro" : "")} style={{ minWidth: 880 }}>
 					<thead>

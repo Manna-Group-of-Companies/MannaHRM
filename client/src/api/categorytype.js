@@ -1,6 +1,6 @@
-import { apiCreate, listAll } from "@/api/client";
+import { api, apiCreate, listAll } from "@/api/client";
 import { set } from "@/store";
-import { CT_CF_FIELDS, CT_CF_FILTER, ctDoc } from "@/data/categorytype";
+import { CT_CF_FIELDS, CT_CF_FILTER, ctDoc, ctFieldsFromMeta } from "@/data/categorytype";
 
 /* ---------------------------------------------------------------------------
    Employees → Categories: the category types this site holds, and creating one.
@@ -23,14 +23,22 @@ import { CT_CF_FIELDS, CT_CF_FILTER, ctDoc } from "@/data/categorytype";
    than as a silent no-op. `apiCreate` throws and the dialog prints what the
    site said.
 
-   ## The read may be refused on its own
+   ## The read may be refused on its own, and there is a second way in
 
    `Custom Field` is System Manager's doctype to read as well as to write, so an
-   HR User signing in sees the eight rows of Factor HR's master and none of
-   ours. That is a different finding from a site with no categories on it, so
-   the state is carried alongside the rows instead of being inferred from an
-   empty list — the screen says which of the two happened.
+   HR User asking for it directly is refused. The same fields are merged into
+   Employee's meta, which the desk hands anybody who may open an Employee — so
+   a refusal falls back to that, and the HR User sees the categories that exist
+   rather than a list that reads as "nobody has added one". Only if both are
+   refused is the state "denied", and the screen says so instead of inferring
+   it from an empty list.
    --------------------------------------------------------------------------- */
+
+/** Employee's meta, which carries every Custom Field on it. */
+async function fieldsFromMeta() {
+	const r = await api("/api/method/frappe.desk.form.load.getdoctype", { doctype: "Employee" });
+	return ctFieldsFromMeta(r && r.docs);
+}
 
 /** Every category type this site holds, into the store.
 
@@ -44,6 +52,15 @@ export async function loadCategoryTypes() {
 		set({ empFields: rows || [], empFieldsState: "ok" });
 		return rows || [];
 	} catch (e) {
+		if (e && e.status === 403) {
+			try {
+				const rows = await fieldsFromMeta();
+				set({ empFields: rows, empFieldsState: "ok" });
+				return rows;
+			} catch {
+				/* Falls through to "denied": the direct read's refusal is the finding. */
+			}
+		}
 		/* The rows are left as they were rather than blanked. A refreshed read
 		   that fails should not empty a list somebody is looking at. */
 		set({ empFieldsState: e && e.status === 403 ? "denied" : "bad" });

@@ -39,7 +39,6 @@ export default function People({ people, note, extra, cap = 200 }) {
 		<>
 			<div className="legend">
 				<b className="font-display">{fmt(people.length)} people</b>
-				<span className="cov live">Already read</span>
 				<span>
 					{note}
 					{people.length > cap

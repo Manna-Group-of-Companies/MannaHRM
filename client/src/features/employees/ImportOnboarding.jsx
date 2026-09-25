@@ -164,7 +164,7 @@ function CodeBox({ s, cand, value, onChange }) {
 
 export default function ImportOnboarding() {
 	const s = useApp();
-	const full = s.candTier === "full";
+	const full = s.candTier === "full" || s.candTier === "extra";
 
 	/* Read on arrival, once. The guard is in the loader rather than here so a
 	   re-render — a keystroke in the search box is one — cannot ask twice. */

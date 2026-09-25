@@ -807,16 +807,6 @@ export default function Calendar() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Calendar</b>
-				{lists.length ? (
-					<span className="cov part">Partial</span>
-				) : (
-					<span className="cov none">Nothing to show</span>
-				)}
-				<span>Holiday lists and weekly offs — the days nobody is expected in.</span>
-			</div>
-
 			{/* The month itself first, as Factor HR opens it. The panels underneath
 			    are the reconciliation: what the grid is drawn from and what it is
 			    missing. */}

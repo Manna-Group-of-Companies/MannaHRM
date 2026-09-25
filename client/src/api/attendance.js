@@ -1,5 +1,6 @@
 import { listAll } from "@/api/client";
 import { getState, set } from "@/store";
+import { lastOfMonth } from "@/lib/format";
 
 /* ---------------------------------------------------------------------------
    One person's month, read from the site.
@@ -63,11 +64,8 @@ const AR_FIELDS = ["name", "employee", "attendance_date", "requested_in", "reque
 const AR_MIN = ["name", "employee", "attendance_date", "status"];
 
 /** `YYYY-MM` → the first and last day of it, as the site writes dates.
-
-    `-01` and `-31` rather than the real last day: a `<=` against `-31` catches
-    every month, and no date that is not in the month can sort between them.
-    Frappe compares these as strings too. */
-const monthRange = (ym) => [ym + "-01", ym + "-31"];
+    The real last day — see `lastOfMonth`. */
+const monthRange = (ym) => [ym + "-01", lastOfMonth(ym)];
 
 /**
  * Read one employee's month into `regMonth`.

@@ -1,4 +1,6 @@
+import { ANNUAL_ALLOCATION, LEAVE_TYPE_NAME } from "@/lib/monthlyleave";
 import { dmy, dmyTime, tidyDept } from "@/lib/format";
+import { balanceOf } from "@/lib/leavebalance";
 /* ---------------------------------------------------------------------------
    Factor HR's Leave menu, read off the tenant on 29 Aug 2026:
 
@@ -37,13 +39,31 @@ export const LEAVE_VALUES = [["1", "Full Day"], ["0.5f", "First Half"], ["0.5s",
     `fill` is the swatch; `from` is what answers it here, and two of the seven
     have nothing that can. Kept in the legend anyway: a colour dropped from a
     key is a gap nobody can see. */
+/** The monthly leave, as the calendar draws it: one Casual Leave earned on
+    the 1st of every month. **A copy of `manna_hr/leavepolicy.py`**, where the
+    site's own policy is defined, and pinned to it by tests/leave.test.js — the
+    calendar marks the day the rule says a leave arrives, but the balance it
+    prints beside it is always the site's (`get_leave_details`), never this. */
+export const MONTHLY_LEAVE = { type: LEAVE_TYPE_NAME, annual: ANNUAL_ALLOCATION, code: "CL" };
+
+/** The letter each state carries in a calendar cell, beside its dot — so a
+    month can be read without matching seven colours against the key. */
+export const LV_CODE = {
+  present: "P", absent: "A", weekoff: "WO", unappr: "L?", partial: "½",
+  holiday: "H", appr: "L", opthol: "OH",
+};
+
 export const LV_LEGEND = [
-  ["absent",   "Absent",           "#EF6C6C", "Attendance rows marked Absent — the site holds none yet"],
+  /* Not on their key. Added 24 September 2026, asked for: picking somebody
+     should show *their* month, and a month where only the bad days carry a
+     mark reads as a month nobody came in. First, because it is most days. */
+  ["present",  "Present",          "#3BB273", "Attendance rows marked Present or Work From Home"],
+  ["absent",   "Absent",           "#EF6C6C", "Attendance rows marked Absent"],
   ["weekoff",  "WeekOff",          "#26252A", "the employee's holiday list, rows flagged weekly off"],
   ["unappr",   "UnApprovedLeave",  "#F2D24B", "a Leave Application still Open"],
-  ["partial",  "Partial",          "#F0932B", "a half day — <code>half_day_date</code> on the application"],
+  ["partial",  "Partial",          "#F0932B", "a half day — <code>half_day_date</code> on the application, or an Attendance row marked Half Day"],
   ["holiday",  "Holiday",          "#6C63FF", "the employee's holiday list, named holidays"],
-  ["appr",     "ApprovedLeave",    "#918D93", "a Leave Application that has been Approved"],
+  ["appr",     "ApprovedLeave",    "#918D93", "a Leave Application that has been Approved, or an Attendance row marked On Leave"],
   ["opthol",   "OptionalHoliday",  "#7A3E1D",
    "<b>nothing here can fill this.</b> A stock ERPNext <code>Holiday</code> row carries a date, a description and a weekly-off flag — there is no optional flag on it, and no second list of optional days. Factor HR treats optional holidays as a category somebody picks from; rebuilding that is a decision, not a query"],
 ];
@@ -94,41 +114,32 @@ export const APPLY_FIELDS = [
 ];
 
 /* ---------------------------------------------------------------------------
-   Leave Balance Report — the form, photographed 29 Aug 2026.
-
-   Their screen carries the same toolbar the three attendance reports carry, so
-   the controls on it are not restated here: Particular Employee, Employee
-   Status and Filter By are the shared ones and are drawn from the shared lists.
-   What is below is only what this report has of its own.
+   Leave Balance Report — its columns. The form is in LeaveBalances.jsx.
    --------------------------------------------------------------------------- */
 
-/** Their Layout Options box holds one chip on this report, where Daily Detail's
-    holds two. Kept as a list rather than a boolean because it is the same
-    control, and a second chip appearing there should be one line here. */
-export const LVB_LAYOUT = [["logo", "With Logo"]];
+/** The output, in the order Factor HR's own Leave Balance Report reads, with
+    Status after Department and the entitlement split three ways.
 
-/** The output, in the order Factor HR's own Leave Balance Report reads.
+    **Assigned, Carried Fwd, Expired and Balance come off the leave ledger**
+    (lib/leavebalance.js), since 24 September 2026. Before that they were drawn
+    blank, because the site held no Leave Allocation to read; Give monthly leave
+    changed that. They are still `—` for a type the person was never allocated
+    — Leave Without Pay has no balance to have — and for everybody when the
+    ledger could not be read. A blank is not a zero, and the two are drawn apart.
 
-    Three of the seven cannot be filled and are drawn anyway, marked `gone`:
+    Availed is approved applications, clipped at the As On Date, as before. */
+const days = (n) => (n == null ? "—" : n.toFixed(1));
+const alloc = (k) => (r) => days(r.alloc ? r.alloc[k] : null);
 
-    - **Entitled** and **Balance** need an entitlement per person per type. In
-      ERPNext that is `Leave Allocation` and the ledger under it — a doctype
-      no screen here reads, and one the site holds none of. Two separate
-      reasons, either of which alone is enough; see `loadLeaveBalances` in
-      `api/load.js` for why reading it is not this report's decision to take.
-    - So **Availed is the only one of Factor HR's figures this side can answer**,
-      and it is answered honestly: approved applications, clipped at the As On
-      Date. That is the whole finding of this screen, and it is drawn as three
-      empty columns rather than written in a footnote, because a column that is
-      missing is a column nobody argues about.
-
-    A blank column is not the same as a zero, and the two are drawn apart. */
 export const LVB_COLS = [
   ["Employee Code", (r) => r.emp.employee_number || "—", "mono"],
   ["Employee Name", (r) => r.emp.employee_name || r.emp.name, ""],
   ["Department", (r) => tidyDept(r.emp.department), ""],
+  ["Status", (r) => r.emp.status || "—", ""],
   ["Leave Type", (r) => r.type, ""],
-  ["Entitled", () => "—", "mono gone"],
-  ["Availed", (r) => r.availed.toFixed(1), "mono"],
-  ["Balance", () => "—", "mono gone"],
+  ["Assigned", alloc("assigned"), "mono"],
+  ["Carried Fwd", alloc("carried"), "mono"],
+  ["Expired", alloc("expired"), "mono"],
+  ["Availed", (r) => days(r.availed), "mono"],
+  ["Balance", (r) => days(balanceOf(r)), "mono"],
 ];

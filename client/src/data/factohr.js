@@ -20,13 +20,17 @@
 
    `here` is `[section, subtab]` — the page in this app that answers that item —
    or `null`, which means **nothing here answers it yet**. `null` is the useful
-   half of this file: 106 of the 160 are null, and that number is the honest
+   half of this file: 105 of the 160 are null, and that number is the honest
    size of what is left. A row is never deleted to make the list look shorter.
 
    It was 119 when this file was written on 8 September 2026. Fifteen of their
    reports were built the same day — `data/reports.js` — off data the site
    already held, so the number a reader sees moves when somebody builds
-   something and at no other time.
+   something and at no other time. Overtime Report went to the OT Report on
+   25 September 2026, the day Factor HR's September overtime was loaded into
+   `Employee Overtime`: the same rows by date, with the shift, the punches and
+   the hours, which is their report less an approval column that a granted
+   row does not need.
 
    `kind` is theirs: Transaction (things you do), Reports (things you read),
    Setup (things you configure). Their menu is split that way and HR reads it
@@ -151,7 +155,7 @@ export const FACTOHR_MENU = [
 	["attendance", "Reports", "Monthly Basic Attendance",
 		"Monthly Basic Attendance", "Monthly basic attendance report", ["attendance", "monthly"]],
 	["attendance", "Reports", "Monthly Basic Attendance",
-		"Monthly Summary Attendance", "Monthly summary attendance report", null],
+		"Monthly Summary Attendance", "Monthly summary attendance report", ["attendance", "summary"]],
 	["attendance", "Reports", "Monthly Basic Attendance",
 		"In Out Summary Report", "In Out summary report", null],
 	["attendance", "Reports", "Monthly Basic Attendance",
@@ -171,7 +175,7 @@ export const FACTOHR_MENU = [
 	["attendance", "Reports", "Late Coming Report",
 		"MSP Report", "Missed punch report", ["attendance", "msp"]],
 	["attendance", "Reports", "Overtime Report",
-		"Overtime Report", "Overtime report", null],
+		"Overtime Report", "Overtime report", ["attendance", "ot"]],
 	["attendance", "Reports", "Overtime Report",
 		"Attendance Regularization Report", "Attendance regularization report", ["attendance", "overview"]],
 	["attendance", "Reports", "Overtime Report",

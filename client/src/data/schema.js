@@ -2202,6 +2202,48 @@ export const SCHEMA = {
 				label: "Punching Closes",
 				kind: "time",
 				def: "21:30:00"
+			},
+			{
+				name: "enable_sandwich_leave",
+				label: "Enable Sandwich Leave",
+				kind: "check",
+				def: "0",
+				hint: "Factor HR's Sandwich Leave: a weekend or holiday run with leave or absence on the working day immediately either side of it is counted as leave too. Off until HR confirms the policy group-wide — see docs/OPEN_QUESTIONS.md."
+			},
+			{
+				name: "onboarding_form_url",
+				label: "Google Form URL",
+				kind: "text",
+				hint: "The Form's own share link — what the Onboarding page's Share Google Form button hands to an employee. Not read for anything else: this box is never used to fetch a submission."
+			},
+			{
+				name: "onboarding_sheet_id",
+				label: "Google Sheet ID",
+				kind: "text",
+				hint: "The id in the linked Sheet's URL, between /d/ and /edit. That Sheet is what Sync Now reads — not the Form."
+			},
+			{
+				name: "onboarding_oauth_client_id",
+				label: "OAuth Client ID",
+				kind: "text",
+				hint: "A Google OAuth client's id, from a Desktop app OAuth client on the same GCP project — not a service account. Used with the refresh token below rather than a service-account key, because this project's org policy (iam.disableServiceAccountKeyCreation) refuses to create one. See tools/google_form_oauth.py for getting the refresh token."
+			},
+			{
+				name: "onboarding_oauth_client_secret",
+				label: "OAuth Client Secret",
+				kind: "password"
+			},
+			{
+				name: "onboarding_oauth_refresh_token",
+				label: "OAuth Refresh Token",
+				kind: "password",
+				hint: "Long-lived — obtained once by signing in as a Google account that can read the Sheet, and good until that account revokes it. Run tools/google_form_oauth.py on your own machine (never on the bench) to get one; it opens a browser, asks you to sign in and consent, and prints the token to paste here."
+			},
+			{
+				name: "onboarding_last_sync",
+				label: "Last Synced",
+				kind: "readonly",
+				hint: "Set by Sync Now, never typed. Empty means the Sheet has not been read yet."
 			}
 		]
 	},

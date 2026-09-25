@@ -24,12 +24,17 @@ const COMPANY_EMPLOYEES = ["overview", "calendar", "profile", "joining"];
 
 export const USER_MENUS = {
 	"mannarubber.products@mannarubber.com": {
-		attendance: ["overview", "inout", "monthly", "ot", "daily", "absent", "weekly", "worktime"],
+		attendance: ["overview", "inout", "monthly", "ot", "daily", "absent", "weekly"],
 		employees: COMPANY_EMPLOYEES,
 	},
 	"hitechrubber@mannarubber.com": { employees: COMPANY_EMPLOYEES },
 	"mannatreads@mannarubber.com": { employees: COMPANY_EMPLOYEES },
 	"mannatyreretreads@mannarubber.com": { employees: COMPANY_EMPLOYEES },
+	/* Asked for on 24 September 2026: On Board is this login's alone (ONLY_FOR
+	   below), and of it, Onboarding alone — Letters, Documents and Assets are
+	   still built and still at their addresses, just not on its strip. Its
+	   Employees module is still USER_ONLY's four. */
+	"hr@mannarubber.com": { onboard: ["overview"] },
 };
 
 /* What a login that is not an admin is shown, asked for on 17 September 2026:
@@ -50,11 +55,20 @@ export const ALL_MENUS = {
 	dashboard: ["overview", "approvals"],
 };
 
-const loginMenu = (user) => USER_MENUS[String(user || "").trim().toLowerCase()] || null;
+/* Modules only the logins named here are shown, admin or not. Asked for on
+   24 September 2026: On Board is the HR login's and nobody else's. Still a
+   menu — `/onboard` is refused nothing by the site for being left off it. */
+export const ONLY_FOR = {
+	onboard: ["hr@mannarubber.com"],
+};
+
+const login = (user) => String(user || "").trim().toLowerCase();
+const loginMenu = (user) => USER_MENUS[login(user)] || null;
 
 /** Whether a module is on this login's rail at all. */
 export const sectionFor = (section, admin, user) =>
-	admin !== false || section in USER_ONLY || Boolean(loginMenu(user)?.[section]);
+	section in ONLY_FOR ? ONLY_FOR[section].includes(login(user))
+		: admin !== false || section in USER_ONLY || Boolean(loginMenu(user)?.[section]);
 
 /** The first page a user is sent to when they land somewhere off their menu. */
 export const USER_HOME = ["employees", "overview"];

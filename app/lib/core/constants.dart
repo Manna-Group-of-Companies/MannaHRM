@@ -36,6 +36,11 @@ const String kOpenStatus = 'Pending Approval';
 /// phone punch trustworthy. See `manna_hr/checkin.py::_classify_source`.
 const String kDeviceIdPrefix = 'PHONE-';
 
+/// Where the punch photo lands on `Employee Checkin` — an Attach Image custom
+/// field, declared in `manna_hr/install.py`. Read by the dashboard's App
+/// Punches page under the same name.
+const String kPhotoField = 'custom_photo';
+
 /// The working window, repeated from `Manna HR Settings`' shipped defaults.
 ///
 /// **This app is not what enforces it.** The server checks the same two numbers

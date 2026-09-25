@@ -12,7 +12,6 @@ import {
 } from "@/data/payroll";
 import { Desk, Gap, Scroll, panelProps, tabProps } from "@/components/ui";
 
-import { PayLegend } from "./shared";
 
 /* Factor HR's SALARY PROCESS, photographed 29 August 2026 on MAR 2026, drawn
    control for control: three lists, the strip of twelve month chips with a "+"
@@ -195,12 +194,6 @@ export default function SalaryProcess() {
 
 	return (
 		<>
-			<PayLegend what="Salary Process">
-				The monthly run. In Frappe HR it is <code>Payroll Entry</code> → <code>Salary Slip</code>,
-				and it is stock — which is not the same as it being ready. Their screen is drawn below as
-				photographed; <b>nothing on this side runs a payroll.</b>
-			</PayLegend>
-
 			<div className="fhscreen">
 				<div className="spbar">
 					<span className="adf">

@@ -23,6 +23,8 @@ DEFAULTS = {
 	"enforce_punch_window": 1,
 	"require_location_for_mobile": 1,
 	"trusted_device_prefix": "BIO-",
+	# Off until HR confirms the policy group-wide — see docs/OPEN_QUESTIONS.md.
+	"enable_sandwich_leave": 0,
 }
 
 

@@ -50,6 +50,14 @@ export const monthEnd = () => {
 	return ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 };
 
+/** `YYYY-MM` → its real last day. Never `-31` for every month: Frappe runs a
+    Date filter through `getdate`, which refuses 31 September outright, and a
+    caller that swallows the error draws a month with nothing in it. */
+export const lastOfMonth = (ym) => {
+	const [y, m] = ym.split("-").map(Number);
+	return ymd(new Date(y, m, 0));
+};
+
 /** "2026-08-24 17:15" for a log line, from the browser clock, in local time. */
 export const nowStamp = () => {
 	const d = new Date();

@@ -1084,6 +1084,7 @@
   .embtn:active:not([disabled]) { @apply bg-brand-tint; }
   .embtn[aria-pressed="true"]  { @apply bg-brand-soft border-brand text-brand-deep font-semibold; }
   .embtn[disabled]             { @apply opacity-[.45] cursor-not-allowed; }
+  .embtn.off                   { @apply opacity-[.45] cursor-not-allowed; }
   /* A control that removes something. Outlined rather than filled: a solid red
      button is the most eye-catching thing on a toolbar, and the most
      eye-catching thing should not be the one that deletes. */
@@ -1165,6 +1166,17 @@
   /* The export list hangs off the right-hand edge of the form, so it opens
      leftwards — anchored left it would run off the page on a narrow screen. */
   .emmenu.end { left: auto; right: 0; }
+
+  /* components/EmpPick.jsx — a searchable employee box on the report forms.
+     The list is an `.emmenu`, capped in height because a search that matches
+     a hundred people should scroll inside itself, not push the page. */
+  .emppick { @apply relative inline-flex min-w-[14rem]; }
+  .emppick > input { @apply w-full; }
+  .emppick .emmenu { @apply w-full max-h-[18rem] overflow-y-auto z-30; }
+  .emppick .emmenu button { @apply justify-between py-[.4rem]; }
+  .emppick .emmenu button.hi { @apply bg-brand-soft text-brand-deep; }
+  .emppick .emmenu .k { @apply text-micro text-ink-3 font-mono whitespace-nowrap; }
+  .emppick .emmenu .none { @apply text-micro text-ink-3 px-[.6rem] py-[.45rem]; }
   /* Categories' ↑ menu. `.emmenu`'s 10rem is right for the short labels every
      other menu on it carries — "File Import", "Export Employees Data" — and one
      word too narrow for "Data import from file", which wrapped onto two lines
@@ -1196,6 +1208,16 @@
     font-size: inherit;
   }
   .locbtn:hover { @apply underline; }
+
+  /* The punch photo. Fixed square so a column of them lines up whatever shape
+     the phone's camera handed back. */
+  .photobtn { @apply bg-transparent border-0 p-0 cursor-pointer block; }
+  .photobtn img { @apply w-[2.6rem] h-[2.6rem] object-cover rounded border border-line; }
+  .photobtn:hover img { @apply border-brand; }
+  .photobig {
+    @apply block mx-auto max-w-full rounded border border-line;
+    max-height: min(60vh, 480px);
+  }
 
   .cards { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
   .ecard {
@@ -2172,10 +2194,25 @@
   .exppair .embtn { @apply px-[.4rem] shrink-0 gap-[.25rem]; }
   .exppair input { @apply flex-1 min-w-0; }
 
-  .expfoot { @apply flex flex-wrap gap-[.6rem] items-center pt-[.2rem]; }
+  .expfoot { @apply flex flex-wrap gap-[.6rem] items-center flex-1 min-w-0; }
   .expfoot .cnt { @apply text-fine text-ink-3; }
   .expfoot .btn { @apply ml-auto; }
   .expfoot .btn svg { @apply w-[15px] h-[15px] stroke-current fill-none; }
+
+  /* Ours, added 24 Sep 2026 with the whole-record file: Excel or PDF, and
+     which sections go in it. The swatch is the section's colour in the file,
+     set inline from lib/employeeexport.js — data, not a theme role. */
+  .expfmt { @apply flex gap-[.35rem]; }
+  .expfmt .embtn { @apply flex-1; }
+  .expfmt .embtn.on { @apply bg-brand-soft text-brand-deep border-brand font-semibold; }
+  .expsecs {
+    @apply grid gap-x-[1rem] gap-y-[.45rem] border border-line rounded px-[.8rem] pt-[.4rem] pb-[.7rem] m-0;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  }
+  .expsecs legend { @apply text-fine text-ink font-semibold px-[.3rem] flex gap-[.6rem] items-baseline; }
+  .expsecs legend .lnk { @apply text-mini font-normal bg-transparent border-0 p-0 cursor-pointer; }
+  .expsec { @apply flex items-center gap-[.45rem] text-read text-ink-2 cursor-pointer min-w-0; }
+  .expsec i { @apply inline-block w-[.8rem] h-[.8rem] rounded-sm shrink-0; }
 
   .onbcodes { @apply flex flex-col gap-[.5rem] max-h-[40vh] overflow-auto; }
   .onbcode { @apply grid gap-x-[.6rem] gap-y-[.2rem] items-center; grid-template-columns: 1fr 9rem; }
@@ -3259,6 +3296,15 @@
   table.muster th.d, table.muster td.d { @apply px-[.2rem] py-[.3rem] text-center font-mono text-tiny; }
   table.muster th.d small { @apply block text-micro font-normal text-ink-3; }
   table.muster td.d.wo  { @apply bg-skip-wash text-skip font-semibold; }
+  /* App Punches' grid: a whole day, a punch missing, and — on either — a punch
+     the server put outside the fence, in the one colour that means trouble. */
+  table.muster td.d.full { @apply bg-live-wash text-live; }
+  table.muster td.d.half { @apply bg-part-wash text-part; }
+  table.muster td.d.off  { @apply text-bad font-semibold; }
+  table.muster td.d.full, table.muster td.d.half { @apply whitespace-pre leading-tight; }
+  table.apt td.good { @apply text-live font-semibold; }
+  table.apt td.warn { @apply text-part font-semibold; }
+  table.apt td.bad  { @apply text-bad font-semibold; }
   table.muster td.d.non { @apply text-line-2; }
   table.muster td.pay { @apply font-mono text-right text-ink-3; }
 
@@ -3524,9 +3570,38 @@
   .lvf .hint { @apply text-mini text-ink-3; }
   .lvf b { @apply text-norm; }
 
+  /* Apply Leave as a grid (asked for on 25 September 2026): the person across
+     the top, the month on the left, the application in a card on the right.
+     It was one column capped at 46rem, which left a third of a desk monitor
+     empty and put Save a screen below the day being clicked. The form column
+     has a floor rather than a share, so Remarks never narrows past a
+     sentence; below 1100px there is no room for both and it is one column
+     again, in the order it is filled in. */
+  .lvlayout {
+    @apply grid gap-x-[1.2rem] gap-y-[1rem] items-start mb-[1.2rem];
+    grid-template-columns: minmax(0, 1.4fr) minmax(20rem, 1fr);
+  }
+  .lvlayout > .wide { grid-column: 1 / -1; }
+  .lvcol { @apply flex flex-col gap-[1rem] min-w-0; }
+  .lvapply { @apply bg-card border border-line rounded-lg shadow-raise px-[1rem] py-[.9rem]; }
+  .lvlayout .lvf select, .lvlayout .lvf textarea { @apply w-full; }
+  @media (max-width: 1100px) {
+    .lvlayout { grid-template-columns: minmax(0, 1fr); }
+  }
+  .lvbal { @apply flex flex-wrap gap-[.6rem]; }
+  .lvbal > .muted { @apply text-read text-ink-2; }
+  .lvbal.col { @apply flex-col items-start bg-card border border-line rounded-md px-[.8rem] py-[.7rem]; }
+  .lvbalrow { @apply flex flex-wrap items-baseline gap-x-[.5rem] gap-y-[.1rem] bg-card border border-line
+                     rounded-md px-[.8rem] py-[.55rem] text-read; }
+  .lvbalrow .big { @apply font-display font-semibold text-fig leading-none text-brand-dark tabular-nums; }
+  .lvbalrow .muted { @apply text-fine text-ink-3; }
+  .lvf .hint.warn { @apply text-bad; }
+  .lvpair { @apply grid gap-[1rem]; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
   .lvcal { @apply bg-card border border-line rounded-md p-[.7rem] flex flex-col gap-[.7rem]; }
   .lvcalbar { @apply flex flex-wrap items-center gap-[.5rem]; }
   .lvcalbar b { @apply font-display font-semibold text-fig leading-none text-brand-dark; }
+  .lvcalbar .who { @apply flex flex-col gap-[.3rem] min-w-0; }
+  .lvcalbar .who small { @apply text-fine text-ink-2 truncate; }
   .lvcalbar .nav { @apply ml-auto flex gap-[.4rem]; }
   /* Their month controls are outlined, not filled — the screenshot of 29 Aug
      2026. Worth copying rather than tidying: a filled pair of chevrons sitting
@@ -3548,10 +3623,19 @@
   }
   .lvgrid .dow { @apply text-center font-semibold text-fine text-ink py-[.4rem] border-r border-b border-line; }
   .lvgrid .cell {
-    @apply relative border-r border-b border-line min-h-[3.1rem] px-[.4rem] pt-[.3rem] pb-[.5rem]
+    @apply relative border-r border-b border-line min-h-[3.6rem] px-[.4rem] pt-[.3rem] pb-[.5rem]
            text-right font-mono text-read text-ink tabular-nums;
   }
   .lvgrid .cell.out { @apply text-line-2; }
+  /* A day is a button once somebody is chosen. Reset to look like the cell it
+     replaces, so the grid does not change shape between the two. */
+  button.cell { @apply bg-transparent cursor-pointer w-full; font: inherit; color: inherit; }
+  button.cell:hover { @apply bg-wash; }
+  button.cell:focus-visible { outline: 2px solid rgb(var(--brand)); outline-offset: -2px; }
+  /* The chosen range: tinted across, ruled at both ends. A tint rather than a
+     fill, so the state letter under the number still reads through it. */
+  .lvgrid .cell.lvsel { background: rgb(var(--brand) / .12); }
+  .lvgrid .cell.lvsel.end { box-shadow: inset 0 0 0 2px rgb(var(--brand)); }
   /* Their own today-fill, a pale amber. It cannot be mistaken for one of the
      seven states even though one of those is yellow: state is carried by the
      dot under the number and never by the cell's fill. */
@@ -3559,7 +3643,11 @@
   /* The colour sits under the number rather than behind it: seven fills behind
      a date is a grid nobody can read the dates off. */
   .lvdot { @apply inline-block w-[.5rem] h-[.5rem] rounded-full align-middle; flex: 0 0 .5rem; }
-  .lvgrid .lvdot { @apply absolute left-1/2 bottom-[.22rem]; transform: translateX(-50%); }
+  /* The dot and its letter, under the number: the letter is what lets the
+     month be read without the key, the dot is what matches the key. */
+  .lvtag { @apply absolute left-[.4rem] bottom-[.25rem] inline-flex items-center gap-[.2rem]
+               font-sans text-mini font-semibold text-ink-2 leading-none; }
+  .lvdot.present { background: #3BB273; }
   .lvdot.absent  { background: #EF6C6C; }
   .lvdot.weekoff { background: #9A96A6; }
   .lvdot.unappr  { background: #F2D24B; }
@@ -3574,6 +3662,24 @@
      dark page. Same hue, far enough up to be a dot on `#141922`. */
   .lvkey { @apply flex flex-wrap gap-x-[.9rem] gap-y-[.3rem] text-fine text-ink-2; }
   .lvkey span { @apply inline-flex items-center gap-[.3rem]; }
+  .lvhint { @apply text-fine text-ink-2; }
+  .lvhint b { @apply text-ink; }
+  /* First and last punch, top left, opposite the day number: small, because
+     it is a detail of the day and the number is what the eye finds first. */
+  .lvtimes { @apply absolute left-[.4rem] top-[.3rem] text-left font-mono text-mini text-ink-3 leading-tight; }
+  /* The month's leave arriving, on the 1st: a small tag on the right, under the
+     day number, so it never sits where the state letter or the punches go. */
+  .lvearn { @apply absolute right-[.4rem] bottom-[.25rem] font-sans text-mini font-semibold
+                   text-brand-dark leading-none; }
+  .lvmonth { @apply flex flex-wrap items-baseline gap-x-[1rem] gap-y-[.2rem] text-fine text-ink-2
+                    bg-brand-soft rounded px-[.7rem] py-[.45rem]; }
+  .lvmonth b { @apply text-ink tabular-nums; }
+  .lvmonth .muted { @apply text-ink-3; }
+  .lvtally { @apply flex flex-wrap gap-x-[.9rem] gap-y-[.3rem] text-fine text-ink-2
+                 border-t border-line pt-[.5rem]; }
+  .lvtally span { @apply inline-flex items-center gap-[.3rem]; }
+  .lvtally b { @apply text-ink tabular-nums; }
+  .lvtally.none { @apply block text-ink-3; }
 
   /* An inline link inside prose, as opposed to a control. */
   .lnk { @apply text-accent underline underline-offset-2; }
@@ -4537,15 +4643,6 @@
   .ddalogo .mark .c { @apply text-char; }
   .ddalogo b { @apply block font-display text-ink text-norm; }
   .ddacount { @apply font-mono text-mini text-ink-3; }
-  .ddagroup { @apply bg-card border border-line rounded-md overflow-hidden; }
-  .ddagroup > header {
-    @apply flex flex-wrap gap-y-[.4rem] gap-x-[.8rem] items-baseline px-[.8rem] py-[.5rem] border-b border-line text-read;
-  }
-  .ddagroup > header b { @apply font-display; }
-  .ddagroup > header .mono  { @apply font-mono text-mini text-ink-2; }
-  .ddagroup > header .muted { @apply text-fine; }
-  .ddagroup > header .n     { @apply ml-auto font-mono text-mini text-ink-3; }
-  .ddagroup .scroll { @apply border-0 rounded-none; }
   .ddasection { @apply flex flex-col gap-[.5rem]; }
   .ddasection h4 { @apply font-display text-read font-semibold text-ink-2 flex gap-[.6rem] items-baseline mt-[.3rem] mb-0; }
   .ddasection h4 span { @apply font-mono text-tiny text-ink-3; }
@@ -5049,7 +5146,7 @@
   /* Export Employees Data drops to one column. The dialog is 560px wide and at
      this width it is the viewport, and two date boxes side by side inside that
      are two boxes nobody can read a year out of. */
-  .expgrid { grid-template-columns: 1fr; }
+  .expgrid, .expsecs { grid-template-columns: 1fr; }
 
   /* Schedule Report's two columns, and its ticks, go the same way and for the
      same reason: "Send To Active Employees Without Their Sub-ordinates" is not

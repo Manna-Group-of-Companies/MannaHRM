@@ -61,8 +61,8 @@ describe("mounted under a prefix, which is the site", () => {
 
 	it("takes the prefix off a path the browser gives it", async () => {
 		const r = await routerWith("/hr");
-		expect(r.routeFromPath("/hr/employees/detail"))
-			.toMatchObject({ section: "employees", subtab: "detail" });
+		expect(r.routeFromPath("/hr/employees/calendar"))
+			.toMatchObject({ section: "employees", subtab: "calendar" });
 	});
 
 	/* The mount on its own is the front page — the same answer `/` gives at the

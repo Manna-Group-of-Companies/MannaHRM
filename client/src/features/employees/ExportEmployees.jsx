@@ -1,11 +1,13 @@
 import { patch, useApp } from "@/store";
 import { Modal } from "@/components/ui";
-import { scoped, uniq } from "@/lib/scope";
-import { download, toCsv } from "@/lib/csv";
+import { uniq } from "@/lib/scope";
 import { fmt, tally, tidyDept, todayIso } from "@/lib/format";
 import {
-	EXPORT_CATS, EXPORT_CAT_WHY, EXPORT_COLS, EXPORT_DEAD, STATUS_ROWS,
+	EXPORT_CATS, EXPORT_CAT_WHY, EXPORT_DEAD, STATUS_ROWS,
 } from "@/data/employees";
+import {
+	EMP_SECTIONS, EMP_SECTION_KEYS, employeesPdf, employeesXlsx, exportSheets, readForExport,
+} from "@/lib/employeeexport";
 
 /* ---------------------------------------------------------------------------
    **Export Employees Data** — Factor HR's dialog, behind Employee Master's ⋯,
@@ -50,6 +52,16 @@ import {
    that filters nothing. So picking one opens a second box of that category's
    values, and the page says that the second box is this site's answer rather
    than theirs.
+
+   ## The file is the whole record now (24 Sep 2026)
+
+   It used to be a CSV of the eight columns the cards draw. HR asked for every
+   person's full record — Identity, PF / ESIC, Salary Master, Personal, Family,
+   Qualification — as an Excel or a PDF, for one company at a time. So three
+   controls were added around theirs, and they are ours: **Company**, which
+   starts at the top bar's pick and can be changed here without leaving the
+   page; **Download As**; and **Sections**. What goes in each section and how it
+   is coloured is `lib/employeeexport.js`.
    --------------------------------------------------------------------------- */
 
 /** How a person reads on the Search Employee list.
@@ -129,9 +141,18 @@ function catsFor(all) {
     One function, read by the count on the button and by the file itself, so the
     number somebody is shown and the number of rows they get cannot disagree —
     which is the same bargain `masterRows` makes for the page behind this. */
+/** The dialog's own company, not the top bar's: somebody exporting one
+    company should not have to change what every other page shows to do it.
+    `undefined` (state from before this control existed) follows the bar. */
+const companyOf = (s) => (s.exp.company === undefined ? s.company || "" : s.exp.company);
+const inCompany = (s) => {
+	const co = companyOf(s);
+	return co ? s.employees.filter((e) => e.company === co) : s.employees;
+};
+
 function exportRows(s) {
 	const f = s.exp;
-	let rows = scoped(s);
+	let rows = inCompany(s);
 
 	if (f.status) rows = rows.filter((e) => e.status === f.status);
 	if (f.emp) rows = rows.filter((e) => e.name === f.emp);
@@ -152,37 +173,15 @@ function exportRows(s) {
 	return rows;
 }
 
-/** The file. Kept beside the filter above so the columns and the rows are
-    decided in one place.
-
-    The group column goes in front when it is not already one of the eight —
-    a file sorted on a field it does not carry reads as a file in no order at
-    all. `tidyDept` on Department for the same reason the screen uses it: the
-    site's own department names carry a company abbreviation this dashboard has
-    never shown anybody. */
-function writeCsv(s, rows) {
-	const groupBy = s.exp.groupBy;
-	const already = EXPORT_COLS.some(([, field]) => field === groupBy);
-	const cat = EXPORT_CATS.find(([field]) => field === groupBy);
-	const cols = groupBy && !already ? [[cat ? cat[1] : groupBy, groupBy], ...EXPORT_COLS] : EXPORT_COLS;
-
-	const value = (e, field) =>
-		field === "department" ? tidyDept(e.department)
-			: field === "date_of_joining" ? String(e.date_of_joining || "").slice(0, 10)
-				: field === "employee_number" ? (e.employee_number || e.name)
-					: (e[field] || "");
-
-	const name = `employees-${todayIso()}.csv`;
-	download(name, toCsv(cols.map(([label]) => label), rows.map((e) => cols.map(([, f]) => value(e, f)))));
-	return name;
-}
-
 export default function ExportEmployees({ onClose }) {
 	const s = useApp();
 	const f = s.exp;
 	const setF = (part) => patch("exp", { ...part, msg: "" });
 
-	const all = scoped(s);
+	const all = inCompany(s);
+	const company = companyOf(s);
+	const keys = f.sections || EMP_SECTION_KEYS;
+	const format = f.format || "xlsx";
 	const statuses = tally(all, "status");
 	/* Active and Inactive whether or not anybody is in them, then anything else
 	   the records carry — the same list the status filter on the bar behind this
@@ -207,12 +206,34 @@ export default function ExportEmployees({ onClose }) {
 	   quietly came back with everybody. */
 	const noHit = typed.trim() && !hit;
 
-	function generate() {
-		const name = writeCsv(s, rows);
-		patch("exp", {
-			msg: `${fmt(rows.length)} row(s) written to ${name}.`
-				+ (rows.length ? "" : " A file of headers and no rows is not an empty answer, it is a confusing one — check the criteria."),
-		});
+	const toggle = (k) => {
+		const next = keys.includes(k) ? keys.filter((x) => x !== k) : [...keys, k];
+		/* Kept in the sections' own order, so the workbook's tabs do not
+		   depend on the order somebody clicked the boxes in. */
+		setF({ sections: EMP_SECTION_KEYS.filter((x) => next.includes(x)) });
+	};
+
+	async function generate() {
+		const say = (busy) => patch("exp", { busy });
+		say("Reading employee records…");
+		try {
+			const { docs, notes } = await readForExport(rows, keys, say);
+			const cat = EXPORT_CATS.find(([k]) => k === f.filterBy);
+			const crit = [
+				company || "All companies",
+				f.status ? `Status: ${f.status}` : "",
+				cat && f.filterVal ? `${cat[1]}: ${tidyDept(f.filterVal)}` : "",
+				`${fmt(rows.length)} employee(s)`,
+			].filter(Boolean).join("  ·  ");
+			const sheets = exportSheets(docs, keys, { sub: crit, notes });
+			const stem = `employees-${(company || "all-companies").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${todayIso()}`;
+			const name = `${stem}.${format === "pdf" ? "pdf" : "xlsx"}`;
+			say("Writing the file…");
+			await (format === "pdf" ? employeesPdf : employeesXlsx)(sheets, name);
+			patch("exp", { busy: "", msg: `${fmt(rows.length)} employee(s), ${keys.length} section(s), written to ${name}.` });
+		} catch (e) {
+			patch("exp", { busy: "", msg: `Could not write the file: ${String(e.message || e).slice(0, 200)}` });
+		}
 	}
 
 	/* Whether the dialog opened holding anything. Said only when it did — a line
@@ -223,6 +244,31 @@ export default function ExportEmployees({ onClose }) {
 	return (
 		<Modal
 			title="Export Employees Data"
+			wide
+			/* Generate Report beside Close, outside the scroll: with Sections under
+			   the criteria this dialog is taller than a laptop screen, and the
+			   first report of it was a user who never saw the button. */
+			foot={
+				<div className="expfoot">
+					<span className="cnt">
+						{fmt(rows.length)}
+						{rows.length === all.length ? "" : " of " + fmt(all.length)} person(s) in the file
+					</span>
+					<button className="btn tpl" onClick={generate}
+						disabled={!rows.length || !keys.length || Boolean(f.busy)}
+						title={!rows.length
+							? "Nothing to export — nobody is left after the criteria above."
+							: !keys.length
+								? "Pick at least one section."
+								: `Write these people's records to ${format === "pdf" ? "a PDF" : "an Excel workbook"}.`}>
+						<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none"
+							strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+							<path d="M12 4v10.5M8 11l4 4 4-4M4 20h16" />
+						</svg>
+						{f.busy || "Generate Report"}
+					</button>
+				</div>
+			}
 			extra={
 				<div className="expform">
 					{seeded ? (
@@ -234,6 +280,34 @@ export default function ExportEmployees({ onClose }) {
 					) : null}
 
 					<div className="expgrid">
+						<Field id="expCompany" label="Company"
+							note={<span className="hint">
+								{company === (s.company || "")
+									? "The company on the top bar."
+									: "Only for this file — the top bar is unchanged."}
+							</span>}>
+							<select id="expCompany" value={company}
+								onChange={(e) => setF({ company: e.target.value, emp: "", empText: "", filterVal: "" })}>
+								<option value="">All companies</option>
+								{s.companies.map((c) => (
+									<option key={c.name} value={c.name}>{c.company_name || c.name}</option>
+								))}
+							</select>
+						</Field>
+
+						<Field id="expFormat" label="Download As">
+							<span id="expFormat" className="expfmt" role="radiogroup" aria-label="Download as">
+								{[["xlsx", "Excel", "One coloured sheet per section, plus All Details side by side"],
+									["pdf", "PDF", "One coloured table per section, landscape A4"]].map(([v, label, why]) => (
+									<button key={v} type="button" role="radio" aria-checked={format === v}
+										className={"embtn" + (format === v ? " on" : "")} title={why}
+										onClick={() => setF({ format: v })}>
+										{label}
+									</button>
+								))}
+							</span>
+						</Field>
+
 						<Field id="expStatus" label="Employee Status">
 							<select id="expStatus" value={f.status}
 								onChange={(e) => setF({ status: e.target.value })}>
@@ -313,7 +387,7 @@ export default function ExportEmployees({ onClose }) {
 						<Field id="expGroup" label="Group By"
 							note={<span className="hint">
 								{f.groupBy
-									? "Rows ordered by it, and the column added to the file when it is not one of the eight already — which is what grouping means in a flat file."
+									? "Rows ordered by it on every sheet — which is what grouping means in a flat file."
 									: "Optional. With none, the file is in the order the site sent."}
 							</span>}>
 							<select id="expGroup" value={f.groupBy}
@@ -324,24 +398,28 @@ export default function ExportEmployees({ onClose }) {
 						</Field>
 					</div>
 
-					{f.msg ? <div className="note">{f.msg}</div> : null}
+					<fieldset className="expsecs">
+						<legend>
+							Sections
+							<button type="button" className="lnk" onClick={() => setF({
+								sections: keys.length === EMP_SECTION_KEYS.length ? [] : EMP_SECTION_KEYS,
+							})}>
+								{keys.length === EMP_SECTION_KEYS.length ? "Clear all" : "Select all"}
+							</button>
+						</legend>
+						{EMP_SECTIONS.map((sec) => (
+							<label key={sec.key} className="expsec">
+								<input type="checkbox" checked={keys.includes(sec.key)} onChange={() => toggle(sec.key)} />
+								{/* The section's colour in the file, so a box here and a sheet
+								    tab there can be matched by eye. Data, like a chart's series
+								    colour — not a theme role. */}
+								<i style={{ background: "#" + sec.color }} aria-hidden="true" />
+								{sec.title}
+							</label>
+						))}
+					</fieldset>
 
-					<div className="expfoot">
-						<span className="cnt">
-							{fmt(rows.length)}
-							{rows.length === all.length ? "" : " of " + fmt(all.length)} person(s) in the file
-						</span>
-						<button className="btn tpl" onClick={generate} disabled={!rows.length}
-							title={rows.length
-								? "Write these people to a CSV — the eight columns this page already draws, plus the group column when one is chosen."
-								: "Nothing to export — nobody is left after the criteria above."}>
-							<svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none"
-								strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-								<path d="M12 4v10.5M8 11l4 4 4-4M4 20h16" />
-							</svg>
-							Generate Report
-						</button>
-					</div>
+					{f.msg ? <div className="note">{f.msg}</div> : null}
 				</div>
 			}
 			onClose={onClose}

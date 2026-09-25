@@ -49,13 +49,14 @@ const button = (view, name) => [...view.container.querySelectorAll(".modal butto
 
 const click = async (el) => { await act(async () => { el.click(); }); };
 
-/** Open +, name it, and walk to the last step. */
+/** Open +, pick the company, name it, set the window, and walk to the last step. */
 async function fillNew(view, name = "Day 8-5") {
 	await click(view.container.querySelector('button[aria-label="Add"]'));
+	type(view, "#shw_company", "Manna Rubber");
 	if (name) type(view, "#shw_name", name);
-	await click(button(view, "Next"));
 	type(view, "#shw_start", "08:00");
 	type(view, "#shw_end", "17:00");
+	await click(button(view, "Next"));
 	await click(button(view, "Next"));
 }
 
@@ -130,6 +131,52 @@ describe("+ creates a Shift Type", () => {
 		expect(getState().shw.step).toBe("kind");
 		expect(calls.created).toHaveLength(0);
 	});
+
+	it("asks for the company, name and times on the first step, and saves from there", async () => {
+		const view = draw();
+		await click(view.container.querySelector('button[aria-label="Add"]'));
+		expect(view.container.querySelector("#shw_company")).not.toBeNull();
+		expect(view.container.querySelector("#shw_start")).not.toBeNull();
+		expect(view.container.querySelector("#shw_end")).not.toBeNull();
+		type(view, "#shw_company", "Manna Tyre UAE");
+		type(view, "#shw_name", "Night 22-6");
+		type(view, "#shw_start", "22:00");
+		type(view, "#shw_end", "06:00");
+		await click(button(view, "Save"));
+
+		expect(calls.created).toHaveLength(1);
+		expect(calls.created[0][1]).toMatchObject({
+			name: "Night 22-6", custom_company: "Manna Tyre UAE",
+			start_time: "22:00:00", end_time: "06:00:00",
+		});
+	});
+
+	it("will not save a new shift without a company where the site can hold one", async () => {
+		const view = draw();
+		await click(view.container.querySelector('button[aria-label="Add"]'));
+		type(view, "#shw_name", "Day");
+		expect(button(view, "Save").disabled).toBe(true);
+		await click(button(view, "Next"));
+		expect(getState().shw.step).toBe("kind");
+	});
+
+	it("opens on the company the top bar is set to", async () => {
+		act(() => set({ company: "Manna Rubber" }));
+		const view = draw();
+		await click(view.container.querySelector('button[aria-label="Add"]'));
+		expect(view.container.querySelector("#shw_company").value).toBe("Manna Rubber");
+	});
+
+	it("does not send a company to a site whose Shift Type has no company field", async () => {
+		act(() => set({ shiftCo: false }));
+		const view = draw();
+		await click(view.container.querySelector('button[aria-label="Add"]'));
+		type(view, "#shw_company", "Manna Rubber");
+		type(view, "#shw_name", "Day");
+		expect(view.container.textContent).toContain("no field on the site yet");
+		await click(button(view, "Save"));
+		expect(calls.created[0][1].custom_company).toBeUndefined();
+	});
 });
 
 describe("✎ changes an existing Shift Type", () => {
@@ -145,8 +192,8 @@ describe("✎ changes an existing Shift Type", () => {
 		await click(view.container.querySelector('tbody button[aria-label="Edit"]'));
 		/* The site's short time is read as 09:00, not as blank. */
 		expect(getState().shw.f.start).toBe("09:00");
-		await click(button(view, "Next"));
 		type(view, "#shw_end", "18:30");
+		await click(button(view, "Next"));
 		await click(button(view, "Next"));
 		await click(button(view, "Save"));
 

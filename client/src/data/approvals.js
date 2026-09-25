@@ -58,7 +58,7 @@ export const APPROVALS = [
    tpl:["employee","leave_type","from_date","to_date","half_day","half_day_date",
         "description","leave_approver","status"],
    empty:"No leave applications are open. Factor HR is holding 3.",
-   maps:"Stock Frappe HR, and it covers the model in FACTOHR_DATA §7 — half days are first-class and the balance is carried on the row. Nothing to build here beyond the approval remarks.",
+   maps:"Stock Frappe HR, and it covers the model in FACTOHR_DATA §7 — half days are first-class and the balance is carried on the row. <b>Approve and Reject submit the application on the site, as you</b> (25 Sep 2026): hrms checks the balance, overlapping leave and your roles, and an approval books the leave and marks the days On Leave.",
    fields:[
      ["Employee","Link → Employee","live",""],
      ["Name and code","fetched from Employee","live",""],
@@ -72,7 +72,7 @@ export const APPROVALS = [
      ["Leave approver","Link → User","live","Defaults from the employee's leave approver"],
      ["Raised on","Date","live","<code>posting_date</code>"],
      ["Status","Open / Approved / Rejected / Cancelled","live",""],
-     ["Approval remarks","Small Text","build","Factor HR keeps the employee's remarks and the approver's apart; the stock doctype has one field and a comment thread"],
+     ["Approval remarks","Comment","part","Factor HR keeps the employee's remarks and the approver's apart; the stock doctype has one field and a comment thread, so the decision note goes on the thread"],
      ["Leave availed dates","Leave Ledger Entry","stock","Written on approval, not requested"],
    ]},
 

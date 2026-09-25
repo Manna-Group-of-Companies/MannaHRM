@@ -1,11 +1,11 @@
 import Blueprint from "@/features/reports/Blueprint";
 import { blueprintsFor } from "@/data/blueprints";
 
-/* The 106 addresses, as page components, generated from their menu rather than
+/* The 105 addresses, as page components, generated from their menu rather than
    listed by hand.
 
-   A hand-written entry per item would be 106 lines that have to be kept level
-   with 106 rows in `data/factohr.js`, and the drift would show up as a link
+   A hand-written entry per item would be 105 lines that have to be kept level
+   with 105 rows in `data/factohr.js`, and the drift would show up as a link
    that 404s on a page whose whole job is to prove nothing was left out.
 
    `displayName` carries the item's real title, so a stack trace from inside one

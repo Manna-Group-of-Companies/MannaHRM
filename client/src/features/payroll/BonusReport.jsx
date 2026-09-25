@@ -9,7 +9,6 @@ import { BONUS_ACT, BONUS_COLS, BONUS_CURRENCY, BONUS_OUTPUTS, BONUS_STATUS } fr
 import { Empty, Gap, Html, Modal, Note, Scroll } from "@/components/ui";
 import People from "@/components/People";
 
-import { PayLegend } from "./shared";
 
 /* Factor HR's Bonus Working Report, photographed 29 August 2026 — seven
    controls and five buttons, copied control for control the way their Statutory
@@ -560,12 +559,6 @@ export default function BonusReport() {
 
 	return (
 		<>
-			<PayLegend what="Bonus Working Report" cov="part" tag="Working only">
-				The Payment of Bonus Act working — who is eligible, on what figure, at what rate. Frappe HR can
-				pay a bonus and cannot compute one, which is why this is the one page in this module that does
-				arithmetic rather than describing what would do it.
-			</PayLegend>
-
 			<BonForm s={s} />
 
 			{s.bonRun ? (

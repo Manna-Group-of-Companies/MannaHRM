@@ -86,6 +86,19 @@ try {
 	}
 	Get-ChildItem $root -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force
 
+	# Manna Attendance, the Windows program, if it has been built on this PC:
+	#     cd desktop; flutter build windows --release
+	# Without it the zip still installs the bridge and the console; say so
+	# rather than fail, because a bridge is needed at a gate whether or not a
+	# program is.
+	$release = Join-Path $PSScriptRoot '..\desktop\build\windows\x64\runner\Release'
+	if (Test-Path (Join-Path $release 'manna_attendance.exe')) {
+		Copy-Item -Recurse -Force $release (Join-Path $root 'app')
+		Write-Host 'Manna Attendance (the Windows program) is in the zip.'
+	} else {
+		Write-Warning 'Manna Attendance is not built, so it is not in this zip. Build it with: cd desktop; flutter build windows --release'
+	}
+
 	# A last look, because the list above is only as good as whoever edits it
 	# next. None of these may ever leave this PC inside the zip.
 	$leaks = Get-ChildItem $root -Recurse -File | Where-Object {

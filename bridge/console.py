@@ -412,7 +412,7 @@ def find(config, query):
 	from mannabridge import wizard
 
 	host = (query.get("host") or [""])[0].strip()
-	hosts = [host] if host else wizard.scan(wizard.private_subnets(wizard.this_pcs_addresses()))
+	hosts = [host] if host else wizard.scan(wizard.subnet_hosts(wizard.private_subnets(wizard.this_pcs_addresses())))
 	known = {d["host"]: d["name"] for d in config.devices if d.get("host")}
 
 	out = []
@@ -616,6 +616,77 @@ def restore(config, body):
 	return {"ok": True, "said": "{0} user(s) restored onto {1}.".format(len(todo), device["name"])}
 
 
+#: The Scheduled Task install.ps1 registers. Renaming it there without here is
+#: a Bridge screen that says "not installed" about a bridge that is running.
+BRIDGE_TASK = "Manna Attendance Bridge"
+BRIDGE_LOG_LINES = 80
+
+
+def _powershell(command):
+	import subprocess
+
+	done = subprocess.run(
+		["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+		capture_output=True, text=True, timeout=30,
+		creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+	)
+	return done.returncode, (done.stdout or "").strip(), (done.stderr or "").strip()
+
+
+def task_state(run=None):
+	"""Ready, Running, Disabled — or blank when the task is not there at all.
+
+	From `Get-ScheduledTask` rather than `schtasks`, whose output is in the
+	language Windows was installed in, and a gate PC set up in Hindi reads as
+	"not running" to anything parsing English.
+	"""
+	code, out, _ = (run or _powershell)(
+		"(Get-ScheduledTask -TaskName '{0}' -ErrorAction SilentlyContinue).State".format(BRIDGE_TASK))
+	return out if code == 0 else ""
+
+
+def tail(path, lines=BRIDGE_LOG_LINES):
+	if not os.path.exists(path):
+		return []
+	with open(path, encoding="utf-8", errors="replace") as handle:
+		return [line.rstrip("\n") for line in handle.readlines()[-lines:]]
+
+
+def bridge(config, query, run=None):
+	"""Is the bridge running, and is anything waiting on this PC to be sent.
+
+	The queue is read off this PC's own file, with no network: when attendance
+	is missing, whether the punches reached this box at all is the question that
+	splits the problem in half.
+	"""
+	from mannabridge.queue import PunchQueue
+
+	queue = PunchQueue(os.path.join(HERE, config.queue_path))
+	devices = queue.stats()
+	return {
+		"task": BRIDGE_TASK,
+		"state": task_state(run),
+		"unsent": sum(d.get("unsent") or 0 for d in devices),
+		"devices": devices,
+		"log": tail(os.path.join(HERE, "bridge.log")),
+	}
+
+
+def restart_bridge(config, body, run=None):
+	"""Stop the bridge's task and start it again, for a new machine or a stuck pass.
+
+	Safe to do at any moment because nothing is lost by it: the queue is on disk
+	and a punch that was mid-send is re-sent, and re-sending is free.
+	"""
+	name = BRIDGE_TASK.replace("'", "''")
+	code, _, err = (run or _powershell)(
+		"Stop-ScheduledTask -TaskName '{0}' -ErrorAction SilentlyContinue; "
+		"Start-ScheduledTask -TaskName '{0}' -ErrorAction Stop".format(name))
+	if code != 0:
+		return {"ok": False, "why": "The bridge did not start again: {0}".format(err or "no reason given")}
+	return {"ok": True, "said": "The bridge was restarted. It reads every machine on its first pass."}
+
+
 def choices(config, query):
 	"""What the form's selects offer, read off the site rather than guessed."""
 	def names(doctype):
@@ -636,6 +707,7 @@ GET = {
 	"/api/unlinked": unlinked,
 	"/api/backups": backups,
 	"/api/find": find,
+	"/api/bridge": bridge,
 }
 
 POST = {
@@ -646,6 +718,7 @@ POST = {
 	"/api/delete-user": delete_user,
 	"/api/restore": restore,
 	"/api/add-machine": add_machine,
+	"/api/restart-bridge": restart_bridge,
 }
 
 

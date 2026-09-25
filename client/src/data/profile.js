@@ -41,6 +41,10 @@ export const PROFILE_TABS = [
 	["past", "Past Company Detail", "💼"],
 	["org", "Organization Info.", "🏢"],
 	["attendance", "Attendance Info.", "🕒"],
+	/* Ours, like All Fields: not one of their thirteen. Asked for on 24 September
+	   2026, once Create Employee started giving leave by type and by the month —
+	   what somebody was given is otherwise only on the site's desk. */
+	["leave", "Leave", "🌴"],
 	["identity", "Employee Identity", "🪪"],
 	["pf", "PF & ESIC Details", "🧾"],
 	["personal", "Personal Details", "👤", [
@@ -237,8 +241,8 @@ export const PROFILE_PANES = {
 				["PAN Number", ["custom_pan_no", "pan_number"]],
 				["Nationality", "custom_nationality"],
 				["Aadhaar", "custom_aadhaar_number"],
-				["Driving Licence", null, "No field. Factor HR's Identity section may hold more than this; only "
-					+ "the section name has been seen, not its contents."],
+				["Driving Licence", "custom_driving_licence", "Unverified against Factor HR's own Identity "
+					+ "section — only the section name has been seen, not its contents."],
 			]],
 		],
 		note: "Expiry is the half ERPNext has no answer for — see On Board → Document Entry. A passport with "
@@ -399,6 +403,15 @@ export const PROFILE_PANES = {
 	},
 
 	assets: { groups: [] },
+
+	/* Drawn by LeavePane in features/employees/EmployeeProfile.jsx, off
+	   Leave Policy Assignment and hrms's own balance — neither is on Employee. */
+	leave: {
+		groups: [],
+		note: "Read from the site, never written here. <b>Leave given</b> is each Leave Policy Assignment on "
+			+ "this person; <b>Balance today</b> is hrms's own figure, the one an application is measured "
+			+ "against. To change what somebody is given, assign a different policy on the site.",
+	},
 
 	/* Drawn from the document rather than from a list here — that is the point
 	   of it. See `AllFields` in features/employees/EmployeeProfile.jsx. */

@@ -97,3 +97,46 @@ export async function pullCandidate(c, code) {
 
 	return { emp, marked: mark.ok, markErr: mark.ok ? "" : mark.error || "" };
 }
+
+/* ---------------------------------------------------------------------------
+   A candidate → the Create Employee wizard, filled in (24 September 2026).
+
+   Onboarding's Create Employee button opens `/employees/new` with the
+   candidate's answers already in the boxes, so HR checks and completes rather
+   than retypes — and still has to give the Emp Code, Machine Code, gender and
+   punch method, which no candidate supplies. The wizard's own checks apply as
+   for anybody typed in by hand.
+
+   `f` is the wizard's boxes. `extra` is what the Form answered that the wizard
+   has no box for but Employee has a field for; it rides along into the create.
+   `from` is the candidate, marked Completed once the Employee exists — the same
+   two writes, in the same order, as pullCandidate above.
+   --------------------------------------------------------------------------- */
+
+/** ERPNext's own options for `Employee.marital_status`. A Form answer that is
+    not one of them is left off rather than sent, since a Select refuses the
+    whole Employee over one word it does not know. */
+const MARITAL = ["Single", "Married", "Divorced", "Widowed"];
+
+export function wizardFromCandidate(c) {
+	const f = { ...employeeFromCandidate(c, c.employee_number) };
+	for (const k of ["aadhaar_number", "current_address", "permanent_address"]) {
+		const v = String(c[k] || "").trim();
+		if (v) f[k === "aadhaar_number" ? "custom_aadhaar_number" : k] = v;
+	}
+
+	const extra = {};
+	const marital = MARITAL.find((m) => m.toLowerCase() === String(c.marital_status || "").trim().toLowerCase());
+	if (marital) extra.marital_status = marital;
+	const family = [c.family_members && `Members: ${c.family_members}`, c.family_details]
+		.filter(Boolean).join("\n");
+	if (family) extra.family_background = family;
+	if (c.insurance_policy_no) extra.health_insurance_no = String(c.insurance_policy_no).trim();
+
+	return { f, extra, from: c.name, fromName: c.employee_name || c.name };
+}
+
+/** After the wizard creates the Employee: say so on the candidate. */
+export async function markCandidate(name, emp) {
+	return apiWrite("Employee Onboarding", name, { employee: emp, boarding_status: "Completed" });
+}

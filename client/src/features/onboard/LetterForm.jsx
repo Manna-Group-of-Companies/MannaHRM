@@ -31,15 +31,6 @@ export default function LetterForm() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Create Letter / Form</b>
-				<span>
-					Factor HR’s letter register and the form behind its blue button, drawn control for
-					control. One letter has been issued through it in three years, against 17 maintained
-					formats.
-				</span>
-			</div>
-
 			{creating
 				? <NewLetter onCancel={() => setCreating(false)} />
 				: <CreateLetters onCreate={() => setCreating(true)} />}

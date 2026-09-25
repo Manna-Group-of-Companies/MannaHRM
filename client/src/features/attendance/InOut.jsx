@@ -1,16 +1,19 @@
 import { getState, patch, set, useApp } from "@/store";
+import EmpPick from "@/components/EmpPick";
 import { listAll } from "@/api/client";
 import { loadWorkLocations } from "@/api/load";
 import { clock, dayOf, dmy, fmt, nowStamp, tidyDept, todayIso } from "@/lib/format";
 import { coordText, placeText, streamOf } from "@/lib/punchplace";
+import { firstLast } from "@/lib/inout";
+import { HEAD_FILL, LETTER_FILL, PUNCH_FILL, ZEBRA_FILL } from "@/lib/fills";
+import ReportForm, { pickable } from "@/components/ReportForm";
 import { LocCell } from "@/components/PunchMap";
 import { Fragment } from "react";
-import { CAT_FIELDS, CAT_GROUP_BY, IO_BY, IO_MAXDAYS, IO_PERIODS } from "@/data/attendance";
-import { Empty, ExportMenu, Gap, Html, Modal, Note, Panel, Scroll, panelProps, tabProps } from "@/components/ui";
-import { download, save, toCsv } from "@/lib/csv";
+import { CAT_FIELDS, CAT_GROUP_BY, IO_MAXDAYS } from "@/data/attendance";
+import { Empty, Gap, Modal, Scroll } from "@/components/ui";
+import { save } from "@/lib/csv";
+import { sheetsPdf, sheetsXlsx } from "@/lib/export";
 import { esc, paper, printPaper } from "@/lib/doc";
-import ScheduleReport, { openSchedule } from "@/features/attendance/ScheduleReport";
-import ScheduleList, { openScheduleList } from "@/features/attendance/ScheduleList";
 
 /* Factor HR's newer report chrome, photographed 28 Aug 2026: the title, a row
    of labelled controls, then REPORT CRITERIA / ADVANCE tabs holding a date
@@ -48,6 +51,19 @@ const IO_COLS = [
 	["Company", "company", "muted", (r, e) => e.company || ""],
 ];
 
+/* The First & last view: one row per person per day, off the same punches.
+   Same shape as IO_COLS, so the table, the file and the paper all read it. */
+const DAY_COLS = [
+	["Date", "date", "mono", (r) => r.date],
+	["Emp code", "emp_code", "mono", (r, e) => e.employee_number || r.employee],
+	["Name", "name", "", (r, e) => e.employee_name || r.employee_name || ""],
+	["First punch", "first", "mono", (r) => (r.first ? clock(r.first) : "")],
+	["Last punch", "last", "mono", (r) => (r.last ? clock(r.last) : "")],
+	["Span", "span", "", (r) => r.span],
+	["Punches", "punches", "mono", (r) => String(r.punches)],
+	["Company", "company", "muted", (r, e) => e.company || ""],
+];
+
 /* What Show Categories appends here. Company is already a column on this
    report, so the categories it can add are the other two — the number is capped
    at what this report can add rather than at what the master holds, because a
@@ -64,6 +80,7 @@ const IO_CAT_COLS = CAT_FIELDS
    construction is a column somebody later writes a formula against. */
 const ioCols = (f) => {
 	const cats = IO_CAT_COLS.slice(0, Math.max(0, Math.min(f.cats || 0, IO_CAT_COLS.length)));
+	if (f.view === "day") return DAY_COLS.concat(cats);
 	return IO_COLS.concat(cats, f.selfie ? [["Selfie", "", "sel", () => ""]] : []);
 };
 
@@ -93,23 +110,25 @@ function ioKeyOf(s, r) {
 const ioGroupLabel = (s, k) =>
 	!s.io.by && s.io.period !== "Employee Wise" ? `${dmy(k)}, ${dayOf(k)}` : k;
 
-/** Today's punches, scoped by the company picker — already loaded, so shown
-    without asking. */
-const todaysPunches = (s) =>
-	s.checkins
-		.filter((c) => !s.company || s.byName[c.employee]?.company === s.company)
-		.slice()
-		.sort((x, y) => String(x.time).localeCompare(String(y.time)));
+/* Before anybody presses Generate, the report is today's — and today's punches
+   are already in the store, so the page opens generated without asking the
+   site again. Any other range is a fetch. */
+const ioToday = (s) =>
+	!s.ioState && (s.io.from || todayIso()) === todayIso() && (s.io.till || todayIso()) === todayIso();
+const ioSource = (s) => (ioToday(s) ? s.checkins || [] : s.ioRows || []);
+const ioRanOf = (s) => (ioToday(s) ? `${todayIso()} to ${todayIso()}` : s.ioRan);
 
 /* Everything the form asks of what came back. The date range was already
    applied by the fetch; these are the filters that do not need the site. */
 function ioFiltered(s) {
 	const f = s.io;
 	const q = (f.emp || "").toLowerCase().trim();
-	return (s.ioRows || [])
+	return ioSource(s)
 		.filter((r) => {
 			const e = s.byName[r.employee] || {};
-			if (s.company && e.company !== s.company) return false;
+			const co = f.co || s.company;
+			if (co && e.company !== co) return false;
+			if (f.who && r.employee !== f.who) return false;
 			if (f.status && (e.status || "") !== f.status) return false;
 			if (f.logtype && (r.log_type || "") !== f.logtype) return false;
 			if (f.stream && streamOf(r) !== f.stream) return false;
@@ -140,6 +159,9 @@ function ioFiltered(s) {
 			return String(a.time || "").localeCompare(String(b.time || ""));
 		});
 }
+
+/** The rows the chosen view draws: every punch, or one per person per day. */
+const ioView = (s, punches) => (s.io.view === "day" ? firstLast(punches) : punches);
 
 /* The one request this page makes, tried from the widest field list down: a
    field the site has not got refuses the whole read rather than dropping the
@@ -200,25 +222,6 @@ const IO_NOTHING = "Nothing to export — generate the report first, or widen th
 
 const ioStamp = (s) => `in-out-activity-${s.io.from || todayIso()}`;
 
-function ioExport(s) {
-	const rows = ioFiltered(s);
-	if (!rows.length) return set({ ioMsg: IO_NOTHING });
-	/* Every column that holds data, which is every one but the selfie — the only
-	   column empty by construction, and marked as such by having no field name.
-	   The categories Show Categories adds are real values and go in. */
-	const cols = ioCols(s.io).filter((c) => c[1]);
-	const csv = toCsv(cols.map((c) => c[1]), rows.map((r) => {
-		const e = s.byName[r.employee] || {};
-		return cols.map((c) => c[3](r, e, s));
-	}));
-	const name = ioStamp(s) + ".csv";
-	download(name, csv);
-	set({
-		ioMsg: `Exported ${fmt(rows.length)} punch${rows.length === 1 ? "" : "es"} to ${name}. `
-			+ "Written in the browser from what was already read — nothing was sent anywhere.",
-	});
-}
-
 /** The report as one self-contained document. Preview shows it, Word opens it,
     and Print and PDF hand it to the print dialog — all four the same HTML, so
     what somebody signs is what they previewed. */
@@ -235,7 +238,9 @@ function ioPaper(s, rows) {
 	   filed and argued over months later, and one that does not say which
 	   filters produced it cannot be checked against the site again. */
 	const crit = [
-		`${fmt(rows.length)} punch${rows.length === 1 ? "" : "es"}`,
+		f.view === "day"
+			? `${fmt(rows.length)} person-day${rows.length === 1 ? "" : "s"}, first and last punch`
+			: `${fmt(rows.length)} punch${rows.length === 1 ? "" : "es"}`,
 		gby ? `sectioned by ${gby[1]}` : "",
 		f.by ? `grouped by ${f.by}` : f.period.toLowerCase(),
 		f.cats ? `${IO_CAT_COLS.slice(0, f.cats).map((c) => c[0]).join(" and ")} shown` : "",
@@ -279,20 +284,51 @@ function ioPaper(s, rows) {
 			<thead><tr>${cols.map((c) => `<th>${esc(c[0])}</th>`).join("")}</tr></thead>
 			<tbody>${body}</tbody>
 			<tfoot><tr><td colspan="${cols.length}">Generated ${esc(nowStamp())} from Employee Checkin${
-				f.selfie ? ", whose selfie column is empty because nothing in Frappe HR captures a photo on punch" : ""
+				f.selfie && f.view !== "day" ? ", whose selfie column is empty because nothing in Frappe HR captures a photo on punch" : ""
 			}. Attendance is generated from these punches by the shift job; this is the punch record, not the day.</td></tr></tfoot>
 		</table>`);
 }
 
-/** One of the five formats on their export menu. Excel is the CSV above; the
-    other four are the one document, handed to the print dialog, to Word, or to
-    an iframe on this page. */
+/* The export's colours, by what a cell says rather than where it is, so a
+   sorted or filtered sheet keeps them. Red on an odd punch count: one missing. */
+const IO_FILL = (v, head) => {
+	if (head === "Punches") return Number(v) % 2 ? LETTER_FILL.A : null;
+	if (head === "In / Out" || head === "Stream") return PUNCH_FILL[v] || null;
+	return null;
+};
+
+/** One of the five formats on their export menu. Excel and PDF are files built
+    off the table's own columns; the other three are the one document, handed
+    to the print dialog, to Word, or to an iframe on this page. */
 function ioRun(s, kind) {
 	patch("io", { fmt: kind, fmenu: false });
-	if (kind === "Excel") return ioExport(s);
 
-	const rows = ioFiltered(s);
+	const rows = ioView(s, ioFiltered(s));
 	if (!rows.length) return set({ ioMsg: IO_NOTHING });
+
+	if (kind === "Excel" || kind === "PDF") {
+		/* The CSV's columns — every one but the selfie, which is empty by
+		   construction. */
+		const cols = ioCols(s.io).filter((c) => c[1]);
+		const f = s.io;
+		const sheet = {
+			title: "In Out Activities Report",
+			sub: `${f.co || s.company || "All companies"} · ${dmy(f.from || todayIso())} to ${dmy(f.till || f.from || todayIso())}`,
+			headFill: HEAD_FILL,
+			zebra: ZEBRA_FILL,
+			cellFill: IO_FILL,
+			head: cols.map((c) => c[0]),
+			rows: rows.map((r) => {
+				const e = s.byName[r.employee] || {};
+				return cols.map((c) => { const v = c[3](r, e, s); return v == null ? "" : v; });
+			}),
+		};
+		const name = ioStamp(s) + (kind === "PDF" ? ".pdf" : ".xlsx");
+		(kind === "PDF" ? sheetsPdf : sheetsXlsx)([sheet], name)
+			.then(() => set({ ioMsg: `Exported ${fmt(rows.length)} row${rows.length === 1 ? "" : "s"} to ${name}.` }))
+			.catch((e) => set({ ioMsg: `Could not build ${name}: ${e.message || e}` }));
+		return undefined;
+	}
 	const html = ioPaper(s, rows);
 
 	if (kind === "Preview") return set({ ioDoc: html, ioMsg: "" });
@@ -310,394 +346,65 @@ function ioRun(s, kind) {
 
 	printPaper(html);
 	set({
-		ioMsg: kind === "PDF"
-			? "<b>PDF is the print dialog with <em>Save as PDF</em> as the destination.</b> The browser writes a "
-				+ "better PDF than a library shipped to it would, and it writes it from the same document Print "
-				+ "and Preview show — a second renderer would only be a second chance to disagree with the screen."
-			: "Sent to the print dialog. Landscape A4 on purpose: the table is ten columns wide, eleven with "
-				+ "the selfie column, and portrait drops the last of them off the page.",
+		ioMsg: "Sent to the print dialog. Landscape A4 on purpose: the table is ten columns wide, eleven with "
+			+ "the selfie column, and portrait drops the last of them off the page.",
 	});
 }
 
-/** Factor HR's coloured status dot, the same control as on Employee Master —
-    and here it writes the same value as the Employee Status box beside it. Two
-    controls, one filter, which is what a duplicated control has to mean if it
-    is not to lie. */
-function IoDot({ s }) {
-	const f = s.io;
-	const opts = [
-		["Active", "on", "Active"], ["Inactive", "off", "InActive"], ["", "all", "All"],
-	];
-	const cur = opts.find((o) => o[0] === f.status) || opts[2];
-	return (
-		<span className="empdrop">
-			<button className="embtn" aria-haspopup="listbox" aria-label="Filter by status"
-				aria-expanded={f.menu} title={"Status: " + cur[2]}
-				onClick={(e) => { e.stopPropagation(); patch("io", { menu: !f.menu }); }}>
-				<i className={"sdot " + cur[1]} />
-				<b className="cx">▾</b>
-			</button>
-			<div className="emmenu" role="listbox" aria-label="Status" hidden={!f.menu}>
-				{opts.map((o) => (
-					<button key={o[0] || "all"} role="option" aria-selected={o[0] === f.status}
-						onClick={(e) => { e.stopPropagation(); patch("io", { status: o[0], menu: false }); }}>
-						<i className={"sdot " + o[1]} />
-						{o[2]}
-					</button>
-				))}
-			</div>
-		</span>
-	);
+/* A new date is a new question for the site, so it is asked at once rather
+   than waiting for Generate. A half-typed date is left alone: the browser hands
+   over "" until all three parts are there. Back to today, and the preload
+   answers without a read. */
+function ioDate(p) {
+	if (Object.values(p).some((v) => !/^\d{4}-\d{2}-\d{2}$/.test(v || ""))) return;
+	patch("io", p);
+	const f = getState().io;
+	if ((f.from || todayIso()) === todayIso() && (f.till || todayIso()) === todayIso()) {
+		return set({ ioState: "", ioRows: null, ioMsg: "" });
+	}
+	void ioGenerate();
 }
 
-/* The shared export split button, wired to this page's state. */
-const IoExport = ({ s }) => (
-	<ExportMenu fmt={s.io.fmt} open={s.io.fmenu}
-		onToggle={() => patch("io", { fmenu: !s.io.fmenu, gmenu: false })}
-		onPick={(kind) => ioRun(s, kind)} />
-);
+/* Download reads the range first when what is on screen is not that range —
+   an export of the last range somebody looked at, under this one's dates, is
+   the copy that gets argued over. */
+async function ioDownload() {
+	const f = getState().io;
+	const from = f.from || todayIso();
+	const till = f.till || todayIso();
+	const today = from === todayIso() && till === todayIso();
+	if (!today && !(getState().ioState === "done" && getState().ioRan === `${from} to ${till}`)) {
+		await ioGenerate();
+		if (getState().ioState !== "done") return;
+	}
+	ioRun(getState(), f.fmt === "PDF" ? "PDF" : "Excel");
+}
 
 function IoForm({ s }) {
 	const f = s.io;
-
-	function button(k) {
-		if (k === "generate") return void ioGenerate();
-		if (k === "refresh") {
-			if (s.ioState !== "done") {
-				return set({ ioMsg: "Nothing has been generated yet — Generate reads the range first." });
-			}
-			return void ioGenerate();
-		}
-		if (k === "more") return void (patch("io", { more: !f.more }), set({ ioMsg: "" }));
-		if (k === "logo" || k === "nologo") {
-			patch("io", { logo: k === "logo" });
-			return set({
-				ioMsg: k === "logo"
-					? "The wordmark now heads the PDF, the Word file and anything printed — it is a letterhead, "
-						+ "so it appears where there is a page for it to head. The CSV has no letterhead to carry "
-						+ "one, and the screen already has it in the chrome."
-					: "",
-			});
-		}
-		if (k === "genmore") {
-			patch("io", { gmenu: false });
-			void ioGenerate();
-			/* Its validation — a backwards range, a range past the cap — runs before the
-			   first await and leaves its complaint in `ioMsg`. That complaint is about
-			   the range the person just asked for and outranks the standing note on why
-			   there is no background, so it is only written when nothing was said. */
-			if (getState().ioMsg) return;
-			return set({
-				ioMsg: "<b>Run here instead, because there is no background to run in.</b> In Factor HR this "
-					+ "queues the report and mails it when it finishes. There is no queue behind this page and "
-					+ "no worker: Generate is one read against the site and the rest is arithmetic in the "
-					+ "browser, which is why it can answer at once. Scheduling lives on the site — the two "
-					+ "items below it open it.",
-			});
-		}
-		if (k === "upload") {
-			set({
-				ioMsg: "<b>That button imports.</b> Nothing on this dashboard does, "
-					+ "where the one write allowed is a decision on an approval. Punches in particular are never "
-					+ "typed in: a correction writes a missing <em>punch</em> through Attendance Regularization, "
-					+ "so that the shift job stays the only thing generating Attendance.",
-			});
-		}
-	}
-
-	const state = s.ioState === "loading" ? "reading the site…"
-		: s.ioState === "done" ? s.ioRan : "not generated";
-
+	const co = f.co || s.company || "";
+	const live = s.ioState === "done" || ioToday(s);
 	return (
-		<section className="fhcat">
-			<header>
-				<h3>IN / OUT ACTIVITY REPORT</h3>
-				<span className="right">
-					<span className={"cov " + (s.ioState === "done" ? "live" : "part")}>{state}</span>
-				</span>
-			</header>
-
-			<div className="iotop">
-				<div className="iof">
-					<span className="lab">Particular Employee</span>
-					<span className="ctl">
-						<IoDot s={s} />
-						<input type="text" className="grow" placeholder="Search Employee" aria-label="Search employee"
-							value={f.emp} onChange={(e) => patch("io", { emp: e.target.value })} />
-						<button className="embtn" title="Import employees" onClick={() => button("upload")}>↑</button>
-					</span>
-				</div>
-
-				<div className="iof">
-					<span className="lab">Employee Status</span>
-					<span className="ctl">
-						<select value={f.status} onChange={(e) => patch("io", { status: e.target.value })}>
-							{[["Active", "Active"], ["Inactive", "Inactive"], ["", "All"]]
-								.map((o) => <option key={o[1]} value={o[0]}>{o[1]}</option>)}
-						</select>
-					</span>
-				</div>
-
-				<div className="iof">
-					<span className="lab">Filter By</span>
-					<span className="ctl">
-						<select className="grow" value={f.by} onChange={(e) => patch("io", { by: e.target.value })}>
-							{IO_BY.map((b) => <option key={b[0]} value={b[0]}>{b[1]}</option>)}
-						</select>
-					</span>
-				</div>
-
-				<div className="iof">
-					<span className="lab">Report Period</span>
-					<span className="ctl">
-						<select value={f.period} onChange={(e) => patch("io", { period: e.target.value })}>
-							{IO_PERIODS.map((v) => <option key={v}>{v}</option>)}
-						</select>
-					</span>
-				</div>
-
-				<div className="right">
-					<IoExport s={s} />
-					<button className="embtn" title="Run it again" onClick={() => button("refresh")}>↻</button>
-
-					{/* Their Generate is a split button, and the three items behind it are all
-					    about a queue. There is no queue here — but two of the three have a real
-					    home on the site, where scheduling a report is one doctype, so they open
-					    it rather than explaining that they cannot. Daily Detail's carries the
-					    same three for the same reasons.
-
-					    The first of the two was a bare `deskNew` link to that doctype until
-					    Factor HR's own SCHEDULE REPORT wizard was photographed on 4 September
-					    2026. The hand-off has not changed — a schedule needs something running
-					    when nobody is watching and this is a browser tab, so Create Schedule
-					    inside the wizard still opens Auto Email Report. What the wizard adds is
-					    that the questions are theirs, the form arrives filled in, and the
-					    answers the site has nowhere to put are named rather than lost on the
-					    way. See features/attendance/ScheduleReport.jsx. */}
-					<span className="empdrop">
-						<button className="embtn pri"
-							onClick={() => { patch("io", { gmenu: false }); button("generate"); }}>Generate</button>
-						<button className="embtn pri split" aria-haspopup="menu" aria-expanded={f.gmenu}
-							aria-label="More ways to run it" title="More ways to run it"
-							onClick={(e) => { e.stopPropagation(); patch("io", { gmenu: !f.gmenu, fmenu: false }); }}>
-							▾
-						</button>
-						<div className="emmenu end" role="menu" hidden={!f.gmenu}>
-							<button role="menuitem"
-								onClick={(e) => { e.stopPropagation(); button("genmore"); }}>
-								Generate in Background
-							</button>
-							<button role="menuitem"
-								title="Factor HR's Schedule Report wizard — Report Detail, then Scheduling Detail. The schedule itself is created on the site, by ERPNext's Auto Email Report, which runs on the site's scheduler — the only clock that keeps time when this browser is closed."
-								onClick={(e) => {
-									e.stopPropagation();
-									patch("io", { gmenu: false });
-									openSchedule("io");
-								}}>
-								Create Schedule Report
-							</button>
-							{/* Their SCHEDULE REPORT LIST, photographed 4 Sep 2026. This was a
-							    second desk link; it is their own screen now, and it makes the
-							    read rather than assuming the answer — the site's own list is
-							    still one click away inside it. */}
-							<button role="menuitem"
-								title="Factor HR's Schedule Report List. The rows would be ERPNext's Auto Email Report, which this server does not carry — so the list says why it is empty rather than saying there are none, and opens the site's own where they can be seen."
-								onClick={(e) => {
-									e.stopPropagation();
-									patch("io", { gmenu: false });
-									openScheduleList("io");
-								}}>
-								View Scheduled Reports
-							</button>
-						</div>
-					</span>
-				</div>
-			</div>
-
-			<div className="iotabs" role="tablist" aria-label="Report criteria">
-				{[["criteria", "Report Criteria"], ["advance", "Advance"]].map((t) => (
-					<button key={t[0]} className="iotab" {...tabProps("iotab-" + t[0], "iobody", f.tab === t[0])}
-						onClick={() => patch("io", { tab: t[0] })}>
-						{t[1]}
-					</button>
-				))}
-			</div>
-
-			{f.tab === "advance" ? (
-				/* Photographed 29 August 2026, and it holds two controls, not the four
-				   on Daily Detail's: Group By and Show Categories. Neither filters —
-				   both change the shape of what came back, which is why they need no
-				   second Generate. */
-				<div className="iobody" {...panelProps("iobody", "iotab-" + f.tab)}>
-					<div className="iorow">
-						<div className="iof">
-							<span className="lab">Group By</span>
-							<span className="ctl">
-								<select
-									className="grow"
-									value={f.gby}
-									title="Factor HR's categories, not fields — the Category Type master behind the Categories screen."
-									onChange={(e) => {
-										const g = CAT_GROUP_BY.find((x) => x[0] === e.target.value);
-										patch("io", { gby: e.target.value });
-										set({ ioMsg: g && g[3] ? g[3] : "" });
-									}}
-								>
-									{CAT_GROUP_BY.map((g) => (
-										<option key={g[0] || "none"} value={g[0]}>
-											{g[1]}{g[0] && !g[2] ? " — no field here" : ""}
-										</option>
-									))}
-								</select>
-							</span>
-							<span className="hint text-mini text-ink-3">
-								sections the punches by category, above the grouping Report Period and Filter By
-								already do
-							</span>
-						</div>
-
-						<div className="iof">
-							<span className="lab">Show Categories</span>
-							<span className="ctl">
-								<input
-									type="number" min="0" max={IO_CAT_COLS.length} value={f.cats}
-									title="How many category columns to append to each punch."
-									onChange={(e) => {
-										const n = Math.max(0, Math.min(Number(e.target.value) || 0, IO_CAT_COLS.length));
-										patch("io", { cats: n });
-										set({
-											ioMsg: Number(e.target.value) > IO_CAT_COLS.length
-												? `Capped at ${IO_CAT_COLS.length} on this report. Three of Factor HR's categories `
-													+ "read onto a field on our side — Company, Department and Designation — and "
-													+ "<b>Company is already a column here</b>, so these two are what is left to add."
-												: "",
-										});
-									}} />
-								<span className="hint text-mini text-ink-3">
-									{f.cats
-										? `${IO_CAT_COLS.slice(0, f.cats).map((c) => c[0]).join(" and ")} appended to every punch`
-										: "their field held 0 and the label is a count, so it is read as how many category columns to append"}
-								</span>
-							</span>
-						</div>
-					</div>
-
-				</div>
-			) : (
-				<div className="iobody" {...panelProps("iobody", "iotab-" + f.tab)}>
-					<div className="iorow">
-						<div className="iof">
-							<span className="lab">Date Range</span>
-							<span className="ctl">
-								<input type="date" aria-label="From date" value={f.from || todayIso()}
-									onChange={(e) => patch("io", { from: e.target.value })} />
-								<span className="text-ink-3">–</span>
-								<input type="date" aria-label="To date" value={f.till || todayIso()}
-									onChange={(e) => patch("io", { till: e.target.value })} />
-							</span>
-						</div>
-						<div className="iof">
-							<span className="lab">From Time</span>
-							<span className="ctl">
-								<input type="time" aria-label="From time" value={f.t1}
-									onChange={(e) => patch("io", { t1: e.target.value })} />
-							</span>
-						</div>
-						<div className="iof">
-							<span className="lab">Till Time</span>
-							<span className="ctl">
-								<input type="time" aria-label="Till time" value={f.t2}
-									onChange={(e) => patch("io", { t2: e.target.value })} />
-							</span>
-						</div>
-					</div>
-
-					<div className="iorow">
-						<label className="chk">
-							<input type="checkbox" checked={f.selfie}
-								onChange={(e) => {
-									patch("io", { selfie: e.target.checked });
-									set({
-										ioMsg: e.target.checked
-											? "Nothing in Frappe HR captures a photo on punch, so the column is shown empty "
-											+ "rather than dropped. Their export carried 35 images for 34 punches — the selfie "
-											+ "is real, it is stored, and at 160 people it is on the order of 5 MB a day."
-											: "",
-									});
-								}} />
-							Show Selfie Images in Report
-						</label>
-					</div>
-
-					<div className="iorow block">
-						<span className="lab font-mono text-micro tracking-[.1em] uppercase text-ink-3">
-							Layout Options
-						</span>
-						<div className="chipbox mt-[.3rem]">
-							{f.logo ? (
-								<span className="chip">
-									With Logo
-									<button aria-label="Remove With Logo" onClick={() => button("nologo")}>×</button>
-								</span>
-							) : (
-								<button className="embtn" onClick={() => button("logo")}>+ With Logo</button>
-							)}
-						</div>
-					</div>
-
-					<div className="iorow block">
-						<button className="iofun" aria-expanded={f.more} onClick={() => button("more")}>
-							Additional Filters
-							<svg viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4 2v-8Z" /></svg>
-						</button>
-						{f.more && (
-							<div className="iorow mt-[.7rem]">
-								<div className="iof">
-									<span className="lab">In / Out</span>
-									<span className="ctl">
-										<select value={f.logtype} onChange={(e) => patch("io", { logtype: e.target.value })}>
-											<option value="">All</option>
-											<option>IN</option>
-											<option>OUT</option>
-										</select>
-									</span>
-								</div>
-								<div className="iof">
-									<span className="lab">Stream</span>
-									<span className="ctl">
-										<select value={f.stream} onChange={(e) => patch("io", { stream: e.target.value })}>
-											<option value="">All</option>
-											<option>Mobile</option>
-											<option>Terminal</option>
-											<option>Correction</option>
-											<option>Unknown</option>
-										</select>
-										<span className="hint text-mini text-ink-3">
-											mobile is the phone app; unknown is a punch with no device id at all
-										</span>
-									</span>
-								</div>
-							</div>
-						)}
-					</div>
-				</div>
-			)}
-
-			{s.ioMsg && (
-				<div className="px-[.9rem] pb-[.9rem]">
-					<Note><Html html={s.ioMsg} /></Note>
-				</div>
-			)}
-		</section>
+		<ReportForm
+			title="IN / OUT ACTIVITY REPORT"
+			state={s.ioState === "loading" ? "reading the site…" : live ? ioRanOf(s) : "not generated"}
+			live={live}
+			companies={s.companies} co={co} onCo={(v) => patch("io", { co: v, who: "" })}
+			status={f.status} onStatus={(v) => patch("io", { status: v, who: "" })}
+			people={pickable(s.employees, co, f.status)} who={f.who} onWho={(v) => patch("io", { who: v })}
+			from={f.from || todayIso()} till={f.till || todayIso()} onDates={ioDate}
+			format={f.fmt} onFormat={(v) => patch("io", { fmt: v })}
+			onDownload={() => void ioDownload()} busy={s.ioState === "loading"}
+			msg={s.ioMsg}
+		/>
 	);
 }
 
-/* The generated table. Their export carries Terminal, Location, Punch Info and
-   a selfie per row; ours carries the three of those four that Employee Checkin
-   has a column for, and says so where the selfie would be. */
 function IoReport({ s }) {
 	const f = s.io;
-	const rows = ioFiltered(s);
+	const punches = ioFiltered(s);
+	const rows = ioView(s, punches);
+	const ran = ioRanOf(s);
 
 	if (s.ioState === "loading") {
 		return (
@@ -714,12 +421,13 @@ function IoReport({ s }) {
 		);
 	}
 	if (!rows.length) {
+		const got = ioSource(s).length;
 		return (
 			<div className="mt-[.9rem]">
 				<Empty title="No punches in that range">
-					{(s.ioRows || []).length
-						? `${fmt(s.ioRows.length)} came back for ${s.ioRan} and the filters on this form removed all of them.`
-						: `Employee Checkin is empty for ${s.ioRan}. It stays empty until the fingerprint bridge is `
+					{got
+						? `${fmt(got)} came back for ${ran} and the filters on this form removed all of them.`
+						: `Employee Checkin is empty for ${ran}. It stays empty until the fingerprint bridge is `
 						+ "running and the phone app is live — shown as nothing recorded rather than as 0%, because "
 						+ "an empty attendance table and an empty factory produce identical numbers."}
 				</Empty>
@@ -737,14 +445,27 @@ function IoReport({ s }) {
 		<>
 			<div className="legend mt-[.9rem]">
 				<b className="font-display">Generated</b>
-				<span className="cov live">{fmt(rows.length)} punch{rows.length === 1 ? "" : "es"}</span>
+				<span className="cov live">
+					{f.view === "day"
+						? `${fmt(rows.length)} person-day${rows.length === 1 ? "" : "s"}`
+						: `${fmt(rows.length)} punch${rows.length === 1 ? "" : "es"}`}
+				</span>
 				<span>
-					{s.ioRan}, {f.t1}–{f.t2}
+					{ran}, {f.t1}–{f.t2}
 					{f.by ? `, grouped by ${f.by}` : `, ${f.period.toLowerCase()}`}.
 				</span>
-				<span className="ml-auto"><IoExport s={s} /></span>
+				<span className="ml-auto flex gap-[.4rem]">
+					{[["", "Every punch"], ["day", "First & last"]].map(([v, label]) => (
+						<button key={label} type="button" className="embtn" aria-pressed={(f.view || "") === v}
+							title={v ? "One row per person per day: the earliest punch, the latest, and the span between" : undefined}
+							onClick={() => patch("io", { view: v })}>{label}</button>
+					))}
+				</span>
 			</div>
 
+			{/* No count tiles over this table — taken off 25 Sep 2026, asked for by
+			    IT. The report is the punches; Daily Detail and Start Up carry the
+			    counts. */}
 
 			<Scroll style={{ marginTop: ".6rem" }}>
 				<table className="io" style={{ minWidth: 1240 }}>
@@ -794,73 +515,18 @@ function IoReport({ s }) {
 
 export default function InOut() {
 	const s = useApp();
-	const p = todaysPunches(s);
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">In Out Activities Report</b>
-				<span className={"cov " + (p.length ? "live" : "part")}>
-					{p.length ? `${fmt(p.length)} today` : "nothing today"}
-				</span>
-				<span>
-					One Factor HR report, <code>rptInOutActivitiesSelfiePunch</code>, carries both streams.
-				</span>
-			</div>
-
 			<div className="mt-[.8rem]">
 				<IoForm s={s} />
 			</div>
 
-			{s.ioState ? <IoReport s={s} /> : (
+			{s.ioState || ioToday(s) ? <IoReport s={s} /> : (
 				<div className="mt-[.9rem]">
-					<Panel title="Today's punches, before anybody asks" cov={p.length ? "live" : "part"} ico="👆">
-						{p.length ? (
-							<Scroll>
-								<table>
-									<thead>
-										<tr>
-											<th>Time</th><th>Emp code</th><th>Name</th><th>In / Out</th><th>Stream</th>
-											<th>Location</th><th>Where</th><th>Company</th>
-										</tr>
-									</thead>
-									<tbody>
-										{p.map((c) => {
-											const e = s.byName[c.employee] || {};
-											return (
-												<tr key={c.name}>
-													<td className="mono">{clock(c.time)}</td>
-													<td className="mono">{e.employee_number || c.employee}</td>
-													<td>{e.employee_name || ""}</td>
-													<td>{c.log_type || "—"}</td>
-													<td>{streamOf(c)}</td>
-													<td className="mono"><LocCell r={c} e={e} /></td>
-													<td className="muted">{placeText(c, s.workLocs) || "—"}</td>
-													<td className="muted">{e.company || "—"}</td>
-												</tr>
-											);
-										})}
-									</tbody>
-								</table>
-							</Scroll>
-						) : (
-							<Empty title="No punches recorded">
-								Employee Checkin is empty until the fingerprint bridge is running and the phone app is
-								live. Shown as <em>nothing recorded</em> rather than as 0%, because an empty attendance
-								table and an empty factory produce identical numbers.
-							</Empty>
-						)}
-					</Panel>
+					<Empty title="Not generated">Generate reads the range above from the site.</Empty>
 				</div>
 			)}
-
-			{s.srep.open ? (
-				<ScheduleReport onClose={() => set({ srep: { ...s.srep, open: false } })} />
-			) : null}
-
-			{s.sreplist.open ? (
-				<ScheduleList onClose={() => set({ sreplist: { ...s.sreplist, open: false } })} />
-			) : null}
 
 			{s.ioDoc && (
 				<Modal

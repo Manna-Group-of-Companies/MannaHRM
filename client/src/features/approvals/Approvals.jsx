@@ -3,6 +3,7 @@ import { load } from "@/api/load";
 import { exportLog, logDecision, otherRows, qExport, qFilter, qTemplate, queueOf, reqId }
 	from "@/features/approvals/queue";
 import { APPROVED, OPEN, REJECTED, decideCorrection, punchesFor } from "@/features/approvals/decide";
+import { LEAVE_APPROVED, LEAVE_OPEN, LEAVE_REJECTED, decideLeave, leaveSpan } from "@/features/approvals/decideLeave";
 import { otherCols } from "@/features/approvals/OtherGrid";
 import { scoped } from "@/lib/scope";
 import { dayOf, dmy } from "@/lib/format";
@@ -34,8 +35,9 @@ function QToolbar({ total, shown }) {
 		   reads is done here and now; the one that writes says why it cannot be. */
 		if (v === "decide") {
 			set({ appmsg: `${sel || "No"} request${sel === 1 ? "" : "s"} selected. `
-				+ (s.apptab === "attendance"
-					? "Bulk decisions are not wired: approving in bulk writes punches for every row at once. "
+				+ (s.apptab === "attendance" || s.apptab === "leave"
+					? "Bulk decisions are not wired: approving in bulk "
+						+ (s.apptab === "leave" ? "books leave" : "writes punches") + " for every row at once. "
 						+ "Decide each card with its own tick or cross, which says what it writes first."
 					: READ_ONLY) });
 		}
@@ -135,30 +137,34 @@ function GroupHead({ k, rows, t }) {
 	);
 }
 
-/* The tick or the cross on a time correction, one step before it is written.
+/* The tick or the cross on a time correction or a leave application, one step
+   before it is written.
 
    A confirmation rather than a one-click decision because approving puts
-   punches on somebody's day, and the dialog says which ones — a misclick on
-   the wrong card is exactly the mistake a queue of fifty invites. The note is
+   punches on somebody's day, or books their leave, and the dialog says which
+   — a misclick on the wrong card is exactly the mistake a queue of fifty
+   invites. The note is
    the approver's, kept apart from the employee's reason, and it is what the
    employee sees back on a rejection. */
 function DecideDialog({ close }) {
 	const s = useApp();
 	const d = s.appdecide;
-	const r = (s.approvals.attendance || []).find((x) => x.name === d.name);
+	const leave = d.queue === "leave";
+	const r = (s.approvals[leave ? "leave" : "attendance"] || []).find((x) => x.name === d.name);
 	const approve = d.action === "Approve";
 	const e = (r && s.byName[r.employee]) || {};
-	const punches = r ? punchesFor(r) : [];
+	const punches = r && !leave ? punchesFor(r) : [];
 
 	const go = async () => {
 		set({ appdecide: { ...d, busy: true }, dlgmsg: "" });
-		const res = await decideCorrection(r, d.action, d.note);
+		const res = leave ? await decideLeave(r, d.action, d.note) : await decideCorrection(r, d.action, d.note);
+		const [yes, no, open] = leave ? [LEAVE_APPROVED, LEAVE_REJECTED, LEAVE_OPEN] : [APPROVED, REJECTED, OPEN];
 		logDecision({ ref: d.name, employee: r.employee, action: d.action,
-			status: res.ok ? (approve ? APPROVED : REJECTED) : OPEN,
-			persisted: res.persisted, note: res.msg, queue: "Attendance" });
+			status: res.ok ? (approve ? yes : no) : open,
+			persisted: res.persisted, note: res.msg, queue: leave ? "Leave" : "Attendance" });
 		if (res.ok) {
 			set({ appdialog: "", dlgmsg: "", appmsg: res.msg,
-				appdecide: { name: "", action: "", note: "", busy: false } });
+				appdecide: { name: "", action: "", note: "", busy: false, queue: "" } });
 		} else {
 			set({ appdecide: { ...getState().appdecide, busy: false }, dlgmsg: res.msg });
 		}
@@ -173,13 +179,27 @@ function DecideDialog({ close }) {
 				r ? (
 					<div className="ctform">
 						<div className="cvwho">
-							<b>{dmy(r.attendance_date)} {dayOf(String(r.attendance_date || "").slice(0, 10))}</b>
+							{leave ? (
+								<b>{leaveSpan(r)} · {r.total_leave_days == null ? "" : `${r.total_leave_days} day${Number(r.total_leave_days) === 1 ? "" : "s"} · `}{r.leave_type}</b>
+							) : (
+								<b>{dmy(r.attendance_date)} {dayOf(String(r.attendance_date || "").slice(0, 10))}</b>
+							)}
 							<span>
 								{e.employee_name || r.employee_name || r.employee} · {e.employee_number || r.employee}
 							</span>
 						</div>
 						<Note>
-							{approve ? (
+							{leave ? (
+								approve ? (
+									<>
+										Submits this application on the site as <b>Approved</b>, as you. The site checks the
+										balance and any overlapping leave, books the days against the balance, and marks them
+										On Leave in attendance. Undoing it is a cancel on the desk.
+									</>
+								) : (
+									<>Submits it as <b>Rejected</b>. No leave is booked. The note below goes on its comments.</>
+								)
+							) : approve ? (
 								<>
 									Writes {punches.length === 1 ? "this punch" : "these punches"} to{" "}
 									<b>Employee Checkin</b>, as you:{" "}

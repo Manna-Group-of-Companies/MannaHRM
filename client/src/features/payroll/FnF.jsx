@@ -7,7 +7,7 @@ import { deskImport, deskUrl } from "@/lib/desk";
 import { Desk, Empty, Html, Note, panelProps, tabProps } from "@/components/ui";
 import { openEmployee } from "@/features/employees/openEmployee";
 import { FH_FNF_STAGES, FH_FNF_TABS, FH_FNF_WAITING } from "@/data/payroll";
-import { PayLegend, scopeSaid } from "./shared";
+import { scopeSaid } from "./shared";
 
 /* Factor HR's FNF & Separation screen, photographed 29 August 2026: three
    numbered stages across the top, two bars of filters, and a card per person
@@ -326,12 +326,6 @@ export default function FnF() {
 
 	return (
 		<>
-			<PayLegend what="Final Settlement">
-				Their menu&rsquo;s name for it; the screen itself is headed <b>FNF &amp; Separation</b> and
-				carries three numbered stages. Photographed 29 Aug 2026 with <b>{FH_FNF_WAITING} people</b>{" "}
-				in the settlement stage and none of them processed.
-			</PayLegend>
-
 			<div className="fhscreen">
 				<div className="fhtitle row">
 					FNF &amp; Separation

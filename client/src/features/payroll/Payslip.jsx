@@ -15,7 +15,6 @@ import {
 } from "@/data/payroll";
 import { Desk, Empty, Gap, Html, Modal, Note, Scroll, panelProps, tabProps } from "@/components/ui";
 
-import { PayLegend } from "./shared";
 
 /* Factor HR's Salary Payslip, photographed 29 Aug 2026 — the bar, both tabs and
    the three checkboxes. Copied control for control, including the controls
@@ -654,12 +653,6 @@ export default function Payslip() {
 
 	return (
 		<>
-			<PayLegend what="Salary Payslip" cov="part" tag="Who and where">
-				Their form, both tabs. Who a slip goes to and at which address is answered off the{" "}
-				<code>Employee</code> master; what would be printed on it is not answerable from this site at
-				all, so the document is produced with its amounts blank rather than with amounts invented.
-			</PayLegend>
-
 			<PslForm s={s} />
 
 			{s.psl.run && <PslOut s={s} />}

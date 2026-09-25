@@ -370,16 +370,6 @@ export default function LoanRegister() {
 
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Loan Register</b>
-				<span className="cov part">Their form, empty grid</span>
-				<span>
-					Their criteria panel, control for control off the capture of 29 August 2026. The scope and
-					the months are real; every recovery figure is empty, because nothing on this site can hold
-					a loan.
-				</span>
-			</div>
-
 			<LregForm s={s} />
 
 			{s.lregRun && <LregOut s={s} />}

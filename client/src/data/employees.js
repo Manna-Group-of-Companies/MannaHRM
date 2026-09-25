@@ -224,6 +224,14 @@ export const NEW_EMP_STEPS = [
 			["final_confirmation_date",     "Confirmation Date", "date",   0, "",       8],
 			["status",                      "Status",            "select", 1, "status", 8],
 		]],
+		/* Asked for on 24 September 2026. Not a field on Employee — see
+		   NEW_EMP_ELSEWHERE — but asked here because the day somebody is hired
+		   is the day their leave starts, and a question left for later is a
+		   joiner who finds out in their third month that they have none. */
+		["Leave", [
+			["leave_type",     "Leave Type",     "select", 1, "leavetype", 8],
+			["leaves_a_month", "Leaves A Month", "number", 1, "",          8],
+		]],
 		/* Filled in at the start for a fixed-term hire and empty for everybody
 		   else. Here rather than on a later screen because a contract that ends is
 		   a thing somebody has to know about on day one. */
@@ -310,6 +318,20 @@ export const NEW_EMP_STEPS = [
 	]],
 ];
 
+/* Asked on the wizard, stored somewhere other than Employee, and written there
+   by CreateEmployee.jsx once the Employee exists — the other document names it,
+   so it cannot come first. Kept out of the Employee payload by
+   lib/newemp.js: sent to Employee, a field it does not have is silently
+   dropped, which is a box that looks saved and is not.
+
+   `leave_type` and `leaves_a_month` become a Leave Policy Assignment on the
+   policy for that type and rate — manna_hr/leavepolicy.py, one policy per
+   pair. */
+export const NEW_EMP_ELSEWHERE = {
+	leave_type: "Leave Policy Assignment",
+	leaves_a_month: "Leave Policy Assignment",
+};
+
 /* A control on their form with nothing behind it here. Drawn anyway — the form
    is a comparison as well as a form, and a field quietly dropped is a field
    nobody ever argues about — but it is disabled and it says why, so nothing is
@@ -347,6 +369,11 @@ export const NEW_EMP_HINT = {
 		+ "needs a Company or Personal Email, which becomes the phone app's login.",
 	"Machine Code": "The fingerprint machine's enrolment number, and the join between a punch and a "
 		+ "person. Left empty, this person can only punch from a phone.",
+	"Leave Type": "Which leave the monthly count below is of. Casual Leave is HR's rule. Any other type "
+		+ "must already be earned monthly on the site — this form does not change a type everybody shares.",
+	"Leaves A Month": "Leave earned each month, carried forward when not taken. HR's rule is 1; "
+		+ "halves are allowed, and 0 gives none. Credited from the month they join, or this month if "
+		+ "that is earlier.",
 	"Status": "Active is what a new hire is. Anything else here is a record being back-filled.",
 	"Confirmation Date": "ERPNext's own field, which this writes. The 25 August backfill put Factor "
 		+ "HR's value in a second one, custom_confirmation_date, and that column is history — this "
@@ -516,6 +543,10 @@ export const EXPORT_CAT_WHY = {
 export const EXP_BLANK = () => ({
 	open: false, status: "", emp: "", empText: "",
 	filterBy: "", filterVal: "", groupBy: "", carried: "", msg: "",
+	/* Added 24 Sep 2026 with the whole-record file. `sections: null` is every
+	   section — kept as null rather than the list, so this file need not import
+	   the writer to know what "all" is. */
+	company: "", format: "xlsx", sections: null, busy: "",
 });
 
 /* ---------------------------------------------------------------------------

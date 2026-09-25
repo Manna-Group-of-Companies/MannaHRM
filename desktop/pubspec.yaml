@@ -1,0 +1,23 @@
+name: manna_attendance
+description: "Manna Attendance: the fingerprint machines, the bridge and ERPNext, as a Windows program"
+publish_to: 'none'
+
+# Nothing but Flutter itself. This runs on a gate PC for years, and it talks to
+# one thing — the bridge's console on 127.0.0.1 — which dart:io reaches
+# without a package. Every rule is the console's; see lib/core/console.dart.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

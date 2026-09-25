@@ -1,10 +1,12 @@
 import { getState, set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { loadEmployeeFiles, loadOnBoard } from "@/api/load";
+import { loadProfileLeave } from "@/api/profileleave";
+import { leavePlans } from "@/lib/monthlyleave";
 import { apiDeleteFile, apiUpload } from "@/api/client";
 import { forgetEmployeeDoc, useEmployeeDoc } from "@/features/employees/useEmployeeDoc";
 import { scoped } from "@/lib/scope";
-import { clock, dmy, filled, fmt, tidyDept } from "@/lib/format";
+import { clock, dmy, filled, fmt, tidyDept, todayIso } from "@/lib/format";
 import { Fragment, useEffect, useState } from "react";
 
 import { Desk, Empty, Html, Scroll } from "@/components/ui";
@@ -570,6 +572,97 @@ function AssetsPane({ s, emp }) {
 	);
 }
 
+/** Leave given, and leave left — see api/profileleave.js. Two tables rather
+    than one because they answer different questions from different reads: the
+    first is what was decided when somebody was hired or renewed, the second is
+    what hrms has actually credited and debited since. */
+function LeavePane({ s, emp }) {
+	const pl = s.profLeave;
+	useEffect(() => {
+		if (pl?.emp !== emp) void loadProfileLeave(emp);
+	}, [emp, pl?.emp]);
+
+	if (!pl || pl.emp !== emp || pl.busy) return <Empty title="reading this person's leave…" />;
+
+	const plans = leavePlans(pl.assignments, pl.policies, s.leaveTypes, todayIso());
+	const num = (n) => (n == null ? "—" : fmt(Math.round(n * 10) / 10));
+
+	return (
+		<>
+			<h4 className="fhtitle">Leave given</h4>
+			{pl.planErr ? (
+				<Empty title="The leave policies could not be read">{pl.planErr}</Empty>
+			) : !plans.length ? (
+				<Empty title="No leave has been given to this person">
+					No Leave Policy Assignment on the site. Create Employee gives it when they are added; for
+					somebody added before that, it is Give monthly leave on Apply Leave, or an assignment on the site.
+				</Empty>
+			) : (
+				<Scroll>
+					<table style={{ minWidth: 560 }}>
+						<thead>
+							<tr>
+								<th>Leave Type</th><th>A Month</th><th>A Year</th><th>From</th><th>To</th><th>Policy</th>
+							</tr>
+						</thead>
+						<tbody>
+							{plans.map((r) => (
+								<tr key={r.assignment + (r.type || "")} className={r.current ? "" : "muted"}>
+									<td>
+										{r.type || "—"}
+										{r.current ? <> <span className="chip">now</span></> : null}
+									</td>
+									<td className="mono">
+										{r.perMonth != null ? num(r.perMonth) : (
+											<span title="Not earned monthly on the site: the year's leave was given at once when the policy was assigned.">
+												all at once
+											</span>
+										)}
+									</td>
+									<td className="mono">{num(r.annual)}</td>
+									<td className="mono">{r.from ? dmy(r.from) : "—"}</td>
+									<td className="mono">{r.to ? dmy(r.to) : "—"}</td>
+									<td className="muted">{r.policy}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Scroll>
+			)}
+
+			<h4 className="fhtitle mt-[1rem]">Balance today</h4>
+			{pl.balErr ? (
+				<Empty title="The balance could not be read">{pl.balErr}</Empty>
+			) : !pl.balance.length ? (
+				<Empty title="Nothing to take yet">
+					The site holds no open leave allocation for this person today.
+				</Empty>
+			) : (
+				<Scroll>
+					<table style={{ minWidth: 480 }}>
+						<thead>
+							<tr>
+								<th>Leave Type</th><th>Given</th><th>Taken</th><th>Awaiting approval</th><th>Left</th>
+							</tr>
+						</thead>
+						<tbody>
+							{pl.balance.map((b) => (
+								<tr key={b.type}>
+									<td>{b.type}</td>
+									<td className="mono">{num(b.total)}</td>
+									<td className="mono">{num(b.taken)}</td>
+									<td className="mono">{num(b.pending)}</td>
+									<td className="mono"><b>{num(b.remaining)}</b></td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Scroll>
+			)}
+		</>
+	);
+}
+
 /** Bytes as something a person reads, not the raw integer off the `File` row —
     the only place that number is shown outside a CSV export. */
 function humanSize(n) {
@@ -577,6 +670,109 @@ function humanSize(n) {
 	if (n < 1024) return `${n} B`;
 	if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
 	return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/* What Employee Identity can add one of at a time. `passport` carries all
+   four of its fields together because Factor HR files it as one document;
+   the rest are a single number. */
+const IDENTITY_TYPES = [
+	{ key: "aadhaar", label: "Aadhaar Card", fields: [["Aadhaar Number", "custom_aadhaar_number"]] },
+	{ key: "pan", label: "PAN Card", fields: [["PAN Number", "custom_pan_no"]] },
+	{ key: "passport", label: "Passport", fields: [
+		["Passport Number", "passport_number"],
+		["Valid Upto", "valid_upto"],
+		["Date Of Issue", "date_of_issue"],
+		["Place Of Issue", "place_of_issue"],
+	] },
+	{ key: "driving_licence", label: "Driving Licence", fields: [["Driving Licence", "custom_driving_licence"]] },
+	{ key: "nationality", label: "Nationality", fields: [["Nationality", "custom_nationality"]] },
+];
+
+/** Pick an identity, fill in its box or boxes, save. This writes on its own
+    Save rather than joining the page's draft — one identity is picked and
+    typed in one sitting, the same reasoning as the photo picker, and it means
+    somebody adding an Aadhaar number does not have to find and press the
+    page's own Edit first. */
+function IdentityAdd({ doc, emp }) {
+	const [type, setType] = useState("");
+	const [vals, setVals] = useState({});
+	const [busy, setBusy] = useState(false);
+	const [msg, setMsg] = useState(null);
+
+	const spec = IDENTITY_TYPES.find((t) => t.key === type);
+
+	function pickType(k) {
+		setType(k);
+		setMsg(null);
+		const found = IDENTITY_TYPES.find((t) => t.key === k);
+		const next = {};
+		if (found) for (const [, field] of found.fields) next[field] = doc[field] ?? "";
+		setVals(next);
+	}
+
+	function cancel() {
+		setType("");
+		setVals({});
+		setMsg(null);
+	}
+
+	async function save() {
+		if (!spec || busy) return;
+		const patch = {};
+		for (const [, field] of spec.fields) patch[field] = vals[field] ?? "";
+
+		setBusy(true);
+		setMsg(null);
+		const r = await saveEmployee(emp, patch);
+		if (!r.ok) {
+			setMsg({ ok: false, text: `The site refused this: ${r.error}` });
+			setBusy(false);
+			return;
+		}
+		forgetEmployeeDoc(emp);
+		setBusy(false);
+		setMsg({ ok: true, text: `${spec.label} saved.` });
+		setType("");
+		setVals({});
+	}
+
+	return (
+		<div>
+			<label className="prochoose">
+				Add an identity{" "}
+				<select value={type} onChange={(e) => pickType(e.target.value)} disabled={busy}>
+					<option value="">— select —</option>
+					{IDENTITY_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+				</select>
+			</label>
+
+			{spec && (
+				<div className="lvform mt-[.7rem]">
+					{spec.fields.map(([label, field]) => {
+						const isDate = DATE_FIELD.test(field);
+						return (
+							<div className="lvf pefield" key={field}>
+								<label className="lab" htmlFor={"idn-" + field}>{label}</label>
+								<div className="ctl">
+									<input id={"idn-" + field} type={isDate ? "date" : "text"}
+										value={vals[field] ?? ""} disabled={busy}
+										onChange={(e) => setVals((v) => ({ ...v, [field]: e.target.value }))} />
+								</div>
+							</div>
+						);
+					})}
+					<div className="flex gap-[.4rem] mt-[.4rem]">
+						<button className="embtn pri" onClick={save} disabled={busy}>
+							{busy ? "Saving…" : "Save"}
+						</button>
+						<button className="embtn" onClick={cancel} disabled={busy}>Cancel</button>
+					</div>
+				</div>
+			)}
+
+			{msg && <div className={"pemsg" + (msg.ok ? " ok" : " bad")}>{msg.text}</div>}
+		</div>
+	);
 }
 
 /** This person's own scans and photographs — a passport, a PAN card, an
@@ -829,6 +1025,9 @@ export default function EmployeeProfile() {
 
 	const refresh = () => {
 		if (picked) forgetEmployeeDoc(picked);
+		/* The Leave pane's reads are not the document's, so forgetting the
+		   document does not refresh them. Emptied, the pane reads again. */
+		if (tab === "leave") set({ profLeave: null });
 	};
 
 	/* Leaving the record leaves the edit. A draft belongs to one document, and
@@ -932,8 +1131,6 @@ export default function EmployeeProfile() {
 			<>
 				<div className="legend">
 					<b className="font-display">Employee Profile</b>
-					<span className="cov live">Live</span>
-					<span>One person's whole record, in Factor HR's own thirteen panes.</span>
 					<span className="right">{chooser}</span>
 				</div>
 				{/* Their screen opens on whoever was last looked at. Ours cannot know
@@ -996,13 +1193,6 @@ export default function EmployeeProfile() {
 					← Employee Master
 				</button>
 				<b className="font-display">Employee Profile</b>
-				<span className="cov live">Live</span>
-				{!nulls && (
-					<span>
-						This record came back with no empty field in it, so <b>“no such field here”</b> cannot be
-						told from “not set” — every gap below is reported as the second.
-					</span>
-				)}
 				<span className="right">{chooser}</span>
 			</div>
 
@@ -1062,6 +1252,12 @@ export default function EmployeeProfile() {
 				</nav>
 
 				<div className="propane">
+					{tab === "identity" && (
+						<Card title="Add an identity" {...card}>
+							<IdentityAdd doc={doc} emp={picked} />
+						</Card>
+					)}
+
 					{(pane.groups || []).map((g) => (
 						<Card key={g[0]} title={g[0]} {...card}>
 							<div className={editing ? "lvform" : "profields"}>
@@ -1090,6 +1286,12 @@ export default function EmployeeProfile() {
 					{tab === "assets" && (
 						<Card title="Assets" {...card}>
 							<AssetsPane s={s} emp={picked} />
+						</Card>
+					)}
+
+					{tab === "leave" && (
+						<Card title="Leave" {...card}>
+							<LeavePane s={s} emp={picked} />
 						</Card>
 					)}
 

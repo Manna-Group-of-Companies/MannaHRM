@@ -5,7 +5,6 @@ import { download, toCsv } from "@/lib/csv";
 import { Desk, Empty, Gap, Scroll } from "@/components/ui";
 import { deskImport, deskNew, deskUrl } from "@/lib/desk";
 import { FH_ADHOC_CLIPPED, FH_ADHOC_FILTERS, FH_ADHOC_ROWS } from "@/data/payroll";
-import { PayLegend } from "./shared";
 
 /* ADHOC PAYMENTS/DEDUCTIONS, photographed 29 August 2026 and drawn here control
    for control: the title with six icons pinned to its right edge, one bar of an
@@ -159,12 +158,6 @@ export default function Adhoc() {
 
 	return (
 		<>
-			<PayLegend what="Adhoc Payments/Deductions">
-				A one-off amount against one person — an incentive, a recovery, an arrear. Frappe HR ships
-				this whole screen as <code>Additional Salary</code>. Theirs is drawn below as photographed;{" "}
-				<b>nothing on this side can pay anybody.</b>
-			</PayLegend>
-
 			<div className="fhscreen">
 				<div className="fhtitle row">
 					Adhoc Payments/Deductions

@@ -89,3 +89,25 @@ describe("the URL grammar", () => {
 		expect(pathFor("nonsense", "overview", KNOWN)).toBe("/");
 	});
 });
+
+describe("pages hidden on 25 Sep 2026", () => {
+	/* Asked for by IT. Hidden, not deleted: the pages and their tests stay, and
+	   an old link lands on the module's first page rather than on a screen with
+	   no tab to say where you are. */
+	const HIDDEN = [
+		["attendance", "statutory"], ["employees", "ctc"], ["employees", "directory"],
+		["employees", "weekoff"], ["employees", "orgchart"], ["employees", "letters"],
+	];
+
+	it("sends every one of their old addresses to the module's first page", async () => {
+		const { routeFromPath, pathFor: mounted } = await import("@/routes/router");
+		for (const [section, subtab] of HIDDEN) {
+			expect(routeFromPath(mounted(section, subtab))).toMatchObject({ section, subtab: OVERVIEW });
+		}
+	});
+
+	it("takes every one of them off the module's tab strip", async () => {
+		const { isHidden } = await import("@/data/sections");
+		for (const [section, subtab] of HIDDEN) expect(isHidden(section, subtab), `${section}/${subtab}`).toBe(true);
+	});
+});

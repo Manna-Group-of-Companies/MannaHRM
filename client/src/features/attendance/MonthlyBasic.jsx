@@ -5,13 +5,16 @@ import { useEffect } from "react";
 import { scoped } from "@/lib/scope";
 import { DAY, dmy, fmt, nowStamp, tidyDept, todayIso, ymd } from "@/lib/format";
 import { Fragment } from "react";
-import { download, save, toCsv } from "@/lib/csv";
+import { save } from "@/lib/csv";
+import { monthlyBasicXlsx } from "@/lib/xlsx";
+import { monthlySummaryRows } from "@/lib/monthlysummary";
 import { esc, paper, printPaper } from "@/lib/doc";
-import { CAT_FIELDS, CAT_GROUP_BY, MB_LAYOUT, MB_LETTER, MB_PAID } from "@/data/attendance";
+import { CAT_FIELDS, CAT_GROUP_BY, MB_LETTER, MB_PAID } from "@/data/attendance";
 import { CTC_BY } from "@/data/masters";
-import { Empty, ExportMenu, Gap, Html, Modal, Note, Scroll, panelProps, tabProps } from "@/components/ui";
-import ScheduleReport, { openSchedule } from "@/features/attendance/ScheduleReport";
-import ScheduleList, { openScheduleList } from "@/features/attendance/ScheduleList";
+import { Empty, Gap, Modal, Scroll } from "@/components/ui";
+import { sheetsPdf } from "@/lib/export";
+import { HEAD_FILL, LETTER_FILL, ZEBRA_FILL } from "@/lib/fills";
+import ReportForm, { Tiles, pickable } from "@/components/ReportForm";
 
 /* Monthly Basic Attendance — the grid payroll reads, one row per person and one
    column per day. Their toolbar and their two tabs; the grid itself is ours,
@@ -91,7 +94,8 @@ function mbOpens(people, i, keys) {
    and a finding at the top of the page reads as the normal case. */
 const mbPeople = (s) => {
 	const keys = mbKeys(s.mb);
-	return scoped(s)
+	const co = s.mb.co || s.company;
+	return (co ? s.employees.filter((e) => e.company === co) : scoped(s))
 		/* A person picked by name is shown whatever Employee Status says: the
 		   picker lists everybody, and somebody who left mid-month still has a
 		   month to read. */
@@ -162,15 +166,23 @@ function mbMap(s) {
 	return map;
 }
 
-/** What one cell says, and whether the site told us anything about the day. */
+/** What one cell says, and whether the site told us anything about the day.
+
+    `text` is what the grid now shows in the cell — the actual punch, `in-out`,
+    when there is one, and the letter only where there is no punch to show
+    (a weekly off, a holiday, or a day nobody has measured yet). `letter` is
+    kept alongside it: Payable and the xlsx fill colour still read the letter,
+    not the clock times, because a day's pay does not change with the hour
+    somebody happened to walk in. */
 function mbCell(s, e, d) {
 	const map = mbMap(s);
 	const r = map && map[e.name + "|" + ymd(d)];
-	if (!r) return { letter: "", known: false };
+	if (!r) return { letter: "", text: "", known: false };
 	let letter = STATUS_LETTER[r.status];
 	if (letter == null) letter = r.dayType ? (r.dayType === "weekoff" ? "WO" : "H") : String(r.status).slice(0, 1).toUpperCase();
 	if (letter === "WO" && s.mb.weekoff) letter = "";
-	return { letter, known: r.status !== "—", row: r };
+	const text = r.in || r.out ? `${r.in || "?"}-${r.out || "?"}` : letter;
+	return { letter, text, known: r.status !== "—", row: r };
 }
 
 /* Only a row that came off the site counts as knowing something. The weekly off
@@ -186,6 +198,26 @@ function mbPayable(s, e, days) {
 		if (letter) paid += MB_PAID[letter] || 0;
 	});
 	return real ? String(Math.round(paid * 2) / 2) : "";
+}
+
+/** Actual/Standard/Deficit hours, one lookup keyed by employee — the same
+    arithmetic lib/monthlysummary.js gives Monthly Summary Attendance, read a
+    second time here rather than duplicated, so the two reports cannot disagree
+    about what a person's hours were. */
+function mbSummaryByEmp(s) {
+	const [from, till] = mbRange(s.mb);
+	const d = s.ddaData;
+	if (d.key !== `${from}|${till}|` || d.state !== "ok") return new Map();
+	const people = mbPeople(s);
+	const rows = monthlySummaryRows({
+		people, from, to: till, attendance: d.attendance, punches: d.punches, leave: d.leave, overtime: d.overtime,
+		holidaysOf: (e) => {
+			const co = s.companies.find((c) => c.name === e.company);
+			return s.holidays[e.holiday_list || (co && co.default_holiday_list) || ""] || [];
+		},
+		windows: s.shiftWindows, today: todayIso(),
+	});
+	return new Map(rows.map((r) => [r.emp.name, r]));
 }
 
 async function mbGenerate(force = true) {
@@ -209,20 +241,38 @@ function mbGrid(s) {
 	const days = mbDays(from, till);
 	const people = mbPeople(s);
 	const cats = mbCats(f);
+	const summary = mbSummaryByEmp(s);
 
 	const cols = ["Emp code", "Name"].concat(
 		cats.map((c) => c[0]),
 		f.shift ? ["Shift"] : [],
 		days.map((d) => ymd(d)),
-		["Payable"],
+		["Payable", "Actual Hrs", "Standard Hrs", "Deficit Hrs", "Actual/Day", "Standard/Day"],
 	);
-	const rows = people.map((e) => [e.employee_number || e.name, e.employee_name || ""].concat(
-		cats.map((c) => c[2](e)),
-		f.shift ? [e.default_shift || ""] : [],
-		days.map((d) => mbCell(s, e, d).letter),
-		[mbPayable(s, e, days)],
-	));
-	return { from, till, days, people, cats, cols, rows };
+	/* The day cells a row shows are `text` — the punch, when there is one — but
+	   the fill colour and the WO/P/A/HD legend the xlsx export prints still key
+	   off the underlying letter, which a punched day's cell no longer carries.
+	   `letters` runs in parallel to `rows`, one entry per day per person, so the
+	   xlsx writer can colour and count without re-deriving it from a grid built
+	   for display. */
+	const letters = people.map((e) => days.map((d) => mbCell(s, e, d).letter));
+	const rows = people.map((e) => {
+		const sm = summary.get(e.name);
+		return [e.employee_number || e.name, e.employee_name || ""].concat(
+			cats.map((c) => c[2](e)),
+			f.shift ? [e.default_shift || ""] : [],
+			days.map((d) => mbCell(s, e, d).text),
+			[
+				mbPayable(s, e, days),
+				sm ? sm.actualHours : "—",
+				sm ? sm.standardHours : "—",
+				sm ? sm.deficitHours : "—",
+				sm ? sm.actualPerDay : "—",
+				sm ? sm.standardPerDay : "—",
+			],
+		);
+	});
+	return { from, till, days, people, cats, cols, rows, letters };
 }
 
 const mbStamp = (s) => {
@@ -253,11 +303,15 @@ function mbPaper(s) {
 			return `<tr class="${level === 0 && keys.length > 1 ? "sec" : "grp"}">`
 				+ `<td colspan="${cols.length}">${esc(h.text)} — ${fmt(h.n)}</td></tr>`;
 		}).join("");
+		/* Payable plus the five hours columns trail the day columns now — see
+		   mbGrid — so the day block ends five short of the row's own end, not at
+		   its last cell. */
+		const trailing = 6;
 		const tds = cells.map((v, j) => {
 			/* The day columns are the narrow ones, and a blank cell is drawn as a
 			   dot rather than left empty: an empty cell in a printed muster reads
 			   as a missing column rather than as a day nobody measured. */
-			const day = j >= cols.length - 1 - days.length && j < cols.length - 1;
+			const day = j >= cols.length - trailing - days.length && j < cols.length - trailing;
 			return `<td${day ? ' class="d"' : ""}>${esc(day ? v || "·" : v)}</td>`;
 		}).join("");
 		return heads + `<tr>${tds}</tr>`;
@@ -282,17 +336,59 @@ function mbPaper(s) {
 }
 
 /** One of the five formats on their export menu. */
-function mbRun(s, kind) {
+async function mbRun(s, kind) {
 	const done = (msg) => patch("mb", { fmt: kind, fmenu: false, msg });
-	const { days, people, cols, rows } = mbGrid(s);
+	const f = s.mb;
+	const grid = mbGrid(s);
+	const { days, people, cols, rows } = grid;
 	if (!days.length) return done("The range reads backwards — nothing to export.");
 	if (!people.length) return done("Nobody matches these criteria, so there is nothing to export.");
 
 	if (kind === "Excel") {
-		const name = mbStamp(s) + ".csv";
-		download(name, toCsv(cols, rows));
-		return done(`Exported the grid as it stands to ${name}. Factor HR writes .xls; a CSV is the same thing `
-			+ "without the formatting, and it opens in Excel.");
+		const name = mbStamp(s) + ".xlsx";
+		patch("mb", { fmt: kind, fmenu: false, msg: "Building the spreadsheet…" });
+		try {
+			const keys = mbKeys(f);
+			await monthlyBasicXlsx(grid, {
+				company: f.co || s.company || "", shift: !!f.shift, logo: !!f.logo,
+				heads: people.map((_, i) => mbOpens(people, i, keys).map((level) => ({ ...mbHead(people, i, keys, level), level }))),
+				crit: [
+					`${fmt(people.length)} ${people.length === 1 ? "person" : "people"} × ${fmt(days.length)} days`,
+					f.status ? `${f.status.toLowerCase()} employees` : "every employee status",
+				].filter(Boolean).join(" · "),
+				name,
+			});
+		} catch (e) {
+			return done(`Could not build the spreadsheet: ${e && e.message ? e.message : e}. `
+				+ `Falling back to ${mbStamp(s)}.csv, which opens in Excel without the formatting.`);
+		}
+		return done(`Exported the grid as it stands to ${name}, formatted the way Factor HR's own sheet is — `
+			+ "company header, day-by-day columns coloured by status, and a legend with counts.");
+	}
+
+	if (kind === "PDF") {
+		const name = mbStamp(s) + ".pdf";
+		/* The status letter in a day cell rather than its punch times: thirty-one
+		   columns of "08:01-17:00" do not fit on a page anybody can read. The
+		   spreadsheet carries the times. */
+		const dayFrom = cols.length - 6 - days.length;
+		const letters = grid.letters;
+		const sheet = {
+			title: "Monthly Basic Attendance Report",
+			sub: `${f.co || s.company || "All companies"} · ${dmy(grid.from)} to ${dmy(grid.till)}`,
+			head: cols.map((c, j) => (j >= dayFrom && j < dayFrom + days.length ? String(days[j - dayFrom].getDate()) : c)),
+			rows: rows.map((cells, i) => cells.map((v, j) => (j >= dayFrom && j < dayFrom + days.length ? letters[i][j - dayFrom] : v))),
+			headFill: HEAD_FILL,
+			zebra: ZEBRA_FILL,
+			cellFill: (v, head, cells, i, j) => (j >= dayFrom && j < dayFrom + days.length ? LETTER_FILL[v] || null : null),
+			note: "P present · A absent · HD half day · L leave · LA leave applied · WO weekly off · H holiday · MP one punch only.",
+		};
+		try {
+			await sheetsPdf([sheet], name);
+		} catch (e) {
+			return done(`Could not build ${name}: ${e && e.message ? e.message : e}`);
+		}
+		return done(`Exported ${fmt(people.length)} ${people.length === 1 ? "person" : "people"} to ${name}.`);
 	}
 
 	const html = mbPaper(s);
@@ -315,250 +411,54 @@ function mbRun(s, kind) {
 			+ "wide page. A shorter range prints better than a smaller font reads.");
 }
 
-function MbForm({ s, days }) {
+/* A new date only once all three parts are typed; the page reads the range
+   itself when it changes. */
+function mbDate(p) {
+	if (Object.values(p).some((v) => !/^\d{4}-\d{2}-\d{2}$/.test(v || ""))) return;
+	patch("mb", { ...p, msg: "" });
+}
+
+function MbForm({ s, reading }) {
 	const f = s.mb;
 	const [from, till] = mbRange(f);
-	const everyone = scoped(s).slice()
-		.sort((a, b) => (a.employee_name || "").localeCompare(b.employee_name || ""));
-
+	const co = f.co || s.company || "";
 	return (
-		<div className="repform mt-[.7rem]">
-			<div className="mbbar">
-				<label className="mbf">
-					<span>Particular Employee</span>
-					<select className="grow" value={f.emp} onChange={(e) => patch("mb", { emp: e.target.value })}>
-						<option value="">every employee</option>
-						{everyone.map((p) => (
-							<option key={p.name} value={p.name}>
-								{`${p.employee_name} (${p.employee_number || "-"})`}
-							</option>
-						))}
-					</select>
-				</label>
-
-				<label className="mbf">
-					<span>Employee Status</span>
-					<select value={f.status} onChange={(e) => patch("mb", { status: e.target.value })}>
-						{["Active", "Inactive", "Suspended", "Left"].map((v) => <option key={v}>{v}</option>)}
-						<option value="">All</option>
-					</select>
-				</label>
-
-				<label className="mbf">
-					<span>Filter By</span>
-					{/* Their list has never been screenshotted open, so this one is ours:
-					    the same five groupings the CTC and In/Out reports offer. Drawn live
-					    rather than dead because what the control *does* — group the muster a
-					    level above the person — is not in doubt, only which words they put
-					    in it. The tooltip says whose list it is. */}
-					<select value={f.by} aria-label="Filter by"
-						title="Groups the muster a level above the person. Their own list has never been seen open, so these five are ours — the same ones the CTC and In / Out reports group by."
-						onChange={(e) => patch("mb", { by: e.target.value })}>
-						{CTC_BY.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-					</select>
-				</label>
-
-				<label className="mbf">
-					<span>Report Period</span>
-					<select defaultValue="datewise" aria-label="Report period">
-						<option value="datewise">Date Wise</option>
-					</select>
-				</label>
-
-				<label className="mbf">
-					<span>&nbsp;</span>
-					<span className="flex gap-[.3rem] items-center">
-						<ExportMenu fmt={f.fmt} open={f.fmenu}
-							onToggle={() => patch("mb", { fmenu: !f.fmenu, gmenu: false })}
-							onPick={(kind) => mbRun(s, kind)} />
-						<button className="btn ghost" title="Reload from the site" aria-label="Reload from the site"
-							onClick={() => void mbGenerate()}>↻</button>
-
-						{/* Their Generate is a split button, and the three items behind it are
-						    all about a queue. There is none here — but two of the three have a
-						    real home on the site, so they open it rather than explaining that
-						    they cannot. */}
-						<span className="empdrop">
-							<button className="btn imp" disabled={f.busy}
-								onClick={() => { patch("mb", { gmenu: false }); void mbGenerate(); }}>
-								{f.busy ? "Reading…" : "Generate"}
-							</button>
-							<button className="btn imp split" aria-haspopup="menu" aria-expanded={f.gmenu}
-								aria-label="More ways to run it"
-								onClick={(e) => { e.stopPropagation(); patch("mb", { gmenu: !f.gmenu, fmenu: false }); }}>
-								▾
-							</button>
-							<div className="emmenu end" role="menu" hidden={!f.gmenu}>
-								<button role="menuitem"
-									onClick={(e) => {
-										e.stopPropagation();
-										patch("mb", {
-											gmenu: false,
-											msg: "<b>Run here instead, because there is no background to run in.</b> In Factor HR "
-												+ "this queues the report and mails it when it finishes. Generate on this screen is "
-												+ "one read of <code>Attendance</code> over the range; the grid is drawn from what "
-												+ "comes back. Scheduling lives on the site — the two items below open it.",
-										});
-										void mbGenerate();
-									}}>
-									Generate in Background
-								</button>
-								{/* The third report to carry Factor HR's own two screens, and the
-								    third to open the same pair — one wizard and one list, keyed by
-								    the report they were opened from. See data/schedreport.js,
-								    where those three reports are the whole of the difference.
-
-								    The hand-off has not changed from when both of these were desk
-								    links: nothing here schedules anything, and Create Schedule
-								    inside the wizard still opens ERPNext's Auto Email Report on
-								    the site. */}
-								<button role="menuitem"
-									title="Factor HR's Schedule Report wizard — Report Detail, then Scheduling Detail. The schedule itself is created on the site, by ERPNext's Auto Email Report, which runs on the site's scheduler — the only clock that keeps time when this browser is closed."
-									onClick={(e) => {
-										e.stopPropagation();
-										patch("mb", { gmenu: false });
-										openSchedule("mb");
-									}}>
-									Create Schedule Report
-								</button>
-								<button role="menuitem"
-									title="Factor HR's Schedule Report List. The rows would be ERPNext's Auto Email Report, which this server does not carry — so the list says why it is empty rather than saying there are none, and opens the site's own where they can be seen."
-									onClick={(e) => {
-										e.stopPropagation();
-										patch("mb", { gmenu: false });
-										openScheduleList("mb");
-									}}>
-									View Scheduled Reports
-								</button>
-							</div>
-						</span>
-					</span>
-				</label>
-			</div>
-
-			<div className="tabs mb-[.8rem]" role="tablist" aria-label="Report criteria">
-				<button className="tab" {...tabProps("mbtab-criteria", "mbpane", f.tab !== "advance")}
-					onClick={() => patch("mb", { tab: "criteria" })}>Report Criteria</button>
-				<button className="tab" {...tabProps("mbtab-advance", "mbpane", f.tab === "advance")}
-					onClick={() => patch("mb", { tab: "advance" })}>Advance</button>
-			</div>
-
-			{f.tab === "advance" ? (
-				/* This report's own Advance tab has still never been screenshotted. What
-				   is on it here is carried across from the two whose tabs *have* been
-				   opened — In / Out and Daily Detail, which hold exactly these two
-				   controls — and it says so rather than implying it was seen. Both do
-				   real work; neither is a guess about what their labels mean, only
-				   about whether these are the labels. */
-				<div className="repgrid" style={{ maxWidth: 760 }}
-					{...panelProps("mbpane", f.tab === "advance" ? "mbtab-advance" : "mbtab-criteria")}>
-					<label htmlFor="mbGby">Group By:</label>
-					<span className="ctl">
-						<select
-							id="mbGby"
-							value={f.gby}
-							title="Factor HR's categories, not fields — the Category Type master behind the Categories screen."
-							onChange={(e) => {
-								const g = CAT_GROUP_BY.find((x) => x[0] === e.target.value);
-								patch("mb", { gby: e.target.value, msg: g && g[3] ? g[3] : "" });
-							}}
-						>
-							{CAT_GROUP_BY.map((g) => (
-								<option key={g[0] || "none"} value={g[0]}>
-									{g[1]}{g[0] && !g[2] ? " — no field here" : ""}
-								</option>
-							))}
-						</select>
-						<span className="hint">sections the muster above Filter By, which sections it above the person</span>
-					</span>
-
-					<label htmlFor="mbCats">Show Categories:</label>
-					<span className="ctl">
-						<input
-							id="mbCats" type="number" min="0" max={MB_CAT_COLS.length} value={f.cats}
-							title="How many category columns to put beside the name."
-							onChange={(e) => {
-								const n = Math.max(0, Math.min(Number(e.target.value) || 0, MB_CAT_COLS.length));
-								patch("mb", {
-									cats: n,
-									msg: Number(e.target.value) > MB_CAT_COLS.length
-										? `Capped at ${MB_CAT_COLS.length}. Only three of Factor HR's categories read onto a `
-											+ "field on our side — Company, Department and Designation. The rest are pay "
-											+ "treatment with no field behind them, and would be columns of dashes."
-										: "",
-								});
-							}} />
-						<span className="hint">
-							{f.cats
-								? `${mbCats(f).map((c) => c[0]).join(", ")} beside the name`
-								: "their field held 0 and the label is a count, so it is read as how many category columns to add"}
-						</span>
-					</span>
-
-					<span />
-					<span className="ctl">
-					</span>
-				</div>
-			) : (
-				<div className="repgrid" style={{ maxWidth: 760 }}
-					{...panelProps("mbpane", f.tab === "advance" ? "mbtab-advance" : "mbtab-criteria")}>
-					<label htmlFor="mbFrom">Date Range:</label>
-					<span className="ctl">
-						<input type="date" id="mbFrom" value={from} onChange={(e) => patch("mb", { from: e.target.value })} />
-						<span className="text-ink-2">to</span>
-						<input type="date" aria-label="To date" value={till}
-							onChange={(e) => patch("mb", { till: e.target.value })} />
-						<span className="hint">
-							{days.length ? `${fmt(days.length)} days` : "the range reads backwards"}
-						</span>
-					</span>
-
-					<label>Layout Options:</label>
-					<span className="ctl">
-						<span className="taglist flex-auto">
-							{/* Chips for what is on, buttons for what is off — their control, which
-							    is a tag list rather than a row of checkboxes. */}
-							{MB_LAYOUT.filter((o) => f[o[0]]).map((o) => (
-								<span className="t" key={o[0]}>
-									{o[1]}
-									<button aria-label={"Remove " + o[1]}
-										onClick={() => patch("mb", { [o[0]]: false })}>×</button>
-								</span>
-							))}
-							{MB_LAYOUT.filter((o) => !f[o[0]]).map((o) => (
-								<button className="add" key={o[0]} onClick={() => patch("mb", { [o[0]]: true })}>
-									+ {o[1]}
-								</button>
-							))}
-						</span>
-					</span>
-
-					<span />
-					<span className="ctl">
-						<label className="chk">
-							<input type="checkbox" checked={f.weekoff}
-								onChange={(e) => patch("mb", { weekoff: e.target.checked })} />
-							Show Day Status on Week Off/Holiday
-						</label>
-						<span className="hint">
-							off: Sunday reads WO. on: Sunday shows whatever the day actually holds.
-						</span>
-					</span>
-				</div>
-			)}
-
+		<>
+			<ReportForm
+				title="MONTHLY BASIC ATTENDANCE REPORT"
+				state={reading ? "reading the site…" : `${from} to ${till}`}
+				live={!reading}
+				companies={s.companies} co={co} onCo={(v) => patch("mb", { co: v, emp: "", msg: "" })}
+				status={f.status} onStatus={(v) => patch("mb", { status: v, emp: "", msg: "" })}
+				people={pickable(s.employees, co, f.status)} who={f.emp} onWho={(v) => patch("mb", { emp: v, msg: "" })}
+				from={from} till={till} onDates={mbDate}
+				format={f.fmt} onFormat={(v) => patch("mb", { fmt: v })}
+				onDownload={() => void mbRun(getState(), f.fmt === "PDF" ? "PDF" : "Excel")} busy={reading}
+				msg={f.msg}
+			/>
 			{f.err && (
 				<div className="mt-[.8rem]">
 					<Gap>The site refused the report: {f.err}</Gap>
 				</div>
 			)}
+		</>
+	);
+}
 
-			{f.msg && (
-				<div className="mt-[.8rem]">
-					<Note><Html html={f.msg} /></Note>
-				</div>
-			)}
-		</div>
+/* The figures over the grid, counted off the same letters the cells and the
+   spreadsheet's colours read. */
+function MbSummary({ s, days, people }) {
+	const c = { P: 0, A: 0, HD: 0, L: 0, LA: 0, WO: 0, H: 0, MP: 0 };
+	for (const e of people) for (const d of days) {
+		const l = mbCell(s, e, d).letter;
+		if (c[l] != null) c[l]++;
+	}
+	return (
+		<Tiles items={[
+			["People", people.length], ["Present", c.P, "good"], ["Absent", c.A, c.A ? "bad" : ""],
+			["Half Day", c.HD], ["Leave", c.L + c.LA], ["Missed punch", c.MP, c.MP ? "warn" : "good", "Days with one punch only"],
+			["Weekly Off", c.WO], ["Holiday", c.H],
+		]} />
 	);
 }
 
@@ -570,6 +470,7 @@ export default function MonthlyBasic() {
 	const people = mbPeople(s);
 	const cats = mbCats(f);
 	const keys = mbKeys(f);
+	const summary = mbSummaryByEmp(s);
 	const named = f.emp ? s.byName[f.emp]?.employee_name : "";
 	const woDays = days.filter((d) => d.getDay() === 0).length;
 
@@ -596,7 +497,9 @@ export default function MonthlyBasic() {
 				</span>
 			</div>
 
-			<MbForm s={s} days={days} />
+			<MbForm s={s} reading={reading} />
+
+			{!reading && days.length ? <MbSummary s={s} days={days} people={people} /> : null}
 
 			{/* Their "With Logo" chip, which on a printed report is the letterhead. */}
 			{f.logo && (
@@ -641,11 +544,17 @@ export default function MonthlyBasic() {
 									</th>
 								))}
 								<th>Payable</th>
+								<th>Actual Hrs</th>
+								<th>Standard Hrs</th>
+								<th>Deficit Hrs</th>
+								<th>Actual/Day</th>
+								<th>Standard/Day</th>
 							</tr>
 						</thead>
 						<tbody>
 							{people.map((e, i) => {
 								const payable = mbPayable(s, e, days);
+								const sm = summary.get(e.name);
 								/* A section head wherever a grouped value changes, one per level:
 								   Group By outside, Filter By inside. The list is already sorted by
 								   them in order, so "changed" and "starts a section" are the same
@@ -656,7 +565,7 @@ export default function MonthlyBasic() {
 										const h = mbHead(people, i, keys, level);
 										return (
 											<tr className={level === 0 && keys.length > 1 ? "sec" : "grp"} key={level}>
-												<td colSpan={3 + cats.length + (f.shift ? 1 : 0) + days.length}>
+												<td colSpan={3 + cats.length + (f.shift ? 1 : 0) + days.length + 5}>
 													{h.text}
 													<span className="muted">{" · "}{fmt(h.n)} people</span>
 												</td>
@@ -669,14 +578,19 @@ export default function MonthlyBasic() {
 										{cats.map((c) => <td className="muted" key={c[0]}>{c[2](e) || "—"}</td>)}
 										{f.shift && <td className="mono muted">{e.default_shift || "—"}</td>}
 										{days.map((d) => {
-											const { letter } = mbCell(s, e, d);
+											const { letter, text } = mbCell(s, e, d);
 											return (
 												<td className={"d " + (letter === "WO" ? "wo" : letter ? "" : "non")} key={ymd(d)}>
-													{letter || "·"}
+													{text || "·"}
 												</td>
 											);
 										})}
 										<td className="pay">{payable || "—"}</td>
+										<td className="mono">{sm ? sm.actualHours : "—"}</td>
+										<td className="mono muted">{sm ? sm.standardHours : "—"}</td>
+										<td className="mono">{sm ? sm.deficitHours : "—"}</td>
+										<td className="mono muted">{sm ? sm.actualPerDay : "—"}</td>
+										<td className="mono muted">{sm ? sm.standardPerDay : "—"}</td>
 									</tr>
 									</Fragment>
 								);
@@ -689,14 +603,6 @@ export default function MonthlyBasic() {
 					<Empty title="Nobody matches">No employee is left after these criteria.</Empty>
 				</div>
 			)}
-
-			{s.srep.open ? (
-				<ScheduleReport onClose={() => set({ srep: { ...s.srep, open: false } })} />
-			) : null}
-
-			{s.sreplist.open ? (
-				<ScheduleList onClose={() => set({ sreplist: { ...s.sreplist, open: false } })} />
-			) : null}
 
 			{s.mbDoc && (
 				<Modal

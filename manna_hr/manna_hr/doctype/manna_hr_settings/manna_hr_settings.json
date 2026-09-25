@@ -14,7 +14,17 @@
   "enforce_punch_window",
   "punch_in_from",
   "column_break_window",
-  "punch_out_until"
+  "punch_out_until",
+  "section_leave",
+  "enable_sandwich_leave",
+  "section_onboarding_form",
+  "onboarding_form_url",
+  "onboarding_sheet_id",
+  "column_break_onboarding",
+  "onboarding_oauth_client_id",
+  "onboarding_oauth_client_secret",
+  "onboarding_oauth_refresh_token",
+  "onboarding_last_sync"
  ],
  "fields": [
   {
@@ -81,6 +91,63 @@
    "fieldname": "punch_out_until",
    "fieldtype": "Time",
    "label": "Punching Closes"
+  },
+  {
+   "fieldname": "section_leave",
+   "fieldtype": "Section Break",
+   "label": "Leave"
+  },
+  {
+   "default": "0",
+   "description": "Factor HR's Sandwich Leave: a weekend or holiday run with leave or absence on the working day immediately either side of it is counted as leave too. Off until HR confirms the policy group-wide — see docs/OPEN_QUESTIONS.md.",
+   "fieldname": "enable_sandwich_leave",
+   "fieldtype": "Check",
+   "label": "Enable Sandwich Leave"
+  },
+  {
+   "fieldname": "section_onboarding_form",
+   "fieldtype": "Section Break",
+   "label": "Onboarding Google Form"
+  },
+  {
+   "description": "The Form's own share link — what the Onboarding page's Share Google Form button hands to an employee. Not read for anything else: this box is never used to fetch a submission.",
+   "fieldname": "onboarding_form_url",
+   "fieldtype": "Data",
+   "label": "Google Form URL"
+  },
+  {
+   "description": "The id in the linked Sheet's URL, between /d/ and /edit. That Sheet is what Sync Now reads — not the Form.",
+   "fieldname": "onboarding_sheet_id",
+   "fieldtype": "Data",
+   "label": "Google Sheet ID"
+  },
+  {
+   "fieldname": "column_break_onboarding",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "A Google OAuth client's id, from a Desktop app OAuth client on the same GCP project — not a service account. Used with the refresh token below rather than a service-account key, because this project's org policy (iam.disableServiceAccountKeyCreation) refuses to create one. See tools/google_form_oauth.py for getting the refresh token.",
+   "fieldname": "onboarding_oauth_client_id",
+   "fieldtype": "Data",
+   "label": "OAuth Client ID"
+  },
+  {
+   "fieldname": "onboarding_oauth_client_secret",
+   "fieldtype": "Password",
+   "label": "OAuth Client Secret"
+  },
+  {
+   "description": "Long-lived — obtained once by signing in as a Google account that can read the Sheet, and good until that account revokes it. Run tools/google_form_oauth.py on your own machine (never on the bench) to get one; it opens a browser, asks you to sign in and consent, and prints the token to paste here.",
+   "fieldname": "onboarding_oauth_refresh_token",
+   "fieldtype": "Password",
+   "label": "OAuth Refresh Token"
+  },
+  {
+   "description": "Set by Sync Now, never typed. Empty means the Sheet has not been read yet.",
+   "fieldname": "onboarding_last_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Synced",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

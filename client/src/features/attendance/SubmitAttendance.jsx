@@ -234,7 +234,6 @@ export default function SubmitAttendance() {
 		<>
 			<div className="legend">
 				<b className="font-display">Submit Attendance</b>
-				<span className="cov part">Partial</span>
 				<span>
 					Closing <b>{label}</b>{company ? <> for <b>{company}</b></> : null}. Submitting freezes the month
 					on the site, and payroll runs from what was frozen.

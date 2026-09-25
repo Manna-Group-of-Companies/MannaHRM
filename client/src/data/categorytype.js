@@ -415,6 +415,29 @@ export const CT_CF_FILTER = [
 	["fieldname", "like", CT_PREFIX + "%"],
 ];
 
+/** The same rows, out of Employee's meta rather than out of `Custom Field`.
+
+    `Custom Field` is System Manager's to read, so an HR User asking for it is
+    refused — but every field on it is also merged into Employee's meta, which
+    anybody who may read an Employee is handed to draw the form. Same filter as
+    CT_CF_FILTER, applied here because meta cannot be asked for a subset.
+
+    `name` is rebuilt as `Employee-<fieldname>`, which is how Frappe names every
+    Custom Field; a meta row's own `name` is a DocField's and opens nothing. `creation`
+    may be absent; ctTypes' sort is stable, so the fields then keep the order
+    Employee's form draws them in. */
+export function ctFieldsFromMeta(docs) {
+	const meta = (docs || []).find((d) => d && d.name === "Employee");
+	return ((meta && meta.fields) || [])
+		.filter((f) => f.is_custom_field
+			&& (f.fieldtype === "Data" || f.fieldtype === "Select")
+			&& String(f.fieldname || "").startsWith(CT_PREFIX))
+		.map((f) => ({
+			...Object.fromEntries(CT_CF_FIELDS.map((k) => [k, f[k] ?? ""])),
+			name: `Employee-${f.fieldname}`,
+		}));
+}
+
 /** The values a category type may take: a Select field's `options`, one to a
     line. Empty for a `Data` field, which is a free-text category and a real
     answer rather than a missing one — see CT_CUSTOM_WHY. */

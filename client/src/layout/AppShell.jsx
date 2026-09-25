@@ -6,6 +6,7 @@ import TopBar from "@/layout/TopBar";
 import SubNav from "@/layout/SubNav";
 import PageOutlet from "@/layout/PageOutlet";
 import { MapDialog } from "@/components/PunchMap";
+import { PhotoDialog } from "@/components/PunchPhoto";
 import { useApp, set } from "@/store";
 
 export default function AppShell() {
@@ -57,6 +58,7 @@ export default function AppShell() {
 			</div>
 			{/* Any page can open it — see components/PunchMap.jsx. */}
 			<MapDialog />
+			<PhotoDialog />
 		</div>
 	);
 }

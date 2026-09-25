@@ -358,16 +358,19 @@ def test_the_old_config_is_kept_beside_the_new_one(new_gate):
 
 
 def test_the_console_serves_nothing_the_tools_cannot_do():
-	# Every route is a read screen or one of the six writes. A route that cleared
+	# Every route is a read screen or one of the writes. Restarting the bridge's
+	# task touches no machine and loses nothing: the queue is on disk. A route that cleared
 	# a log or wiped a machine would have to be added here first, and the test
 	# below says why there is none.
 	assert set(console.POST) == {
 		"/api/add-user", "/api/create-employee", "/api/link",
 		"/api/backup", "/api/delete-user", "/api/restore", "/api/add-machine",
+		"/api/restart-bridge",
 	}
 	assert set(console.GET) == {
 		"/api/machines", "/api/people", "/api/punches", "/api/attendance",
 		"/api/free-number", "/api/choices", "/api/unlinked", "/api/backups", "/api/find",
+		"/api/bridge",
 	}
 
 
@@ -464,3 +467,49 @@ def test_no_route_can_clear_the_log_wipe_the_machine_or_switch_it_off():
 	with open(os.path.join(console.HERE, "console.py"), encoding="utf-8") as handle:
 		code = handle.read()
 	assert re.findall(r"\.(clear_attendance|clear_data|poweroff|restart)\(", code) == []
+
+
+# --- the bridge, for the Windows app's Bridge screen ------------------------
+
+
+def test_the_bridge_screen_counts_what_is_waiting_on_this_pc_to_be_sent(tmp_path, monkeypatch):
+	from mannabridge.queue import PunchQueue
+
+	monkeypatch.setattr(console, "HERE", str(tmp_path))
+	queue = PunchQueue(str(tmp_path / "q.sqlite3"))
+	queue.offer("BIO-MRP-GATE1", "860", "2026-09-23 08:59:00")
+	queue.offer("BIO-MRP-GATE1", "912", "2026-09-23 09:01:00")
+	(tmp_path / "bridge.log").write_text("one\ntwo\n", encoding="utf-8")
+
+	answer = console.bridge(SimpleNamespace(queue_path="q.sqlite3"), {}, run=lambda command: (0, "Running", ""))
+	assert answer["state"] == "Running"
+	assert answer["unsent"] == 2
+	assert answer["log"] == ["one", "two"]
+
+
+def test_a_bridge_task_that_is_not_there_reads_blank_rather_than_as_running():
+	assert console.task_state(run=lambda command: (0, "", "")) == ""
+	assert console.task_state(run=lambda command: (1, "Running", "")) == ""
+
+
+def test_a_restart_that_windows_refuses_says_so_and_why():
+	answer = console.restart_bridge(None, {}, run=lambda command: (1, "", "Access is denied."))
+	assert answer == {"ok": False, "why": "The bridge did not start again: Access is denied."}
+
+
+def test_the_restart_asks_windows_for_the_task_the_installer_registers():
+	seen = []
+	console.restart_bridge(None, {}, run=lambda command: seen.append(command) or (0, "", ""))
+	assert "Start-ScheduledTask -TaskName 'Manna Attendance Bridge'" in seen[0]
+
+
+def test_the_search_asks_every_address_on_this_pcs_network_not_the_network_itself(monkeypatch):
+	from mannabridge import wizard
+
+	asked = []
+	monkeypatch.setattr(wizard, "this_pcs_addresses", lambda: ["192.168.1.33"])
+	monkeypatch.setattr(wizard, "scan", lambda hosts: asked.extend(hosts) or [])
+	console.find(SimpleNamespace(devices=[]), {})
+	assert asked[0] == "192.168.1.1"
+	assert asked[-1] == "192.168.1.254"
+	assert len(asked) == 254

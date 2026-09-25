@@ -18,18 +18,6 @@ import AssignEntry from "@/features/onboard/AssignEntry";
 export default function AssetAssign() {
 	return (
 		<>
-			<div className="legend">
-				<b className="font-display">Assets Assignment</b>
-				<span className="cov part">Photographed 3 Sep 2026</span>
-				<span>
-					Their screen, and it is <b>one person at a time</b> — the employee bar, the ASSETS table
-					of what they are holding, and a fifteen-box form for one handover. Drawn below, box for
-					box. In ERPNext this is the asset’s <code>custodian</code>, moved by an{" "}
-					<code>Asset Movement</code>, so the register and the assignment are one record rather
-					than two lists to reconcile.
-				</span>
-			</div>
-
 			<AssignEntry />
 		</>
 	);

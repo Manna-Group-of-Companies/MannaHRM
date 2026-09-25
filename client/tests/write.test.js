@@ -5,7 +5,7 @@ import {
 	fieldWarning, formFields, isMaster, missingRequired, namingField, patchOf,
 } from "@/lib/write";
 import { RECORD_DOCTYPES, SCHEMA } from "@/data/schema";
-import { MANAGED, OWN_PAGES } from "@/data/manage";
+import { MANAGED, NO_PAGE, OWN_PAGES } from "@/data/manage";
 import { MODULES } from "@/routes/registry";
 
 /* ---------------------------------------------------------------------------
@@ -220,9 +220,16 @@ describe("the form is built from the doctype, not by hand", () => {
 
 describe("every record doctype has somewhere to be managed", () => {
 	it("covers every one, on a generic list or on a page of its own — and never both", () => {
-		const places = [...MANAGED, ...OWN_PAGES].map((m) => m[3]);
+		const places = [...MANAGED, ...OWN_PAGES].map((m) => m[3]).concat(NO_PAGE.map((m) => m[0]));
 		expect(places).toHaveLength(RECORD_DOCTYPES.length);
 		expect([...places].sort()).toEqual([...RECORD_DOCTYPES].sort());
+	});
+
+	it("gives a reason for every doctype left without a page", () => {
+		for (const [doctype, why] of NO_PAGE) {
+			expect(SCHEMA[doctype], doctype).toBeDefined();
+			expect(why, doctype).toBeTruthy();
+		}
 	});
 
 	it("names a doctype this app actually installs", () => {

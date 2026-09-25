@@ -1,4 +1,4 @@
-import { apiCreate, apiUpload, getDoc } from "@/api/client";
+import { apiCall, apiCreate, apiUpload, getDoc } from "@/api/client";
 import { dmy } from "@/lib/format";
 
 /* ---------------------------------------------------------------------------
@@ -77,6 +77,32 @@ export function leaveDoc(f, emp, today) {
 }
 
 /**
+ * The weekend or holiday dates this application would sweep into leave, as
+ * `YYYY-MM-DD` strings — or `[]` when Sandwich Leave is off or nothing is
+ * swept.
+ *
+ * **The site decides this, not this form.** `manna_hr.leave.sandwich_preview`
+ * runs the same rule `manna_hr.leave.sweep` applies on Submit, against the
+ * Holiday List and the person's other leave and absence — none of which this
+ * dashboard holds in full. Asked here only so the warning can name the dates
+ * before the application is sent; the sweep itself happens on the site once
+ * the application is actually submitted, whether or not anybody saw this
+ * warning. CLAUDE.md §1.
+ */
+export async function sandwichPreview(employee, from, till) {
+	try {
+		return await apiCall("manna_hr.leave.sandwich_preview", {
+			employee, from_date: from, to_date: till,
+		}) || [];
+	} catch {
+		// Cannot tell is not the same as nothing to sweep — but a broken preview
+		// must never stop somebody applying for leave, so it is treated as
+		// nothing to warn about. The site's own rule runs on Submit regardless.
+		return [];
+	}
+}
+
+/**
  * Who the application goes to: the approver set on the person's record, else
  * their reporting manager's login.
  *
@@ -114,7 +140,10 @@ export async function raiseLeave(f, emp, today, file) {
 	const { doc, refuse } = leaveDoc(f, emp, today);
 	if (refuse) return { ok: false, refuse };
 
-	const approver = await approverFor(emp);
+	/* The one picked on the form wins. The site may insist on one ("Leave
+	   Approver is mandatory", an HR Settings switch), and the record and the
+	   manager are often both empty, so the form offers the choice. */
+	const approver = f.approver ? { user: f.approver, inferred: false } : await approverFor(emp);
 	if (approver.user) doc.leave_approver = approver.user;
 
 	let made;

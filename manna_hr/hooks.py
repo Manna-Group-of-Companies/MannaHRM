@@ -64,6 +64,12 @@ doc_events = {
 	"Leave Application": {
 		"before_submit": "manna_hr.freeze.guard_leave",
 		"before_cancel": "manna_hr.freeze.guard_leave",
+		# Sandwich Leave — Manna HR Settings.enable_sandwich_leave. Sweeps in the
+		# weekend or holiday between two days of leave once the application is
+		# actually granted, and withdraws it if the application is cancelled.
+		# See manna_hr/leave.py.
+		"on_submit": "manna_hr.leave.sweep",
+		"on_cancel": "manna_hr.leave.on_cancel",
 	},
 }
 
@@ -170,12 +176,29 @@ fixtures = [
 					"Employee Onboarding-custom_date_of_birth",
 					"Employee Onboarding-custom_cell_number",
 					"Employee Onboarding-custom_personal_email",
+					"Employee Onboarding-custom_form_section",
+					"Employee Onboarding-custom_form_timestamp",
+					"Employee Onboarding-custom_current_address",
+					"Employee Onboarding-custom_permanent_address",
+					"Employee Onboarding-custom_aadhaar_number",
+					"Employee Onboarding-custom_other_id_proof",
+					"Employee Onboarding-custom_column_break_form",
+					"Employee Onboarding-custom_marital_status",
+					"Employee Onboarding-custom_family_members",
+					"Employee Onboarding-custom_family_details",
+					"Employee Onboarding-custom_other_insurance",
+					"Employee Onboarding-custom_insurance_provider",
+					"Employee Onboarding-custom_insurance_policy_no",
+					"Employee Onboarding-custom_highest_qualification",
 					"Employee Checkin-custom_source",
 					"Employee Checkin-custom_geofence_result",
 					"Employee Checkin-custom_distance_metres",
+					"Employee Checkin-custom_photo",
 					# The one box Assets Details draws dead. Assets Assignment's
 					# seven are fields on the `Asset Assignment` doctype instead.
 					"Asset-custom_detail",
+					# Which company a shift is for — see CUSTOM_FIELDS in install.py.
+					"Shift Type-custom_company",
 				],
 			]
 		],
@@ -205,6 +228,11 @@ scheduler_events = {
 		# request from Approved to Completed — the difference between "somebody
 		# said yes" and "the day is actually fixed".
 		"manna_hr.regularization.complete_applied",
+		# The Onboarding page's Google Form: a candidate who submitted the form
+		# at 9am must not wait for somebody to open the page and click Sync Now
+		# before HR can see them. Silently skipped when no Sheet is configured —
+		# see sync_onboarding_from_sheet's own guard.
+		"manna_hr.onboard_sync.sync_if_configured",
 	],
 	"daily": [
 		# `Employee Document.status` is stored so the expiry watch can be a list

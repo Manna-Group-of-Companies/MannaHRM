@@ -13,7 +13,6 @@ import {
 	Empty, Gap, Html, Note, Scroll, Tile, Tiles, panelProps, tabProps,
 } from "@/components/ui";
 
-import { PayLegend } from "./shared";
 
 /* BANK TRANSFER, photographed 29 August 2026 — both tabs — and drawn here
    control for control: the rail of three collapsed filter groups with their
@@ -449,13 +448,6 @@ export default function BankTransfer() {
 
 	return (
 		<>
-			<PayLegend what="Bank Transfer" cov="part" tag="Readiness only">
-				Turning a finished payroll into money leaving an account. Half of it is stock, and the half
-				that is not is the file the bank will actually accept — which cannot be written here, and
-				would still not be writable if payroll ran tomorrow. What this page does instead is count
-				who could be paid at all.
-			</PayLegend>
-
 			<div className="fhscreen">
 				<div className="fhtitle">Bank Transfer</div>
 
