@@ -1,7 +1,7 @@
 import { useApp } from "@/store";
 import { active, scoped } from "@/lib/scope";
 import { fmt } from "@/lib/format";
-import { Cols, Empty, Gap, Html, Note, Panel, Tile, Tiles } from "@/components/ui";
+import { Cols, Empty, Gap, Html, Panel, Tile, Tiles } from "@/components/ui";
 import Link from "@/routes/Link";
 import { FACTOHR_MENU } from "@/data/factohr";
 import { needFor } from "@/data/needs";
@@ -107,10 +107,6 @@ export default function Blueprint({ section, title }) {
 				    this app's guess where their product's own description belongs. */}
 				<Panel title="What it is, in Factor HR's words" cov="none" ico="📖">
 					<p className="text-read text-ink">{desc}</p>
-					<Note>
-						Read off their menu on 8 September 2026 — docs/FACTOHR_SCREENS.md §7. Their
-						description, not a summary of it.
-					</Note>
 				</Panel>
 
 				<Panel title={plan.refuse ? "Why this one is not coming" : "What it would take here"}
@@ -134,11 +130,6 @@ export default function Blueprint({ section, title }) {
 						<Tiles>
 							{held.map(([k, n]) => <Tile key={k} k={k} n={n} />)}
 						</Tiles>
-						<Note>
-							Live counts, read when this page opened. They are here so whoever picks this
-							item up knows whether the inputs exist before they start — not as a measure
-							of progress on it.
-						</Note>
 					</Panel>
 				) : null}
 
@@ -149,10 +140,6 @@ export default function Blueprint({ section, title }) {
 						))}
 						<li><Link section={section} subtab="all">All of their {section === "onboard" ? "On Board" : section} menu</Link></li>
 					</ul>
-					<Note>
-						The pages here that read the same records this item would. Not a substitute —
-						a place to look while this is not built.
-					</Note>
 				</Panel>
 			</Cols>
 		</>

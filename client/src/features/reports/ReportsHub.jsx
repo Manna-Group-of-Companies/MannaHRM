@@ -3,12 +3,11 @@ import { useState } from "react";
 import { useApp } from "@/store";
 import { fmt, isoAgo, todayIso } from "@/lib/format";
 import { isHidden } from "@/data/sections";
-import { Note, Scroll } from "@/components/ui";
+import { Scroll } from "@/components/ui";
 import ExportButtons from "@/components/ExportButtons";
 import Link from "@/routes/Link";
 import { REPORTS, askText, reportInput, specSheet } from "@/data/reports";
 import { FACTOHR_MENU } from "@/data/factohr";
-import { slugOf } from "@/data/blueprints";
 
 /* ---------------------------------------------------------------------------
    Every report, on one page, and every one of them as an Excel or a PDF.
@@ -26,13 +25,13 @@ import { slugOf } from "@/data/blueprints";
    read, and two copies of a read are two chances for one report to show two
    numbers. They carry their own Excel and PDF buttons.
 
-   **"All" means Factor HR's whole Reports menu** (asked for 25 Sep 2026), not
-   the ones this app happens to have. So the second and third tables are
-   derived from `data/factohr.js` rather than kept by hand: every report of
-   theirs lands in exactly one of the three, a report built later moves itself
-   from the third table to the second, and the third says out loud how many are
-   not built yet, instead of a short list passing for a complete one. A report
-   whose module or page is hidden is left off all three, for the reason below.
+   **Every report of Factor HR's that opens a page here** (asked for 25 Sep
+   2026). The second table is derived from `data/factohr.js` rather than kept by
+   hand, so a report built later appears in it by itself. A third table listed
+   the ones not built yet; it was taken off the same day, asked for by IT —
+   those are still on each module's All tab, which is where the comparison with
+   Factor HR lives. A report whose module or page is hidden is left off both,
+   for the reason below.
    --------------------------------------------------------------------------- */
 
 /* The reports built off `s.checkins`, which holds today's punches and nothing
@@ -78,20 +77,15 @@ const DOWNLOADS = {
 	"leave/balances": "Excel · PDF · Word",
 };
 
-/** The three tables, worked out once per render from what is visible.
-    `specs` are the reports built on this page; everything else of theirs is
-    either a page elsewhere or a blueprint. */
+/** The second table, worked out once per render from what is visible.
+    `specs` are the reports built on this page; a report of theirs with no page
+    here is not on this page at all. */
 export function reportTables(specs) {
 	const onThisPage = new Set(specs.map((r) => r.section + "/" + r.id));
 	const seen = new Set();
 	const elsewhere = [];
-	const unbuilt = [];
-	for (const [section, , , title, description, here] of THEIRS) {
-		if (isHidden(section)) continue;
-		if (!here) {
-			unbuilt.push({ section, subtab: slugOf(title), title, description });
-			continue;
-		}
+	for (const [section, , , title, , here] of THEIRS) {
+		if (isHidden(section) || !here) continue;
 		const key = here.join("/");
 		if (isHidden(here[0], here[1]) || onThisPage.has(key) || seen.has(key)) continue;
 		seen.add(key);
@@ -103,7 +97,7 @@ export function reportTables(specs) {
 		seen.add(key);
 		elsewhere.push({ section, subtab, module: section, title });
 	}
-	return { elsewhere, unbuilt };
+	return { elsewhere };
 }
 
 export default function ReportsHub() {
@@ -119,7 +113,7 @@ export default function ReportsHub() {
 	/* A report whose own tab is hidden is left off here too — hiding a page and
 	   then offering its download one module over is not hiding it. */
 	const specs = REPORTS.filter((r) => !isHidden(r.section, r.id) && !REPLACED.has(r.section + "/" + r.id));
-	const { elsewhere, unbuilt } = reportTables(specs);
+	const { elsewhere } = reportTables(specs);
 	const built = specs.map((spec) => ({ spec, rows: spec.build(reportInput(s, spec.section), ask) }));
 	const sheet = (b) => specSheet(b.spec, b.rows, askText(b.spec, ask, s.company));
 	const open = built.length + elsewhere.length;
@@ -128,9 +122,7 @@ export default function ReportsHub() {
 		<>
 			<div className="legend">
 				<b className="font-display">📑 Reports</b>
-				<span>{open + unbuilt.length} reports</span>
-				<span>{open} open here</span>
-				<span>{unbuilt.length} not built yet</span>
+				<span>{open} reports</span>
 				{s.company ? <span>{s.company}</span> : <span>All companies</span>}
 			</div>
 
@@ -210,38 +202,6 @@ export default function ReportsHub() {
 				</table>
 			</Scroll>
 
-			<h4 className="ddasection">In Factor HR, not built here yet · {unbuilt.length}</h4>
-			<Scroll>
-				<table>
-					<thead>
-						<tr>
-							<th>Report</th>
-							<th>Module</th>
-							<th>What it is, in Factor HR's words</th>
-						</tr>
-					</thead>
-					<tbody>
-						{unbuilt.map((r) => (
-							<tr key={r.section + "/" + r.subtab}>
-								<td><Link section={r.section} subtab={r.subtab}>{r.title}</Link></td>
-								<td className="muted">{SECTION_LABEL[r.section] || r.section}</td>
-								<td className="muted">{r.description}</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</Scroll>
-
-			<Note>
-				The first table is built from what this dashboard has already read, for the company picked in the
-				top bar. <b>Date</b> is used by the one-day reports and <b>From / To</b> by the range ones, capped at
-				62 days. Present, MSP, In / Out Count and Head Count read the punches loaded with the dashboard, which
-				are today's — for another day use In Out Activities or Daily Detail below. Download all is one Excel
-				workbook with a sheet per report, or one PDF with each report starting on a new page. The second
-				table's reports read their own range from the site when opened — open one and use the export
-				buttons on it. The third is the rest of Factor HR's Reports menu: each one opens a page saying what
-				it would take to build. Payroll and Loans reports are left off while those modules are hidden.
-			</Note>
 		</>
 	);
 }

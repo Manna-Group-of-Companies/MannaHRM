@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Desk, Gap, NoteBelow } from "@/components/ui";
+import { Desk, Gap } from "@/components/ui";
 import { apiCreate } from "@/api/client";
 import { deskUrl } from "@/lib/desk";
 import { dmy, tidyDept, todayIso } from "@/lib/format";
@@ -330,15 +330,6 @@ export default function NewLetter({ onCancel }) {
 						</Gap>
 					</div>
 				)}
-
-				<NoteBelow>
-					<b>Their form does not ask who the letter is for.</b> The register behind it has Employee
-					Name as its second column, so one plainly belongs to somebody — either their flow carries
-					it in from the selected row, or the field sits below the fold of the 4 Sep 2026 capture.
-					The box is here because the write is here: <span className="mono">employee</span> is
-					required on <span className="mono">Employee Letter</span>, and the template is merged
-					against that person's record.
-				</NoteBelow>
 
 				{done && !s.site && (
 					<div className="mt-[.6rem]">

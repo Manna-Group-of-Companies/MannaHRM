@@ -1,4 +1,4 @@
-import { Note, Panel } from "@/components/ui";
+import { Panel } from "@/components/ui";
 import { dmy } from "@/lib/format";
 import { UPDATES } from "@/data/updates";
 
@@ -27,12 +27,6 @@ export default function Updates() {
 					))}
 				</ul>
 			</Panel>
-			<Note>
-				Factor HR's own Product Updates tab is factoHR writing to Manna about a
-				product Manna buys. This one is about the system Manna is building, so
-				it is written here — and written for whoever has to change what they do,
-				not for whoever reads the diff.
-			</Note>
 		</>
 	);
 }

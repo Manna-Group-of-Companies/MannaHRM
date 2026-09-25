@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useApp } from "@/store";
 import { download, toCsv } from "@/lib/csv";
 import { isoAgo, todayIso } from "@/lib/format";
-import { Empty, Html, Note, Scroll } from "@/components/ui";
+import { Empty, Scroll } from "@/components/ui";
 import { LocCell } from "@/components/PunchMap";
 import ExportButtons from "@/components/ExportButtons";
 import { askText, daysBetween, reportFor, reportInput, specSheet } from "@/data/reports";
@@ -79,12 +79,10 @@ export default function Report({ section, id }) {
 			</div>
 
 			{rows.length === 0 ? (
-				<Empty title={spec.empty}>
-					{/* The empty state says what an empty result *means* here, because it
-					    is never the same thing twice: nobody has a birthday in March, and
-					    no punch has reached the site today, are different problems. */}
-					<Html html={spec.note} />
-				</Empty>
+				/* The title says what an empty result *means* here, because it is never
+				   the same thing twice: nobody joined this month, and no punch has
+				   reached the site today, are different problems. */
+				<Empty title={spec.empty} />
 			) : (
 				<>
 					<Scroll>
@@ -113,7 +111,6 @@ export default function Report({ section, id }) {
 							</tbody>
 						</table>
 					</Scroll>
-					<Note><Html html={spec.note} /></Note>
 				</>
 			)}
 		</>

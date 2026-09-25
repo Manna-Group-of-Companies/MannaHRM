@@ -127,26 +127,29 @@ describe("the Reports page", () => {
 		expect(reportInput(getState(), "leave").rows.every((e) => e.status === "Active")).toBe(true);
 	});
 
-	it("shows every report on Factor HR's Reports menu whose module is on the rail", async () => {
+	const theirs = () => FACTOHR_MENU.filter((r) => r[1] === "Reports" && !isHidden(r[0]));
+
+	it("shows every report of Factor HR's that opens a page here", async () => {
 		const { container } = await draw();
 		const text = container.textContent;
-		const theirs = FACTOHR_MENU.filter((r) => r[1] === "Reports" && !isHidden(r[0]));
-		expect(theirs.length).toBeGreaterThan(40);
-		for (const r of theirs) {
-			// A report whose page is hidden (Employee Detail) is not offered by another name either.
-			if (r[5] && isHidden(r[5][0], r[5][1])) continue;
-			const spec = r[5] && REPORTS.find((x) => x.section === r[5][0] && x.id === r[5][1]);
+		for (const r of theirs().filter((x) => x[5] && !isHidden(x[5][0], x[5][1]))) {
+			const spec = REPORTS.find((x) => x.section === r[5][0] && x.id === r[5][1]);
 			expect(text).toContain(spec && spec.id !== "absent" ? spec.title : r[3]);
 		}
 	});
 
-	it("puts each of their reports in exactly one table", () => {
+	it("leaves off the reports of theirs that are not built here", async () => {
+		const { container } = await draw();
+		const unbuilt = theirs().filter((r) => !r[5]);
+		expect(unbuilt.length).toBeGreaterThan(10);
+		for (const r of unbuilt) expect(container.textContent).not.toContain(r[3]);
+	});
+
+	it("lists each page once, whichever table it is in", () => {
 		const specs = REPORTS.filter((r) => r.id !== "absent" && !isHidden(r.section, r.id));
-		const { elsewhere, unbuilt } = reportTables(specs);
-		const addresses = [...specs.map((r) => r.section + "/" + r.id),
-			...elsewhere.map((r) => r.section + "/" + r.subtab), ...unbuilt.map((r) => r.section + "/" + r.subtab)];
+		const { elsewhere } = reportTables(specs);
+		const addresses = [...specs.map((r) => r.section + "/" + r.id), ...elsewhere.map((r) => r.section + "/" + r.subtab)];
 		expect(new Set(addresses).size).toBe(addresses.length);
-		expect(unbuilt.every((r) => !FACTOHR_MENU.find((m) => m[3] === r.title)[5])).toBe(true);
 	});
 
 	it("leaves off the reports of modules hidden from the rail", async () => {

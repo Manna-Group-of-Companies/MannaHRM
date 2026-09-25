@@ -204,8 +204,7 @@ export function AttendanceDash() {
 				<Panel title={`Month — ${month}`} ico="📅" cov="live">
 					<ReadNote st={att} what="attendance" />
 					{att.rows && !m.marked ? (
-						<Note>No submitted Attendance for this month. It is generated from punches by the shift job,
-							so an empty month usually means shifts are not assigned yet.</Note>
+						<Note>No submitted Attendance for this month.</Note>
 					) : null}
 					{m.marked ? (
 						<>

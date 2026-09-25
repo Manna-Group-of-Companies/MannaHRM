@@ -147,11 +147,6 @@ export function OtReport() {
 							<Table cols={OT_COLS} rows={ot} keyOf={(r) => r.emp.name + r.date} />
 						</>
 					)}
-			<Note>
-				Overtime here is only what HR has entered for a person and a day — click a day on Attendance
-				Regularization, or open the person's month, and fill OT hrs. A late punch-out on its own is hours
-				worked, not overtime.
-			</Note>
 		</>
 	);
 }
@@ -255,7 +250,6 @@ export function WeeklyReport() {
 			)}
 			<Note>
 				Sunday to Saturday. P Present · HD Half Day · A Absent · L On Leave · WO Weekly Off · H Holiday · ½ one punch only.
-				A day hrms has processed shows its Attendance; a day it has not shows the day's punches.
 			</Note>
 		</>
 	);
@@ -291,11 +285,6 @@ export function AbsentReport() {
 			{!ready ? <div className="regload">Reading {dmy(day)}…</div>
 				: !list.length ? <Empty title="Nobody absent">Everybody active punched, is on leave, is off, or the day is not over yet.</Empty>
 					: <Table cols={ABSENT_COLS} rows={list} keyOf={(r) => r.emp.name} />}
-			<Note>
-				Absent is hrms's Attendance where the day has been processed. Where it has not, a past working day with
-				no punch, no approved leave and no holiday is counted absent — and a machine that has not delivered its
-				log looks exactly like that, so check the device before anybody's pay is cut.
-			</Note>
 		</>
 	);
 }

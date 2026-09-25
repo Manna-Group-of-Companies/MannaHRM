@@ -19,9 +19,14 @@ import { RECORD_DOCTYPES, SCHEMA, fieldsOf, listFields } from "@/data/schema";
 
 describe("the generated schema is current", () => {
 	it("matches what the generator produces from the doctype JSON right now", () => {
-		const before = readFileSync("src/data/schema.js", "utf8");
+		/* Line endings are not content. The generator writes LF, and on a Windows
+		   checkout core.autocrlf hands back CRLF — which failed this test once
+		   after every checkout (25 Sep 2026), then passed, because the run itself
+		   had rewritten the file. */
+		const lf = (t) => t.replace(/\r\n/g, "\n");
+		const before = lf(readFileSync("src/data/schema.js", "utf8"));
 		execFileSync("node", ["scripts/schema.mjs"], { stdio: "pipe" });
-		const after = readFileSync("src/data/schema.js", "utf8");
+		const after = lf(readFileSync("src/data/schema.js", "utf8"));
 		expect(after, "Run `node scripts/schema.mjs` — a doctype changed and the client's copy did not")
 			.toBe(before);
 	});

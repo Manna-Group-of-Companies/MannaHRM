@@ -325,9 +325,7 @@ export default function Dashboard({ company }) {
 					/>
 					{s.checkins.length === 0 ? (
 						<Note>
-							No punches have reached the site today. Until a shift is defined
-							these are punches only — <b>Attendance rows are generated from
-							them</b>, never written by hand. See CLAUDE.md §5.
+							No punches have reached the site today.
 						</Note>
 					) : null}
 				</Panel>
@@ -390,14 +388,6 @@ export default function Dashboard({ company }) {
 								s={`a year, across ${fmt(withCtc.length)} people`} />
 						</Tiles>
 					</div>
-					<Note>
-						<b>Nothing has been run.</b> Salary Structures, Payroll Entry and
-						Salary Slips are all untouched on this site — the Payroll module
-						draws Factor HR's screens against them and is marked Deferred on the
-						rail for exactly that reason. Two of their six —{" "}
-						<b>Stop Salary</b> and <b>Hold Salary</b> — have no field on hrms
-						at all and would each become a Custom Field on Employee.
-					</Note>
 				</Panel>
 
 				{/* Their F&F Summary. All five read zero on their screen too, on a
@@ -414,12 +404,6 @@ export default function Dashboard({ company }) {
 							</div>
 						))}
 					</div>
-					<Note>
-						<code>Full and Final Statement</code> and <code>Employee Separation</code>{" "}
-						are both stock Frappe HR and neither has a row on this site. Factor
-						HR's five read zero as well — so this is not a gap between the two
-						systems, it is a module nobody has used in either.
-					</Note>
 				</Panel>
 
 				{/* Their Wish Celebration. Birthdays and work anniversaries are both
@@ -484,11 +468,6 @@ export default function Dashboard({ company }) {
 							</div>
 						))}
 					</div>
-					<Note>
-						Factor HR's four are <b>factoHR's own staff</b>. Manna's ladder is
-						not written down anywhere yet — and until it is, "the attendance is
-						wrong and payroll runs on Friday" has no named owner.
-					</Note>
 				</Panel>
 
 				{/* Their Help Desk. Three tickets, all Open — raised with factoHR,
@@ -502,11 +481,6 @@ export default function Dashboard({ company }) {
 							</div>
 						))}
 					</div>
-					<Note>
-						factoHR's <em>own</em> support desk, for raising tickets with
-						factoHR — three open on their tenant, none resolved. It goes with
-						the product it belongs to.
-					</Note>
 				</Panel>
 
 				{/* **Their Announcements and CEO Speak, and these two are live.**
@@ -547,12 +521,6 @@ export default function Dashboard({ company }) {
 									))}
 								</ul>
 							)}
-							<Note>
-								<b>Published is off until somebody means it.</b> This is the one thing in
-								this app read by people who did not go looking for it, and a notice cannot
-								be taken back from whoever has already read it. The server refuses one with
-								no body, or a window that ends before it begins.
-							</Note>
 						</Panel>
 					);
 				})}
@@ -563,7 +531,6 @@ export default function Dashboard({ company }) {
 						<Empty title="Nothing here, and nothing there either">
 							<Html html={what} />
 						</Empty>
-						<Note><b>What it would take.</b> <Html html={need} /></Note>
 					</Panel>
 				))}
 
@@ -623,10 +590,6 @@ export default function Dashboard({ company }) {
 
 				<Panel title="New joiners" cov="live" ico="📈" shut={shut.has("New joiners")} onToggle={() => fold("New joiners")}>
 					<Columns rows={joiners} label="New joiners a month, six months back" />
-					<Note>
-						Off <code>date_of_joining</code>, and it counts people still on the
-						books — somebody who joined in April and left in June is not here.
-					</Note>
 				</Panel>
 
 				<Panel title="Recruitment Status" cov={cands.length ? "live" : "part"} ico="🧲" shut={shut.has("Recruitment Status")} onToggle={() => fold("Recruitment Status")}>
@@ -677,11 +640,6 @@ export default function Dashboard({ company }) {
 						<Line l="Appraisal Template" note="the criteria and their weights" />
 						<Line l="Goal" note="what was agreed, so a rating means something" />
 					</div>
-					<Note>
-						All three ship with Frappe HR. Until one exists, a rating on this
-						panel would be a number with nothing behind it — which on a screen
-						read beside Factor HR is worse than an empty panel.
-					</Note>
 				</Panel>
 			</Cols>
 
