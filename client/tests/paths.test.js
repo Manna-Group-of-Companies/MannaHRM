@@ -90,13 +90,14 @@ describe("the URL grammar", () => {
 	});
 });
 
-describe("pages hidden on 25 Sep 2026", () => {
+describe("pages hidden on 25 and 26 Sep 2026", () => {
 	/* Asked for by IT. Hidden, not deleted: the pages and their tests stay, and
 	   an old link lands on the module's first page rather than on a screen with
 	   no tab to say where you are. */
 	const HIDDEN = [
 		["attendance", "statutory"], ["employees", "ctc"], ["employees", "directory"],
 		["employees", "weekoff"], ["employees", "orgchart"], ["employees", "letters"],
+		["employees", "all"],
 	];
 
 	it("sends every one of their old addresses to the module's first page", async () => {

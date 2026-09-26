@@ -26,9 +26,10 @@ export const VISIBLE_SECTIONS = SECTIONS.filter((s) => !s.hidden);
    17 Sep 2026; Submit Attendance 24 Sep 2026 — it waits on the app install
    anyway (CLAUDE.md §7). Profile Change Requests, Employee Detail and Category Types 24 Sep 2026.
    CTC / Earnings, Employees Directory, Weekoff Holiday Report, Organization
-   Chart, Employee Letters and Statutory Reports 25 Sep 2026, asked for by IT. */
+   Chart, Employee Letters and Statutory Reports 25 Sep 2026, asked for by IT.
+   Employees → All 26 Sep 2026, the same way. */
 export const HIDDEN_PAGES = {
-	employees: ["salary", "changes", "detail", "cattypes", "ctc", "directory", "weekoff", "orgchart", "letters"],
+	employees: ["salary", "changes", "detail", "cattypes", "ctc", "directory", "weekoff", "orgchart", "letters", "all"],
 	attendance: ["submit", "statutory"],
 };
 
