@@ -1,18 +1,17 @@
 import { patch, useApp } from "@/store";
-import { load, REG_DOCTYPE } from "@/api/load";
+import { load } from "@/api/load";
 import { scoped } from "@/lib/scope";
 import { useEffect, useRef, useState } from "react";
 import { saveDayEdit, saveOvertime } from "@/api/punchedit";
-import { addShiftForDates, setWorkingTime } from "@/api/shiftassign";
-import { isSupervisor, shiftChoices } from "@/lib/worktime";
+import { addShiftForDates, removeShiftForDates, setWorkingTime } from "@/api/shiftassign";
+import { isSupervisor, shiftOptions } from "@/lib/worktime";
+import { spliceShift, spliceText } from "@/lib/shiftsplice";
 import { MON, clock, dayOf, dmy, fmt, thisMonth, tidyDept, todayIso } from "@/lib/format";
 import { REGISTER_CODE, ROSTER_STATES, daysOf, minutesText, monthRegister, monthRoster, spanHours } from "@/lib/roster";
 import { loadRegGrid, loadRegMonth, loadShiftWindows, shiftLabel } from "@/api/attendance";
 import { editPlan } from "@/lib/punchedit";
 import { Desk, Modal, Note, Scroll } from "@/components/ui";
 import { deskUrl } from "@/lib/desk";
-import { decideCorrection } from "@/features/approvals/decide";
-import { ATTENDANCE_APPROVER, isAttendanceApprover } from "@/data/approver";
 
 /* Factor HR's Attendance Regularization screen, photographed 28 Aug 2026:
    the title, then one bar — Attendance Cycle, the status dot, Search Employee,
@@ -243,8 +242,15 @@ function RosterRow({ r, label, onOpen }) {
 			<td className="mono">{time("in", clock(r.inAt).replace("—", ""), "Time In")}</td>
 			<td className="mono">{time("out", clock(r.outAt).replace("—", ""), "Time Out")}</td>
 			<td className="mono">{r.hours}</td>
-			<td className="mono">{minutesText(r.lateMin)}</td>
-			<td className="mono">{minutesText(r.earlyMin)}</td>
+			{/* Coloured as the register's corners are — red for late coming, blue
+			    for early going — asked for on 29 September 2026, so the two
+			    columns are found down thirty rows without reading every one. */}
+			<td className="mono">
+				{r.lateMin ? <span className="rtflag late" title={`Late by ${minutesText(r.lateMin)}`}>{minutesText(r.lateMin)}</span> : null}
+			</td>
+			<td className="mono">
+				{r.earlyMin ? <span className="rtflag early" title={`Left ${minutesText(r.earlyMin)} early`}>{minutesText(r.earlyMin)}</span> : null}
+			</td>
 			<td className="mono">{time("ot", otText(r.otSec), "OT hours")}</td>
 			{/* Their four AR columns. Empty on a day nobody asked about, which is
 			    most of them — a dash on thirty rows reads as data. */}
@@ -312,8 +318,16 @@ const GRID_TOTALS = [
 	   shift window — there is nothing to measure them against. */
 	["Hrs", "Hours worked — first punch-in to last punch-out, each day, added up", (c) => minutesText(c.workMin)],
 	["OT", "Overtime HR has entered for the month — click a day to add it", (c) => minutesText(c.otMin)],
-	["Late", "Days the first punch-in was after the shift's start (total late time in the tooltip)", (c) => (c.lateDays ? fmt(c.lateDays) : "")],
+	["Late", "Late coming — days the first punch-in was after the shift's start (total late time in the tooltip)", (c) => (c.lateDays ? fmt(c.lateDays) : "")],
+	/* Early going, beside it — asked for on 29 September 2026. The same
+	   measure the other way round: the last punch-out before the shift's end,
+	   on a day that has both punches. A day with only an in is ½, not early. */
+	["Early", "Early going — days the last punch-out was before the shift's end (total early time in the tooltip)", (c) => (c.earlyDays ? fmt(c.earlyDays) : "")],
 ];
+
+/** The tooltip on a row's Late and Early totals: how much time, in all. */
+const totalTitle = (key, c) => (key === "Late" && c.lateMin ? `${minutesText(c.lateMin)} late in all`
+	: key === "Early" && c.earlyMin ? `${minutesText(c.earlyMin)} early in all` : undefined);
 
 /* OT is picked on a clock, to the second, asked for on 17 September 2026 —
    `01:30:00` rather than typing `1.5`. The clock reads as a duration here, not a
@@ -463,6 +477,10 @@ function DayPopup({ pick, onClose, onDone }) {
 	);
 }
 
+/** Punches made in the month itself — the read reaches the next morning for
+    the last night's leaving, and that is not this month's punch to count. */
+const inCycle = (punches, cyc) => punches.filter((c) => String(c.time || "").startsWith(cyc)).length;
+
 /* ---------------------------------------------------------------------------
    The register: everybody down the side, the days of the cycle across.
 
@@ -523,6 +541,8 @@ function RegGrid({ s, cyc, onPick }) {
 					</span>
 				))}
 				<span><b className="rgc full ar">P</b>a correction is filed for the day</span>
+				<span><b className="rgc full late">P</b>late coming</span>
+				<span><b className="rgc full early">P</b>early going</span>
 			</div>
 
 			{people.length ? (
@@ -567,6 +587,7 @@ function RegGrid({ s, cyc, onPick }) {
 												{rows.map((d) => (
 													<td key={d.iso} title={cellTitle(d)}
 														className={"d rgc " + d.display + (d.ar ? " ar" : "")
+															+ (d.lateMin ? " late" : "") + (d.earlyMin ? " early" : "")
 															+ (d.iso === today ? " now" : "")}>
 														{/* A past day opens its Time In / Time Out editor. */}
 														{d.iso <= today ? (
@@ -584,7 +605,7 @@ function RegGrid({ s, cyc, onPick }) {
 													</td>
 												))}
 												{GRID_TOTALS.map((t) => (
-													<td className="d tot" key={t[0]} title={t[0] === "Late" && counts.lateMin ? `${minutesText(counts.lateMin)} late in all` : undefined}>{t[2](counts)}</td>
+													<td className="d tot" key={t[0]} title={totalTitle(t[0], counts)}>{t[2](counts)}</td>
 												))}
 											</>
 										)}
@@ -603,7 +624,7 @@ function RegGrid({ s, cyc, onPick }) {
 
 			<div className="regfoot">
 				<span className="cnt">
-					{fmt(people.length)} people · {fmt(days.length)} days · {fmt(mine.punches.length)} punches ·{" "}
+					{fmt(people.length)} people · {fmt(days.length)} days · {fmt(inCycle(mine.punches, cyc))} punches ·{" "}
 					{fmt(mine.ar.length)} correction(s), every status. Click a name for that person's month.
 				</span>
 			</div>
@@ -614,13 +635,20 @@ function RegGrid({ s, cyc, onPick }) {
 /* Give the picked person a shift — their working time, or a shift for dates.
    See api/shiftassign.js for the difference. */
 function ShiftPanel({ s, emp, cyc }) {
-	/* Day and Night — and General too for a supervisor — of this person's company. */
-	const names = shiftChoices(emp, s.shiftTypes, s.companies, s.employees);
+	/* Day and Night — and General too for a supervisor — of this person's company
+	   first, then every other shift on the site. */
+	const { suggested, others } = shiftOptions(emp, s.shiftTypes, s.companies, s.employees);
+	const opt = (n) => <option key={n} value={n}>{shiftLabel(n, s.shiftWindows)}</option>;
 	const [f, setF] = useState({ shift: emp.default_shift || "", from: todayIso(), to: "" });
 	const [busy, setBusy] = useState(false);
 	const [msg, setMsg] = useState({ text: "", bad: false });
 	useEffect(() => { setF({ shift: emp.default_shift || "", from: todayIso(), to: "" }); setMsg({ text: "", bad: false }); }, [emp.name]);
 	const mine = s.regMonth.key === `${emp.name}|${cyc}` ? s.regMonth.assignments || [] : [];
+	/* What the new shift will do to the ones already there — said before the
+	   button rather than discovered after it. The site's own list is read again
+	   when it is pressed; this is the month on screen. */
+	const plan = f.shift && f.from && (!f.to || f.to >= f.from) ? spliceShift(mine, f) : null;
+	const ahead = plan && !plan.same ? spliceText(plan, dmy) : "";
 
 	const run = async (fn) => {
 		setBusy(true);
@@ -636,7 +664,12 @@ function ShiftPanel({ s, emp, cyc }) {
 			<label>Shift{" "}
 				<select value={f.shift} disabled={busy} aria-label="Shift" onChange={(e) => setF({ ...f, shift: e.target.value })}>
 					<option value="">— choose —</option>
-					{names.map((n) => <option key={n} value={n}>{shiftLabel(n, s.shiftWindows)}</option>)}
+					{others.length && suggested.length ? (
+						<>
+							<optgroup label={emp.company || "This person"}>{suggested.map(opt)}</optgroup>
+							<optgroup label="All other shifts">{others.map(opt)}</optgroup>
+						</>
+					) : suggested.concat(others).map(opt)}
 				</select>
 			</label>
 			<button type="button" className="embtn" disabled={busy || f.shift === (emp.default_shift || "")}
@@ -650,9 +683,18 @@ function ShiftPanel({ s, emp, cyc }) {
 				onClick={() => run(() => addShiftForDates(emp, f, cyc))}>{busy ? "Saving…" : "Add shift"}</button>
 			{mine.length ? (
 				<span className="rnote">
-					Dated shifts: {mine.map((a) => `${a.shift_type} ${dmy(a.start_date)}${a.end_date ? `–${dmy(a.end_date)}` : " →"}`).join(" · ")}
+					Dated shifts:{" "}
+					{mine.map((a, i) => (
+						<span key={a.name}>
+							{i ? " · " : ""}{a.shift_type} {dmy(a.start_date)}{a.end_date ? `–${dmy(a.end_date)}` : " →"}{" "}
+							<button type="button" className="lnk" disabled={busy}
+								aria-label={`Remove ${a.shift_type} from ${dmy(a.start_date)}`}
+								onClick={() => run(() => removeShiftForDates(emp, a, cyc))}>Remove</button>
+						</span>
+					))}
 				</span>
 			) : null}
+			{ahead ? <span className="rnote">Adding this shift will also change: {ahead}.</span> : null}
 			{msg.text ? <span className={"rnote" + (msg.bad ? " bad" : "")} role="status">{msg.text}</span> : null}
 		</div>
 	);
@@ -740,139 +782,15 @@ function RegMonth({ s, emp, cyc, onPick }) {
 
 			<div className="regfoot">
 				<span className="cnt">
-					{fmt(rows.length)} days · {fmt(mine.punches.length)} punches ·{" "}
+					{fmt(rows.length)} days · {fmt(inCycle(mine.punches, cyc))} punches ·{" "}
 					{counts.workMin ? `${minutesText(counts.workMin)} hrs worked · ` : ""}
 					{counts.otMin ? `${minutesText(counts.otMin)} OT · ` : ""}
 					{counts.lateDays ? `${fmt(counts.lateDays)} late (${minutesText(counts.lateMin)}) · ` : ""}
+					{counts.earlyDays ? `${fmt(counts.earlyDays)} early (${minutesText(counts.earlyMin)}) · ` : ""}
 					{fmt(mine.ar.length)} correction(s), every status
 				</span>
 			</div>
 		</>
-	);
-}
-
-/* ---------------------------------------------------------------------------
-   Waiting for approval — corrections raised from the phone app, or left over
-   from before Save changed a time directly, decided on
-   the page they were raised from (17 September 2026). The same decision as the
-   card on Dashboard → Approvals, through the same decideCorrection: approving
-   writes the punch and sets aside the one it replaces; rejecting writes nothing.
-
-   Narrowed like the rest of the page: the company scope, the cycle, and the
-   picked person when there is one.
-   --------------------------------------------------------------------------- */
-function PendingPanel({ s, emp, cyc }) {
-	const [notes, setNotes] = useState({});
-	const [busy, setBusy] = useState("");
-	const [msg, setMsg] = useState({ text: "", bad: false });
-	const inScope = new Set(scoped(s).map((e) => e.name));
-	const all = s.approvals.attendance || [];
-	const visible = all.filter((r) => inScope.has(r.employee));
-	const forWho = visible.filter((r) => !emp || r.employee === emp.name);
-	const rows = forWho
-		.filter((r) => String(r.attendance_date || "").slice(0, 7) === cyc)
-		.sort((a, b) => String(a.attendance_date).localeCompare(String(b.attendance_date)));
-
-	/* Always drawn. An empty box that says why is the difference between "nothing
-	   is waiting" and "the request went somewhere else" — hiding it made both
-	   look like the feature was missing. */
-	const otherMonths = [...new Set(forWho.map((r) => String(r.attendance_date || "").slice(0, 7)))]
-		.filter((m) => m && m !== cyc).sort();
-	const empty = !s.regDoctype
-		? `The correction queue could not be read, so requests waiting for approval cannot be shown. The site said: ${s.regQueueErr || `no read permission on ${REG_DOCTYPE}`}.`
-		: otherMonths.length
-			? `Nothing in ${cycleLabel(cyc)}. Waiting in: ${otherMonths.map(cycleLabel).join(", ")} — change the Attendance Cycle.`
-			: all.length > visible.length
-				? `Nothing for the companies you are looking at; ${fmt(all.length - visible.length)} waiting for other companies.`
-				: `Nothing waiting${emp ? ` for ${emp.employee_name}` : ""}. A time changed on this page is saved at once and never waits here.`;
-
-	const reread = async () => {
-		setBusy("reload");
-		await load();
-		setBusy("");
-	};
-
-	async function decide(r, action) {
-		setBusy(r.name + action);
-		setMsg({ text: "", bad: false });
-		const res = await decideCorrection(r, action, notes[r.name] || "");
-		setBusy("");
-		setMsg({ text: res.msg, bad: !res.ok });
-		if (res.ok) {
-			if (emp) void loadRegMonth(emp.name, cyc, true);
-			else void loadRegGrid(cyc, true);
-		}
-	}
-
-	const approver = isAttendanceApprover(s.user);
-
-	return (
-		<div className="regwho regedit" role="region" aria-label="Waiting for approval">
-			<b>Waiting for approval</b>
-			<span className="muted">
-				{approver ? "You approve these — approving saves the time." : `Sent to ${ATTENDANCE_APPROVER}, who approves them. The time is saved once approved.`}
-			</span>
-			<span className="n">{fmt(rows.length)} in {cycleLabel(cyc)}</span>
-			<button type="button" className="embtn" disabled={Boolean(busy)} onClick={reread}>
-				{busy === "reload" ? "Reading…" : "Refresh queue"}
-			</button>
-			{!rows.length ? <span className="rnote" style={{ flexBasis: "100%" }}>{empty}</span> : null}
-			{rows.length ? (
-				<Scroll>
-					<table>
-						<thead>
-							<tr>
-								<th>Date</th><th>Employee</th><th>Request</th><th>Requested In</th><th>Requested Out</th>
-								<th>Reason</th><th>Raised by</th>{approver ? <><th>Note</th><th>Decide</th></> : <th>Approver</th>}
-							</tr>
-						</thead>
-						<tbody>
-							{rows.map((r) => {
-								const who = s.byName[r.employee] || {};
-								const mineToo = Boolean(s.user && r.owner === s.user);
-								const off = Boolean(busy) || mineToo;
-								const why = mineToo ? "You raised this correction, so deciding it is somebody else's job." : "";
-								return (
-									<tr key={r.name}>
-										<td className="mono">{dmy(r.attendance_date)}</td>
-										<td>
-											<b>{r.employee_name || who.employee_name || r.employee}</b>{" "}
-											<span className="mono muted">{who.employee_number || r.employee}</span>
-										</td>
-										<td className="mono muted">{r.name}</td>
-										<td className="mono">{clock(r.requested_in).replace("—", "")}</td>
-										<td className="mono">{clock(r.requested_out).replace("—", "")}</td>
-										<td>{r.reason || ""}</td>
-										<td className="muted">{r.owner || ""}</td>
-										{approver ? (<>
-										<td>
-											<input type="text" className="rreason" placeholder="Note (optional)"
-												aria-label={`Decision note, ${r.name}`} value={notes[r.name] || ""} disabled={off}
-												onChange={(e) => setNotes({ ...notes, [r.name]: e.target.value })} />
-										</td>
-										<td>
-											<button type="button" className="btn tpl" disabled={off} title={why || "Writes the requested punch"}
-												aria-label={`Approve ${r.name}`} onClick={() => decide(r, "Approve")}>
-												{busy === r.name + "Approve" ? "Approving…" : "Approve"}
-											</button>{" "}
-											<button type="button" className="embtn" disabled={off} title={why || "Writes nothing to attendance"}
-												aria-label={`Reject ${r.name}`} onClick={() => decide(r, "Reject")}>
-												{busy === r.name + "Reject" ? "Rejecting…" : "Reject"}
-											</button>
-											{why ? <span className="rnote">{why}</span> : null}
-										</td>
-										</>) : (
-											<td className="muted">Waiting for {ATTENDANCE_APPROVER}</td>
-										)}
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
-				</Scroll>
-			) : null}
-			{msg.text ? <span className={"rnote" + (msg.bad ? " bad" : "")} role="status">{msg.text}</span> : null}
-		</div>
 	);
 }
 
@@ -925,7 +843,11 @@ export default function Regularization() {
 			<div className="fhscreen">
 				<div className="fhtitle">Attendance Regularization</div>
 				<RegBar s={s} cyc={cyc} />
-				<PendingPanel s={s} emp={emp} cyc={cyc} />
+				{/* No "Waiting for approval" box here since 29 September 2026. A
+				    correction raised from the phone app is decided on Dashboard →
+				    Approvals, through the same decideCorrection, and the header's
+				    bell lists it; repeating the queue on this page was a box that
+				    said "Nothing waiting" most days. */}
 
 				{/* The picker Factor HR opens under its search box. Ours says how many
 				    people it is searching, because the dot and the category box can

@@ -75,13 +75,19 @@ class Listing:
 
 
 class Site:
-	"""Shift Types with a last_sync_of_checkin each, and a record of what got written."""
+	"""Shift Types with a last_sync_of_checkin each, and a record of what got written.
+
+	It answers with every shift whatever the filter asked for, on purpose: the
+	sink must move only the shifts it named even when the site says more.
+	"""
 
 	def __init__(self, shifts):
 		self.shifts = shifts
 		self.writes = {}
+		self.asked = 0
 
 	def get(self, url, params=None, timeout=None):
+		self.asked += 1
 		return Listing([{"name": n, "last_sync_of_checkin": v} for n, v in self.shifts.items()])
 
 	def put(self, url, json=None, timeout=None):
@@ -99,19 +105,41 @@ def test_the_sync_marker_never_moves_backwards():
 	# Measured on 14 Sep 2026: J1800 had it at Saturday 15:19, the laptop filling
 	# in wrote Friday 20:31 over it, and Saturday's shifts stopped closing.
 	site = Site({"Office": "2026-09-12 15:19:26"})
-	assert sink_on(site).mark_synced("https://site.example", "2026-09-11 20:31:07") == 0
+	assert sink_on(site).mark_synced("https://site.example", {"Office": "2026-09-11 20:31:07"}) == 0
 	assert site.writes == {}
 
 
 def test_the_sync_marker_moves_forward():
 	site = Site({"Office": "2026-09-12 15:19:26"})
-	assert sink_on(site).mark_synced("https://site.example", "2026-09-14 08:29:39") == 1
+	assert sink_on(site).mark_synced("https://site.example", {"Office": "2026-09-14 08:29:39"}) == 1
 	assert site.writes == {"Office": "2026-09-14 08:29:39"}
 
 
 def test_a_shift_that_was_never_synced_gets_its_first_marker():
 	site = Site({"Office": None})
-	assert sink_on(site).mark_synced("https://site.example", "2026-09-14 08:29:39") == 1
+	assert sink_on(site).mark_synced("https://site.example", {"Office": "2026-09-14 08:29:39"}) == 1
+
+
+def test_only_the_shifts_a_bridge_delivered_on_are_moved():
+	# 16 Sep 2026: another plant's bridge moved Manna Rubber Products' Office
+	# Shift to 19:33 with its own punches, hrms closed the day while the gate's
+	# punch-outs were still on the machine, and they were set aside as late.
+	site = Site({"MRP-Office": "2026-09-16 09:29:00", "Polymers-Day": "2026-09-16 17:01:18"})
+	assert sink_on(site).mark_synced("https://site.example", {"Polymers-Day": "2026-09-16 19:33:35"}) == 1
+	assert site.writes == {"Polymers-Day": "2026-09-16 19:33:35"}
+
+
+def test_each_shift_moves_only_as_far_as_its_own_newest_punch():
+	site = Site({"Office": "2026-09-16 08:00:00", "Production12": "2026-09-16 08:00:00"})
+	sink_on(site).mark_synced("https://site.example",
+		{"Office": "2026-09-16 09:29:00", "Production12": "2026-09-16 20:02:11"})
+	assert site.writes == {"Office": "2026-09-16 09:29:00", "Production12": "2026-09-16 20:02:11"}
+
+
+def test_nothing_delivered_on_a_shift_moves_nothing_and_asks_nothing():
+	site = Site({"Office": "2026-09-16 08:00:00"})
+	assert sink_on(site).mark_synced("https://site.example", {}) == 0
+	assert site.writes == {} and site.asked == 0
 
 
 def test_a_connection_the_site_dropped_is_retried_even_for_a_post():

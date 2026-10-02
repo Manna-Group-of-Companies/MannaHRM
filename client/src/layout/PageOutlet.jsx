@@ -5,7 +5,8 @@ import { useApp } from "@/store";
 import { loadOnBoard, loadShiftAssignments } from "@/api/load";
 import { pageFor, fullPage } from "@/routes/registry";
 import { USER_HOME, landingFor, sectionFor } from "@/data/menus";
-import { navigate, pathFor } from "@/routes/router";
+import { DEFAULT_SECTION, OVERVIEW, navigate, pathFor } from "@/routes/router";
+import { isHidden } from "@/data/sections";
 
 export default function PageOutlet() {
 	const s = useApp();
@@ -33,8 +34,12 @@ export default function PageOutlet() {
 	   its first page, in the address bar too, so the strip and the page agree.
 	   A user who is not an admin and lands in a module they are not shown at all
 	   goes to Employee Master the same way. */
-	const [home, homeTab] = sectionFor(section, s.admin, s.user) ? [section, null] : USER_HOME;
-	const shown = homeTab || landingFor(section, subtab, s.user, s.admin);
+	/* Settings → Security's rules arrive after the first page is drawn, so a
+	   page hidden there has to be left here as well as at the router. */
+	const [sec, tab] = isHidden(section) ? [DEFAULT_SECTION, OVERVIEW]
+		: isHidden(section, subtab) ? [section, OVERVIEW] : [section, subtab];
+	const [home, homeTab] = sectionFor(sec, s.admin, s.user) ? [sec, null] : USER_HOME;
+	const shown = homeTab || landingFor(sec, tab, s.user, s.admin);
 	useEffect(() => {
 		if (home !== section || shown !== subtab) {
 			window.history.replaceState({}, "", pathFor(home, shown));

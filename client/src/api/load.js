@@ -5,6 +5,7 @@ import { loadCategoryTypes } from "@/api/categorytype";
 import { readShiftTypes } from "@/api/shifttype";
 import { lastOfMonth, todayIso } from "@/lib/format";
 import { LEAVE_TYPE_NAME } from "@/lib/monthlyleave";
+import { byMachine } from "@/lib/direction";
 
 export const EMP_FIELDS_MIN = [
 	"name", "employee_name", "employee_number", "company", "department", "designation",
@@ -156,7 +157,8 @@ export async function load() {
 			   — so the four fields every site has are what it falls back to. */
 			listAll("Employee Checkin", CHECKIN_FIELDS, [["time", ">=", today + " 00:00:00"]])
 				.catch(() => listAll("Employee Checkin", CHECKIN_FIELDS_MIN,
-					[["time", ">=", today + " 00:00:00"]])),
+					[["time", ">=", today + " 00:00:00"]]))
+				.then(byMachine),
 			readShiftTypes(),
 			listAll("Holiday List", ["name"]),
 			/* Whether a type is earned monthly is what Create Employee needs to
@@ -344,6 +346,29 @@ export async function loadLeaveFor(emp, ym) {
 	}
 	set({ applyPunch: punch });
 	patch("apply", { busy: false });
+}
+
+/** Approved leave anywhere in the group that touches the month `ym` or
+    today, for the three cards over Apply Leave (lib/leavecards.js). One read,
+    spanning both, so "on leave today" stays about today when the calendar is
+    walked to another month. Keyed on the two, so picking somebody else does
+    not ask again and walking the calendar does. */
+export async function loadLeaveMonth(ym, today = todayIso(), { fresh = false } = {}) {
+	if (!ym) return;
+	const key = `${ym}|${today}`;
+	const cur = getState().lvMonth;
+	if (!fresh && cur.key === key && cur.state !== "error") return;
+	set({ lvMonth: { key, state: "loading", rows: cur.key === key ? cur.rows : [] } });
+	const first = ym + "-01";
+	const last = lastOfMonth(ym);
+	const rows = await listAll("Leave Application",
+		["name", "employee", "from_date", "to_date", "status"],
+		[["status", "=", "Approved"], ["docstatus", "=", 1],
+			["from_date", "<=", today > last ? today : last],
+			["to_date", ">=", today < first ? today : first]], 500)
+		.catch(() => null);
+	if (getState().lvMonth.key !== key) return;
+	set({ lvMonth: rows ? { key, state: "ok", rows } : { key, state: "error", rows: [] } });
 }
 
 /** What this person has left of each leave type, today, in hrms's own words.

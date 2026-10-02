@@ -124,7 +124,7 @@ const DEAD_CONTROLS = {
 	"onboard/assignment": { empty: 15, loaded: 15 },
 	"payroll/bank": { empty: 2, loaded: 2 },
 	"payroll/itdec": { empty: 1, loaded: 1 },
-	"payroll/overview": { empty: 4, loaded: 4 },
+	"payroll/adhoc": { empty: 4, loaded: 4 },
 	"payroll/process": { empty: 3, loaded: 3 },
 };
 

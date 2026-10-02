@@ -88,6 +88,18 @@ export default {
           3: "rgb(var(--nav-3) / <alpha-value>)",
           ink: "rgb(var(--nav-ink) / <alpha-value>)",
         },
+        /* The module rail. Its own ramp rather than `nav`, because on light it
+           is white and `nav` is still the dark fill behind a white section row. */
+        rail: {
+          DEFAULT: "rgb(var(--rail) / <alpha-value>)",
+          2: "rgb(var(--rail-2) / <alpha-value>)",
+          3: "rgb(var(--rail-3) / <alpha-value>)",
+          ink: "rgb(var(--rail-ink) / <alpha-value>)",
+          fg: "rgb(var(--rail-fg) / <alpha-value>)",
+          on: "rgb(var(--rail-on) / <alpha-value>)",
+          "on-ink": "rgb(var(--rail-on-ink) / <alpha-value>)",
+          mark: "rgb(var(--rail-mark) / <alpha-value>)",
+        },
         page: "rgb(var(--page) / <alpha-value>)",
         card: "rgb(var(--card) / <alpha-value>)",
         /* `line` and `2` divide things; `ctl` is the edge of a control somebody
@@ -186,11 +198,13 @@ export default {
          palette here owns. Pointing the default at `line` means the handful of
          such places follow the theme like everything else. */
       borderColor: { DEFAULT: "rgb(var(--line))" },
+      /* Rounder since 29 September 2026: a control at 8px and a card at 14px
+         read as soft and approachable, where 6 and 12 read as a spreadsheet. */
       borderRadius: {
-        DEFAULT: "6px",
-        sm: "4px",
+        DEFAULT: "8px",
+        sm: "6px",
         md: "10px",
-        lg: "12px",
+        lg: "14px",
       },
       boxShadow: {
         /* Four steps and no more. A screen that needs a fifth is a screen with
@@ -240,24 +254,41 @@ export default {
            title  25.5px  avatar initials
            hero   28.9px  the big number on a dashboard tile
            mega   34.0px  the profile avatar */
+      /* **Raised a step at the small end on 29 September 2026**, when the
+         micro-labels stopped being monospace capitals. A 10px label in mixed
+         case is harder to read than the same label in wide-tracked caps, so
+         the bottom three steps went up by about a pixel each and the rest are
+         unchanged. Nothing below `tiny` is used for anything a person has to
+         read to do their job. */
       fontSize: {
-        micro: ".62rem",
-        tiny: ".72rem",
-        mini: ".77rem",
-        fine: ".82rem",
-        read: ".86rem",
+        micro: ".68rem",
+        tiny: ".75rem",
+        mini: ".8rem",
+        fine: ".84rem",
+        read: ".875rem",
         norm: ".92rem",
         sub: "1.05rem",
         head: "1.2rem",
-        fig: "1.32rem",
+        fig: "1.35rem",
         title: "1.5rem",
-        hero: "1.7rem",
+        hero: "1.75rem",
         mega: "2rem",
       },
+      /* **One face, Inter, since 29 September 2026.** Three faces — Archivo
+         for headings, Plex Sans for text, Plex Mono for every label, count and
+         time — read as a technical tool rather than as a friendly one, and a
+         monospace capital is the hardest thing on the page to scan.
+
+         `mono` is kept as a name and pointed at Inter, because it is on a
+         hundred rules that mean "a figure that lines up with the one above
+         it", and that job is done now by `tabular-nums` on <body>. `code` is
+         the one place a real monospace is still wanted: a field name in a
+         sentence has to look like something typed. */
       fontFamily: {
-        display: ['"Archivo"', '"Helvetica Neue"', "Arial", "sans-serif"],
-        body: ['"IBM Plex Sans"', "-apple-system", '"Segoe UI"', "sans-serif"],
-        mono: ['"IBM Plex Mono"', "ui-monospace", "Menlo", "Consolas", "monospace"],
+        display: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        body: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        mono: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        code: ['"JetBrains Mono"', "ui-monospace", "Menlo", "Consolas", "monospace"],
       },
     },
   },

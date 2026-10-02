@@ -273,17 +273,6 @@ export default function Onboarding() {
 				<span className="n">
 					{s.candState === "ok" ? `${rows.length} submission(s)` : null}
 				</span>
-				{/* Somebody HR is enrolling in person, with no Form to fill in —
-				    the same Create Employee wizard Employee Master's Add opens,
-				    so there is one way to make an employee and one set of checks
-				    on the Emp Code and Machine Code (lib/newemp.js). */}
-				<span className="right">
-					<button className="embtn pri" aria-label="Add New Employee"
-						title="Create Employee — Basic Details, Job Details, Job Organization. Saved to the ERPNext site."
-						onClick={() => go({ section: "employees", subtab: "new" })}>
-						+ Add New Employee
-					</button>
-				</span>
 			</header>
 
 			<div className="onbbar" style={{ flexWrap: "wrap", gap: "0.5rem" }}>

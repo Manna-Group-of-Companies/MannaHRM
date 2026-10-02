@@ -132,7 +132,9 @@ export default defineConfig(({ command, mode }) => {
 			extensions: [".mjs", ".js", ".jsx", ".json"],
 		},
 		server: {
-			port: 5173,
+			/* Not 5173: the Traccar GPS server on this machine listens on 5001–5267
+			   (one port per device protocol), so Vite's default is taken. */
+			port: 5300,
 			proxy: {
 				"/api": proxy,
 				/* The desk page, for the one thing this app reads out of it: the CSRF

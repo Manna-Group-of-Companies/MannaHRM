@@ -13,14 +13,100 @@ carry within the year is free — an earned-leave allocation only ever grows, an
 a day not taken is simply still in it. The carry *across* years is
 `is_carry_forward` plus a new assignment each January with `carry_forward` set.
 
+**Who gets it** (HR, 2 October 2026): office staff, supervisors and drivers,
+and nobody else. The factory floor's absence is Leave Without Pay. See
+`casual_leave_group`.
+
 Pure values and date arithmetic, no `frappe` — the same file is read by
 `install.py` on a bench and by `tools/setup_monthly_leave.py` against the live
 site, so the two cannot describe different leave.
 """
 
+import re
 from datetime import date, timedelta
 
 LEAVE_TYPE_NAME = "Casual Leave"
+
+#: The three groups HR named as getting Casual Leave, in the words they used.
+CASUAL_LEAVE_GROUPS = ("Office", "Supervisor", "Driver")
+
+#: A designation with one of these words in it is that group, however it is
+#: spelled around the word — `SHIFT SUPERVISOR` and `QUALITY/PRODUCTION
+#: SUPERVISOR` both, and a `SENIOR DRIVER` nobody has hired yet.
+DESIGNATION_WORDS = (("SUPERVISOR", "Supervisor"), ("DRIVER", "Driver"))
+
+#: The office designations, spelled as Factor HR's Employee Detail spells them
+#: (2 October 2026), compared without regard to case or spacing.
+#:
+#: **Designation, not shift and not department, because neither of those says
+#: it.** Five managers — purchase, accounts, audit, a shop, export sales — are
+#: on an `Other location` shift rather than an Office one, and three
+#: production managers sit in the Production department beside 117 people on
+#: the floor. Designation is the one field that names the job.
+#:
+#: **A designation missing from here gets no Casual Leave**, and the tool and
+#: the Give monthly leave button both say who was passed over and why. That is
+#: the cheaper mistake to have made: leave not given is a line on a report HR
+#: reads and one more name here, while leave given is paid days that have to be
+#: clawed back from somebody. `PRODUCTION FOREMAN`, `COOK`, `TECHNICIAN`,
+#: `WELDER`, `FITTER` and `MAINTENANCE ASSISTANT` are left out deliberately.
+OFFICE_DESIGNATIONS = frozenset({
+	"ACCOUNTANT",
+	"ACCOUNTS MANAGER",
+	"ASST.MANAGER-ACCOUNTS",
+	"AUDIT IN-CHARGE",
+	"BRANCH ACCOUNTANT",
+	"BRANCH MANAGER",
+	"GENERAL MANAGER",
+	"H.R MANAGER",
+	"HEAD, MAINTENANCE",
+	"LAB ASSISTANT",
+	"MANAGER-INTERNATIONAL SALES&MKTG",
+	"OPERATIONS INCHARGE",
+	"PRODUCTION ACCOUNTANT",
+	"PRODUCTION MANAGER",
+	"PURCHASE MANAGER",
+	"SHOP MANAGER",
+	"SHOP SALESMAN",
+	"STACK DEVELOPER",
+	"STORES IN-CHARGE",
+	"VICE PRESIDENT-OPERATIONS",
+})
+
+
+def _designation_key(designation):
+	return re.sub(r"\s+", " ", str(designation or "")).strip().upper()
+
+
+def casual_leave_group(designation):
+	"""Which of CASUAL_LEAVE_GROUPS a designation is, or None for nobody's.
+
+	A supervisor or a driver by the word in it, an office job by the list.
+	A blank designation is None: until somebody has said what the job is,
+	nothing says it is one that gets leave.
+	"""
+	key = _designation_key(designation)
+	if not key:
+		return None
+	for word, group in DESIGNATION_WORDS:
+		if re.search(r"\b" + word + r"\b", key):
+			return group
+	return "Office" if key in OFFICE_DESIGNATIONS else None
+
+
+def casual_leave_refusal(designation, who="This employee"):
+	"""Why `who` cannot be given Casual Leave, or None when they can.
+
+	One sentence, used by the server's refusal and the tool's report alike, so
+	HR reads the same reason wherever they meet it.
+	"""
+	if casual_leave_group(designation):
+		return None
+	if not _designation_key(designation):
+		return ("{0} has no designation, so gets no {1} — it is only for office staff, "
+			"supervisors and drivers. Set the designation first.").format(who, LEAVE_TYPE_NAME)
+	return ("{0} ({1}) gets no {2} — it is only for office staff, supervisors and drivers.").format(
+		who, str(designation).strip(), LEAVE_TYPE_NAME)
 
 #: Twelve a year is what hrms is given; it divides by the frequency itself, so
 #: "one a month" is this number and `earned_leave_frequency`, never a 1 typed

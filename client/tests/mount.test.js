@@ -100,7 +100,7 @@ describe("mounted under a prefix, which is the site", () => {
 
 	it("sends a hidden module's address to the front page", async () => {
 		const r = await routerWith("/hr");
-		for (const path of ["/hr/payroll", "/hr/loans", "/hr/survey"]) {
+		for (const path of ["/hr/loans", "/hr/survey"]) {
 			expect(r.routeFromPath(path)).toMatchObject({ section: r.DEFAULT_SECTION, subtab: r.OVERVIEW });
 		}
 		expect(r.routeFromPath("/hr/employees/salary")).toMatchObject({ section: "employees", subtab: r.OVERVIEW });

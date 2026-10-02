@@ -171,3 +171,32 @@ describe("All Fields draws the whole record", () => {
 		expect(text(view)).toContain("344 people have left");
 	});
 });
+
+describe("what came across from Factor HR's Employee Detail Report", () => {
+	/* tools/load_employee_detail.py writes these onto fields the app adds. The
+	   panes read those fields, and say so when the site has not been given one
+	   yet — a blank is a different finding from a field that does not exist. */
+	const withLoaded = (extra) => {
+		set({ empDoc: { "HR-EMP-00001": { ...DOC, ...extra } } });
+	};
+
+	it("shows the IFSC beside the bank account", () => {
+		withLoaded({ bank_name: "UNION BANK OF INDIA", bank_ac_no: "000000000000", custom_ifsc: "UBIN0533793" });
+		const view = open(draw(), "bank");
+		expect(text(view)).toContain("UBIN0533793");
+		expect(text(view)).toContain("UNION BANK OF INDIA");
+	});
+
+	it("shows the group joining and last working dates on Joining Details", () => {
+		withLoaded({ custom_group_joining_date: "2013-09-30", custom_last_working_date: "2024-11-23" });
+		const view = open(draw(), "joining");
+		expect(text(view)).toContain("30-Sep-2013");
+		expect(text(view)).toContain("23-Nov-2024");
+	});
+
+	it("says a field is missing from the site rather than empty, until it has been added", () => {
+		const view = open(draw(), "bank");
+		const row = [...view.container.querySelectorAll(".profield")].find((r) => r.textContent.startsWith("IFSC"));
+		expect(row.textContent).toContain("no such field here");
+	});
+});

@@ -118,3 +118,88 @@ describe("the page with nobody picked", () => {
 		expect(getState().reg.emp).toBeTruthy();
 	});
 });
+
+describe("late coming and early going on the register", () => {
+	const W = { start_time: "09:00:00", end_time: "17:30:00" };
+
+	it("counts a punch-out before the shift's end as early going, and adds up the minutes", () => {
+		const { rows, counts } = monthRoster({ ym: "2026-08", today: "2026-08-10", window: W, punches: [
+			IN("E1", "2026-08-03 09:10:00"), OUT("E1", "2026-08-03 17:00:00"),
+			IN("E1", "2026-08-04 08:55:00"), OUT("E1", "2026-08-04 17:15:00"),
+			IN("E1", "2026-08-05 08:50:00"), OUT("E1", "2026-08-05 17:40:00"),
+		] });
+		expect(rows[2]).toMatchObject({ lateMin: 10, earlyMin: 30 });
+		expect(counts).toMatchObject({ lateDays: 1, lateMin: 10, earlyDays: 2, earlyMin: 45 });
+	});
+
+	it("does not call a day with only a punch-in early — that is ½, not early", () => {
+		const { rows, counts } = monthRoster({ ym: "2026-08", today: "2026-08-10", window: W,
+			punches: [IN("E1", "2026-08-03 09:00:00")] });
+		expect(rows[2]).toMatchObject({ display: "partial", earlyMin: 0 });
+		expect(counts.earlyDays).toBe(0);
+	});
+
+	it("draws an Early column beside Late, and flags the day in both corners", () => {
+		resetStore();
+		set(loadedState());
+		const ym = new Date().toISOString().slice(0, 7);
+		const emp = getState().employees.find((e) => e.status === "Active" && e.default_shift === "General");
+		set({
+			shiftWindows: { General: { name: "General", ...W } },
+			shiftWindowState: "ok",
+			reg: { ...getState().reg, cycle: ym },
+			regGrid: { key: ym, state: "ok", err: "", leave: [], ar: [], punches: [
+				IN(emp.name, `${ym}-01 09:20:00`), OUT(emp.name, `${ym}-01 17:05:00`),
+			] },
+		});
+		const view = render(<Provider store={store}><Regularization /></Provider>);
+
+		const heads = [...view.container.querySelectorAll("table.rgrid thead th.tot")].map((th) => th.textContent);
+		expect(heads.slice(-2)).toEqual(["Late", "Early"]);
+
+		const row = [...view.container.querySelectorAll("table.rgrid tbody tr")]
+			.find((tr) => tr.textContent.includes(emp.employee_name));
+		const day1 = row.querySelectorAll("td.rgc")[0];
+		expect(day1.classList.contains("late")).toBe(true);
+		expect(day1.classList.contains("early")).toBe(true);
+		expect(day1.getAttribute("title")).toContain("Late 0:20");
+		expect(day1.getAttribute("title")).toContain("Early out 0:25");
+
+		const tots = row.querySelectorAll("td.tot");
+		const early = tots[tots.length - 1];
+		expect(early.textContent).toBe("1");
+		expect(early.getAttribute("title")).toBe("0:25 early in all");
+
+		/* And the key says what the two corners mean. */
+		const key = view.container.querySelector(".rgkey").textContent;
+		expect(key).toContain("late coming");
+		expect(key).toContain("early going");
+	});
+});
+
+describe("Late By and Early Out on one person's month", () => {
+	it("colours a late day red and an early day blue, and leaves an on-time day blank", async () => {
+		resetStore();
+		set(loadedState());
+		const ym = new Date().toISOString().slice(0, 7);
+		const emp = getState().employees.find((e) => e.status === "Active" && e.default_shift === "General");
+		set({
+			shiftWindows: { General: { name: "General", start_time: "09:00:00", end_time: "17:30:00" } },
+			shiftWindowState: "ok",
+			reg: { ...getState().reg, cycle: ym, emp: emp.name },
+			regMonth: { key: `${emp.name}|${ym}`, state: "ok", err: "", leave: [], ar: [], overtime: [], assignments: [], punches: [
+				IN(emp.name, `${ym}-01 09:20:00`), OUT(emp.name, `${ym}-01 17:05:00`),
+				IN(emp.name, `${ym}-02 08:55:00`), OUT(emp.name, `${ym}-02 17:40:00`),
+			] },
+		});
+		let view;
+		await act(async () => { view = render(<Provider store={store}><Regularization /></Provider>); });
+
+		const late = view.container.querySelectorAll(".rtflag.late");
+		const early = view.container.querySelectorAll(".rtflag.early");
+		expect([...late].map((x) => x.textContent)).toEqual(["0:20"]);
+		expect([...early].map((x) => x.textContent)).toEqual(["0:25"]);
+		expect(late[0].getAttribute("title")).toBe("Late by 0:20");
+		expect(early[0].getAttribute("title")).toBe("Left 0:25 early");
+	});
+});

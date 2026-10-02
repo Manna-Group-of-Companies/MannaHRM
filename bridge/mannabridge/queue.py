@@ -115,6 +115,18 @@ class PunchQueue:
 			).fetchall()
 			return [dict(r) for r in rows]
 
+	def previous(self, device_user, before):
+		"""The same person's punch before this one, on any machine here, as
+		`(punched_at, log_type)` — or None. What `rota.arrival` checks a key
+		against."""
+		with self._connect() as db:
+			row = db.execute(
+				"SELECT punched_at, log_type FROM punch WHERE device_user = ? AND punched_at < ? "
+				"ORDER BY punched_at DESC LIMIT 1",
+				(device_user, before),
+			).fetchone()
+			return (row["punched_at"], row["log_type"]) if row else None
+
 	def newest_sent(self):
 		"""The latest punch time that has actually reached ERPNext."""
 		with self._connect() as db:

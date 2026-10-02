@@ -1,4 +1,7 @@
+import { useEffect } from "react";
 import { patch, useApp } from "@/store";
+import { loadPayroll, payKey } from "@/api/payroll";
+import { periodOf, slipsByEmployee } from "@/lib/payroll";
 import { scoped } from "@/lib/scope";
 import { fmt, tidyDept, todayIso } from "@/lib/format";
 import { deskImport, deskNew, deskUrl } from "@/lib/desk";
@@ -24,9 +27,11 @@ import { load } from "@/api/load";
    which figures are answerable and which are not — is worth more before payroll
    starts than after.
 
-   What it must never do is imply it computed a payslip. Every money column is
-   blank, none of them is a zero, and the difference is drawn rather than
-   footnoted: see SREG_COLS. */
+   What it must never do is imply it computed a payslip. Since 29 Sep 2026 the
+   money columns are the site's Salary Slips for the period, added up per
+   person (lib/payroll.js) — hrms's figures and nothing derived here. A person
+   with no slip says "no slip" rather than a zero, and the difference is drawn
+   rather than footnoted: see SREG_COLS. */
 
 /** The payroll year on the form. Empty means the one today falls in, resolved
     here rather than seeded, so a tab left open across 31 March does not go on
@@ -458,10 +463,22 @@ function SregForm({ s }) {
 	);
 }
 
+/** The first and last day the register covers: the month picked, or the whole
+    payroll year when none is. */
+function sregSpan(f) {
+	if (f.month) return periodOf(f.month).iso;
+	const months = fyMonths(sregYear(f));
+	return [periodOf(months[0][0]).iso[0], periodOf(months[months.length - 1][0]).iso[1]];
+}
+
 /** What Generate produced. */
 function SregOut({ s }) {
 	const f = s.sreg;
-	const rows = sregRows(s);
+	const [start, end] = sregSpan(f);
+	useEffect(() => { void loadPayroll(s.company, start, end); }, [s.company, start, end]);
+	const pay = s.pay[payKey(s.company, start, end)] || { state: "" };
+	const by = pay.state === "ok" ? slipsByEmployee(pay.slips) : {};
+	const rows = sregRows(s).map((r) => ({ ...r, slip: by[r.emp.name] || null }));
 	const cols = sregCols(f);
 
 	if (!rows.length) {
@@ -475,11 +492,14 @@ function SregOut({ s }) {
 
 	const flat = sregFlat(rows, sregSections(f));
 	const withCtc = rows.filter((r) => Number(r.emp.ctc) > 0).length;
+	const paid = rows.filter((r) => r.slip).length;
 
 	return (
 		<div className="ddaout">
 			<div className="ddacount">
 				{fmt(rows.length)} employee{rows.length === 1 ? "" : "s"} · {sregPeriod(f)}
+				{" · "}{pay.state === "ok" ? `${fmt(paid)} with a salary slip`
+					: pay.state === "error" ? `salary slips could not be read — ${pay.err}` : "reading salary slips…"}
 				{" · "}{fmt(withCtc)} with a CTC on the master
 			</div>
 
@@ -498,7 +518,9 @@ function SregOut({ s }) {
 						) : (
 							<tr key={x.row.emp.name + i}>
 								{cols.map((c) => (
-									<td key={c[0]} className={c[2] || undefined}>{String(c[1](x.row))}</td>
+									<td key={c[0]} className={[c[2], c[3]?.(x.row) ? "gone" : ""].filter(Boolean).join(" ") || undefined}>
+										{String(c[1](x.row))}
+									</td>
 								))}
 							</tr>
 						)))}

@@ -20,9 +20,9 @@ import { FACTOHR_MENU } from "@/data/factohr";
    with a page run per report.
 
    **The rest are linked, not built.** In Out, Daily Detail, Monthly, OT,
-   Weekly, Absent and Leave Balance each read their own date range from the
-   site when they are opened; building them here would be a second copy of that
-   read, and two copies of a read are two chances for one report to show two
+   Weekly, Absent, Leave Balance and Leave Monthly Availed each read their own
+   range from the site when they are opened; building them here would be a
+   second copy of that read, and two copies of a read are two chances for one report to show two
    numbers. They carry their own Excel and PDF buttons.
 
    **Every report of Factor HR's that opens a page here** (asked for 25 Sep
@@ -75,6 +75,7 @@ const DOWNLOADS = {
 	"dashboard/approvals": "A queue, not a file",
 	"employees/ctc": "CSV",
 	"leave/balances": "Excel · PDF · Word",
+	"leave/monthly": "Excel · PDF",
 };
 
 /** The second table, worked out once per render from what is visible.

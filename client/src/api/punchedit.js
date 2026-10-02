@@ -3,6 +3,7 @@ import { REG_DOCTYPE } from "@/api/load";
 import { getState, set } from "@/store";
 import { dmy } from "@/lib/format";
 import { editPlan } from "@/lib/punchedit";
+import { byMachine } from "@/lib/direction";
 import { correctionSummary, localStamp, writeCorrection } from "@/features/approvals/decide";
 
 /* The write behind an edited day. What an edit is allowed to be, and why, is
@@ -45,8 +46,9 @@ export async function saveDayEdit(emp, day, next) {
 	try {
 		[punches, open] = await Promise.all([
 			listAll("Employee Checkin",
-				["name", "time", "log_type", "skip_auto_attendance"],
-				[["employee", "=", emp.name], ["time", ">=", day + " 00:00:00"], ["time", "<=", day + " 23:59:59"]]),
+				["name", "time", "log_type", "skip_auto_attendance", "device_id"],
+				[["employee", "=", emp.name], ["time", ">=", day + " 00:00:00"], ["time", "<=", day + " 23:59:59"]])
+				.then(byMachine),
 			listAll(dt, REG_FIELDS,
 				[["employee", "=", emp.name], ["attendance_date", "=", day], ["status", "in", ["Draft", "Pending Approval"]]]),
 		]);
@@ -100,7 +102,7 @@ export async function saveDayEdit(emp, day, next) {
 	const w = await writeCorrection({ employee: emp.name, attendance_date: day, ...times }, user);
 	if (!w.ok) {
 		/* Approved with its punch missing looks handled and is not. Put back to
-		   Pending, where it is listed on this page to be finished, and say so. */
+		   Pending, where Dashboard → Approvals lists it to be finished, and say so. */
 		const back = regName
 			? await apiWrite(dt, regName, { status: "Pending Approval", decided_by: null, decided_on: null })
 			: { ok: false, error: "the correction has no name" };
@@ -108,7 +110,7 @@ export async function saveDayEdit(emp, day, next) {
 			ok: false,
 			msg: `The time was not saved: ${w.error} `
 				+ (back.ok
-					? `${regName} is left under Waiting for approval to try again.`
+					? `${regName} is left pending on Dashboard → Approvals to try again.`
 					: `${regName || "The correction"} still says Approved (${back.error}) — fix it on the desk.`),
 		};
 	}

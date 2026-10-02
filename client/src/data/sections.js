@@ -1,3 +1,5 @@
+import { DEFAULT_SECTION, OVERVIEW } from "@/routes/paths";
+
 /* One nav row: the module, its coverage (a Cov), and the path of its icon glyph.
 
    Factor HR's own left-hand nav, in its order, so the two can be compared
@@ -8,7 +10,7 @@ export const SECTIONS = [
   {key:"employees", label:"Employees", cov:"live", icon:"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8"},
   {key:"attendance",label:"Attendance",cov:"part", icon:"M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2"},
   {key:"leave",     label:"Leave",     cov:"part", icon:"M3 5h18v16H3zM3 9h18M8 3v4M16 3v4"},
-  {key:"payroll",   label:"Payroll",   cov:"skip", hidden:true, icon:"M6 4h9a4 4 0 0 1 0 8H6M6 8h12M9 12l5 8"},
+  {key:"payroll",   label:"Payroll",   cov:"part", icon:"M6 4h9a4 4 0 0 1 0 8H6M6 8h12M9 12l5 8"},
   {key:"loans",     label:"Loans",     cov:"none", hidden:true, icon:"M4 8h16v11H4zM8 8V6a4 4 0 0 1 8 0v2M12 12v3"},
   {key:"reports",   label:"Reports",   cov:"live", icon:"M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"},
   {key:"survey",    label:"Survey",    cov:"none", hidden:true, icon:"M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"},
@@ -18,7 +20,12 @@ export const SECTIONS = [
 /* `hidden` takes a module off the rail and sends its address to the front page.
    Payroll, Loans and Survey were hidden on 17 Sep 2026 — not deleted: their
    pages, menus and tests stay, and Settings → Module coverage still counts them.
-   Like data/menus.js, this is a menu, not a permission. */
+   Payroll came back on 29 Sep 2026, when Salary Process started running on the
+   site (api/payroll.js), and was hidden again the same evening, asked for —
+   shown again on 2 Oct 2026 as one guided page that runs the month, with ERPNext
+   holding only its documents (features/payroll/). To hide it
+   again, put `hidden:true` back on its row. Like data/menus.js, this is a menu,
+   not a permission. */
 export const VISIBLE_SECTIONS = SECTIONS.filter((s) => !s.hidden);
 
 /* Single pages hidden the same way, inside a module that is not: off the strip,
@@ -27,16 +34,87 @@ export const VISIBLE_SECTIONS = SECTIONS.filter((s) => !s.hidden);
    anyway (CLAUDE.md §7). Profile Change Requests, Employee Detail and Category Types 24 Sep 2026.
    CTC / Earnings, Employees Directory, Weekoff Holiday Report, Organization
    Chart, Employee Letters and Statutory Reports 25 Sep 2026, asked for by IT.
-   Employees → All 26 Sep 2026, the same way. */
+   Employees → All 26 Sep 2026, the same way, and Leave Availed Detail and
+   Pending Leave Applications the same day — both are now a Status choice on
+   Leave Application History. Payroll → Frappe Payroll 29 Sep 2026, the day it
+   was built: asked for, looked at, and put away. Payroll → everything but the
+   Payroll page 2 Oct 2026: the module is five custom pages of ours (Payroll,
+   Salary Setup, Advances & Loans, Payslips, Bank Transfer), and the older
+   screens — modelled on another system's — stay as hidden code. */
 export const HIDDEN_PAGES = {
 	employees: ["salary", "changes", "detail", "cattypes", "ctc", "directory", "weekoff", "orgchart", "letters", "all"],
 	attendance: ["submit", "statutory"],
+	leave: ["availed", "pending"],
+	payroll: ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],
 };
+
+/* ---------------------------------------------------------------------------
+   Settings → Security: the same two lists, changed from a screen.
+
+   The site's `Manna HR Settings.page_visibility` holds only what somebody
+   changed — `{"employees/all": "show", "leave": "hide"}` — so the lists above
+   stay the defaults, and a page hidden here by a later commit is still hidden
+   on a site where nobody has touched it. Still a menu, not a permission.
+
+   **Some things cannot be hidden, because hiding them is a lock-out.** Security
+   itself, and the modules a hidden address is sent to: Dashboard is where a
+   hidden module lands, Employees is the whole menu of a login that is not an
+   admin (data/menus.js USER_ONLY), and Settings holds the page that would undo
+   it. Nor can a module's first page — a hidden page lands there, and hiding the
+   module is the way to hide that.
+   --------------------------------------------------------------------------- */
+export const LOCKED = new Set([DEFAULT_SECTION, "employees", "settings", "settings/security"]);
+
+/** Whether a rule may change this module or page at all. */
+export const canHide = (key, subtab) =>
+  subtab === undefined ? !LOCKED.has(key) : subtab !== OVERVIEW && !LOCKED.has(key + "/" + subtab);
+
+/** The rules the site holds, cleaned: a key that names no module, a value that
+    is neither word, or text that is not JSON is dropped rather than obeyed —
+    a typo in Desk must not take a page off everybody's menu. */
+export function parsePageRules(text) {
+  let raw;
+  try { raw = typeof text === "string" ? JSON.parse(text || "{}") : text; } catch { return {}; }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const [key, subtab, extra] = k.split("/");
+    if (extra !== undefined || !SECTIONS.some((s) => s.key === key)) continue;
+    if ((v === "show" || v === "hide") && canHide(key, subtab)) out[k] = v;
+  }
+  return out;
+}
+
+/** Hidden under these rules, before anything the site says. */
+const byCode = (key, subtab) => subtab === undefined
+  ? SECTIONS.some((s) => s.key === key && s.hidden)
+  : (HIDDEN_PAGES[key] || []).includes(subtab);
+
+/** Whether one module, or one page on its own, is hidden under `rules`. */
+export function hiddenUnder(rules, key, subtab) {
+  if (!canHide(key, subtab)) return false;
+  const rule = rules[subtab === undefined ? key : key + "/" + subtab];
+  return rule === "hide" ? true : rule === "show" ? false : byCode(key, subtab);
+}
+
+/** Whether the code alone hides it — what a rule is measured against, so only
+    a difference is stored. */
+export const hiddenByDefault = (key, subtab) => canHide(key, subtab) && byCode(key, subtab);
+
+/* The rules in force. Module state rather than the store's, because the router
+   asks outside React; `pageRules` in the store carries the same object so that
+   anything drawing a menu redraws when it changes. api/pagerules.js is the one
+   place that sets both. */
+let siteRules = {};
+export const setPageRules = (rules) => { siteRules = rules || {}; };
 
 /** Whether a module — or, given a subtab, one page of it — is hidden. */
 export const isHidden = (key, subtab) =>
-  SECTIONS.some((s) => s.key === key && s.hidden)
-  || (subtab !== undefined && (HIDDEN_PAGES[key] || []).includes(subtab));
+  hiddenUnder(siteRules, key, undefined)
+  || (subtab !== undefined && hiddenUnder(siteRules, key, subtab));
+
+/** The rail's modules under the rules in force. */
+export const visibleSections = () => SECTIONS.filter((s) => !isHidden(s.key));
 
 export const COV_LABEL = {live:"Live", part:"Partial", none:"Not built", skip:"Deferred"};
 

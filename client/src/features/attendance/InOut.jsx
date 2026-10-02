@@ -4,11 +4,14 @@ import { listAll } from "@/api/client";
 import { loadWorkLocations } from "@/api/load";
 import { clock, dayOf, dmy, fmt, nowStamp, tidyDept, todayIso } from "@/lib/format";
 import { coordText, placeText, streamOf } from "@/lib/punchplace";
-import { firstLast } from "@/lib/inout";
+import { clockOn, dayPeriod, firstLast } from "@/lib/inout";
+import { dayAfter } from "@/lib/roster";
+import { byMachine } from "@/lib/direction";
+import { loadShiftWindows } from "@/api/attendance";
 import { HEAD_FILL, LETTER_FILL, PUNCH_FILL, ZEBRA_FILL } from "@/lib/fills";
 import ReportForm, { pickable } from "@/components/ReportForm";
 import { LocCell } from "@/components/PunchMap";
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import { CAT_FIELDS, CAT_GROUP_BY, IO_MAXDAYS } from "@/data/attendance";
 import { Empty, Gap, Modal, Scroll } from "@/components/ui";
 import { save } from "@/lib/csv";
@@ -57,8 +60,9 @@ const DAY_COLS = [
 	["Date", "date", "mono", (r) => r.date],
 	["Emp code", "emp_code", "mono", (r, e) => e.employee_number || r.employee],
 	["Name", "name", "", (r, e) => e.employee_name || r.employee_name || ""],
-	["First punch", "first", "mono", (r) => (r.first ? clock(r.first) : "")],
-	["Last punch", "last", "mono", (r) => (r.last ? clock(r.last) : "")],
+	["First punch", "first", "mono", (r) => clockOn(r.first, r.date)],
+	["Day / Night", "period", "", (r) => dayPeriod(r)],
+	["Last punch", "last", "mono", (r) => clockOn(r.last, r.date)],
 	["Span", "span", "", (r) => r.span],
 	["Punches", "punches", "mono", (r) => String(r.punches)],
 	["Company", "company", "muted", (r, e) => e.company || ""],
@@ -104,7 +108,9 @@ function ioKeyOf(s, r) {
 	const f = s.io;
 	if (f.by) return String(s.byName[r.employee]?.[f.by] || "—");
 	if (f.period === "Employee Wise") return s.byName[r.employee]?.employee_name || r.employee;
-	return String(r.time || "").slice(0, 10);
+	/* A First & last row's own work day, not its first punch's date — a
+	   night that has only its morning leaving would head the wrong day. */
+	return r.date || String(r.time || "").slice(0, 10);
 }
 
 const ioGroupLabel = (s, k) =>
@@ -160,8 +166,19 @@ function ioFiltered(s) {
 		});
 }
 
-/** The rows the chosen view draws: every punch, or one per person per day. */
-const ioView = (s, punches) => (s.io.view === "day" ? firstLast(punches) : punches);
+/** The rows the chosen view draws: every punch, or one per person per work day.
+
+    The read reaches noon the day after the range, for the last night's
+    leaving. Those morning punches are there to finish a night inside the
+    range, so every punch stops at the range's end, and a work day outside it
+    is not drawn. */
+function ioView(s, punches) {
+	const [from, till] = String(ioRanOf(s) || "").split(" to ");
+	if (s.io.view !== "day") return till ? punches.filter((r) => String(r.time || "").slice(0, 10) <= till) : punches;
+	const shiftOn = (emp, iso) => (s.shiftWindows || {})[(s.byName[emp] || {}).default_shift || ""] || null;
+	const days = firstLast(punches, shiftOn);
+	return from && till ? days.filter((r) => r.date >= from && r.date <= till) : days;
+}
 
 /* The one request this page makes, tried from the widest field list down: a
    field the site has not got refuses the whole read rather than dropping the
@@ -179,6 +196,7 @@ const IO_TIERS = [
 
 async function ioGenerate() {
 	void loadWorkLocations();
+	void loadShiftWindows();
 	const f = getState().io;
 	const from = f.from || todayIso();
 	const till = f.till || todayIso();
@@ -198,7 +216,7 @@ async function ioGenerate() {
 	}
 
 	set({ ioState: "loading", ioMsg: "" });
-	const range = [["time", ">=", from + " 00:00:00"], ["time", "<=", till + " 23:59:59"]];
+	const range = [["time", ">=", from + " 00:00:00"], ["time", "<=", dayAfter(till) + " 11:59:59"]];
 
 	let rows = null;
 	for (const fields of IO_TIERS) {
@@ -212,7 +230,7 @@ async function ioGenerate() {
 	}
 
 	if (err) return set({ ioState: "error", ioMsg: err, ioRows: null });
-	set({ ioRows: rows || [], ioState: "done", ioRan: `${from} to ${till}` });
+	set({ ioRows: byMachine(rows || []), ioState: "done", ioRan: `${from} to ${till}` });
 }
 
 /** Nothing to hand over is a message rather than an empty file: a CSV with a
@@ -515,6 +533,9 @@ function IoReport({ s }) {
 
 export default function InOut() {
 	const s = useApp();
+	/* Today's report is drawn without a Generate, and First & last needs the
+	   shifts to know whose morning punch finished last night. */
+	useEffect(() => { void loadShiftWindows(); }, []);
 
 	return (
 		<>

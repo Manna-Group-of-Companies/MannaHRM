@@ -1,6 +1,8 @@
 import { listAll } from "@/api/client";
 import { getState, set } from "@/store";
 import { lastOfMonth } from "@/lib/format";
+import { dayAfter } from "@/lib/roster";
+import { byMachine } from "@/lib/direction";
 
 /* ---------------------------------------------------------------------------
    One person's month, read from the site.
@@ -67,6 +69,12 @@ const AR_MIN = ["name", "employee", "attendance_date", "status"];
     The real last day — see `lastOfMonth`. */
 const monthRange = (ym) => [ym + "-01", lastOfMonth(ym)];
 
+/* Punches are read to noon the day after the range: the last night of it ends
+   that morning, and without its leaving a night worker's last day is "in,
+   never out". A morning punch that is not a night's leaving lands on a day
+   outside the range and is never drawn — see `workDateOf`. */
+const punchesTill = (to) => dayAfter(to) + " 11:59:59";
+
 /**
  * Read one employee's month into `regMonth`.
  *
@@ -103,7 +111,7 @@ export async function loadRegMonth(emp, ym, force) {
 		   lexicographically against exactly that shape — see client/README.md on
 		   why every date on this site is a string. */
 		read("Employee Checkin", PUNCH_FIELDS, PUNCH_MIN,
-			[["employee", "=", emp], ["time", ">=", from + " 00:00:00"], ["time", "<=", to + " 23:59:59"]]),
+			[["employee", "=", emp], ["time", ">=", from + " 00:00:00"], ["time", "<=", punchesTill(to)]]).then(byMachine),
 
 		/* Overlapping, not contained. A leave that started in July and runs into
 		   August covers days in this month, and asking for `from_date >= the
@@ -175,8 +183,10 @@ export async function loadRegGrid(ym, force) {
 			.catch(() => null);
 
 	const [punches, leave, ar, overtime] = await Promise.all([
-		read("Employee Checkin", PUNCH_MIN.concat(["skip_auto_attendance"]), PUNCH_MIN,
-			[["time", ">=", from + " 00:00:00"], ["time", "<=", to + " 23:59:59"]]),
+		/* `device_id` since 30 Sep 2026: lib/direction.js reads it to pair
+		   Manna Tyre Retreads' two machines by time. */
+		read("Employee Checkin", PUNCH_MIN.concat(["skip_auto_attendance", "device_id"]), PUNCH_MIN,
+			[["time", ">=", from + " 00:00:00"], ["time", "<=", punchesTill(to)]]).then(byMachine),
 		read("Leave Application", LEAVE_FIELDS, LEAVE_MIN,
 			[["from_date", "<=", to], ["to_date", ">=", from]]),
 		read(doctype, AR_FIELDS, AR_MIN,
@@ -277,7 +287,7 @@ export async function loadDda(from, to, emp, force) {
 		read("Attendance", DDA_ATT_FIELDS, DDA_ATT_MIN,
 			who.concat([["attendance_date", ">=", from], ["attendance_date", "<=", to], ["docstatus", "=", 1]])),
 		read("Employee Checkin", PUNCH_MIN.concat(["skip_auto_attendance", "device_id", "latitude", "longitude"]), PUNCH_MIN,
-			who.concat([["time", ">=", from + " 00:00:00"], ["time", "<=", to + " 23:59:59"]])),
+			who.concat([["time", ">=", from + " 00:00:00"], ["time", "<=", punchesTill(to)]])).then(byMachine),
 		read("Leave Application", LEAVE_FIELDS, LEAVE_MIN,
 			who.concat([["from_date", "<=", to], ["to_date", ">=", from]])),
 		read("Employee Overtime", OT_FIELDS, OT_FIELDS,

@@ -180,3 +180,36 @@ export function apGrid(daily, from, till) {
 
 /** What a grid cell says: `P` a whole day, `MP` a punch missing, blank no app punch. */
 export const cellLetter = (d) => (!d ? "" : d.complete ? "P" : "MP");
+
+/** `00:00:45` — the gap between two punches to the second, as Factor HR's In /
+    Out report prints it. Hours run past 24 rather than wrapping, so a gap
+    across a weekend does not read as a minute. */
+export function hms(msec) {
+	if (msec == null || !isFinite(msec) || msec < 0) return "";
+	const s = Math.floor(msec / 1000);
+	const two = (n) => String(n).padStart(2, "0");
+	return `${two(Math.floor(s / 3600))}:${two(Math.floor(s / 60) % 60)}:${two(s % 60)}`;
+}
+
+/**
+ * The punch list in Factor HR's order — a person's punches together, by
+ * employee code, oldest first — each carrying `gapMs`, how long after that
+ * person's previous punch in the read it came. Null on a person's first.
+ *
+ * A one-second gap is the thing this column exists to show: the same finger
+ * pressed twice, or a phone that sent one punch as two.
+ *
+ * @param {Array} rows - Employee Checkin rows
+ * @param {(employee: string) => string} codeOf - the employee code to sort by
+ */
+export function apPunchList(rows, codeOf = (id) => id) {
+	const sorted = rows.slice().sort((a, b) =>
+		String(codeOf(a.employee) || "").localeCompare(String(codeOf(b.employee) || ""), undefined, { numeric: true })
+		|| String(a.employee || "").localeCompare(String(b.employee || ""))
+		|| String(a.time || "").localeCompare(String(b.time || "")));
+	return sorted.map((r, i) => {
+		const prev = sorted[i - 1];
+		const gapMs = prev && prev.employee === r.employee ? ms(r.time) - ms(prev.time) : null;
+		return { ...r, gapMs: gapMs != null && isFinite(gapMs) ? gapMs : null };
+	});
+}

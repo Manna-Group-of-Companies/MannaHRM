@@ -95,6 +95,17 @@ const initial = {
 	/** Whether `user` is an admin, as the site answered it — see `isAdmin` in
 	    api/client.js and USER_ONLY in data/menus.js. `null` until it answers. */
 	admin: null,
+	/** Settings → Security's rules as the site holds them — the same object
+	    data/sections.js is obeying, here so a menu redraws when they change.
+	    See api/pagerules.js. The state is "" before a sign-in, then "loading",
+	    and "ok", "nofield" (the site has nowhere to keep them) or "unread". */
+	pageRules: {},
+	pageRulesState: "",
+	/** Security's Employee fields: which fields a login may only read, or is
+	    not shown, on Create Employee and Employee Profile — lib/fieldaccess.js.
+	    Read with the page rules, and in the same states. */
+	fieldAccess: {},
+	fieldAccessState: "",
 
 	/* ---- chrome ---- */
 	section: "dashboard",
@@ -264,6 +275,13 @@ const initial = {
 	lvbState: "",
 	lvbErr: "",
 
+	/* Leave → Leave Monthly Availed: the Leave Balance form with a month where
+	   the As On Date was. It reads the same applications and ledger (`lvb*`
+	   above), so opening both reports asks the site once. `month` empty means
+	   this month, resolved at render like `lvb.ason`. `emps` is who is listed —
+   only the people picked, and nobody until somebody is. See LeaveMonthly.jsx. */
+	lvm: { emps: [], status: "Active", ltype: "", month: "", fmt: "Excel" },
+
 	sal: { emp: "", q: "", status: "", menu: false, list: false },
 
 	/* Salary Master → List of Employees, their paged table. See
@@ -331,7 +349,15 @@ const initial = {
 	sp: {
 		year: "", month: "", ptype: "Monthly", pfor: "All Employees",
 		remarks: "", gear: false, more: false,
+		/* The run's two buttons: which one is busy, which is waiting on its
+		   confirm, and what the site said. */
+		busy: "", confirm: "", msg: "", err: "",
 	},
+	/** Payroll as the site holds it, one period at a time — api/payroll.js,
+	    keyed by company, first day and last day. Each is `{state, entries,
+	    slips, assignments, details, err}`; `details` is the slips' Salary
+	    Detail rows, read only by the screens that print lines. */
+	pay: {},
 	/** `relieving_date`, read once when this screen is first opened. A probe
 	    rather than a field on EMP_FIELDS, on the same terms as the payslip's
 	    address read: a field this site does not carry would fail the load that
@@ -818,6 +844,9 @@ const initial = {
 	applyPunch: {},
 	/* The person's leave balance per type, off hrms — see loadLeaveBalance. */
 	applyBal: null,
+	/* The month's approved leave, group-wide, for the three cards over Apply
+	   Leave — see loadLeaveMonth. */
+	lvMonth: { key: "", state: "", rows: [] },
 	/* The Leave pane on Employee Profile — api/profileleave.js. `null` is not read yet. */
 	profLeave: null,
 

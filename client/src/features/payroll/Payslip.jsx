@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 
 import { listAll } from "@/api/client";
+import { loadPayroll, payKey } from "@/api/payroll";
+import { periodOf, slipLines } from "@/lib/payroll";
 import { load } from "@/api/load";
 import { getState, patch, set, useApp } from "@/store";
 import { scoped } from "@/lib/scope";
@@ -84,14 +86,27 @@ function pslRows(s) {
 	if (f.status) pool = pool.filter((e) => e.status === f.status);
 	if (f.emp) pool = pool.filter((e) => e.name === f.emp);
 
-	let rows = pool.map((e) => ({
-		e,
-		month: label,
-		email: addressOf(mail[e.name]),
-		/* What the slip comes to. Null on every row and it stays null: the number
-		   that belongs here is the one no doctype on this site can produce. */
-		net: null,
-	}));
+	/* The month's Salary Slip for each person, as the site holds it. A
+	   finalized slip over a draft, since that is the one that was paid. */
+	const pay = f.month ? s.pay[payKey(s.company, ...periodOf(f.month).iso)] : null;
+	const slipOf = {};
+	for (const sl of pay?.state === "ok" ? pay.slips : []) {
+		const had = slipOf[sl.employee];
+		if (!had || Number(sl.docstatus) > Number(had.docstatus)) slipOf[sl.employee] = sl;
+	}
+
+	let rows = pool.map((e) => {
+		const slip = slipOf[e.name] || null;
+		return {
+			e,
+			month: label,
+			email: addressOf(mail[e.name]),
+			slip,
+			lines: slip ? slipLines(pay.details, slip.name) : null,
+			/* What the slip comes to — hrms's net pay, or null with no slip. */
+			net: slip ? Number(slip.net_pay) || 0 : null,
+		};
+	});
 
 	/* Their box says *without* email, so unticked means drop them. It is applied
 	   only when the addresses were actually read — with nothing to filter on it
@@ -147,15 +162,22 @@ function slipHtml(r) {
 		["Sent to", r.email || "no address on record"],
 	];
 
-	const lines = Math.max(PSL_SLIP_EARNINGS.length, PSL_SLIP_DEDUCTIONS.length);
+	/* A slip on the site prints its own lines; without one, the empty shape
+	   that would have to be filled, at the size it actually is. */
+	const sl = r.slip;
+	const earn = sl ? r.lines.earnings : PSL_SLIP_EARNINGS.map((c) => [c, null]);
+	const ded = sl ? r.lines.deductions : PSL_SLIP_DEDUCTIONS.map((c) => [c, null]);
+	const amt = (v) => (v == null ? "" : esc(fmt(Math.round(v))));
+	const lines = Math.max(earn.length, ded.length, 1);
 	const body = Array.from({ length: lines }, (_, i) =>
-		`<tr><td>${esc(PSL_SLIP_EARNINGS[i] || "")}</td><td class="amt"></td>`
-		+ `<td>${esc(PSL_SLIP_DEDUCTIONS[i] || "")}</td><td class="amt"></td></tr>`).join("");
+		`<tr><td>${esc(earn[i]?.[0] || "")}</td><td class="amt">${amt(earn[i]?.[1])}</td>`
+		+ `<td>${esc(ded[i]?.[0] || "")}</td><td class="amt">${amt(ded[i]?.[1])}</td></tr>`).join("");
+	const draft = sl && Number(sl.docstatus) === 0;
 
 	return `<div class="slip">
 		<div class="head">
 			<div class="mark">MANNA GROUP</div>
-			<h1>PAYSLIP &mdash; ${esc(r.month)}</h1>
+			<h1>PAYSLIP &mdash; ${esc(r.month)}${draft ? " &mdash; DRAFT" : ""}</h1>
 			<p class="sub">${esc(e.company || "")}</p>
 		</div>
 		<table class="facts">
@@ -165,14 +187,20 @@ function slipHtml(r) {
 			<thead><tr><th>Earnings</th><th class="amt">Amount</th>
 				<th>Deductions</th><th class="amt">Amount</th></tr></thead>
 			<tbody>${body}</tbody>
-			<tfoot><tr class="grp"><td>Gross</td><td class="amt"></td>
-				<td>Total deductions</td><td class="amt"></td></tr></tfoot>
+			<tfoot><tr class="grp"><td>Gross</td><td class="amt">${sl ? amt(sl.gross_pay) : ""}</td>
+				<td>Total deductions</td><td class="amt">${sl ? amt(sl.total_deduction) : ""}</td></tr>
+				${sl ? `<tr class="grp"><td>Net pay</td><td class="amt">${amt(sl.net_pay)}</td>
+				<td>Payment days</td><td class="amt">${esc(fmt(sl.payment_days ?? 0))}</td></tr>` : ""}</tfoot>
 		</table>
-		<p class="crit"><b>No amount is printed on this slip.</b> Every figure above comes from a salary
-			structure, and this site holds none &mdash; nor is any payroll doctype readable from this page.
-			The annual cost on record for this person is
+		${sl
+			? `<p class="crit">From ${esc(sl.name)} on the site${draft
+				? " &mdash; <b>a draft</b>: not finalized, and not what will be paid until it is"
+				: ""}. Every figure is hrms&rsquo;s own. Generated ${esc(nowStamp())}.</p>`
+			: `<p class="crit"><b>No amount is printed on this slip.</b> There is no salary slip for this
+			person in ${esc(r.month)} on the site &mdash; the month has not been run, or they had no salary
+			structure for it. The annual cost on record is
 			${e.ctc ? esc(fmt(Math.round(Number(e.ctc)))) : "not recorded"}, which is a cost and not a
-			payment. Generated ${esc(nowStamp())}.</p>
+			payment. Generated ${esc(nowStamp())}.</p>`}
 	</div>`;
 }
 
@@ -243,6 +271,8 @@ async function pslGenerate() {
 	   back would have an empty Email column, and nothing would tell that apart
 	   from nobody having one. */
 	await pslProbe();
+	const s0 = getState();
+	await loadPayroll(s0.company, ...periodOf(f.month).iso, { details: true });
 	const now = getState();
 
 	if (f.output === "Excel") return pslRun(now, "Excel");
@@ -571,9 +601,8 @@ function PslOut({ s }) {
 			<Empty title="Nobody is left">
 				{f.zero
 					? "No employee matches these criteria."
-					: "Include Zero Value Employees is unticked, and every slip here is worth nothing — because "
-						+ "no salary structure is readable. That is the whole of why their capture has the box "
-						+ "ticked."}
+					: "Include Zero Value Employees is unticked, and nobody here has a salary slip with an amount "
+						+ "on it for this month — the month has not been run on the site yet."}
 			</Empty>
 		);
 	}
@@ -599,7 +628,9 @@ function PslOut({ s }) {
 						) : (
 							<tr key={x.row.e.name + i}>
 								{PSL_COLS.map((c) => (
-									<td key={c[0]} className={c[2] || undefined}>{String(c[1](x.row))}</td>
+									<td key={c[0]} className={[c[2], c[3]?.(x.row) ? "gone" : ""].filter(Boolean).join(" ") || undefined}>
+										{String(c[1](x.row))}
+									</td>
 								))}
 							</tr>
 						)))}

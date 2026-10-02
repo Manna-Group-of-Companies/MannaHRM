@@ -82,6 +82,26 @@ describe("the rail", () => {
 		expect(container.querySelector(".cdot.skip")).toBeNull();
 	});
 
+	it("keeps four modules for a phone's bar and puts the rest behind More", () => {
+		/* The bar is four links and a More, so nine labels are never squeezed
+		   into 390px. Which four is BAR in Sidebar; the rest of the rail is still
+		   drawn, and More opens the same drawer the tablet's hamburger does. */
+		set({ user: HR, section: "payroll" });
+		const { container } = draw(<Sidebar />);
+		const bar = [...container.querySelectorAll(".nav[data-bar]")].map((a) => a.querySelector(".lab").textContent);
+		expect(bar).toEqual(["Dashboard", "Employees", "Attendance", "Leave"]);
+
+		const more = container.querySelector(".navmore");
+		expect(more).not.toBeNull();
+		/* Payroll is behind More, so More is what says where you are. */
+		expect(more.hasAttribute("data-on")).toBe(true);
+		/* It is not a module, and is not counted as one. */
+		expect(more.classList.contains("nav")).toBe(false);
+
+		fireEvent.click(more);
+		expect(getState().drawer).toBe(true);
+	});
+
 	it("collapses and expands, and remembers which", () => {
 		const { container } = draw(<Sidebar />);
 		const toggle = container.querySelector(".railtoggle");
@@ -96,11 +116,17 @@ describe("the rail", () => {
 		expect(storedRail()).toBe("wide");
 	});
 
-	it("says who is signed in and whether the site is answering", () => {
+	it("says whether the site is answering, and leaves who is signed in to the header", () => {
+		/* The rail carried the signed-in address too until 29 September 2026 —
+		   the same address the header's avatar already holds, twice on one
+		   screen. It is the header's alone now, so both halves are checked. */
 		set({ user: "hr@mannarubber.com", conn: "live", connState: "live" });
 		const { container } = draw(<Sidebar />);
-		expect(container.querySelector(".railwho").textContent).toContain("hr@mannarubber.com");
 		expect(container.querySelector(".railconn").textContent).toContain("live");
+		expect(container.textContent).not.toContain("hr@mannarubber.com");
+
+		const header = draw(<TopBar />).container;
+		expect(header.querySelector(".tbme").getAttribute("title")).toBe("hr@mannarubber.com");
 	});
 });
 

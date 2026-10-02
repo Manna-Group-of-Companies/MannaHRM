@@ -19,6 +19,7 @@ import People from "@/components/People";
 import Avatar from "@/components/Avatar";
 import { LocCell } from "@/components/PunchMap";
 import { DATE_FIELD } from "@/data/employees";
+import { accessFor } from "@/lib/fieldaccess";
 import { fieldLabel, PROFILE_CHECKS, PROFILE_CHIPS, PROFILE_FIRST_CHILD, PROFILE_HEAD, PROFILE_LONG, PROFILE_MAPPED, PROFILE_PANES, PROFILE_PLUMBING, PROFILE_TABS } from "@/data/profile";
 
 /* Factor HR's **Employee Profile** — the record page, screenshotted 29 Aug 2026.
@@ -63,8 +64,21 @@ function say(key, v) {
 	return String(v);
 }
 
+/* Settings → Security → Employee fields, for this login, on this page.
+   Read from the store rather than passed down: every Field is redrawn by the
+   page, which does subscribe, so a rule saved elsewhere reaches it anyway. */
+const LOCKED_WHY = "Read only for this login — HR set it in Settings → Security.";
+const editAccess = (field) => {
+	const names = field == null ? [] : Array.isArray(field) ? field : [field];
+	const { fieldAccess, user } = getState();
+	return names.length ? accessFor(fieldAccess, "edit", names, user) : "write";
+};
+const shownRow = (row) => editAccess(row[1]) !== "hidden";
+
 function Field({ doc, row, nulls, edit }) {
 	const [label, field, why] = row;
+	const access = editAccess(field);
+	if (access === "hidden") return null;
 	const got = pick(doc, field);
 	const long = got.key && PROFILE_LONG.has(got.key);
 
@@ -73,7 +87,7 @@ function Field({ doc, row, nulls, edit }) {
 	   gets a box**, and that is the whole reason this screen tells "not set"
 	   from "no such field here": Frappe accepts a key its doctype does not have
 	   and drops it, so the box would look saved and be gone on reload. */
-	if (edit) {
+	if (edit && access === "write") {
 		const kind = controlFor(got.key, got.how);
 		if (kind) return <EditField doc={doc} label={label} why={why} field={got.key} kind={kind} edit={edit} />;
 	}
@@ -104,7 +118,7 @@ function Field({ doc, row, nulls, edit }) {
 	   the same thing — so `absent` keeps its line and carries the rest in the
 	   tooltip. What is written out is the case nothing on the row explains:
 	   a field that exists, holds a value, and still cannot be typed. */
-	const locked = edit ? whyNotEditable(got.key, got.how) : "";
+	const locked = edit ? whyNotEditable(got.key, got.how) || (access === "read" ? LOCKED_WHY : "") : "";
 	const sayLocked = locked && got.how !== "absent";
 
 	return (
@@ -408,7 +422,8 @@ function AllFields({ doc }) {
 
 	const entries = Object.entries(doc);
 	const tables = entries.filter(([, v]) => Array.isArray(v));
-	const plain = entries.filter(([k, v]) => !Array.isArray(v) && !PROFILE_PLUMBING.has(k));
+	const plain = entries.filter(([k, v]) => !Array.isArray(v) && !PROFILE_PLUMBING.has(k)
+		&& editAccess(k) !== "hidden");
 	const plumbing = entries.filter(([k, v]) => !Array.isArray(v) && PROFILE_PLUMBING.has(k));
 
 	const has = (v) => v != null && v !== "";
@@ -694,17 +709,21 @@ const IDENTITY_TYPES = [
     somebody adding an Aadhaar number does not have to find and press the
     page's own Edit first. */
 function IdentityAdd({ doc, emp }) {
+	/* A box here is a write, so a field this login may only read is no box. */
+	const types = IDENTITY_TYPES
+		.map((t) => ({ ...t, fields: t.fields.filter(([, field]) => editAccess(field) === "write") }))
+		.filter((t) => t.fields.length);
 	const [type, setType] = useState("");
 	const [vals, setVals] = useState({});
 	const [busy, setBusy] = useState(false);
 	const [msg, setMsg] = useState(null);
 
-	const spec = IDENTITY_TYPES.find((t) => t.key === type);
+	const spec = types.find((t) => t.key === type);
 
 	function pickType(k) {
 		setType(k);
 		setMsg(null);
-		const found = IDENTITY_TYPES.find((t) => t.key === k);
+		const found = types.find((t) => t.key === k);
 		const next = {};
 		if (found) for (const [, field] of found.fields) next[field] = doc[field] ?? "";
 		setVals(next);
@@ -742,7 +761,7 @@ function IdentityAdd({ doc, emp }) {
 				Add an identity{" "}
 				<select value={type} onChange={(e) => pickType(e.target.value)} disabled={busy}>
 					<option value="">— select —</option>
-					{IDENTITY_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+					{types.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
 				</select>
 			</label>
 
@@ -982,7 +1001,7 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto 
 						<i className={"sdot " + (on ? "on" : "off")} />
 						{doc.status || "—"}
 					</span>
-					{PROFILE_CHIPS.map((c) => {
+					{PROFILE_CHIPS.filter(shownRow).map((c) => {
 						const v = chip(c);
 						return (
 							<span className={"prochip" + (v ? "" : " off")} key={c[0]}>
@@ -1002,7 +1021,7 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto 
 				</div>
 
 				<div className={"prokeys" + (editing ? " lvform" : "")}>
-					{PROFILE_HEAD.map((row) => (
+					{PROFILE_HEAD.filter(shownRow).map((row) => (
 						<Field doc={doc} row={row} nulls={nulls} edit={edit} key={row[0]} />
 					))}
 				</div>
@@ -1258,10 +1277,10 @@ export default function EmployeeProfile() {
 						</Card>
 					)}
 
-					{(pane.groups || []).map((g) => (
+					{(pane.groups || []).filter((g) => g[1].some(shownRow)).map((g) => (
 						<Card key={g[0]} title={g[0]} {...card}>
 							<div className={editing ? "lvform" : "profields"}>
-								{g[1].map((row) => (
+								{g[1].filter(shownRow).map((row) => (
 									<Field doc={doc} row={row} nulls={nulls} edit={edit} key={row[0]} />
 								))}
 							</div>

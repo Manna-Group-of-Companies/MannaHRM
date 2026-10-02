@@ -6,7 +6,7 @@ import { isoAgo, todayIso } from "@/lib/format";
 import { Empty, Scroll } from "@/components/ui";
 import { LocCell } from "@/components/PunchMap";
 import ExportButtons from "@/components/ExportButtons";
-import { askText, daysBetween, reportFor, reportInput, specSheet } from "@/data/reports";
+import { LEAVE_STATUS_PICK, askText, daysBetween, reportFor, reportInput, specSheet } from "@/data/reports";
 
 /* ---------------------------------------------------------------------------
    One page for fifteen of Factor HR's reports.
@@ -46,6 +46,7 @@ export default function Report({ section, id }) {
 		month: todayIso().slice(5, 7),
 		from: isoAgo(30),
 		to: todayIso(),
+		status: "",
 	});
 
 	if (!spec) return <Empty title="No such report">Nothing is registered at this address.</Empty>;
@@ -119,7 +120,7 @@ export default function Report({ section, id }) {
 
 /** The one control this report needs, and nothing else.
 
-    A day, a month, a window, or nothing. Their reports carry a filter panel of
+    A day, a month, a window, a status, or nothing. Their reports carry a filter panel of
     a dozen controls on every screen and most of them do nothing on most
     reports; drawing only the one that changes the answer is the one place this
     deliberately does not copy them. */
@@ -145,6 +146,16 @@ function Ask({ spec, ask, setAsk }) {
 								"September", "October", "November", "December"][i]}
 						</option>
 					))}
+				</select>
+			</label>
+		);
+	}
+	if (spec.ask === "status") {
+		return (
+			<label className="inline">
+				<span>Status</span>
+				<select value={ask.status} onChange={on("status")}>
+					{LEAVE_STATUS_PICK.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
 				</select>
 			</label>
 		);

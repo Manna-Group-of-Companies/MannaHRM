@@ -41,6 +41,18 @@ const String kDeviceIdPrefix = 'PHONE-';
 /// Punches page under the same name.
 const String kPhotoField = 'custom_photo';
 
+/// What the phone said about the punch, beside the coordinate and the photo:
+/// how good the fix claimed to be, and which handset sent it. Both are Data
+/// custom fields in `manna_hr/install.py`, drawn in the dashboard's Punch Info
+/// column. **They describe and decide nothing** — both are the punching
+/// person's own phone talking, so the site never judges by either.
+const String kAccuracyField = 'custom_location_accuracy';
+const String kDeviceInfoField = 'custom_device_info';
+
+/// The street the punch was made in, by the phone's own geocoder — see
+/// `services/address.dart`. A caption beside the coordinate, never a verdict.
+const String kAddressField = 'custom_punch_address';
+
 /// The working window, repeated from `Manna HR Settings`' shipped defaults.
 ///
 /// **This app is not what enforces it.** The server checks the same two numbers

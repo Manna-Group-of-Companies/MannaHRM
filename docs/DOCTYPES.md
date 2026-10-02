@@ -163,6 +163,11 @@ authority and a second calculation is a second answer.
 
 | Page | Doctype | |
 |---|---|---|
+| Payroll (2 Oct 2026) — the one page the module shows | writes `Salary Component`, `Additional Salary`, `Payroll Entry`; reads `Salary Slip`, `Salary Structure Assignment` | stock |
+| Salary Setup (2 Oct 2026) | `Salary Structure`, `Salary Structure Assignment` — made and submitted; reads `Salary Component` | stock |
+| Advances & Loans (2 Oct 2026) | `Additional Salary` — one per monthly instalment, made and submitted | stock |
+| Payslips (2 Oct 2026) | reads `Salary Slip`, `Salary Detail` | stock |
+| Bank Transfer (2 Oct 2026) | reads `Salary Slip`, `Employee` (bank fields) | stock |
 | Adhoc Payments / Deductions | `Additional Salary` | stock |
 | Salary Process | `Payroll Entry`, `Salary Slip` | stock |
 | Final Settlement | `Full and Final Statement` | stock |
@@ -171,6 +176,15 @@ authority and a second calculation is a second answer.
 | Bonus Working Report | `Additional Salary` | stock |
 | Salary Payslip, Salary Register | `Salary Slip` | stock |
 | Prof. Tax Statement | `Salary Component`, `Salary Slip` | stock |
+
+On 2 October 2026 the module became **one page, Payroll → Payroll**, on the
+website: it makes the Salary Components, adds advances, loan instalments, leave
+encashment and bonuses as Additional Salary, starts the run and makes the slips,
+and lays the month out for Excel (`client/src/features/payroll/PayrollRun.jsx`).
+ERPNext holds the documents and nothing else — payroll is generated here, not
+there. Submitting the slips, which books the pay, stays a button in ERPNext. The
+other payroll pages are hidden in `data/sections.js`, kept and tested, not deleted.
+What the site needs before a run is in [PAYROLL_SETUP.md](PAYROLL_SETUP.md).
 
 **Payroll adds no doctype of ours and that is the finding, not a gap.** Every
 one of these nine pages is a report or a form over hrms' payroll, which is the
@@ -220,6 +234,29 @@ exist.
 | Page | Doctype | |
 |---|---|---|
 | Setup readiness, Module coverage | `Manna HR Settings` + counts | ours + derived |
+| Security → Pages | `Manna HR Settings.page_visibility` | ours |
+| Security → Employee fields | `Manna HR Settings.employee_field_access` | ours |
+
+**Employee fields** is Write, Read or Hidden per field, on Create Employee and
+on Employee Profile separately, for every login but `PAGE_ADMINS`
+(`client/src/lib/fieldaccess.js`). Read and Hidden are both refused by the site
+once the app is installed (`manna_hr/fieldaccess.py`, an Employee `validate`
+hook). Hidden takes a field off the two forms and nothing more: a login that can
+read an Employee reads every field of it through the API, because hiding a field
+from a login is a permlevel, and a permlevel is per role, not per login. The
+fields Create Employee cannot do without are always Write there, Machine Code
+among them. Note the gate PC: `bridge/employee_tools.py` sets Machine Code on an
+existing Employee, so Machine Code made Read under editing refuses the bridge
+too, unless its login is a page admin.
+
+**Security is a menu, not a permission.** It decides which modules and pages
+every login is shown, and only `hr@mannarubber.com` is shown it. A hidden page's
+doctype is exactly as readable as before — that is each login's roles. Who may
+change it is checked on the server (`rules.may_set_page_visibility`), because
+every company login is an HR Manager and could otherwise write the field
+directly; that check runs once the app is installed, like every other
+controller. The live site needs the field first:
+`python tools/add_missing_fields.py "Manna HR Settings" --apply`.
 
 ---
 

@@ -5,7 +5,7 @@ import { scoped } from "@/lib/scope";
 import { dmy, fmt, todayIso } from "@/lib/format";
 import { sheetsPdf, sheetsXlsx } from "@/lib/export";
 import { HEAD_FILL, ZEBRA_FILL } from "@/lib/fills";
-import { ledgerUpTo, lvbFill, lvbKey } from "@/lib/leavebalance";
+import { availedUpTo, ledgerUpTo, lvbFill, lvbKey } from "@/lib/leavebalance";
 import { LVB_COLS } from "@/data/leave";
 import EmpPick from "@/components/EmpPick";
 import { Empty, Scroll } from "@/components/ui";
@@ -27,28 +27,6 @@ import { loadLeaveBalances } from "@/api/load";
 
    Assigned, Carried Fwd, Expired and Balance come off the site's leave ledger
    (lib/leavebalance.js); Availed off approved applications. See LVB_COLS. */
-
-/** Days of one application that fall on or before the As On Date.
-
-    Whole applications are taken at their own `total_leave_days`, which is the
-    site's number and already accounts for the half-day flag — recomputing it
-    here would be a second opinion about somebody's leave, and the site's is the
-    one payroll would use.
-
-    An application still running on the As On Date is clipped instead, because
-    leave not yet taken is not yet availed. The clip counts whole days and then
-    gives back the half if the half-day falls inside the window. */
-function availedUpTo(row, ason) {
-	const from = String(row.from_date || "").slice(0, 10);
-	const to = String(row.to_date || from).slice(0, 10);
-	if (!from || from > ason) return 0;
-	if (to <= ason) return Number(row.total_leave_days) || 0;
-
-	const days = Math.round((Date.parse(ason) - Date.parse(from)) / 86400000) + 1;
-	const half = String(row.half_day_date || "").slice(0, 10);
-	const halved = row.half_day && half && half >= from && half <= ason ? 0.5 : 0;
-	return Math.max(0, days - halved);
-}
 
 /** Everybody the status filter allows, in the company picked on the top bar,
     by name — the people the employee box offers and the report runs over. */

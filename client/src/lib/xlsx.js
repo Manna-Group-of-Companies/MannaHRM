@@ -12,6 +12,7 @@
    none of them should pay to parse a library they never call. */
 
 import { HEAD_FILL, LETTER_FILL, PUNCH_FILL, ZEBRA_FILL } from "@/lib/fills";
+import { periodOf } from "@/lib/format";
 
 /** Counts a row's own letters into the legend Monthly Basic already shows on
     screen (WO/P/A/HD/L/H/LA/MP) — nothing invented, nothing Factor HR's sheet
@@ -438,12 +439,14 @@ const flagged = (r) => r.custom_geofence_result === "outside" || r.custom_geofen
  * HR can check any total against the punches that make it.
  *
  * @param {object} data - { from, till, company, daily, totals, grid, punches }, from lib/apppunches.js
- * @param {object} opts - { name, empOf(employee) → Employee, whereOf(punch) → text, hm(ms) → "8:33", fenceText(day) }
+ * @param {object} opts - { name, empOf(employee) → Employee, hm(ms) → "8:33", fenceText(day),
+ *   punchCols: [[heading, (punch, i) → text]] — the page's own punch columns, so the sheet is the screen,
+ *   photoUrl(punch) → absolute URL or "" }
  */
 export async function appPunchesXlsx(data, opts) {
 	const ExcelJS = (await import("exceljs")).default;
 	const { from, till, company, daily, totals, grid, punches } = data;
-	const { name, empOf, whereOf, hm, fenceText } = opts;
+	const { name, empOf, hm, fenceText, punchCols, photoUrl } = opts;
 	const code = (id) => empOf(id).employee_number || id;
 	const who = (id, fallback) => empOf(id).employee_name || fallback || "";
 	const clockOf = (t) => (t ? String(t).slice(11, 16) : "");
@@ -484,6 +487,7 @@ export async function appPunchesXlsx(data, opts) {
 		["Emp Code", (d) => code(d.employee), { width: [10, 16] }],
 		nameCol((d) => who(d.employee, d.employee_name)),
 		["First In", (d) => clockOf(d.firstIn), { align: "center", width: [8, 9], style: (c, d) => d.firstIn && inOut(c, "IN") }],
+		["Day / Night", (d) => periodOf(d.firstIn), { align: "center", width: [7, 11] }],
 		["Last Out", (d) => clockOf(d.lastOut), { align: "center", width: [8, 9], style: (c, d) => d.lastOut && inOut(c, "OUT") }],
 		["Hours", (d) => hm(d.workMs), { align: "center", width: [7, 9], style: bold }],
 		["Punches", (d) => d.punches.length, { align: "center", width: [8, 9] }],
@@ -499,18 +503,41 @@ export async function appPunchesXlsx(data, opts) {
 
 	gridSheet(wb, grid, { heading: heading("APP PUNCHES — MONTHLY GRID"), code, who, clockOf, hm });
 
-	const coord = (v) => (v != null && v !== "" && isFinite(Number(v)) ? Number(v) : "");
-	tableSheet(wb, "Punches", heading("APP PUNCHES — EVERY PUNCH"), [
-		["Date", (r) => String(r.time || "").slice(0, 10), date],
-		["Time", (r) => clockOf(r.time), { align: "center", width: [7, 8] }],
-		["Emp Code", (r) => code(r.employee), { width: [10, 16] }],
-		["Name", (r) => who(r.employee, r.employee_name), { width: [18, 34] }],
-		["In / Out", (r) => r.log_type || "", { align: "center", width: [8, 9], style: (c, r) => inOut(c, r.log_type) }],
-		["Latitude", (r) => coord(r.latitude), { align: "right", width: [11, 12], style: (c) => { c.numFmt = "0.000000"; } }],
-		["Longitude", (r) => coord(r.longitude), { align: "right", width: [11, 12], style: (c) => { c.numFmt = "0.000000"; } }],
-		["Where", (r) => whereOf(r), { width: [14, 44], style: warnIf(flagged) }],
-		["Company", (r) => empOf(r.employee).company || "", { width: [12, 30] }],
-	], punches);
+	/* The page's columns, with a link where the screen has a button: the
+	   selfie and the map open from the file as they do from the page. */
+	const link = (url, text) => (cell) => {
+		if (!url) return;
+		cell.value = { text, hyperlink: url };
+		cell.font = { ...cell.font, color: { argb: "FF1F5FBF" }, underline: true };
+	};
+	/* Wrapped, and the row grown to fit: tableSheet's fixed height would clip
+	   an address to its first line. About forty characters to a line at the
+	   widest these columns go. */
+	const wrap = (c) => {
+		c.alignment = { ...c.alignment, wrapText: true, vertical: "top" };
+		const lines = String(c.value || "").split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 40)), 0);
+		const row = c.worksheet.getRow(c.row);
+		row.height = Math.max(row.height || 18, 13 * lines + 4);
+	};
+	const PUNCH_OPTS = {
+		"S#": { align: "center", width: [4, 6] },
+		"Emp Code": { width: [9, 14] },
+		"Emp Name": { width: [16, 30], style: bold },
+		"Location": { width: [24, 40], style: wrap },
+		"Punch Info": { width: [24, 40], style: wrap },
+		"Punch Date": date,
+		"In / Out": { align: "center", width: [7, 9], style: (c, r) => inOut(c, r.log_type) },
+		"Remarks": { width: [10, 22], style: warnIf(flagged) },
+		"Selfie Image": { width: [10, 12] },
+		"Location Link": { width: [10, 12] },
+	};
+	const index = new Map(punches.map((r, i) => [r, i]));
+	tableSheet(wb, "Punches", heading("APP PUNCHES — IN / OUT ACTIVITIES"), punchCols.map(([head, get]) => {
+		const o = PUNCH_OPTS[head] || { width: [9, 22] };
+		if (head === "Selfie Image") return [head, (r) => (photoUrl(r) ? "Photo" : ""), { ...o, style: (c, r) => link(photoUrl(r), "Photo")(c) }];
+		if (head === "Location Link") return [head, (r) => (get(r, index.get(r)) ? "View Map" : ""), { ...o, style: (c, r) => link(get(r, index.get(r)), "View Map")(c) }];
+		return [head, (r) => get(r, index.get(r)), o];
+	}), punches);
 
 	await downloadWorkbook(wb, name);
 }

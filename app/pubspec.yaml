@@ -24,6 +24,12 @@ dependencies:
   # permission is declared — declaring one and not being granted it is what
   # makes that hand-off fail on Android.
   image_picker: ^1.2.3
+  # Which handset a punch came from, for the dashboard's Punch Info column —
+  # the make and model and Android version, never an identifier.
+  device_info_plus: ^13.3.0
+  # The street a punch was made in, by the phone's own keyless geocoder, for
+  # the dashboard's Location column — see services/address.dart.
+  geocoding: ^5.0.0
 
 dev_dependencies:
   flutter_test:

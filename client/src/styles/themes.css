@@ -101,12 +101,32 @@
   --brand-tint:   124 45 18;
   --brand-lift:   251 146 60;
 
-  /* ---- the chrome ---- */
+  /* ---- the chrome ----
+     `nav` is the dark material — the rail in this mode, and the fill behind a
+     white section row in the muster and the salary tables in both. */
   --char:         6 9 14;
   --nav:          13 17 24;
   --nav-2:        9 12 18;
   --nav-3:        27 33 45;
   --nav-ink:      154 165 184;
+
+  /* ---- the rail ----
+     Its own tokens since 29 September 2026, when the light rail arrived: the
+     rail stopped being `nav`, and `nav` kept every other job it had. On dark
+     they are the `nav` values, so nothing here moved.
+
+     `ink` is a link at rest and `fg` is one under the pointer; `on` is the
+     current module's pill and `on-ink` the label on it; `mark` is the stripe
+     and icon that say which one is current — 3:1 against both the rail and
+     the pill, which `npm run contrast` checks. */
+  --rail:         13 17 24;
+  --rail-2:       9 12 18;
+  --rail-3:       27 33 45;
+  --rail-ink:     154 165 184;
+  --rail-fg:      255 255 255;
+  --rail-on:      56 40 30;
+  --rail-on-ink:  255 255 255;
+  --rail-mark:    251 146 60;
 
   /* ---- the surfaces ----
      Four of them, and the gaps between them are what makes a card read as
@@ -245,8 +265,8 @@
   /* Ink at low alpha, which is what a shadow on white actually is. The dark
      palette needs near-opaque black because there is no white to lift off;
      here the surfaces do the lifting and the shadow only softens the edge. */
-  --sh-raise:     0 1px 2px rgba(15, 23, 42, .06), 0 1px 3px rgba(15, 23, 42, .07);
-  --sh-lift:      0 2px 6px rgba(15, 23, 42, .07), 0 10px 24px rgba(15, 23, 42, .08);
+  --sh-raise:     0 1px 2px rgba(15, 23, 42, .04), 0 2px 8px rgba(15, 23, 42, .045);
+  --sh-lift:      0 4px 10px rgba(15, 23, 42, .06), 0 14px 32px rgba(15, 23, 42, .08);
   --sh-pop:       0 8px 26px rgba(15, 23, 42, .14), 0 2px 6px rgba(15, 23, 42, .08);
   --sh-modal:     0 28px 64px rgba(15, 23, 42, .22);
 
@@ -273,14 +293,29 @@
   --nav-3:        44 55 76;
   --nav-ink:      165 176 194;
 
+  /* ---- the rail, on light ----
+     **White since 29 September 2026.** The dark rail was kept on purpose — see
+     the note that used to be here — as the one fixed edge a reader steers by.
+     It was also the heaviest thing on every screen, and people asked for a
+     lighter, simpler app. The edge survives as a hairline and the current
+     module as a warm pill, which is how the rail still reads as the rail. */
+  --rail:         255 255 255;
+  --rail-2:       255 255 255;
+  --rail-3:       255 255 255;
+  --rail-ink:     71 85 105;
+  --rail-fg:      23 32 47;
+  --rail-on:      255 241 232;
+  --rail-on-ink:  124 45 18;
+  --rail-mark:    194 65 12;
+
   /* ---- the surfaces ----
      `page` is not white and `card` is. That way a card lifts off the page with
      no border needed, which is the same job the four dark steps do in reverse.
      A pure-white page with white cards is a screen with no structure at all. */
-  --page:         246 247 250;
+  --page:         244 246 250;
   --card:         255 255 255;
-  --wash:         248 249 252;
-  --rule:         234 237 243;
+  --wash:         248 250 252;
+  --rule:         236 239 244;
 
   --line:         224 228 236;
   --line-2:       203 210 221;
@@ -322,7 +357,9 @@
      enough for `ink-3` to clear AA, warm enough not to read as an error. */
   --need:         255 251 235;
 
-  --beacon:       148 163 184;
+  /* On a white rail now as well as on the dark fills, so the resting dot is a
+     step darker than it was — 148 163 184 was 2.5:1 on white. */
+  --beacon:       100 116 139;
   --beacon-live:  22 163 74;
   --beacon-bad:   220 38 38;
 

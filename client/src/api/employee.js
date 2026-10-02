@@ -26,10 +26,18 @@ import { employeeDoc } from "@/lib/newemp";
     three-step form to keep on screen, and the site's own refusal — a mandatory
     field, a naming series that is not set up, a duplicate — is the useful half
     of a failure here. It arrives whole and the form shows it verbatim. */
-export async function createEmployee(f, extra = {}) {
+export async function createEmployee(f, extra = {}, locked = new Set()) {
 	/* `extra` is what an onboarding candidate brought that the wizard has no box
-	   for (api/candidate.js wizardFromCandidate). The boxes win on a clash. */
-	return apiCreate("Employee", { ...extra, ...employeeDoc(f) });
+	   for (api/candidate.js wizardFromCandidate). The boxes win on a clash.
+
+	   `locked` is what Settings → Security keeps this login from setting on a
+	   new Employee (lib/fieldaccess.js). Left out even when a candidate brought
+	   a value for it: the site refuses a record carrying one, and a refusal at
+	   the end of a four-step form over a box that was never typable is the
+	   wrong way to learn that. */
+	const doc = { ...extra, ...employeeDoc(f) };
+	for (const k of locked) delete doc[k];
+	return apiCreate("Employee", doc);
 }
 
 /* ---------------------------------------------------------------------------

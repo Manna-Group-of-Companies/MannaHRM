@@ -58,7 +58,7 @@ $Files = @(
 	'mannabridge', 'probe.py', 'check_push.py', 'requirements.txt', 'config.example.toml',
 	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1',
 	'machine.py', 'machine_menu.py', 'push_users.py', 'employee_tools.py', 'MACHINE.bat',
-	'console.py', 'console.html', 'CONSOLE.bat', 'MannaHRConsole.vbs',
+	'console.py', 'console.html', 'CONSOLE.bat', 'MannaHRConsole.vbs', 'RESEND.bat',
 	# Manna Attendance, the Windows program (desktop/ in the repo). Absent from a
 	# zip built before it was, which is why a missing item is skipped.
 	'app'
@@ -203,6 +203,25 @@ function Stop-Bridge {
 	}
 }
 
+function Stop-Console {
+	# The console as well as the bridge, before their files are replaced. Left
+	# running, it goes on serving the old console.py - and the task's own
+	# MultipleInstances IgnoreNew means the Start-ScheduledTask that follows the
+	# copy does nothing at all, so the new code never runs until a restart.
+	if (Get-ScheduledTask -TaskName $ConsoleTask -ErrorAction SilentlyContinue) {
+		Stop-ScheduledTask -TaskName $ConsoleTask -ErrorAction SilentlyContinue
+	}
+	# Stopping the task ends the pythonw it started; one started by hand from
+	# CONSOLE.bat is its own process. Only a console running this install's
+	# console.py is stopped - a developer's copy elsewhere is not ours to kill.
+	$mine = (Join-Path $InstallDir 'console.py')
+	foreach ($p in @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)) {
+		if ($p.CommandLine -and $p.CommandLine.IndexOf($mine, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+			Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+		}
+	}
+}
+
 function Show-Status {
 	$task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 	if ($task) {
@@ -226,8 +245,14 @@ function Show-Status {
 # `.venv` is kept as well, and checked rather than rebuilt: a plant on a slow
 # line pays for that download, and a venv whose Python has gone is detected and
 # replaced a few steps below anyway.
+#
+# `console-token.txt` since 30 Sep 2026. The console writes it once, as it
+# starts, and a replace that deleted it under a console still running left a
+# PC whose Manna Attendance said "No bridge found" until somebody restarted it
+# - running INSTALL.bat again, which is what that message said to do, went
+# round the same loop. Kept, the new console reads the same key back.
 $Keep = @('config.toml', 'bridge.env', 'punches.sqlite3', 'punches.sqlite3-wal',
-	'punches.sqlite3-shm', 'machine-backups', 'run-bridge.bat.old', '.venv')
+	'punches.sqlite3-shm', 'machine-backups', 'run-bridge.bat.old', '.venv', 'console-token.txt')
 
 # Other attendance software on the same PC. **Only looked for, never touched.**
 # eSSL is what enrols the fingers at several of these gates and Factor HR is the
@@ -383,7 +408,11 @@ function Register-ConsoleTask {
 	# that may be whoever was nearest, so every request has to carry a key kept
 	# in a file only an administrator can read.
 	$pythonw = Join-Path $InstallDir '.venv\Scripts\pythonw.exe'
-	if (-not (Test-Path $pythonw)) { return }
+	if (-not (Test-Path $pythonw)) {
+		Write-Host "  The console is not set up: $pythonw is missing, so Manna Attendance will not open." -ForegroundColor Yellow
+		Write-Host '  Run INSTALL.bat -Replace to rebuild the libraries.'
+		return
+	}
 
 	$token = Join-Path $InstallDir 'console-token.txt'
 	$arguments = '"{0}" --no-browser --token-file "{1}" --log "{2}"' -f `
@@ -399,11 +428,17 @@ function Register-ConsoleTask {
 	Start-ScheduledTask -TaskName $ConsoleTask
 
 	# The key, as soon as it exists: same lock as bridge.env, by SID.
-	for ($i = 0; $i -lt 10 -and -not (Test-Path $token); $i++) { Start-Sleep -Seconds 1 }
+	for ($i = 0; $i -lt 20 -and -not (Test-Path $token); $i++) { Start-Sleep -Seconds 1 }
 	if (Test-Path $token) {
 		& icacls.exe $token /inheritance:r /grant:r '*S-1-5-18:F' '*S-1-5-32-544:F' | Out-Null
+		Write-Host "  The console runs in the background from boot. Its key is $token, locked to administrators."
+	} else {
+		# Said, not assumed. Without the key Manna Attendance cannot open, and the
+		# line above used to print either way.
+		Write-Host "  The console did not start: no key in $token after 20 seconds." -ForegroundColor Yellow
+		Write-Host "  Restart this PC and it starts at boot. If it still does not, run CONSOLE.bat to see why"
+		Write-Host "  - and $((Join-Path $InstallDir 'console.log')) says what it last tried."
 	}
-	Write-Host "  The console runs in the background from boot. Its key is $token, locked to administrators."
 }
 
 function Install-MachineTools {
@@ -504,6 +539,7 @@ function Install-Bridge {
 
 	Step "Copying the bridge to $InstallDir"
 	Stop-Bridge
+	Stop-Console
 	if ($Replace) {
 		# After Stop-Bridge, never before: files held open by a running bridge
 		# are the ones that fail to delete, and the queue is one of them.

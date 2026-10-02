@@ -43,7 +43,7 @@ $Files = @(
 	'mannabridge', 'probe.py', 'check_push.py', 'requirements.txt', 'config.example.toml',
 	'known_machines.toml', 'README.md', 'INSTALL.bat', 'install.ps1', 'install.sh', 'package.ps1',
 	'machine.py', 'machine_menu.py', 'push_users.py', 'employee_tools.py', 'MACHINE.bat',
-	'console.py', 'console.html', 'CONSOLE.bat', 'MannaHRConsole.vbs'
+	'console.py', 'console.html', 'CONSOLE.bat', 'MannaHRConsole.vbs', 'RESEND.bat'
 )
 
 if (-not $Out) {

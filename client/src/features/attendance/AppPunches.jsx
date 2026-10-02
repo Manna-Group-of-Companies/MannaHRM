@@ -16,6 +16,11 @@
    person, a line per person, and the month as a grid — the arithmetic is
    lib/apppunches.js. Excel carries all four as sheets of one workbook; CSV
    carries the view on screen.
+
+   The punch list is drawn in Factor HR's In / Out Activities Report layout
+   (2 October 2026) — their columns in their order, a person's punches
+   together, the selfie beside the punch — because HR reads the two side by
+   side and a different shape is a second thing to learn.
    --------------------------------------------------------------------------- */
 
 import { useState } from "react";
@@ -23,10 +28,11 @@ import { useState } from "react";
 import { getState, set, useApp } from "@/store";
 import { listAll } from "@/api/client";
 import { loadWorkLocations } from "@/api/load";
-import { DAY, clock, dmy, fmt, todayIso } from "@/lib/format";
-import { coordText, placeText, streamOf } from "@/lib/punchplace";
-import { apDaily, apGrid, apTotals, cellLetter, fenceText, hm } from "@/lib/apppunches";
-import { LocCell } from "@/components/PunchMap";
+import { DAY, clock, dmy, fmt, periodOf, todayIso } from "@/lib/format";
+import { coordOf, fenceVerdict, mapLink, nearestPlace, streamOf, terminalOf } from "@/lib/punchplace";
+import { formatDistance } from "@/lib/geo";
+import { apDaily, apGrid, apPunchList, apTotals, cellLetter, fenceText, hm, hms } from "@/lib/apppunches";
+import { openMap } from "@/components/PunchMap";
 import { PHOTO_FIELD, PhotoCell, photoOf } from "@/components/PunchPhoto";
 import { Empty, Note, Scroll, panelProps, tabProps } from "@/components/ui";
 import { download, toCsv } from "@/lib/csv";
@@ -37,24 +43,76 @@ const AP_MAXDAYS = 31;
 /* Tried widest first, the same reasoning as In Out Activities Report's
    IO_TIERS: a field the site has not got refuses the whole read rather than
    dropping the column. */
-const AP_BASE = ["name", "employee", "employee_name", "time", "log_type", "device_id"];
+const AP_BASE = ["name", "employee", "employee_name", "time", "log_type", "device_id", "creation"];
 const AP_GEO = AP_BASE.concat(["latitude", "longitude"]);
 const AP_CHECKED = AP_GEO.concat(["custom_distance_metres", "custom_geofence_result"]);
 /* The photo tier first: a site without `custom_photo` (the field went on 25
    September 2026) falls through to the one below and draws every punch as
-   having no photo, which is true of it. */
-const AP_TIERS = [AP_CHECKED.concat([PHOTO_FIELD]), AP_CHECKED, AP_GEO, AP_BASE];
+   having no photo, which is true of it. The Punch Info fields (2 October
+   2026) sit above that, falling through the same way. */
+const AP_PHOTO = AP_CHECKED.concat([PHOTO_FIELD]);
+const AP_INFO = AP_PHOTO.concat(["custom_location_accuracy", "custom_device_info", "custom_punch_address"]);
+const AP_TIERS = [AP_INFO, AP_PHOTO, AP_CHECKED, AP_GEO, AP_BASE];
 
+const secs = (t) => String(t || "").slice(11, 19);
+
+function accText(r) {
+	const a = Number(r.custom_location_accuracy);
+	return r.custom_location_accuracy != null && r.custom_location_accuracy !== "" && isFinite(a) && a > 0
+		? `${Math.round(a * 10) / 10} m` : "";
+}
+
+/* Where, as lines: the street the phone's geocoder named, then how far that
+   was from the nearest surveyed place. A punch from before the phone sent an
+   address has the second line alone, which is the more useful of the two. */
+function locLines(r, places) {
+	const near = nearestPlace(r, places);
+	const lines = [String(r.custom_punch_address || "").trim(),
+		near ? `${formatDistance(near.metres)} from ${near.name}` : ""].filter(Boolean);
+	return lines.length || coordOf(r) ? lines : ["no location sent"];
+}
+
+/* What the phone said about itself, a line for each thing it said. */
+function infoLines(r) {
+	const c = coordOf(r);
+	return [
+		accText(r) && `Loc Acc: ${accText(r)}`,
+		r.custom_device_info && `Device Info: ${r.custom_device_info}`,
+		c && `Latitude: ${c.lat.toFixed(7)}`,
+		c && `Longitude: ${c.lng.toFixed(7)}`,
+	].filter(Boolean);
+}
+
+const lineDivs = (lines, restCls) => lines.map((l, i) => <div key={i} className={i ? restCls : undefined}>{l}</div>);
+
+/* Factor HR's In / Out Activities Report, column for column, plus In / Out —
+   theirs leaves the direction to the reader and ours has it. One list for the
+   screen, the CSV and the workbook's Punches sheet: [1] is the text a file
+   carries, [3] what the page draws instead where it draws more than text. */
 const AP_COLS = [
-	["Date", (r) => String(r.time || "").slice(0, 10), "mono"],
-	["Time", (r) => clock(r.time), "mono"],
-	["Emp code", (r, e) => e.employee_number || r.employee, "mono"],
-	["Name", (r, e) => e.employee_name || r.employee_name || ""],
+	["S#", (r, e, s, i) => String(i + 1), "mono"],
+	["Emp Code", (r, e) => e.employee_number || r.employee, "mono"],
+	["Emp Name", (r, e) => e.employee_name || r.employee_name || ""],
+	["Terminal", (r) => terminalOf(r), "muted"],
+	["Location", (r, e, s) => locLines(r, s.workLocs).join("\n"), "wide",
+		(r, e, s) => lineDivs(locLines(r, s.workLocs), "muted")],
+	["Generation Time / Upload Time", (r) => (r.creation ? `${dmy(r.creation)} ${secs(r.creation)}` : ""), "mono"],
+	["Punch Date", (r) => dmy(r.time), "mono"],
+	["Punch Time", (r) => secs(r.time), "mono"],
 	["In / Out", (r) => r.log_type || ""],
-	["Photo", (r) => photoOf(r)],
-	["Location", (r) => coordText(r), "mono"],
-	["Where", (r, e, s) => placeText(r, s.workLocs), "muted"],
-	["Company", (r, e) => e.company || "", "muted"],
+	["Duration From Previous Punch", (r) => hms(r.gapMs), "mono"],
+	["Selfie Image", (r) => photoOf(r), "", (r, e) => <PhotoCell r={r} e={e} big />],
+	["Remarks", (r) => fenceVerdict(r), "", (r) => {
+		const v = fenceVerdict(r);
+		return v && <span className={r.custom_geofence_result === "inside" ? "text-live" : "text-bad font-semibold"}>{v}</span>;
+	}],
+	["Punch Info", (r) => infoLines(r).join("\n"), "wide", (r) => lineDivs(infoLines(r))],
+	["Location Link", (r) => {
+		const c = coordOf(r);
+		return c ? mapLink(c.lat, c.lng) : "";
+	}, "", (r, e) => coordOf(r) && (
+		<button type="button" className="locbtn" onClick={() => openMap(r, e)}>View Map</button>
+	)],
 ];
 
 async function apGenerate() {
@@ -124,6 +182,7 @@ const AP_DAILY_COLS = [
 	["Emp code", (d, e) => e.employee_number || d.employee, "mono"],
 	["Name", (d, e) => e.employee_name || d.employee_name],
 	["First in", (d) => (d.firstIn ? clock(d.firstIn) : ""), "mono"],
+	["Day / Night", (d) => periodOf(d.firstIn)],
 	["Last out", (d) => (d.lastOut ? clock(d.lastOut) : ""), "mono"],
 	["Hours", (d) => hm(d.workMs), "mono"],
 	["Punches", (d) => String(d.punches.length), "mono"],
@@ -159,9 +218,9 @@ function apViews(s, rows) {
 function apCsv(s, rows) {
 	const view = s.ap.view || "punches";
 	const v = apViews(s, rows);
-	const tab = (cols, list) => toCsv(cols.map((c) => c[0]), list.map((r) => {
+	const tab = (cols, list) => toCsv(cols.map((c) => c[0]), list.map((r, i) => {
 		const e = empOf(s, r.employee);
-		return cols.map((c) => c[1](r, e, s));
+		return cols.map((c) => c[1](r, e, s, i));
 	}));
 	if (view === "daily") return tab(AP_DAILY_COLS, v.daily);
 	if (view === "people") return tab(AP_PEOPLE_COLS, v.totals);
@@ -172,8 +231,11 @@ function apCsv(s, rows) {
 				...p.cells.map((d) => (d ? `${d.firstIn ? clock(d.firstIn) : "?"}-${d.lastOut ? clock(d.lastOut) : "?"}` : ""))];
 		}));
 	}
-	return tab(AP_COLS, rows);
+	return tab(AP_COLS, punchList(s, rows));
 }
+
+/* The punch list's order, for the screen and both files alike. */
+const punchList = (s, rows) => apPunchList(rows, (id) => empOf(s, id).employee_number || id);
 
 function apExport(s, rows) {
 	if (!rows.length) return set({ apMsg: "Nothing to export — generate the report first." });
@@ -190,8 +252,14 @@ async function apExcel(s, rows) {
 	try {
 		const v = apViews(s, rows);
 		await appPunchesXlsx(
-			{ from: apRange(s)[0], till: apRange(s)[1], company: s.company || "", ...v, punches: rows },
-			{ name, empOf: (id) => empOf(s, id), whereOf: (r) => placeText(r, s.workLocs), hm, fenceText },
+			{ from: apRange(s)[0], till: apRange(s)[1], company: s.company || "", ...v, punches: punchList(s, rows) },
+			{
+				name, empOf: (id) => empOf(s, id), hm, fenceText,
+				punchCols: AP_COLS.map((c) => [c[0], (r, i) => c[1](r, empOf(s, r.employee), s, i)]),
+				/* Absolute, so the link works from the file. It is a private
+				   file: it opens only in a browser signed in to the site. */
+				photoUrl: (r) => (photoOf(r) ? window.location.origin + photoOf(r) : ""),
+			},
 		);
 	} catch (e) {
 		return set({ apMsg: `Could not build the spreadsheet: ${e && e.message ? e.message : e}. Export CSV still works.` });
@@ -342,6 +410,9 @@ export default function AppPunches() {
 					<>
 						<div className="legend mt-[.6rem]">
 							<span className="cov live">{count}</span>
+							{view === "punches" && (
+								<span className="muted">Date from {dmy(apRange(s)[0])} till {dmy(apRange(s)[1])}</span>
+							)}
 							{view === "grid" && (
 								<span className="muted">
 									Each day is first in over last out. Green is a full day, amber a punch missing, red text a
@@ -360,18 +431,16 @@ export default function AppPunches() {
 							<Grid s={s} grid={v.grid} />
 						) : (
 							<Scroll style={{ marginTop: ".6rem" }}>
-								<table style={{ minWidth: 1040 }}>
+								<table className="iorep" style={{ minWidth: 1360 }}>
 									<thead><tr>{AP_COLS.map((c) => <th key={c[0]}>{c[0]}</th>)}</tr></thead>
 									<tbody>
-										{rows.map((r) => {
-											const e = s.byName[r.employee] || {};
+										{punchList(s, rows).map((r, i) => {
+											const e = empOf(s, r.employee);
 											return (
 												<tr key={r.name}>
 													{AP_COLS.map((c) => (
 														<td key={c[0]} className={c[2] || undefined}>
-															{c[0] === "Location" ? <LocCell r={r} e={e} />
-																: c[0] === "Photo" ? <PhotoCell r={r} e={e} />
-																: (c[1](r, e, s) || "—")}
+															{(c[3] ? c[3](r, e, s) : c[1](r, e, s, i)) || "—"}
 														</td>
 													))}
 												</tr>

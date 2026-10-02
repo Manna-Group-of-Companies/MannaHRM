@@ -12,7 +12,10 @@ import frappe
 # document with every field `None`, and a `None` radius would refuse every
 # punch in the group.
 DEFAULTS = {
-	"enforce_geofence": 1,
+	# Off since 29 September 2026: a phone punch is taken from anywhere. The
+	# coordinate is still recorded, which is what HR reads; switch this on in
+	# Manna HR Settings to refuse punches beyond the radius below.
+	"enforce_geofence": 0,
 	# 1000m rather than 300: with five Work Locations now in play, a location
 	# nobody has set a radius on yet is more likely to be a yard or a compound
 	# than a single gate. Set radius_metres on the Work Location itself for

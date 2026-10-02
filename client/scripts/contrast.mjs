@@ -127,6 +127,11 @@ const NON_TEXT = [
 	["line-ctl", "card"], ["line-ctl", "page"], ["line-ctl", "wash"], ["line-ctl", "rule"],
 	["brand-lift", "nav"], ["brand-lift", "nav-2"], ["brand", "card"],
 	["beacon", "nav"], ["beacon-live", "nav"], ["beacon-bad", "nav"],
+	/* The rail has its own material since the light one arrived: the marker
+	   has to be found against the rail and against the pill it sits in, and
+	   the connection dot is drawn on the rail's foot. */
+	["rail-mark", "rail"], ["rail-mark", "rail-on"],
+	["beacon", "rail"], ["beacon-live", "rail"], ["beacon-bad", "rail"],
 	/* The three chart hues, against the card every chart is drawn on. A slice
 	   or a bar is a non-text mark carrying meaning, which is 1.4.11's own
 	   wording — and it is the check that catches a dark-mode hue left at its
@@ -137,7 +142,11 @@ const NON_TEXT = [
 ];
 
 /** Text on the dark chrome. */
-const ON_CHROME = [["nav-ink", "nav"], ["nav-ink", "nav-2"], ["nav-ink", "nav-3"]];
+const ON_CHROME = [
+	["nav-ink", "nav"], ["nav-ink", "nav-2"], ["nav-ink", "nav-3"],
+	["rail-ink", "rail"], ["rail-ink", "rail-2"], ["rail-ink", "rail-3"],
+	["rail-fg", "rail"], ["rail-on-ink", "rail-on"],
+];
 
 /* --------------------------------------------------------------------- run */
 

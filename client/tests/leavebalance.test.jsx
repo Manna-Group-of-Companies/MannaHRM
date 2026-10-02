@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceOf, ledgerUpTo, lvbFill, lvbKey } from "@/lib/leavebalance";
+import { availedUpTo, balanceOf, ledgerUpTo, lvbFill, lvbKey, monthLeave } from "@/lib/leavebalance";
 import { LETTER_FILL } from "@/lib/fills";
 
 const CL = "Casual Leave";
@@ -41,6 +41,53 @@ describe("the balance", () => {
 	});
 });
 
+describe("one month of leave, for Leave Monthly Availed", () => {
+	const app = (from_date, to_date, total_leave_days, extra = {}) =>
+		({ employee: "E1", leave_type: CL, from_date, to_date, total_leave_days, ...extra });
+	const credits = [e("2026-07-01", 1), e("2026-08-01", 1), e("2026-09-01", 1)];
+
+	it("makes available what was brought in plus what the month earned, less what was taken", () => {
+		const got = monthLeave(credits, [app("2026-08-10", "2026-08-10", 1)], "2026-09").get(lvbKey("E1", CL));
+		expect(got).toEqual({ brought: 1, earned: 1, availed: 0, lapsed: 0, available: 2 });
+	});
+
+	it("ends a month on exactly the balance the Leave Balance Report prints on its last day", () => {
+		const apps = [app("2026-08-10", "2026-08-10", 1), app("2026-09-14", "2026-09-15", 2)];
+		const a = ledgerUpTo(credits, "2026-09-30").get(lvbKey("E1", CL));
+		const taken = apps.reduce((t, r) => t + availedUpTo(r, "2026-09-30"), 0);
+		expect(monthLeave(credits, apps, "2026-09").get(lvbKey("E1", CL)).available)
+			.toBe(balanceOf({ alloc: a, availed: taken }));
+	});
+
+	it("splits a leave that crosses a month end between the two months", () => {
+		const apps = [app("2026-08-30", "2026-09-02", 4)];
+		expect(monthLeave(credits, apps, "2026-08").get(lvbKey("E1", CL)).availed).toBe(2);
+		expect(monthLeave(credits, apps, "2026-09").get(lvbKey("E1", CL)).availed).toBe(2);
+	});
+
+	it("ends December at what lapsed and starts January at what was carried", () => {
+		const ledger = [
+			e("2026-11-01", 1), e("2026-12-01", 1), e("2026-12-31", -2, { is_expired: 1 }),
+			e("2027-01-01", 2, { is_carry_forward: 1 }), e("2027-01-01", 1),
+		];
+		expect(monthLeave(ledger, [], "2026-12").get(lvbKey("E1", CL)))
+			.toEqual({ brought: 1, earned: 1, availed: 0, lapsed: 2, available: 0 });
+		expect(monthLeave(ledger, [], "2027-01").get(lvbKey("E1", CL)))
+			.toEqual({ brought: 2, earned: 1, availed: 0, lapsed: 0, available: 3 });
+	});
+
+	it("draws a type never allocated only in a month it was taken, with its balance blank", () => {
+		const lwp = [{ employee: "E1", leave_type: "Leave Without Pay", from_date: "2026-08-05", to_date: "2026-08-05", total_leave_days: 1 }];
+		expect(monthLeave(credits, lwp, "2026-08").get(lvbKey("E1", "Leave Without Pay")))
+			.toEqual({ brought: null, earned: null, availed: 1, lapsed: null, available: null });
+		expect(monthLeave(credits, lwp, "2026-09").has(lvbKey("E1", "Leave Without Pay"))).toBe(false);
+	});
+
+	it("has no row for a month before anything was allocated", () => {
+		expect(monthLeave(credits, [], "2026-06").size).toBe(0);
+	});
+});
+
 describe("the export's colours", () => {
 	it("paints a positive balance green, a negative one red and nothing on a blank", () => {
 		expect(lvbFill("2.0", "Balance")).toBe(LETTER_FILL.P);
@@ -59,7 +106,7 @@ describe("the export's colours", () => {
 	});
 });
 
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { beforeEach } from "vitest";
 import { getState, resetStore, set, store } from "@/store";
@@ -100,5 +147,86 @@ describe("the Leave Balance Report, with a ledger", () => {
 		const buttons = [...out.container.querySelectorAll("button")].map((b) => b.textContent);
 		expect(buttons).toContain("Download");
 		expect(buttons.some((b) => /Generate/.test(b))).toBe(false);
+	});
+});
+
+import LeaveMonthly from "@/features/leave/LeaveMonthly";
+
+describe("the Leave Monthly Availed page", () => {
+	beforeEach(() => resetStore());
+
+	it("shows each person's leave available at the end of the chosen month", async () => {
+		const st = loadedState();
+		const emp = st.employees.find((x) => x.status === "Active");
+		const on = (from_date) => ({ employee: emp.name, leave_type: CL, transaction_type: "Leave Allocation", from_date, leaves: 1 });
+		set({
+			...st, lvbState: "done",
+			lvbLedger: [on("2026-07-01"), on("2026-08-01"), on("2026-09-01")],
+			lvbRows: [{ employee: emp.name, leave_type: CL, from_date: "2026-09-10", to_date: "2026-09-10", total_leave_days: 1 }],
+			lvm: { ...getState().lvm, emps: [emp.name], status: "", month: "2026-09" },
+		});
+		let out;
+		await act(async () => { out = render(<Provider store={store}><LeaveMonthly /></Provider>); });
+		const cells = [...out.container.querySelectorAll("table tbody tr")].map((r) =>
+			[...r.querySelectorAll("td")].map((c) => c.textContent));
+		expect(cells).toHaveLength(1);
+		const head = [...out.container.querySelectorAll("table thead th")].map((c) => c.textContent);
+		const at = (h) => cells[0][head.indexOf(h)];
+		expect(at("Employee Name")).toBe(emp.employee_name);
+		expect([at("Brought Fwd"), at("Earned"), at("Availed"), at("Available")]).toEqual(["2.0", "1.0", "1.0", "2.0"]);
+	});
+
+	const credited = (st) => st.employees.filter((x) => x.status === "Active").flatMap((x) =>
+		["2026-08-01", "2026-09-01"].map((from_date) =>
+			({ employee: x.name, leave_type: CL, transaction_type: "Leave Allocation", from_date, leaves: 1 })));
+	const names = (out) => [...out.container.querySelectorAll("table tbody tr")].map((r) => r.children[1].textContent);
+
+	it("lists nobody until an employee is picked, even with everybody credited", async () => {
+		const st = loadedState();
+		set({ ...st, lvbState: "done", lvbRows: [], lvbLedger: credited(st),
+			lvm: { ...getState().lvm, month: "2026-09" } });
+		let out;
+		await act(async () => { out = render(<Provider store={store}><LeaveMonthly /></Provider>); });
+		expect(out.container.querySelector("table")).toBeNull();
+		expect(out.container.textContent).toContain("Pick an employee");
+	});
+
+	it("lists only the employees picked, and drops one when its chip is removed", async () => {
+		const st = loadedState();
+		const active = st.employees.filter((x) => x.status === "Active");
+		expect(active.length).toBeGreaterThan(2);
+		const [a, b] = active;
+		set({ ...st, lvbState: "done", lvbRows: [], lvbLedger: credited(st),
+			lvm: { ...getState().lvm, emps: [a.name, b.name], month: "2026-09" } });
+		let out;
+		await act(async () => { out = render(<Provider store={store}><LeaveMonthly /></Provider>); });
+		expect(names(out).sort()).toEqual([a.employee_name, b.employee_name].sort());
+
+		const remove = out.container.querySelector(`[aria-label="Remove ${b.employee_name}"]`);
+		await act(async () => { fireEvent.click(remove); });
+		expect(names(out)).toEqual([a.employee_name]);
+		expect(getState().lvm.emps).toEqual([a.name]);
+	});
+
+	it("takes a picked person off when the status filter no longer allows them", async () => {
+		const st = loadedState();
+		const emp = st.employees.find((x) => x.status === "Active");
+		set({ ...st, lvbState: "done", lvbRows: [], lvbLedger: credited(st),
+			lvm: { ...getState().lvm, emps: [emp.name], status: "" } });
+		let out;
+		await act(async () => { out = render(<Provider store={store}><LeaveMonthly /></Provider>); });
+		await act(async () => {
+			fireEvent.change(out.container.querySelector('[aria-label="Employee status"]'), { target: { value: "Left" } });
+		});
+		expect(getState().lvm.emps).toEqual([]);
+	});
+
+	it("asks for employee, status, leave type, month and file type", async () => {
+		set({ ...loadedState(), lvbState: "done", lvbLedger: [] });
+		let out;
+		await act(async () => { out = render(<Provider store={store}><LeaveMonthly /></Provider>); });
+		const q = (l) => out.container.querySelector(`[aria-label="${l}"]`);
+		for (const l of ["Search employee", "Employee status", "Leave type", "Month", "File type"]) expect(q(l)).toBeTruthy();
+		expect(q("Month").value).toMatch(/^\d{4}-\d{2}$/);
 	});
 });

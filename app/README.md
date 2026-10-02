@@ -60,7 +60,7 @@ Every rule it appears to enforce is enforced on the server, by
 |---|---|
 | refuses to offer a punch outside 05:00–21:30 | `_check_punch_window` throws, on its own clock |
 | stamps the punch with the site's clock | `_apply_server_clock` overwrites it anyway |
-| shows the distance to the work location | `_check_geofence` measures it and refuses |
+| sends the coordinate, and shows no distance | `_check_geofence` refuses nothing — `enforce_geofence` is off by default since 29 September 2026 |
 | labels the punch `PHONE-<employee>` | `_classify_source` derives the source from that id |
 
 The app's copy exists so that somebody standing at a gate gets a sentence

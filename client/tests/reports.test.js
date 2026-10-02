@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	absent, availedLeave, birthdays, headCount, inOutCount, leaveDays, leaveHistory,
-	missedPunches, monthlyLeave, newJoiners, onLeave, orgChart, pendingLeave, present,
+	absent, availedLeave, birthdays, headCount, inOutCount, leaveByStatus, leaveDays, leaveHistory, leaveStatus,
+	missedPunches, newJoiners, onLeave, orgChart, pendingLeave, present,
 	shiftReport, weekoffs,
 } from "../src/lib/reports.js";
 import { daysBetween } from "../src/data/reports.js";
@@ -223,23 +223,21 @@ describe("leave, as their reports count it", () => {
 		expect(availedLeave(rows).map((r) => r.employee).sort()).toEqual(["A", "D"]);
 	});
 
-	it("puts a trip crossing a month wholly in the month it started", () => {
-		// Their report does the same. Worth knowing before anybody reconciles
-		// the two and finds three days missing from September.
-		const aug = monthlyLeave(rows).find((g) => g.month === "2026-08" && g.type === "Casual Leave");
-		expect(aug.days).toBe(3 + 1.5);
-		expect(monthlyLeave(rows).some((g) => g.month === "2026-09")).toBe(false);
-	});
-
-	it("counts people, not applications", () => {
-		const twice = [
-			{ employee: "A", leave_type: "Casual Leave", from_date: "2026-09-01", to_date: "2026-09-01", status: "Approved" },
-			{ employee: "A", leave_type: "Casual Leave", from_date: "2026-09-20", to_date: "2026-09-20", status: "Approved" },
-		];
-		expect(monthlyLeave(twice)[0].people).toBe(1);
-	});
-
 	it("puts the newest application first", () => {
 		expect(leaveHistory(rows)[0].employee).toBe("B");
+	});
+
+	it("calls an application nobody has decided Pending, and keeps the site's word for the rest", () => {
+		expect(rows.map(leaveStatus)).toEqual(["Approved", "Pending", "Pending", "Approved"]);
+		expect(leaveStatus({ status: "Rejected" })).toBe("Rejected");
+		expect(leaveStatus({ status: "Cancelled" })).toBe("Cancelled");
+	});
+
+	it("the history narrows to pending or to approved, and holds every application otherwise", () => {
+		const who = (status) => leaveByStatus(rows, status).map((r) => r.employee).sort();
+		expect(who("pending")).toEqual(["B", "C"]);
+		expect(who("approved")).toEqual(["A", "D"]);
+		expect(who("")).toEqual(["A", "B", "C", "D"]);
+		expect(who(undefined)).toEqual(["A", "B", "C", "D"]);
 	});
 });

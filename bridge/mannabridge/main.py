@@ -28,6 +28,7 @@ from mannabridge.config import load_config
 from mannabridge.device import Device
 from mannabridge.queue import PunchQueue
 from mannabridge.roster import EnrolmentSite, EnrolmentStore, sync_enrolments
+from mannabridge.rota import Rota
 from mannabridge.sink import DeliveryError, ErpSink, UnmappedEmployee
 
 log = logging.getLogger("mannabridge")
@@ -43,8 +44,12 @@ MAX_ATTEMPTS = 20
 WAKE_SETTLE_SECONDS = 2
 
 
-def poll_devices(devices, queue):
-	"""Read each device and persist anything new. Returns how many were new."""
+def poll_devices(devices, queue, unread=None):
+	"""Read each device and persist anything new. Returns how many were new.
+
+	`unread`, when given, collects the names of the machines that could not be
+	read this pass — run_once holds the shift marker back for them.
+	"""
 	found = 0
 	for device in devices:
 		try:
@@ -54,6 +59,8 @@ def poll_devices(devices, queue):
 			# backlog draining. Logged loudly; the site-side job notices the
 			# silence separately.
 			log.error("%s: could not be read: %s", device.name, exc)
+			if unread is not None:
+				unread.append(device.name)
 			continue
 
 		newest = None
@@ -74,6 +81,26 @@ def poll_devices(devices, queue):
 	return found
 
 
+def rewind_cursors(devices, queue, start):
+	"""Point every readable machine at the start of `start` (`YYYY-MM-DD`), so the
+	next pass reads it again. Returns the machines moved.
+
+	**Backwards on purpose, and only from here.** `--from` never moves a cursor
+	back, because on an ordinary start that would be a replay nobody asked for.
+	This is somebody asking: the bridge was not running for some days — Manna
+	Tyre Retreads' was installed on 16 Sep 2026, and the 1st to the 15th were
+	still only on the two machines. Re-reading costs nothing it should not:
+	`queue.offer` refuses a punch it already holds, so only the missing days are
+	queued, and the site answers ALREADY_THERE for any it has.
+	"""
+	stamp = (datetime.strptime(start, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d") + " 23:59:59"
+	moved = []
+	for d in devices:
+		queue.set_last_seen(d.name, stamp)
+		moved.append(d.name)
+	return moved
+
+
 def _waiting_on_employee(row):
 	# Both are one thing: a punch that needs a person to change a record, not a
 	# line that needs time. Neither is ever retired by the attempt cap, which is
@@ -82,14 +109,24 @@ def _waiting_on_employee(row):
 	return "matches no Employee" in error or "not Active" in error
 
 
-def drain(queue, sink, batch=500, by_serial=None):
+def drain(queue, sink, batch=500, by_serial=None, reached=None, rota=None):
 	"""Deliver everything undelivered. Returns (sent, failed).
+
+	`reached`, when given, is filled with `{shift: newest punch delivered on it}`
+	— the shift hrms matched each delivered punch to, off the checkin it hands
+	back. That, and only that, is how far this bridge may say a shift's
+	checkins have arrived (ErpSink.mark_synced). A punch the site already held
+	says nothing about a shift and is not counted.
 
 	`by_serial` is the ADMS map, serial -> device id. A punch pushed by a
 	machine nobody had configured is parked under `SN:<serial>` rather than
 	dropped or given an invented id (see `adms.UNKNOWN_PREFIX`), and this is
 	where it is let out: the moment the serial appears in `config.toml`, the
 	backlog behind it resolves and delivers on the next pass.
+
+	`rota`, when given, gives a punch-in its day or night shift before it is
+	sent (mannabridge/rota.py), so hrms matches it to the right one. Anything
+	it cannot do is logged and the punch goes anyway.
 	"""
 	sent = failed = 0
 	by_serial = by_serial or {}
@@ -112,8 +149,16 @@ def drain(queue, sink, batch=500, by_serial=None):
 				# fingerprint punch as a phone punch and refuse it on the geofence.
 				continue
 
+		if rota is not None:
+			try:
+				rota.before_send(row, queue.previous(row["device_user"], row["punched_at"]))
+			except Exception as exc:
+				# The punch is the pay; its shift can be put right after.
+				log.warning("could not settle day or night for device user %s at %s: %s",
+				            row["device_user"], row["punched_at"], exc)
+
 		try:
-			sink.send(
+			made = sink.send(
 				device_user=row["device_user"],
 				punched_at=row["punched_at"],
 				device_id=device_id,
@@ -136,11 +181,16 @@ def drain(queue, sink, batch=500, by_serial=None):
 
 		queue.mark_sent(row["id"], datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 		sent += 1
+		shift = (made or {}).get("shift") if isinstance(made, dict) else None
+		if reached is not None and shift:
+			when = str(row["punched_at"])[:19]
+			if when > reached.get(shift, ""):
+				reached[shift] = when
 
 	return sent, failed
 
 
-def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fix_clocks=True, tolerance=clock.TOLERANCE_SECONDS):
+def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fix_clocks=True, tolerance=clock.TOLERANCE_SECONDS, rota=None):
 	if fix_clocks and erp_url:
 		try:
 			keep_clocks(devices, queue, sink.now(erp_url), tolerance)
@@ -148,17 +198,34 @@ def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fi
 			# A clock is a report about the punches; the punches are the pay.
 			log.exception("unexpected failure checking the clocks")
 
-	found = poll_devices(devices, queue)
-	sent, failed = drain(queue, sink, by_serial=by_serial)
+	unread = []
+	found = poll_devices(devices, queue, unread=unread)
+	reached = {}
+	sent, failed = drain(queue, sink, by_serial=by_serial, reached=reached, rota=rota)
 
-	if sent and erp_url:
-		# Only after something was actually delivered, and only as far as the
-		# newest punch that got through. See ErpSink.mark_synced for why this
-		# matters more than it looks.
-		newest = queue.newest_sent()
-		if newest:
-			n = sink.mark_synced(erp_url, newest)
-			log.info("last_sync_of_checkin advanced to %s on %d shift(s)", newest, n)
+	if reached and erp_url:
+		# **Only the shifts this pass delivered punches on, each only as far as
+		# its own newest punch** — since 30 Sep 2026. It used to move every
+		# auto-attendance shift in the group to the newest punch delivered on
+		# any of them. On 16 Sep another plant's bridge, delivering its own
+		# evening, moved Manna Rubber Products' Office Shift to 19:33 while
+		# BIO-MRP-GATE1's bridge was off with the gate's punch-outs still on
+		# the machine; hrms closed the day on the morning's punches alone, and
+		# the outs that arrived next morning were set aside as late. 43 people,
+		# 52 days in September.
+		if unread:
+			# A machine this bridge could not read holds punches of its own,
+			# and nothing here says which shifts they belong to. Closing any
+			# shift now could close one of theirs without them — the same
+			# failure — so nothing moves until every machine has been read.
+			# Loud, because a machine that stays dead holds these shifts open.
+			log.warning(
+				"last_sync_of_checkin not moved: %s could not be read this pass, and its punches may "
+				"belong to the same shifts. It moves again once every machine reads.", ", ".join(unread))
+		else:
+			n = sink.mark_synced(erp_url, reached)
+			log.info("last_sync_of_checkin advanced on %d shift(s): %s", n,
+			         ", ".join("{0} to {1}".format(s, t) for s, t in sorted(reached.items())))
 
 	cutoff = (datetime.now() - timedelta(days=retain_days)).strftime("%Y-%m-%d %H:%M:%S")
 	pruned = queue.prune_sent(cutoff)
@@ -336,6 +403,13 @@ def main():
 		     "machine holds three years and 79,000 records, and posting all of "
 		     "them would take hours and fill the site with attendance nobody "
 		     "asked for. Only ever moves a cursor forward.")
+	parser.add_argument(
+		"--resend-from", dest="resend", metavar="YYYY-MM-DD",
+		help="read every machine again from this date, and send whatever the site has not got. "
+		     "The one way to move a cursor backwards, and so its own flag: re-sending is free "
+		     "(the site recognises a punch it holds and the queue never sends one twice), and "
+		     "this is how days a bridge was not running for reach the site. Run it with --once, "
+		     "with the bridge's own task stopped - RESEND.bat does both.")
 	args = parser.parse_args()
 
 	config = load_config(args.config)
@@ -347,6 +421,7 @@ def main():
 
 	queue = PunchQueue(config.queue_path)
 	sink = ErpSink(config.erp_url, config.api_key, config.api_secret)
+	rota = Rota(config.erp_url, config.api_key, config.api_secret)
 	enrolments = EnrolmentStore(config.queue_path)
 	enrolment_site = EnrolmentSite(config.erp_url, config.api_key, config.api_secret)
 	command_site = commands.CommandSite(config.erp_url, config.api_key, config.api_secret)
@@ -380,6 +455,16 @@ def main():
 		# machine did not get its OK and sends those records again.
 		threading.Thread(target=server.serve_forever, name="adms", daemon=True).start()
 
+	if args.resend:
+		for name in rewind_cursors(devices, queue, args.resend):
+			log.info("%s: cursor moved back to the start of %s, to read it again", name, args.resend)
+		pushed = [d["name"] for d in config.devices if d.get("serial") and not d.get("host")]
+		if pushed:
+			# A pushed machine sends what it decides to; there is no cursor here
+			# that makes it send again. Said, so a day missing from one of these
+			# is not taken for a day re-read.
+			log.warning("not re-read, they push and have no address to read: %s", ", ".join(pushed))
+
 	if args.since:
 		# Seeded as end-of-day so the named date is itself skipped: "--from
 		# 2026-08-23" means "start with the 24th". Never moved backwards, so
@@ -405,7 +490,7 @@ def main():
 	while True:
 		try:
 			run_once(devices, queue, sink, config.retain_days, config.erp_url, by_serial,
-			         config.fix_clocks, config.clock_tolerance)
+			         config.fix_clocks, config.clock_tolerance, rota=rota)
 		except Exception:
 			log.exception("unexpected failure in poll cycle")
 

@@ -4,7 +4,8 @@ import { Provider } from "react-redux";
 
 import { store, set, resetStore } from "@/store";
 import AppPunches from "@/features/attendance/AppPunches";
-import { apDaily, apGrid, apTotals, cellLetter, fenceText, hm } from "@/lib/apppunches";
+import { apDaily, apGrid, apPunchList, apTotals, cellLetter, fenceText, hm, hms } from "@/lib/apppunches";
+import { terminalOf } from "@/lib/punchplace";
 
 /* ---------------------------------------------------------------------------
    App Punches' reports — a day per person, a line per person, the month as a
@@ -86,6 +87,31 @@ describe("the per-person totals and the grid", () => {
 	});
 });
 
+describe("the punch list, in Factor HR's In / Out report order", () => {
+	it("puts_a_persons_punches_together_oldest_first_by_employee_code", () => {
+		const list = apPunchList([
+			p("E2", "2026-09-01 09:00:00", "IN"), p("E1", "2026-09-01 16:00:00", "OUT"), p("E1", "2026-09-01 08:00:00", "IN"),
+		], (id) => ({ E1: "HPT-010", E2: "HPT-002" })[id]);
+		expect(list.map((r) => `${r.employee} ${r.time.slice(11, 16)}`)).toEqual(["E2 09:00", "E1 08:00", "E1 16:00"]);
+	});
+
+	it("says_how_long_after_the_same_persons_previous_punch_and_nothing_on_their_first", () => {
+		const list = apPunchList([
+			p("E1", "2026-09-01 08:00:00", "IN"), p("E1", "2026-09-01 08:00:01", "IN"), p("E2", "2026-09-01 08:00:30", "IN"),
+		]);
+		expect(list.map((r) => hms(r.gapMs))).toEqual(["", "00:00:01", ""]);
+	});
+
+	it("prints_a_gap_past_a_day_in_hours_rather_than_wrapping_round", () => {
+		expect(hms(26 * 3600e3 + 61e3)).toBe("26:01:01");
+	});
+
+	it("calls_every_phone_punch_the_mobile_app_and_a_machine_by_its_own_name", () => {
+		expect(terminalOf({ device_id: "PHONE-HR-EMP-00001" })).toBe("Mobile App");
+		expect(terminalOf({ device_id: "BIO-MRP-GATE1" })).toBe("BIO-MRP-GATE1");
+	});
+});
+
 describe("the App Punches page", () => {
 	beforeEach(() => resetStore());
 
@@ -120,6 +146,55 @@ describe("the App Punches page", () => {
 		expect(r.container.querySelector("td.d.half").textContent).toBe("09:00\n?");
 	});
 
+	it("draws_the_punch_list_in_factor_hrs_columns_with_what_the_phone_said", async () => {
+		await act(async () => {
+			set({
+				ap: { from: "2026-10-02", till: "2026-10-02", view: "" },
+				apRows: [p("E1", "2026-10-02 08:00:00", "IN", {
+					creation: "2026-10-02 08:00:02.123456", latitude: 10.0639767, longitude: 76.4781234,
+					custom_location_accuracy: 13.99, custom_device_info: "vivo 1906 · Android 11",
+					custom_punch_address: "4F6J+23R, Perumbavoor, Kerala, 683542", custom_geofence_result: "outside",
+				}), p("E1", "2026-10-02 08:00:45", "IN")],
+				apState: "done", apRan: "2026-10-02 to 2026-10-02",
+			});
+		});
+		const r = render(<Provider store={store}><AppPunches /></Provider>);
+		const heads = [...r.container.querySelectorAll("thead th")].map((th) => th.textContent);
+		expect(heads).toEqual(["S#", "Emp Code", "Emp Name", "Terminal", "Location", "Generation Time / Upload Time",
+			"Punch Date", "Punch Time", "In / Out", "Duration From Previous Punch", "Selfie Image", "Remarks",
+			"Punch Info", "Location Link"]);
+		const [first, second] = [...r.container.querySelectorAll("tbody tr")]
+			.map((tr) => Object.fromEntries([...tr.children].map((td, i) => [heads[i], td.textContent])));
+		expect(first["Terminal"]).toBe("Mobile App");
+		expect(first["Location"]).toContain("4F6J+23R, Perumbavoor");
+		expect(first["Generation Time / Upload Time"]).toBe("02-Oct-2026 08:00:02");
+		expect(first["Punch Time"]).toBe("08:00:00");
+		expect(first["Remarks"]).toBe("outside fence");
+		expect(first["Punch Info"]).toContain("Loc Acc: 14 m");
+		expect(first["Punch Info"]).toContain("Device Info: vivo 1906 · Android 11");
+		expect(first["Location Link"]).toBe("View Map");
+		expect(second["Duration From Previous Punch"]).toBe("00:00:45");
+		expect(second["Location Link"]).toBe("—");
+	});
+
+	it("a_night_shift_is_night_by_its_punch_in_though_its_out_is_in_the_morning", async () => {
+		await act(async () => {
+			set({
+				ap: { from: "2026-09-01", till: "2026-09-02", view: "daily" },
+				apRows: [p("E1", "2026-09-01 20:30:00", "IN"), p("E1", "2026-09-02 08:30:00", "OUT"),
+					p("E2", "2026-09-01 08:25:00", "IN"), p("E2", "2026-09-01 20:35:00", "OUT")],
+				apState: "done", apRan: "2026-09-01 to 2026-09-02",
+			});
+		});
+		const r = render(<Provider store={store}><AppPunches /></Provider>);
+		const heads = [...r.container.querySelectorAll("thead th")].map((th) => th.textContent);
+		const at = heads.indexOf("Day / Night");
+		expect(at).toBe(heads.indexOf("First in") + 1);
+		const byName = Object.fromEntries([...r.container.querySelectorAll("tbody tr")]
+			.map((tr) => [tr.children[3].textContent, tr.children[at].textContent]));
+		expect(byName).toEqual({ Anil: "Night", Mary: "Day" });
+	});
+
 	it("draws_the_grid_over_the_range_that_was_read_not_the_one_being_typed", async () => {
 		const r = await page();
 		await act(async () => { set({ ap: { from: "2026-09-01", till: "2026-09-30", view: "grid" } }); });
@@ -142,7 +217,12 @@ describe("the App Punches workbook", () => {
 			const daily = apDaily(rows);
 			await appPunchesXlsx(
 				{ from: "2026-09-01", till: "2026-09-02", company: "", daily, totals: apTotals(daily), grid: apGrid(daily, "2026-09-01", "2026-09-02"), punches: rows },
-				{ name: "t.xlsx", empOf: () => ({}), whereOf: () => "", hm, fenceText },
+				{
+					name: "t.xlsx", empOf: () => ({}), hm, fenceText,
+					punchCols: [["S#", (r, i) => String(i + 1)], ["Location", () => "4F6J+23R,\nPerumbavoor"],
+						["Location Link", () => "https://www.google.com/maps/search/?api=1&query=10,76"]],
+					photoUrl: () => "",
+				},
 			);
 		} finally {
 			[URL.createObjectURL, URL.revokeObjectURL] = was;
@@ -159,5 +239,20 @@ describe("the App Punches workbook", () => {
 		expect(cell.fill.fgColor.argb).toBe("FFD9F2E3");
 		/* Outside the fence: red text on the green of a full day. */
 		expect(cell.font.color.argb).toBe("FFB42318");
+		/* The Daily sheet says Day or Night beside the punch-in, as the screen does. */
+		const cells = [];
+		wb.getWorksheet("Daily").eachRow((row) => cells.push(row.values.slice(1)));
+		const head = cells.findIndex((v) => v.includes("Day / Night"));
+		expect(head).toBeGreaterThan(-1);
+		const col = cells[head].indexOf("Day / Night");
+		expect(cells[head][col - 1]).toBe("First In");
+		expect(cells[head + 1][col]).toBe("Day");
+		/* The Punches sheet is the page's columns, the map a link that opens from the file. */
+		const punches = [];
+		wb.getWorksheet("Punches").eachRow((row) => punches.push(row.values.slice(1)));
+		const ph = punches.findIndex((v) => v[0] === "S#");
+		expect(punches[ph]).toEqual(["S#", "Location", "Location Link"]);
+		expect(punches[ph + 2][0]).toBe("2");
+		expect(punches[ph + 1][2]).toEqual({ text: "View Map", hyperlink: "https://www.google.com/maps/search/?api=1&query=10,76" });
 	});
 });

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { MODULES } from "@/routes/registry";
 import { ATT_BUCKETS, FNF_TILES, PAYROLL_TILES, QUICK_LINKS, QUICK_REPORTS, THEIRS_EMPTY } from "@/data/startup";
 import { byStanding, findPeople } from "@/lib/summary";
-import { PANELS } from "@/features/dashboard/Dashboard";
+import { createElement as h } from "react";
+import { act, render } from "@testing-library/react";
+import { Provider } from "react-redux";
+import Dashboard, { PANELS, shownLinks } from "@/features/dashboard/Dashboard";
+import { resetStore, set, store } from "@/store";
+import { loadedState } from "./fixture";
 import { FACTOHR_MENU, NOTES } from "@/data/factohr";
 
 /* ---------------------------------------------------------------------------
@@ -188,21 +193,51 @@ describe("their Search", () => {
 });
 
 describe("their Expand All and Collapse All", () => {
-	it("names every panel drawn on the page", () => {
+	it("names every panel drawn on the page, and nothing that is not drawn", async () => {
 		// Written out rather than discovered from the DOM: a control that shuts
 		// "whatever happens to be rendered" behaves differently on a site with no
-		// punches than on one with a full day of them.
+		// punches than on one with a full day of them. So the list is checked
+		// against the page instead — both ways, since the empty placeholder
+		// panels came off it on 29 September 2026 and a name left behind here is
+		// a Collapse All that shuts nothing.
+		resetStore();
+		set({ ...loadedState(), section: "dashboard", subtab: "startup" });
+		let container;
+		await act(async () => {
+			({ container } = render(h(Provider, { store }, h(Dashboard))));
+		});
+		const drawn = [...container.querySelectorAll(".panel .pfold")]
+			.map((b) => b.getAttribute("aria-label").replace(/^Collapse /, ""));
+		expect([...drawn].sort()).toEqual([...PANELS].sort());
+		// And the four HR reads first every morning are among them.
+		for (const t of ["Employee Attendance Summary", "Wish Celebration", "CEO Speak", "Announcements"]) {
+			expect(PANELS).toContain(t);
+		}
+		// None of the placeholders that could only ever be empty came back.
 		for (const [title] of THEIRS_EMPTY) {
 			if (title === "CEO Speak" || title === "Announcements") continue;
-			expect(PANELS, title).toContain(title);
+			expect(drawn, title).not.toContain(title);
 		}
-		expect(PANELS).toContain("Employee Attendance Summary");
-		expect(PANELS).toContain("Wish Celebration");
-		expect(PANELS).toContain("CEO Speak");
-		expect(PANELS).toContain("Announcements");
 	});
 
 	it("has no duplicate, so Collapse All shuts each panel once", () => {
 		expect(new Set(PANELS).size).toBe(PANELS.length);
+	});
+});
+
+describe("quick links into a hidden module", () => {
+	it("are left off the front page, and only those", async () => {
+		/* Payroll is one page now (2 Oct 2026): its links to the pages behind it
+		   would each land back here, as would Loans, Survey, Employee Salary
+		   Master and Attendance Submission. */
+		const { isHidden } = await import("@/data/sections");
+		const hidden = ([, section, subtab]) => Boolean(section) && (isHidden(section) || isHidden(section, subtab));
+		const all = [...QUICK_LINKS, ...QUICK_REPORTS];
+		const shown = shownLinks(all);
+		expect(shown.some(([, section]) => section === "payroll")).toBe(false);
+		expect(shown.every((r) => !hidden(r))).toBe(true);
+		expect(all.filter((r) => !shown.includes(r)).every(hidden)).toBe(true);
+		/* The rows that were never a link here — "not built" — are still drawn. */
+		expect(shown.filter(([, section]) => !section)).toEqual(all.filter(([, section]) => !section));
 	});
 });

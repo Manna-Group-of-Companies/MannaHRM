@@ -160,6 +160,10 @@ export const DDA_COLS = [
   ["Day",            r => dayOf(r.date),               "muted"],
   ["Shift",          r => (r.shift||"—") + (r.shiftWindow ? ` (${r.shiftWindow})` : ""), ""],
   ["In",             r => r.in||"—",                   "mono"],
+  /* Ours, not theirs: which shift the punch-in reads as, off its own time
+     rather than the shift assigned — so a Day worker who came in at night
+     shows up here as the disagreement it is. */
+  ["Day / Night",    r => r.period||"—",               ""],
   /* Ours, not theirs: where a phone punch-in was made. The fourth entry names
      the punch, so the page can open it on a map. */
   ["In Location",    r => coordText(r.inAt)||"—",      "mono", r => r.inAt],

@@ -3,18 +3,18 @@ import { coordText, placeText } from "../lib/punchplace.js";
 import { active, scoped } from "../lib/scope.js";
 import { plain } from "../lib/export.js";
 import {
-	absent, availedLeave, directory, headCount, inOutCount, leaveHistory,
-	missedPunches, monthlyLeave, newJoiners, orgChart, pendingLeave, present, shiftReport, weekoffs,
+	absent, availedLeave, directory, headCount, inOutCount, leaveByStatus, leaveStatus,
+	missedPunches, newJoiners, orgChart, pendingLeave, present, shiftReport, weekoffs,
 } from "../lib/reports.js";
 
 /* ---------------------------------------------------------------------------
-   **Fifteen of Factor HR's reports, as specifications rather than as pages.**
+   **Thirteen of Factor HR's reports, as specifications rather than as pages.**
 
    Their menu has 160 items and 119 of them had nothing behind them here. These
-   fifteen are the ones this site can already answer from what the dashboard has
+   thirteen are the ones this site can already answer from what the dashboard has
    loaded — no new doctype, no payroll run, no attendance policy engine. They
    are built as one page reading a spec (`features/reports/Report.jsx`) rather
-   than as fifteen pages, for the same reason `ModuleAll` is one page: fifteen
+   than as thirteen pages, for the same reason `ModuleAll` is one page: thirteen
    hand-built report screens drift until the same column means two things.
 
    A spec is:
@@ -23,7 +23,8 @@ import {
      section   the module on the rail
      title     **Factor HR's own menu title**, so the tab reads as theirs
      ico       …
-     ask       what the reader has to choose — "day", "month", "window", "" —
+     ask       what the reader has to choose — "day", "month", "window",
+               "status", "" —
                and what the page draws to ask it
      build     (store, ask) → rows. Pure; it lives in `lib/reports.js`
      cols      [heading, csv field, class, value, punch?] — the same shape InOut.jsx
@@ -206,8 +207,8 @@ export const REPORTS = [
 
 	/* ---- Leave ---- */
 	{
-		id: "history", section: "leave", title: "Leave Application History", ico: "📜", ask: "",
-		build: (s) => leaveHistory(s.leave),
+		id: "history", section: "leave", title: "Leave Application History", ico: "📜", ask: "status",
+		build: (s, a) => leaveByStatus(s.leave, a && a.status),
 		cols: [
 			["Emp code", "emp_code", "mono", (r) => r.employee || ""],
 			["Name", "name", "", (r) => r.employee_name || r.employee || ""],
@@ -215,13 +216,16 @@ export const REPORTS = [
 			["From", "from", "mono", (r) => dmy(r.from_date)],
 			["To", "to", "mono", (r) => dmy(r.to_date)],
 			["Days", "days", "num", (r) => (r.days == null ? "" : r.days)],
-			["Status", "status", "", (r) => r.status || "—"],
+			["Applied", "applied", "mono", (r) => dmy(r.posting_date || r.creation)],
+			["Status", "status", "", leaveStatus],
 		],
-		empty: "No leave applications have been read.",
-		note: "Every application this dashboard holds, whatever its status. <b>Days count both ends</b> "
-			+ "— a Monday-to-Monday application is eight days, not seven — and the site's own "
-			+ "<code>total_leave_days</code> wins where it is set, because a half day is real and this "
-			+ "arithmetic cannot see one.",
+		empty: "No leave applications with that status have been read.",
+		note: "Every application this dashboard holds, or only the Pending or the Approved ones. "
+			+ "<b>Pending is one nobody has decided</b> — the site's <code>Open</code>, and an "
+			+ "application with no status at all, because reading a blank as decided would hide the "
+			+ "worst case. <b>Days count both ends</b> — a Monday-to-Monday application is eight days, "
+			+ "not seven — and the site's own <code>total_leave_days</code> wins where it is set, "
+			+ "because a half day is real and this arithmetic cannot see one.",
 	},
 	{
 		id: "pending", section: "leave", title: "Pending Leave Applications", ico: "⏳", ask: "",
@@ -253,22 +257,8 @@ export const REPORTS = [
 		],
 		empty: "No approved leave has been read.",
 		note: "Approved only — what has actually been taken, as opposed to what has been asked for. "
-			+ "It is not a balance: <b>nothing on this site has a leave ledger yet</b>, so this counts "
-			+ "applications rather than drawing down an entitlement.",
-	},
-	{
-		id: "monthly", section: "leave", title: "Leave Monthly Availed", ico: "📊", ask: "",
-		build: (s) => monthlyLeave(s.leave),
-		cols: [
-			["Month", "month", "mono", (r) => r.month],
-			["Type", "type", "", (r) => r.type],
-			["Days", "days", "num", (r) => r.days],
-			["People", "people", "num", (r) => r.people],
-		],
-		empty: "No approved leave has been read.",
-		note: "Grouped on the month the leave <em>started</em>, so a trip crossing a month boundary "
-			+ "lands wholly in the first. Their report does the same thing — worth knowing before "
-			+ "anybody reconciles the two. People are distinct people, not applications.",
+			+ "It is not a balance: it counts applications rather than drawing down an entitlement. "
+			+ "What is left is on Leave Balance Report, and month by month on Leave Monthly Availed.",
 	},
 ];
 
@@ -313,6 +303,9 @@ export const reportInput = (store, section) => ({
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August",
 	"September", "October", "November", "December"];
 
+/** The Status choice on Leave Application History: `[value, label]`. */
+export const LEAVE_STATUS_PICK = [["", "All"], ["pending", "Pending"], ["approved", "Approved"]];
+
 /** What the reader chose, in words — the line under a report's title in a file,
     which is read long after anybody remembers what was typed into the page. */
 export function askText(spec, ask, company) {
@@ -320,6 +313,10 @@ export function askText(spec, ask, company) {
 	if (spec.ask === "day") return `${who} · ${dmy(ask.day)}`;
 	if (spec.ask === "month") return `${who} · ${MONTHS[Number(ask.month) - 1] || ask.month}`;
 	if (spec.ask === "window") return `${who} · ${dmy(ask.from)} to ${dmy(ask.to)}`;
+	if (spec.ask === "status") {
+		const pick = LEAVE_STATUS_PICK.find((o) => o[0] === (ask.status || ""));
+		return `${who} · ${pick ? pick[1] : "All"}`;
+	}
 	return who;
 }
 

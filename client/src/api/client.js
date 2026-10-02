@@ -342,11 +342,16 @@ export async function apiCreate(label, doc) {
 
 /** Remove one document. The site's link validation refuses a master that
     anything still points at, with the count in the message. */
-/** Create a document **submitted** — for three doctypes only.
+/** Create a document **submitted** — for five doctypes only.
 
     Shift Assignment (16 Sep 2026): a draft assignment rosters nobody, so
     creating one and leaving it would read as done and change nothing, which is
     the worst of the outcomes.
+
+    Salary Structure and Salary Structure Assignment (2 Oct 2026, Payroll →
+    Salary Setup): a draft of either gives nobody a structure, so it would read
+    as done and change nothing. The base pay and the rates are what HR typed;
+    hrms's own checks (company, dates, overlap) run on the site.
 
     Leave Policy and Leave Policy Assignment (24 Sep 2026, Give monthly leave):
     the same shape. A draft policy grants nothing and a draft assignment creates
@@ -356,7 +361,7 @@ export async function apiCreate(label, doc) {
     year, turned into one a month by hrms on the site, and the allocation
     submit creates is hrms's own arithmetic. The site validates roles (HR User
     and HR Manager) and overlaps. Throws what the site said. */
-const SUBMITTED_FROM_HERE = new Set(["Shift Assignment", "Leave Policy", "Leave Policy Assignment"]);
+const SUBMITTED_FROM_HERE = new Set(["Shift Assignment", "Leave Policy", "Leave Policy Assignment", "Salary Structure", "Salary Structure Assignment"]);
 
 export async function apiCreateSubmitted(label, doc) {
 	if (!SUBMITTED_FROM_HERE.has(label)) throw new Error(`${label} is not created submitted from here.`);
@@ -387,6 +392,42 @@ export async function apiDecide(label, name, status) {
 	if (!doc) throw new Error(`${name} could not be read from the site.`);
 	if (Number(doc.docstatus) !== 0) throw new Error(`${name} is already ${doc.status || "decided"}.`);
 	return apiCall("frappe.desk.form.save.savedocs", { doc: JSON.stringify({ ...doc, status }), action: "Submit" });
+}
+
+/** Submit a draft that already exists — for one doctype only.
+
+    Payroll Entry (29 Sep 2026): **submitting one pays nobody.** hrms's
+    `on_submit` makes a draft Salary Slip for each person on it, and a draft
+    slip books nothing and can be deleted by cancelling the entry. The step
+    that pays — submitting the slips, which books the salary to the ledger —
+    is Finalize, and it stays on the desk with the other submits that decide
+    somebody's pay. `savedocs` with the whole document, the way the desk's own
+    Submit button sends it, so hrms's own checks run: the employees, the
+    accounts, an overlapping run. Throws what the site said.
+
+    Additional Salary (2 Oct 2026, the Payroll page): an advance, a loan
+    instalment or a bonus is entered on the website and has to be submitted
+    before a slip picks it up. Submitting one books nothing and pays nobody — it
+    only says what the next slip for that month will carry — and cancelling it
+    on the site takes it back. */
+const SUBMITTED_HERE = new Set(["Payroll Entry", "Additional Salary"]);
+
+export async function apiSubmitDraft(label, name) {
+	if (!SUBMITTED_HERE.has(label)) throw new Error(`${label} is not submitted from here.`);
+	const doc = await getDoc(label, name);
+	if (!doc) throw new Error(`${name} could not be read from the site.`);
+	if (Number(doc.docstatus) !== 0) throw new Error(`${name} is already submitted.`);
+	return apiCall("frappe.desk.form.save.savedocs", { doc: JSON.stringify(doc), action: "Submit" });
+}
+
+/** A whitelisted method on one saved document, the way the desk's buttons call
+    them. Returns the whole answer — `message`, and `docs` holding the document
+    as the method left it, which is not saved unless the method saved it. */
+export async function apiDocMethod(label, name, method, args) {
+	const r = await http.post("/api/method/run_doc_method", { dt: label, dn: name, method, args }, {
+		headers: { "Content-Type": "application/json" },
+	});
+	return r.data || {};
 }
 
 export async function apiDelete(label, name) {

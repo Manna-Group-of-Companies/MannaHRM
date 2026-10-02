@@ -35,6 +35,12 @@ website_route_rules = [
 # ---------------------------------------------------------------- documents ---
 
 doc_events = {
+	# Settings → Security → Employee fields: a field HR has locked for a login
+	# is refused from Desk and the API too, not only left off the dashboard's
+	# two forms. See manna_hr/fieldaccess.py.
+	"Employee": {
+		"validate": "manna_hr.fieldaccess.validate_employee",
+	},
 	"Employee Checkin": {
 		# `before_validate`, not `validate`: the server clock overwrites
 		# `doc.time`, and hrms' own validation reads that field to resolve the
@@ -70,6 +76,15 @@ doc_events = {
 		# See manna_hr/leave.py.
 		"on_submit": "manna_hr.leave.sweep",
 		"on_cancel": "manna_hr.leave.on_cancel",
+	},
+	# Casual Leave is for office staff, supervisors and drivers (HR, 2 October
+	# 2026). Refused at submit, on both ways it can arrive. See
+	# manna_hr/casualleave.py.
+	"Leave Policy Assignment": {
+		"before_submit": "manna_hr.casualleave.guard_assignment",
+	},
+	"Leave Allocation": {
+		"before_submit": "manna_hr.casualleave.guard_allocation",
 	},
 }
 
@@ -194,6 +209,9 @@ fixtures = [
 					"Employee Checkin-custom_geofence_result",
 					"Employee Checkin-custom_distance_metres",
 					"Employee Checkin-custom_photo",
+					"Employee Checkin-custom_location_accuracy",
+					"Employee Checkin-custom_device_info",
+					"Employee Checkin-custom_punch_address",
 					# The one box Assets Details draws dead. Assets Assignment's
 					# seven are fields on the `Asset Assignment` doctype instead.
 					"Asset-custom_detail",

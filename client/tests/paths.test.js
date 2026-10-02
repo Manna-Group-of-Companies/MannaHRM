@@ -97,7 +97,7 @@ describe("pages hidden on 25 and 26 Sep 2026", () => {
 	const HIDDEN = [
 		["attendance", "statutory"], ["employees", "ctc"], ["employees", "directory"],
 		["employees", "weekoff"], ["employees", "orgchart"], ["employees", "letters"],
-		["employees", "all"],
+		["employees", "all"], ["leave", "availed"], ["leave", "pending"],
 	];
 
 	it("sends every one of their old addresses to the module's first page", async () => {
@@ -110,5 +110,40 @@ describe("pages hidden on 25 and 26 Sep 2026", () => {
 	it("takes every one of them off the module's tab strip", async () => {
 		const { isHidden } = await import("@/data/sections");
 		for (const [section, subtab] of HIDDEN) expect(isHidden(section, subtab), `${section}/${subtab}`).toBe(true);
+	});
+});
+
+describe("Payroll, shown again on 2 Oct 2026 as one page", () => {
+	/* Hidden on 29 Sep 2026 and brought back as a single guided page. Every
+	   other address in the module lands on that page. */
+	it("is on the rail", async () => {
+		const { isHidden, VISIBLE_SECTIONS } = await import("@/data/sections");
+		expect(isHidden("payroll")).toBe(false);
+		expect(VISIBLE_SECTIONS.map((m) => m.key)).toContain("payroll");
+	});
+
+	it("opens on its one page, and sends every other address there", async () => {
+		const { routeFromPath, pathFor: mounted } = await import("@/routes/router");
+		for (const subtab of [OVERVIEW, "sheet", "process", "payslip", "register", "frappe"]) {
+			const r = routeFromPath(mounted("payroll", subtab));
+			expect(r.section, `payroll/${subtab}`).toBe("payroll");
+			expect(r.subtab, `payroll/${subtab}`).toBe(OVERVIEW);
+		}
+	});
+
+	it("opens each of its custom pages at its own address", async () => {
+		const { routeFromPath, pathFor: mounted } = await import("@/routes/router");
+		for (const subtab of ["setup", "advances", "slips", "transfer"]) {
+			const r = routeFromPath(mounted("payroll", subtab));
+			expect(r.section, `payroll/${subtab}`).toBe("payroll");
+			expect(r.subtab, `payroll/${subtab}`).toBe(subtab);
+		}
+	});
+
+	it("keeps every other page off the strip", async () => {
+		const { isHidden } = await import("@/data/sections");
+		for (const k of ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe"]) {
+			expect(isHidden("payroll", k), k).toBe(true);
+		}
 	});
 });

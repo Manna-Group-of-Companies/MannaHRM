@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { ROSTER_STATES, dayPunches, daysOf, monthRoster, spanHours } from "../src/lib/roster.js";
+import {
+	ROSTER_STATES, dayAfter, dayPunches, daysOf, monthRoster, spanHours, workDateOf, workDayPunches,
+} from "../src/lib/roster.js";
 
 /* ---------------------------------------------------------------------------
    One person's month.
@@ -73,6 +75,72 @@ describe("dayPunches", () => {
 
 	it("says nothing for a day with no punches", () => {
 		expect(dayPunches([])).toEqual({ inAt: "", outAt: "" });
+	});
+
+	it("a gate day with no direction on any punch is its first punch in and its last out", () => {
+		/* Most gates report every punch as 0 and the bridge sends no log type.
+		   Read as all arrivals, a whole day at the gate was "in, never out". */
+		const gate = (t) => ({ log_type: "", time: t });
+		expect(dayPunches([gate("2026-08-03 17:31:00"), gate("2026-08-03 08:29:00"), gate("2026-08-03 12:02:00")]))
+			.toEqual({ inAt: "2026-08-03 08:29:00", outAt: "2026-08-03 17:31:00" });
+	});
+
+	it("a finger read twice at the gate is one arrival, not a day that ended four minutes in", () => {
+		const gate = (t) => ({ time: t });
+		expect(dayPunches([gate("2026-08-03 08:29:00"), gate("2026-08-03 08:33:00")]))
+			.toEqual({ inAt: "2026-08-03 08:29:00", outAt: "" });
+	});
+});
+
+describe("the day a punch is worked for", () => {
+	const NIGHT = { start_time: "20:30:00", end_time: "8:30:00" };
+	const DAY = { start_time: "8:30:00", end_time: "20:30:00" };
+
+	it("a gate punch the morning after a night shift began belongs to that night", () => {
+		expect(workDateOf({ time: "2026-08-04 08:31:00" }, () => NIGHT)).toBe("2026-08-03");
+		expect(workDateOf(OUT("2026-08-04 08:31:00"), () => NIGHT)).toBe("2026-08-03");
+	});
+
+	it("an evening punch on a night shift is the night that begins then", () => {
+		expect(workDateOf({ time: "2026-08-04 20:27:00" }, () => NIGHT)).toBe("2026-08-04");
+	});
+
+	it("a typed IN in the morning is an arrival and stays on its own day", () => {
+		expect(workDateOf(IN("2026-08-04 07:55:00"), () => NIGHT)).toBe("2026-08-04");
+	});
+
+	it("a morning punch after a day shift, or with no shift known, stays on its own day", () => {
+		expect(workDateOf({ time: "2026-08-04 08:31:00" }, () => DAY)).toBe("2026-08-04");
+		expect(workDateOf({ time: "2026-08-04 08:31:00" }, () => null)).toBe("2026-08-04");
+		expect(workDateOf({ time: "2026-08-04 08:31:00" })).toBe("2026-08-04");
+	});
+
+	it("the shift that decides is the one of the day before, not of the morning itself", () => {
+		const shiftOn = (iso) => (iso === "2026-08-03" ? NIGHT : DAY);
+		expect(workDateOf({ time: "2026-08-04 08:31:00" }, shiftOn)).toBe("2026-08-03");
+		expect(workDateOf({ time: "2026-08-05 08:31:00" }, shiftOn)).toBe("2026-08-05");
+	});
+
+	it("the morning after the last day of a month is read into that month's last night", () => {
+		expect(dayAfter("2026-08-31")).toBe("2026-09-01");
+		expect(workDateOf({ time: "2026-09-01 08:31:00" }, () => NIGHT)).toBe("2026-08-31");
+	});
+
+	it("a day holding only a night's morning leaving is an out with its arrival missing", () => {
+		expect(workDayPunches([{ time: "2026-08-04 08:31:00" }], "2026-08-03"))
+			.toEqual({ inAt: "", outAt: "2026-08-04 08:31:00" });
+		expect(workDayPunches([{ time: "2026-08-03 20:29:00" }, { time: "2026-08-04 08:31:00" }], "2026-08-03"))
+			.toEqual({ inAt: "2026-08-03 20:29:00", outAt: "2026-08-04 08:31:00" });
+	});
+
+	it("a night worker at a gate with no direction is present every night, not half a day twice", () => {
+		const gate = (t) => ({ log_type: "", time: t });
+		const out = monthRoster({ ...base, window: NIGHT, punches: [
+			gate("2026-08-03 20:29:00"), gate("2026-08-04 08:31:00"),
+			gate("2026-08-04 20:31:00"), gate("2026-08-05 08:34:00"),
+		] });
+		expect(dayOn(out, "2026-08-03")).toMatchObject({ inAt: "2026-08-03 20:29:00", outAt: "2026-08-04 08:31:00", display: "full" });
+		expect(dayOn(out, "2026-08-04")).toMatchObject({ inAt: "2026-08-04 20:31:00", outAt: "2026-08-05 08:34:00", display: "full" });
 	});
 });
 

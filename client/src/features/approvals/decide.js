@@ -3,6 +3,7 @@ import { load, REG_DOCTYPE } from "@/api/load";
 import { getState, set } from "@/store";
 import { dmy } from "@/lib/format";
 import { supersededBy } from "@/lib/punchedit";
+import { byMachine } from "@/lib/direction";
 import { ATTENDANCE_APPROVER, isAttendanceApprover } from "@/data/approver";
 
 /* ---------------------------------------------------------------------------
@@ -263,8 +264,9 @@ export async function writeCorrection(r, user) {
 	   are right, and the old one is named for HR. */
 	const inAt = (wanted.find((p) => p.log_type === "IN") || {}).time || "";
 	const outAt = (wanted.find((p) => p.log_type === "OUT") || {}).time || "";
-	const dayPunches = await listAll("Employee Checkin", ["name", "time", "log_type", "skip_auto_attendance"],
+	const dayPunches = await listAll("Employee Checkin", ["name", "time", "log_type", "skip_auto_attendance", "device_id"],
 		[["employee", "=", r.employee], ["time", ">=", day + " 00:00:00"], ["time", "<=", day + " 23:59:59"]])
+		.then(byMachine)
 		.catch(() => null);
 	const setAside = [];
 	const stuck = [];

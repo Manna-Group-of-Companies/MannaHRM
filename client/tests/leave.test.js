@@ -182,3 +182,57 @@ describe("the leave type asked beside leaves a month", () => {
 		expect(notMonthly("Sick Leave", [{ name: "Sick Leave" }])).toBeNull();
 	});
 });
+
+import {
+	DESIGNATION_WORDS, OFFICE_DESIGNATIONS, casualLeaveGroup, casualLeaveRefusal,
+} from "@/lib/monthlyleave";
+import { leaveProblems as wizardLeaveProblems } from "@/lib/newemp";
+
+/* HR, 2 October 2026: office staff, supervisors and drivers get Casual Leave,
+   nobody else. The site refuses the rest (manna_hr/casualleave.py); this copy
+   is what keeps the calendar and the buttons from promising otherwise. */
+describe("who gets Casual Leave", () => {
+	it("the_office_list_is_the_one_leavepolicy_py_holds", () => {
+		const body = py.slice(py.indexOf("OFFICE_DESIGNATIONS = frozenset({"), py.indexOf("})", py.indexOf("OFFICE_DESIGNATIONS")));
+		const names = [...body.matchAll(/^\s*"([^"]+)",\s*$/gm)].map((m) => m[1]);
+		expect(names.length).toBeGreaterThan(0);
+		expect([...OFFICE_DESIGNATIONS].sort()).toEqual(names.sort());
+	});
+
+	it("the_words_that_make_a_supervisor_or_a_driver_are_leavepolicy_pys", () => {
+		for (const [word, group] of DESIGNATION_WORDS) expect(py).toContain(`("${word}", "${group}")`);
+	});
+
+	it("a_plant_helper_gets_none", () => {
+		expect(casualLeaveGroup("PLANT HELPER")).toBeNull();
+		expect(casualLeaveRefusal("PLANT HELPER", "RAJU")).toMatch(/^RAJU \(PLANT HELPER\) gets no Casual Leave/);
+	});
+
+	it("supervisors_drivers_and_office_staff_do", () => {
+		expect(casualLeaveGroup("SHIFT SUPERVISOR")).toBe("Supervisor");
+		expect(casualLeaveGroup("Driver")).toBe("Driver");
+		expect(casualLeaveGroup(" purchase  manager ")).toBe("Office");
+	});
+
+	it("a_foreman_is_not_a_supervisor", () => {
+		expect(casualLeaveGroup("PRODUCTION FOREMAN")).toBeNull();
+	});
+
+	it("nobody_without_a_designation_gets_it", () => {
+		expect(casualLeaveGroup("")).toBeNull();
+		expect(casualLeaveRefusal(undefined, "A")).toMatch(/no designation/);
+	});
+
+	it("the_wizard_stops_casual_leave_for_a_plant_helper_before_anything_is_created", () => {
+		const bad = wizardLeaveProblems({ designation: "PLANT HELPER", leave_type: "Casual Leave", leaves_a_month: "1" }, []);
+		expect(bad.join(" ")).toMatch(/Set Leaves A Month to 0/);
+	});
+
+	it("the_wizard_lets_a_plant_helper_through_with_no_leave", () => {
+		expect(wizardLeaveProblems({ designation: "PLANT HELPER", leave_type: "Casual Leave", leaves_a_month: "0" }, [])).toEqual([]);
+	});
+
+	it("the_wizard_gives_a_driver_casual_leave", () => {
+		expect(wizardLeaveProblems({ designation: "DRIVER", leave_type: "Casual Leave", leaves_a_month: "1" }, [])).toEqual([]);
+	});
+});

@@ -434,7 +434,42 @@ describe("giving the monthly leave", () => {
 		set({ applyBal: { rows: [] } });
 		const c = page();
 		expect(c.getByRole("button", { name: `Give ${emp().employee_name} monthly leave` })).toBeTruthy();
-		expect(c.getByRole("button", { name: /Give everyone \(\d+\) monthly leave/ })).toBeTruthy();
+		expect(c.getByRole("button", { name: /Give office staff, supervisors and drivers \(\d+\) monthly leave/ })).toBeTruthy();
+	});
+
+	/* HR, 2 October 2026: office staff, supervisors and drivers only. The
+	   fixture's Operator is none of them; its Accountant and Supervisor are. */
+	it("an_operator_is_told_casual_leave_is_not_theirs_and_offered_no_button_of_their_own", () => {
+		patch("apply", { emp: "HR-EMP-00001" });
+		set({ applyBal: { rows: [] } });
+		const c = page();
+		expect(c.queryByRole("button", { name: `Give ${emp("HR-EMP-00001").employee_name} monthly leave` })).toBeNull();
+		expect(c.container.querySelector(".lvbal").textContent)
+			.toContain("(Operator) gets no Casual Leave — it is only for office staff, supervisors and drivers");
+	});
+
+	it("the_everyone_button_counts_only_the_people_it_will_give_leave_to", () => {
+		patch("apply", { emp: PRIYA });
+		set({ applyBal: { rows: [] } });
+		const n = getState().employees.filter((e) => e.status === "Active"
+			&& ["Accountant", "Supervisor"].includes(e.designation)).length;
+		expect(page().getByRole("button", { name: `Give office staff, supervisors and drivers (${n}) monthly leave` }))
+			.toBeTruthy();
+	});
+
+	it("an_operator_with_no_casual_leave_is_answered_before_anything_is_sent", async () => {
+		patch("apply", { ...FORM, emp: "HR-EMP-00001" });
+		set({ applyBal: { rows: [] } });
+		const view = page();
+		await act(async () => { fireEvent.click(view.getByRole("button", { name: "Save" })); });
+		expect(view.container.textContent).toMatch(/only for office staff, supervisors and drivers/);
+		expect(calls.made).toEqual([]);
+	});
+
+	it("an_operator_does_not_have_a_casual_leave_promised_on_the_calendar", () => {
+		patch("apply", { emp: "HR-EMP-00001", month: "2026-09" });
+		set({ applyBal: { rows: [] } });
+		expect(page().container.querySelector(".lvearn")).toBeNull();
 	});
 
 	it("a_person_who_has_leave_is_not_offered_it_again", () => {

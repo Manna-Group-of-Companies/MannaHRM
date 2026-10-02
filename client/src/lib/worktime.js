@@ -25,7 +25,8 @@
    Workers are offered Day and Night. A supervisor — a designation with
    "supervisor" in it — is offered all three. Shifts already in use by the
    company (named some other way, from before) stay offered, so nobody on one
-   is shown a list that no longer holds their own shift.
+   is shown a list that no longer holds their own shift. Those come first in
+   the picker; every other shift on the site follows them (`shiftOptions`).
    --------------------------------------------------------------------------- */
 
 export const SHIFT_KINDS = ["Day Shift", "Night Shift", "General Shift"];
@@ -58,4 +59,19 @@ export function shiftChoices(e, shiftTypes, companies, employees) {
 	const legacy = [...used].filter((n) => !own.includes(n) && !SHIFT_KINDS.some((k) => n.endsWith("-" + k))).sort();
 	/* A company with none of its own yet (Manna Tyre UAE, say) is offered every shift. */
 	return own.length ? own.concat(legacy) : names;
+}
+
+/**
+ * Every shift on the site, split for the picker: this person's own choices
+ * first, then all the rest. Asked for on 1 October 2026 — a list of two hid the
+ * shift HR was looking for whenever somebody worked to another company's hours,
+ * so the suggestion now leads the list rather than being all of it.
+ *
+ * @returns {{suggested: string[], others: string[]}}
+ */
+export function shiftOptions(e, shiftTypes, companies, employees) {
+	const names = (shiftTypes || []).map((x) => (typeof x === "string" ? x : x.name));
+	const suggested = shiftChoices(e, shiftTypes, companies, employees);
+	const others = names.filter((n) => !suggested.includes(n)).sort();
+	return { suggested, others };
 }

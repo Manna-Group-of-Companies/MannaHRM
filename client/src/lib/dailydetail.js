@@ -20,7 +20,8 @@
    --------------------------------------------------------------------------- */
 
 import { resolveDayStatus, ABSENT, HOLIDAY, LEAVE_PENDING, ON_FLOOR, ON_LEAVE, PRESENT, UNMARKED } from "./rules.js";
-import { dayPunches } from "./roster.js";
+import { workDateOf, workDayPunches } from "./roster.js";
+import { periodOf } from "./format.js";
 
 const two = (n) => String(n).padStart(2, "0");
 const ymdOf = (d) => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
@@ -97,11 +98,21 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 		if (Number(r.docstatus) !== 1) continue;
 		att.set(r.employee + "|" + String(r.attendance_date).slice(0, 10), r);
 	}
-	/* Punches grouped by person and calendar day — the fallback only, used where
-	   hrms has not written the day. */
+	/* Punches grouped by person and the day they were worked for — the
+	   fallback only, used where hrms has not written the day. A night shift's
+	   morning leaving counts on the night it began (`workDateOf`); grouped by
+	   calendar day instead, that leaving was the next day's In, and the day
+	   read as a Day arrival at 08:30. The shift is the one hrms recorded for
+	   the day where it has, else the person's own. */
+	const who = new Map((people || []).map((e) => [e.name, e]));
 	const byDay = new Map();
 	for (const c of punches || []) {
-		const k = c.employee + "|" + String(c.time || "").slice(0, 10);
+		const e = who.get(c.employee);
+		const shiftOn = (iso) => {
+			const a = att.get(c.employee + "|" + iso);
+			return (windows || {})[(a && a.shift) || (e && e.default_shift) || ""] || null;
+		};
+		const k = c.employee + "|" + workDateOf(c, shiftOn);
 		if (!byDay.has(k)) byDay.set(k, []);
 		byDay.get(k).push(c);
 	}
@@ -137,7 +148,7 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 				source = "attendance";
 				lateFlag = Boolean(Number(a.late_entry));
 			} else {
-				const p = dayPunches(byDay.get(e.name + "|" + iso) || []);
+				const p = workDayPunches(byDay.get(e.name + "|" + iso) || [], iso);
 				inAt = p.inAt;
 				outAt = p.outAt;
 				const l = leaveOn(iso, lv.get(e.name));
@@ -171,6 +182,11 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 				shift: shiftName,
 				shiftWindow: startM != null && endM != null ? `${clockOf(w.start_time)}-${clockOf(w.end_time)}` : "",
 				in: inAt ? String(inAt).slice(11, 16) : "",
+				/* Day or Night off the punch-in's own clock. A day with no in
+				   but a leaving the next morning is a night whose arrival is
+				   missing — it can only have one because its shift ran past
+				   midnight. */
+				period: inAt ? periodOf(inAt) : outAt && String(outAt).slice(0, 10) > iso ? "Night" : "",
 				out: outAt ? String(outAt).slice(11, 16) : "",
 				/* The punch object, not the time — In Location opens it on a map. */
 				inAt: (byDay.get(e.name + "|" + iso) || [])

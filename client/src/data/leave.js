@@ -131,6 +131,22 @@ export const APPLY_FIELDS = [
 const days = (n) => (n == null ? "—" : n.toFixed(1));
 const alloc = (k) => (r) => days(r.alloc ? r.alloc[k] : null);
 
+/** Leave Monthly Availed — one month per person per type, off monthLeave in
+    lib/leavebalance.js. The four entitlement columns are `—` for a type never
+    allocated, as on the Leave Balance Report. Available is the one the page
+    exists for: what is left at the month's end, and goes on to the next. */
+export const LVM_COLS = [
+  ["Employee Code", (r) => r.emp.employee_number || "—", "mono"],
+  ["Employee Name", (r) => r.emp.employee_name || r.emp.name, ""],
+  ["Department", (r) => tidyDept(r.emp.department), ""],
+  ["Leave Type", (r) => r.type, ""],
+  ["Brought Fwd", (r) => days(r.brought), "mono"],
+  ["Earned", (r) => days(r.earned), "mono"],
+  ["Availed", (r) => days(r.availed), "mono"],
+  ["Lapsed", (r) => days(r.lapsed), "mono"],
+  ["Available", (r) => days(r.available), "mono"],
+];
+
 export const LVB_COLS = [
   ["Employee Code", (r) => r.emp.employee_number || "—", "mono"],
   ["Employee Name", (r) => r.emp.employee_name || r.emp.name, ""],

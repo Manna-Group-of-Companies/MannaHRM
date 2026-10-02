@@ -88,29 +88,86 @@ export function daysOf(ym) {
 	return out;
 }
 
+const DOUBLE_READ_MS = 10 * 60 * 1000;
+const stampMs = (t) => Date.parse(String(t).replace(" ", "T"));
+
 /** The punches of one day, earliest in and latest out.
 
     **Earliest and latest, not first and second.** A gate that double-reads puts
     four rows on a day, and a pair taken in arrival order would report the
-    second read as the punch-out — a nine-hour day as four minutes. */
+    second read as the punch-out — a nine-hour day as four minutes.
+
+    **A day with no direction on any punch is its first and its last.** Most
+    gates here report every punch as `0` and the bridge sends no log type
+    (CLAUDE.md §5); read as all arrivals, a whole day at the gate was "in, never
+    out". First and last is what hrms's own default pairing does with them —
+    except that a last within DOUBLE_READ_MS of the first is the same finger
+    read twice, and the day stays in-only: a missing leaving shown as missing
+    gets corrected, and one hidden inside a full day does not. */
 export function dayPunches(rows) {
 	let inAt = "";
 	let outAt = "";
-	for (const c of rows) {
-		const t = String(c.time || "");
-		if (!t) continue;
-		/* A punch HR superseded on Attendance Regularization. It is kept — a
-		   punch is evidence and is never deleted — but marked the way hrms's
-		   shift job reads it, so the day is built without it. See
-		   lib/punchedit.js. */
-		if (Number(c.skip_auto_attendance)) continue;
-		if (c.log_type === "OUT") {
+	/* A punch HR superseded on Attendance Regularization. It is kept — a
+	   punch is evidence and is never deleted — but marked the way hrms's
+	   shift job reads it, so the day is built without it. See
+	   lib/punchedit.js. */
+	const live = rows.filter((c) => c.time && !Number(c.skip_auto_attendance));
+	const typed = live.some((c) => c.log_type === "IN" || c.log_type === "OUT");
+	for (const c of live) {
+		const t = String(c.time);
+		if (typed && c.log_type === "OUT") {
 			if (!outAt || t > outAt) outAt = t;
 		} else if (!inAt || t < inAt) {
 			inAt = t;
 		}
+		if (!typed && (!outAt || t > outAt)) outAt = t;
 	}
+	if (!typed && outAt && stampMs(outAt) - stampMs(inAt) <= DOUBLE_READ_MS) outAt = "";
 	return { inAt, outAt };
+}
+
+/** `dayPunches` for the work day `iso`. Where the earliest punch it holds is
+    the next morning's, the day has only a night's leaving (`workDateOf` moved
+    it back), and that is an Out with its arrival missing — not somebody
+    arriving at dawn. */
+export function workDayPunches(rows, iso) {
+	const p = dayPunches(rows);
+	return p.inAt && p.inAt.slice(0, 10) > iso ? { inAt: "", outAt: p.outAt || p.inAt } : p;
+}
+
+const nextIso = (iso, n = 1) => {
+	const d = new Date(iso + "T00:00:00");
+	d.setDate(d.getDate() + n);
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/** The day after `YYYY-MM-DD`, for a read that has to reach the morning a
+    night shift ends on. */
+export const dayAfter = (iso) => nextIso(iso, 1);
+export const dayBefore = (iso) => nextIso(iso, -1);
+
+/** The day a punch is worked for — its own date, or the day before.
+
+    A night shift belongs to the day it started (CLAUDE.md §5). So when the
+    shift of the day before runs past midnight, a punch before noon is that
+    night's leaving and counts there. A typed IN is not moved: it says somebody
+    arrived, and an arrival does not end last night.
+
+    `shiftOn(iso)` is the Shift Type of a day, `{start_time, end_time}`, or
+    null — without one a punch stays on its own date, which is where it was
+    before this rule existed. */
+export function workDateOf(punch, shiftOn) {
+	/* Placed already: a 24-hour shift's next-morning leaving, put on its
+	   arrival's day by the machine that took it (lib/direction.js). */
+	if (punch && punch.work_day) return punch.work_day;
+	const t = String((punch && punch.time) || "");
+	const iso = t.slice(0, 10);
+	if (!iso || t.slice(11, 13) >= "12" || punch.log_type === "IN") return iso;
+	const prev = nextIso(iso, -1);
+	const w = shiftOn ? shiftOn(prev) : null;
+	const s = clockMinutes(w && w.start_time);
+	const e = clockMinutes(w && w.end_time);
+	return s != null && e != null && e <= s ? prev : iso;
 }
 
 /** Hours between two `YYYY-MM-DD HH:MM:SS` stamps, as `H:MM`.
@@ -208,9 +265,19 @@ export function assignmentOn(iso, assignments) {
 
 export function monthRoster({ ym, punches, leave, holidays, corrections, shift, today, window, overtime, assignments, windows }) {
 	const otDay = overtimeByDay(overtime);
+
+	/* A night shift ends the next morning, and the day it belongs to is the
+	   day it started (CLAUDE.md §5) — `workDateOf` moves that morning's
+	   leaving back to it, typed OUT or a gate's undirected punch alike.
+	   Without it a night worker reads as ½ on every day of the month: an in
+	   with no out, and an out with no in. */
+	const shiftOf = (iso) => {
+		const a = assignmentOn(iso, assignments);
+		return a ? (windows || {})[a.shift_type] || null : window;
+	};
 	const byDay = new Map();
 	for (const c of punches || []) {
-		const d = String(c.time || "").slice(0, 10);
+		const d = workDateOf(c, shiftOf);
 		if (!d) continue;
 		if (!byDay.has(d)) byDay.set(d, []);
 		byDay.get(d).push(c);
@@ -226,32 +293,9 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 		ar.set(String(r.attendance_date || "").slice(0, 10), r);
 	}
 
-	/* A night shift ends the next morning, and the day it belongs to is the
-	   day it started (CLAUDE.md §5). So on a day whose shift runs past
-	   midnight, the next morning's punch-outs — before noon — are that
-	   night's, and are moved back to it. Without this a night worker reads as
-	   ½ on every day of the month: an in with no out, and an out with no in. */
-	const shiftOf = (iso) => {
-		const a = assignmentOn(iso, assignments);
-		return a ? (windows || {})[a.shift_type] || null : window;
-	};
-	for (const iso of daysOf(ym)) {
-		const w = shiftOf(iso);
-		const s = clockMinutes(w && w.start_time);
-		const e = clockMinutes(w && w.end_time);
-		if (s == null || e == null || e > s) continue;
-		const d = new Date(iso + "T00:00:00");
-		d.setDate(d.getDate() + 1);
-		const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-		const morning = (byDay.get(next) || []).filter((c) => c.log_type === "OUT" && String(c.time).slice(11, 13) < "12");
-		if (!morning.length) continue;
-		byDay.set(iso, (byDay.get(iso) || []).concat(morning));
-		byDay.set(next, (byDay.get(next) || []).filter((c) => !morning.includes(c)));
-	}
-
 	const rows = daysOf(ym).map((iso) => {
 		const mine = byDay.get(iso) || [];
-		const { inAt, outAt } = dayPunches(mine);
+		const { inAt, outAt } = workDayPunches(mine, iso);
 		const h = hol.get(iso);
 		const lv = leaveOn(iso, leave);
 
@@ -309,6 +353,7 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 	counts.lateDays = rows.filter((r) => r.lateMin > 0).length;
 	counts.lateMin = rows.reduce((a, r) => a + r.lateMin, 0);
 	counts.earlyDays = rows.filter((r) => r.earlyMin > 0).length;
+	counts.earlyMin = rows.reduce((a, r) => a + r.earlyMin, 0);
 
 	return { rows, counts };
 }

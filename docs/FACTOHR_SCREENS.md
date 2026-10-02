@@ -217,7 +217,11 @@ one day per month for the eight months January to August, which would mean a
 **calendar leave year with 12 days a year accruing monthly** — but that is a
 hypothesis from one number, not a rule anybody has stated.
 
-**Needed:** the actual rule. When does someone become eligible, how much do they
+**Answered by HR:** one a month, carried forward (24 September 2026), and only
+for office staff, supervisors and drivers (2 October 2026) — so not tenure after
+all, whatever Factor HR's 72 say. See `manna_hr/leavepolicy.py`.
+
+**Was needed:** the actual rule. When does someone become eligible, how much do they
 get, does it accrue monthly or arrive as an annual grant, and does the leave year
 run January or April? ERPNext's fiscal year is April–March, and if the leave year
 is not, that has to be said explicitly.

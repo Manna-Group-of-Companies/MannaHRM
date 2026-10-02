@@ -3,15 +3,17 @@ import { useEffect } from "react";
 import { loadLeaveFor } from "@/api/load";
 import { deskNewWith, deskUrl } from "@/lib/desk";
 import { CAL_MONTHS } from "@/data/masters";
-import { DAY, dmy, fmt, monthCells, thisMonth, todayIso, tidyDept, ymd } from "@/lib/format";
+import { DAY, dayOf, dmy, fmt, monthCells, thisMonth, todayIso, tidyDept, ymd } from "@/lib/format";
 import { esc } from "@/lib/doc";
 import { LEAVE_HISTORY_COLS, LEAVE_VALUES, LV_CODE, LV_LEGEND, MONTHLY_LEAVE } from "@/data/leave";
 import { Empty, Html, Note, Panel, Scroll } from "@/components/ui";
 import { scoped } from "@/lib/scope";
 import { DOCTYPE, approverFor, raiseLeave, sandwichPreview } from "./raise";
 import { giveMonthlyLeave } from "@/api/monthlyleave";
-import { monthCarry } from "@/lib/monthlyleave";
-import { loadLeaveBalance } from "@/api/load";
+import { casualLeaveGroup, casualLeaveRefusal, monthCarry } from "@/lib/monthlyleave";
+import { loadLeaveBalance, loadLeaveMonth } from "@/api/load";
+import { leaveCards } from "@/lib/leavecards";
+import { Stat, Stats } from "@/components/charts";
 
 /* Apply Leave, as HR asked for it on 24 September 2026: one column, in the
    order somebody actually works through it — find the person, see their month,
@@ -83,6 +85,33 @@ function dayState(s, iso, hol) {
 	if (h) return h.weekly_off ? "weekoff" : "holiday";
 	return ATT_STATE[(s.applyAtt || {})[iso]] || "";
 }
+
+/** The holiday calendar the page draws: the person's own list, else their
+    company's default — which is what hrms falls back to as well — and with
+    nobody picked, the top-bar company's. On "All companies" it is the group's
+    one calendar where every company shares it, and none where they differ:
+    drawing one company's holidays over another's people is a wrong answer
+    that looks right. */
+export function calendarFor(s, emp) {
+	if (emp && emp.holiday_list) return emp.holiday_list;
+	const name = emp ? emp.company : s.company;
+	const co = name ? (s.companies || []).find((c) => c.name === name) : null;
+	if (co) return co.default_holiday_list || "";
+	if (emp) return "";
+	const lists = [...new Set((s.companies || []).map((c) => c.default_holiday_list).filter(Boolean))];
+	if (lists.length === 1) return lists[0];
+	return (s.holidayLists || []).length === 1 ? s.holidayLists[0].name : "";
+}
+
+/** A holiday's description as words. It is a Text Editor field on the site,
+    so it can arrive as `<p>Onam</p>`. */
+export const holidayName = (h) => String((h && h.description) || "")
+	.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+	.replace(/\s+/g, " ").trim();
+
+/** A day's state from the calendar alone — before anybody is picked there are
+    no punches or leave to colour it, and the holidays are still facts. */
+const holidayState = (hol, iso) => (hol[iso] ? (Number(hol[iso].weekly_off) ? "weekoff" : "holiday") : "");
 
 /** An Attendance row's status, as one of the calendar's states. Work From Home
     is a day worked, so it reads as Present; a status not listed here — a draft,
@@ -180,9 +209,10 @@ function EmpFind({ s, q, status, chosen, onQ, onPick, id }) {
 
 /** Whether this person earns the month's leave on `iso`: the 1st of a month
     they were employed in. The month they joined counts — hrms credits it too,
-    from the assignment's first day. */
+    from the assignment's first day. Never for a designation that gets no
+    Casual Leave — office staff, supervisors and drivers only. */
 function earnsOn(emp, iso) {
-	if (!emp || iso.slice(8) !== "01") return false;
+	if (!emp || iso.slice(8) !== "01" || !casualLeaveGroup(emp.designation)) return false;
 	const joined = String(emp.date_of_joining || "").slice(0, 7);
 	return !joined || iso.slice(0, 7) >= joined;
 }
@@ -207,9 +237,89 @@ function takenIn(s, ym, type) {
 	return n;
 }
 
+/** Frappe HR's three leave cards, over the calendar — asked for on 29
+    September 2026, to be in view while somebody is being picked.
+
+    Before anybody is picked they are about the company in the top bar; once
+    somebody is, about that person's company and that person's calendar,
+    because "who else is off" is a question about the people they work with.
+    They follow the month the calendar is on. Numbers come from lib/leavecards. */
+function LvCards({ s, emp, ym }) {
+	const today = todayIso();
+	const lv = s.lvMonth || {};
+	const ready = lv.key === `${ym}|${today}` && lv.state === "ok";
+	const people = emp ? (s.employees || []).filter((e) => e.company === emp.company) : scoped(s);
+	const co = emp ? emp.company : s.company;
+	const list = calendarFor(s, emp);
+	const n = leaveCards({ rows: lv.rows, people, ym, today, holidays: list ? s.holidays[list] || null : null });
+
+	const [y, m] = ym.split("-").map(Number);
+	const month = ym === thisMonth() ? "this month" : `in ${CAL_MONTHS[m - 1]} ${y}`;
+	const scope = co || "all companies";
+	const dash = lv.state === "error" ? "—" : "…";
+
+	const hol = n.holidays;
+	const holNote = !list
+		? (emp ? "no holiday list on their record or company" : "pick a company or an employee")
+		: !hol ? "reading the calendar…"
+		: `${fmt(hol.weekly)} weekly off · ${fmt(hol.other)} holiday${hol.other === 1 ? "" : "s"}`;
+
+	return (
+		<div className="lvcards wide">
+			<Stats>
+				<Stat ico="🌴" k="Employees on leave today" n={ready ? fmt(n.onToday) : dash}
+					s={lv.state === "error" ? "the site would not list approved leave" : scope} />
+				<Stat ico="📅" k={`Employees on leave ${month}`} n={ready ? fmt(n.inMonth) : dash}
+					s={lv.state === "error" ? "the site would not list approved leave" : scope} />
+				<Stat ico="🎉" k={`Holidays ${month}`} n={hol ? fmt(hol.total) : "—"} s={holNote} />
+			</Stats>
+		</div>
+	);
+}
+
+/** The month's holidays by name, under the calendar, from the calendar the
+    page is drawing — "Manna Holidays" or whichever list it is. Weekly offs are
+    counted rather than listed: four Sundays is a line nobody needs to read. */
+function LvHolidays({ list, hol, ym }) {
+	const [y, m] = ym.split("-").map(Number);
+	if (!list) {
+		return (
+			<div className="lvhols">
+				<b>Holidays</b>
+				<span className="muted">Pick a company or an employee to see their holiday calendar.</span>
+			</div>
+		);
+	}
+	const rows = Object.values(hol)
+		.filter((h) => String(h.holiday_date).slice(0, 7) === ym)
+		.sort((a, b) => String(a.holiday_date).localeCompare(String(b.holiday_date)));
+	const named = rows.filter((h) => !Number(h.weekly_off));
+	const weekly = rows.length - named.length;
+	return (
+		<div className="lvhols" aria-label={`${list}, ${CAL_MONTHS[m - 1]} ${y}`}>
+			<b>{list} · {CAL_MONTHS[m - 1]} {y}</b>
+			{named.length ? (
+				<ul>
+					{named.map((h) => {
+						const iso = String(h.holiday_date).slice(0, 10);
+						return (
+							<li key={iso}>
+								<em className="lvdot holiday" />
+								<span className="mono">{iso.slice(8)} {dayOf(iso).slice(0, 3)}</span>
+								<span>{holidayName(h) || "Holiday"}</span>
+							</li>
+						);
+					})}
+				</ul>
+			) : <span className="muted">No holidays this month.</span>}
+			{weekly ? <span className="muted">and {weekly} weekly off{weekly === 1 ? "" : "s"}</span> : null}
+		</div>
+	);
+}
+
 /** The month grid. Always six weeks, as their screen draws it: a grid that
     changes height with the month makes the arrows move under the pointer. */
-function LvCalendar({ s, hol, emp, onPick }) {
+function LvCalendar({ s, hol, list, emp, onPick }) {
 	const f = s.apply;
 	const from = f.from || todayIso();
 	const till = f.till || from;
@@ -246,8 +356,9 @@ function LvCalendar({ s, hol, emp, onPick }) {
 				{cells.map((d) => {
 					const iso = ymd(d);
 					const out = d.getMonth() !== m - 1;
-					const st = out || !emp ? "" : dayState(s, iso, hol);
-					const name = st ? LV_LEGEND.find((l) => l[0] === st)[1] : "";
+					const st = out ? "" : emp ? dayState(s, iso, hol) : holidayState(hol, iso);
+					const hname = !out && st === "holiday" ? holidayName(hol[iso]) : "";
+					const name = st ? LV_LEGEND.find((l) => l[0] === st)[1] + (hname ? ` — ${hname}` : "") : "";
 					const picked = from <= iso && iso <= till;
 					const p = emp ? (s.applyPunch || {})[iso] : null;
 					const cls = "cell" + (out ? " out" : "") + (iso === today ? " now" : "")
@@ -268,7 +379,8 @@ function LvCalendar({ s, hol, emp, onPick }) {
 							{st ? (
 								<span className="lvtag">
 									<em className={"lvdot " + st} />
-									<small>{LV_CODE[st]}</small>
+									{/* A holiday says which one — "Onam" rather than "H". */}
+									<small className={hname ? "lvholname" : undefined}>{hname || LV_CODE[st]}</small>
 								</span>
 							) : null}
 						</>
@@ -292,6 +404,8 @@ function LvCalendar({ s, hol, emp, onPick }) {
 					? <>From <b>{dmy(from)}</b> — now click the last day of the leave, or the same day again for one day.</>
 					: <>Click a day to start the leave, then the day it ends. <b>{dmy(from)}{from !== till ? ` – ${dmy(till)}` : ""}</b> is selected.</>}
 			</span>
+
+			<LvHolidays list={list} hol={hol} ym={ym} />
 
 			{emp ? <LvMonthLeave s={s} emp={emp} ym={ym} /> : null}
 
@@ -317,6 +431,16 @@ function LvMonthLeave({ s, emp, ym }) {
 	const future = ym > todayIso().slice(0, 7);
 	const waiting = takenIn({ applyHist: (s.applyHist || []).filter((r) => r.status === "Open") },
 		ym, MONTHLY_LEAVE.type);
+
+	/* Not their leave at all: say so, rather than a rule that will never run. */
+	if (!c && !casualLeaveGroup(emp.designation)) {
+		return (
+			<div className="lvmonth">
+				<b>{MONTHLY_LEAVE.type}</b>
+				<span className="muted">{casualLeaveRefusal(emp.designation, emp.employee_name)}</span>
+			</div>
+		);
+	}
 
 	/* Nothing on the site yet: say what the rule will do, and that it has not. */
 	if (!c) {
@@ -400,6 +524,7 @@ function GiveLeave({ s, emp }) {
 				giving: false,
 				giveMsg: `<b>Monthly leave given to ${r.given.length}</b>`
 					+ (r.had.length ? `, ${r.had.length} already had it` : "")
+					+ (r.passed.length ? `, ${r.passed.length} skipped — not office staff, a supervisor or a driver` : "")
 					+ (r.refused.length ? `. <b>${r.refused.length} refused</b> — ${bad.join("; ")}` : "")
 					+ `. It starts from ${dmy(todayIso().slice(0, 7) + "-01")}: leave before that date is still outside it.`,
 			});
@@ -408,15 +533,19 @@ function GiveLeave({ s, emp }) {
 		}
 		if (getState().apply.emp === emp.name) void loadLeaveBalance(emp.name);
 	};
-	const everyone = scoped(s).filter((e) => e.status === "Active");
+	/* Office staff, supervisors and drivers only: the count on the button is
+	   the people it will write for, not everybody active. */
+	const everyone = scoped(s).filter((e) => e.status === "Active" && casualLeaveGroup(e.designation));
 	return (
 		<>
 			<span className="repacts">
-				<button className="btn tpl" onClick={() => void run([emp])} aria-busy={f.giving || undefined}>
-					{f.giving ? "Giving…" : `Give ${emp.employee_name} monthly leave`}
-				</button>
+				{casualLeaveGroup(emp.designation) ? (
+					<button className="btn tpl" onClick={() => void run([emp])} aria-busy={f.giving || undefined}>
+						{f.giving ? "Giving…" : `Give ${emp.employee_name} monthly leave`}
+					</button>
+				) : null}
 				<button className="btn ghost" onClick={() => void run(everyone)} aria-busy={f.giving || undefined}>
-					Give everyone ({fmt(everyone.length)}) monthly leave
+					Give office staff, supervisors and drivers ({fmt(everyone.length)}) monthly leave
 				</button>
 			</span>
 			{f.giveMsg ? <Note><Html html={f.giveMsg} /></Note> : null}
@@ -429,6 +558,10 @@ function GiveLeave({ s, emp }) {
     before) the dates asked for. HTML, escaped. */
 function outsideWhy(s, type, from, till, who) {
 	const row = (s.applyBal?.rows || []).find((r) => r.type === type);
+	const emp = s.byName[s.apply.emp];
+	const no = type === MONTHLY_LEAVE.type && !row?.periods?.length && emp
+		? casualLeaveRefusal(emp.designation, emp.employee_name) : null;
+	if (no) return esc(no);
 	if (!row?.periods?.length) {
 		return `${who} has not been given any ${esc(type)} on the site. `
 			+ (type === MONTHLY_LEAVE.type ? "Press <b>Give monthly leave</b> below, then Save again." : "");
@@ -476,9 +609,15 @@ function LvBalance({ s, emp }) {
 						{b.err
 							? <>The site did not give the balance ({b.err}). </>
 							: null}
-						<b>{emp.employee_name} has not been given {MONTHLY_LEAVE.type} on the site</b>, so the site
-						refuses every {MONTHLY_LEAVE.type} application. Everybody earns one a month, added on the
-						1st — give it here.
+						{casualLeaveGroup(emp.designation) ? (
+							<>
+								<b>{emp.employee_name} has not been given {MONTHLY_LEAVE.type} on the site</b>, so the
+								site refuses every {MONTHLY_LEAVE.type} application. Office staff, supervisors and
+								drivers earn one a month, added on the 1st — give it here.
+							</>
+						) : (
+							<>{casualLeaveRefusal(emp.designation, emp.employee_name)} </>
+						)}
 					</span>
 					<GiveLeave s={s} emp={emp} />
 				</>
@@ -501,6 +640,11 @@ export default function ApplyLeave() {
 		void loadLeaveFor(f.emp, ym);
 	}, [f.emp, ym]);
 
+	/* The three cards' leave, once per month on screen — not per person. */
+	useEffect(() => {
+		void loadLeaveMonth(ym);
+	}, [ym]);
+
 	/* The approver, filled in the moment somebody is picked: their record's
 	   leave approver, else their manager's login, else whoever is signed in —
 	   HR raising leave for somebody with neither is the person who can decide
@@ -519,8 +663,12 @@ export default function ApplyLeave() {
 		return () => { gone = true; };
 	}, [f.emp]);
 
+	/* The person's calendar, else their company's — see calendarFor. It was
+	   the person's own list alone, so everybody on their company's default drew
+	   a month with no holidays in it. */
+	const list = calendarFor(s, emp);
 	const hol = {};
-	(s.holidays[emp?.holiday_list] || []).forEach((h) => {
+	(s.holidays[list] || []).forEach((h) => {
 		hol[String(h.holiday_date).slice(0, 10)] = h;
 	});
 
@@ -546,6 +694,13 @@ export default function ApplyLeave() {
 		if (f.sending) return;
 		if (missing.length) {
 			return patch("apply", { msg: "Needs " + missing.join(", ") + ". Nothing has been sent." });
+		}
+		/* Somebody given Casual Leave before HR's rule still holds it and may
+		   take it; only a person with none of it is answered here. */
+		const noCL = f.type === MONTHLY_LEAVE.type && s.applyBal && !typeBal && emp
+			? casualLeaveRefusal(emp.designation, emp.employee_name) : null;
+		if (noCL) {
+			return patch("apply", { msg: `<b>Not saved.</b> ${esc(noCL)} Nothing has been sent.` });
 		}
 		if (!f.sandwichDates) {
 			patch("apply", { sending: true, msg: "" });
@@ -628,10 +783,12 @@ export default function ApplyLeave() {
 					</span>
 				</div>
 
+				<LvCards s={s} emp={emp} ym={ym} />
+
 				<div className="lvcol">
 					<LvBalance s={s} emp={emp} />
 
-					<LvCalendar s={s} hol={hol} emp={emp} onPick={(iso) => put({ ...pickDay({ ...f, from }, iso), month: iso.slice(0, 7) })} />
+					<LvCalendar s={s} hol={hol} list={list} emp={emp} onPick={(iso) => put({ ...pickDay({ ...f, from }, iso), month: iso.slice(0, 7) })} />
 				</div>
 
 				<div className="lvcol lvapply">

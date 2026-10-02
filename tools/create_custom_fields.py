@@ -82,6 +82,12 @@ def main():
 
 	if not os.environ.get("ERP_KEY"):
 		sys.exit("Set ERP_URL, ERP_KEY and ERP_SECRET in the environment first.")
+	# A key is ASCII. Anything else dies inside http.client as a latin-1
+	# UnicodeEncodeError that names neither the key nor the fix.
+	if not (os.environ.get("ERP_KEY", "") + os.environ.get("ERP_SECRET", "")).isascii():
+		sys.exit("ERP_KEY / ERP_SECRET hold something that is not a key - the '...' placeholder, "
+		         "or a character pasted from a document. Put the real pair from ERPNext -> your User "
+		         "-> API Access -> Generate Keys in their place.")
 
 	fields = custom_fields()
 	if args.doctype:

@@ -18,6 +18,9 @@ does not run (CLAUDE.md §7).
     2. Leave Policy  → twelve a year of it, submitted.
     3. Leave Policy Assignment, one per active employee without one for the
        year → submitted, which is what makes hrms create the allocation.
+       **Office staff, supervisors and drivers only** (HR, 2 October 2026):
+       everybody else is listed by designation and skipped. Who is which is
+       `leavepolicy.casual_leave_group`.
 
 From then on hrms's daily scheduler adds one day on the 1st of every month.
 A month not taken is still in the balance the month after; that part needs
@@ -143,15 +146,37 @@ def main():
 	filters = [["status", "=", "Active"]]
 	if args.employee:
 		filters.append(["name", "in", args.employee])
-	emps = listing("Employee", ["name", "employee_name", "company", "date_of_joining"], filters)
+	emps = listing("Employee", ["name", "employee_name", "company", "date_of_joining", "designation"], filters)
 	held = {a["employee"] for a in listing("Leave Policy Assignment", ["employee"], [
 		["docstatus", "=", 1],
 		["effective_to", ">=", str(start)],
 		["effective_from", "<=", str(year_to)],
 	])}
-	todo = [e for e in emps if e["name"] not in held]
-	print("Employees: {0} active in scope, {1} already assigned for this year, {2} to assign\n".format(
-		len(emps), len(emps) - len(todo), len(todo)))
+	entitled = [e for e in emps if lp.casual_leave_group(e.get("designation"))]
+	passed = [e for e in emps if not lp.casual_leave_group(e.get("designation"))]
+	todo = [e for e in entitled if e["name"] not in held]
+	print("Employees: {0} active in scope, {1} get {2} (office, supervisor, driver), "
+		"{3} already assigned for this year, {4} to assign\n".format(
+		len(emps), len(entitled), lp.LEAVE_TYPE_NAME, len(entitled) - len(todo), len(todo)))
+
+	# Who does not get it, by designation — the list somebody checks for an
+	# office job spelled in a way OFFICE_DESIGNATIONS does not know yet.
+	by = {}
+	for e in passed:
+		by.setdefault((e.get("designation") or "").strip() or "(no designation)", []).append(e)
+	if by:
+		print("Not given {0} — not office, supervisor or driver:".format(lp.LEAVE_TYPE_NAME))
+		for d, rows in sorted(by.items(), key=lambda kv: -len(kv[1])):
+			print("    {0:>4}  {1}".format(len(rows), d))
+		print()
+	# Given before the rule. Listed, never cancelled: that is a balance somebody
+	# has built up, and taking it away is HR's decision, not a re-run's.
+	stale = [e for e in passed if e["name"] in held]
+	if stale:
+		print("Already hold a leave policy this year but are not office, supervisor or driver — HR to decide:")
+		for e in stale:
+			print("    {0} · {1} · {2}".format(e["name"], e.get("employee_name"), e.get("designation") or "no designation"))
+		print()
 
 	if not args.apply:
 		for e in todo[:20]:

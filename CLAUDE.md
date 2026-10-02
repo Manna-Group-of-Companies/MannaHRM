@@ -76,12 +76,14 @@ exists — a private bench is not a preference here.
 | `manna_hr/freeze.py` | Submit Attendance's month freeze — what a submitted `Attendance Submission` refuses |
 | `bridge/` | The on-premise agent. Reads the fingerprint machines, and listens for the ones that push (`--adms`) |
 | `bridge/mannabridge/roster.py` | Who is enrolled on each machine, sent as `Attendance Device User`. Kept apart from punches: nothing in it may cost a pass of them |
+| `bridge/mannabridge/rota.py` | Day or night from the punch-in: an evening IN gives a 12-hour worker the night shift before the punch is sent. Belongs in `manna_hr/` once installed; pure halves so it moves unchanged |
 | `bridge/mannabridge/commands.py` | `Machine Command`: what the dashboard asked a machine to do, done at the machine and answered. Kept apart from punches, like the roster |
 | `bridge/console.py`, `console.html` | The gate PC's console, on `127.0.0.1` only: machines, who is on them, the punch log, attendance, and a new employee on the site and the machine at once. Calls the tools below rather than repeating their rules |
 | `bridge/machine.py`, `push_users.py`, `employee_tools.py` | The only code that writes to a machine: run by hand from the Machine Tools menu, dry run first, never the log. `employee_tools.py create` also writes the Employee, site first |
 | `bridge/INSTALL.bat`, `install.sh` | Put a bridge on a new PC: Python, the key, the machines, a service. `package.ps1` builds the zip that carries it — never zip the folder, it holds a key |
 | `app/` | The phone app. Punch in, punch out, the month, and the correction — see `app/README.md` |
 | `desktop/` | Manna Attendance, the gate PC's Windows program (Flutter): eSSL's screens, each one a question to `bridge/console.py`, which holds the rules. Ships in the bridge's zip as `app\` — see `desktop/README.md` |
+| `admin/` | Manna HR Admin, HR's phone app (Flutter): one day for everybody — punches, absents, leave. Reads only, as the signed-in HR login — see `admin/README.md` |
 | `docs/` | Runbook, schema, migration, open questions |
 
 The repo root **is** the Frappe app root, so `bench get-app` works against it
@@ -106,6 +108,7 @@ cd client && npm run contrast             # both palettes, every pairing, AA
 cd client && npm run shots                # the app in a real browser, light and dark
 cd app && flutter test                    # 50 tests, no site and no handset
 cd desktop && flutter test                # 21 tests, no console, no machine, no site
+cd admin && flutter test                  # 24 tests, no site and no phone
 ```
 
 The Python ones cover `rules.py`, `geo.py`, the approval workflow's tables, the
@@ -348,7 +351,11 @@ existing `Attendance Log` history should be migrated is still open.
   write: Apply Leave raises a Leave Application as an **Open draft**
   (`client/src/features/leave/raise.js`), and approving and submitting stay
   with the approver. **Casual Leave is one a month, carried forward** (HR, 24
-  September 2026): hrms Earned Leave, defined in `manna_hr/leavepolicy.py` and
+  September 2026), **and only for office staff, supervisors and drivers** (HR,
+  2 October 2026) — judged by designation in `leavepolicy.casual_leave_group`,
+  refused at submit by `manna_hr/casualleave.py`. A new office designation gets
+  nothing until it is added to `OFFICE_DESIGNATIONS`; the tool lists who it
+  passed over. It is hrms Earned Leave, defined in `manna_hr/leavepolicy.py` and
   put on the site by `tools/setup_monthly_leave.py` — or by **Give monthly
   leave** on Apply Leave, the same steps as the signed-in HR user
   (`client/src/api/monthlyleave.js`; its values are pinned to the Python by

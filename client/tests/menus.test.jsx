@@ -210,7 +210,7 @@ describe("Monthly Basic Attendance fills itself from the site", () => {
 	});
 });
 
-import { isSupervisor, shiftChoices } from "@/lib/worktime";
+import { isSupervisor, shiftChoices, shiftOptions } from "@/lib/worktime";
 
 describe("Day or Night, and supervisors have three shifts", () => {
 	const types = ["HRI-Day Shift", "HRI-Night Shift", "HRI-General Shift", "MT-Day Shift", "MT-Night Shift", "MT-General Shift", "Old Office"].map((name) => ({ name }));
@@ -231,6 +231,13 @@ describe("Day or Night, and supervisors have three shifts", () => {
 		expect(shiftChoices({ company: "Manna Treads", designation: "Helper", default_shift: "Old Office" }, types, cos, []))
 			.toEqual(["MT-Day Shift", "MT-Night Shift", "Old Office"]);
 		expect(shiftChoices({ company: "Manna Tyre UAE" }, types, cos, [])).toHaveLength(7);
+	});
+
+	it("the picker lists every shift on the site, the person's own first", () => {
+		const { suggested, others } = shiftOptions({ company: "Hi-Tech Rubber Industries", designation: "Operator" }, types, cos, []);
+		expect(suggested).toEqual(["HRI-Day Shift", "HRI-Night Shift"]);
+		expect(others).toEqual(["HRI-General Shift", "MT-Day Shift", "MT-General Shift", "MT-Night Shift", "Old Office"]);
+		expect(shiftOptions({ company: "Manna Tyre UAE" }, types, cos, []).others).toEqual([]);
 	});
 });
 

@@ -94,12 +94,9 @@ describe("Upload Responses with no Designation in the Sheet", () => {
 });
 
 describe("Add New Employee on Onboarding", () => {
-	it("opens the same Create Employee form Employee Master's Add opens", async () => {
+	it("is not offered here — Employee Master's Add is the one way in", async () => {
 		const view = await draw();
-		const add = view.container.querySelector('button[aria-label="Add New Employee"]');
-		await act(async () => { add.click(); });
-		expect(store.getState().app.section).toBe("employees");
-		expect(store.getState().app.subtab).toBe("new");
+		expect(view.container.querySelector('button[aria-label="Add New Employee"]')).toBeNull();
 	});
 });
 

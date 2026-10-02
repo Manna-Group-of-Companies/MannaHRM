@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:manna_hr_app/core/errors.dart';
-import 'package:manna_hr_app/core/geo.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -11,7 +10,9 @@ import 'package:manna_hr_app/screens/calendar_screen.dart';
 import 'package:manna_hr_app/screens/correction_sheet.dart';
 import 'package:manna_hr_app/screens/corrections_screen.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
+import 'package:manna_hr_app/services/address.dart';
 import 'package:manna_hr_app/services/api.dart';
+import 'package:manna_hr_app/services/device.dart';
 import 'package:manna_hr_app/services/location.dart';
 import 'package:manna_hr_app/services/photo.dart';
 
@@ -41,7 +42,6 @@ class PunchScreen extends StatefulWidget {
 
 class _PunchScreenState extends State<PunchScreen> {
   List<Map<String, dynamic>> _today = const [];
-  Map<String, dynamic>? _place;
   Fix? _fix;
   bool _loading = true;
   bool _busy = false;
@@ -110,11 +110,9 @@ class _PunchScreenState extends State<PunchScreen> {
         _linkMissing = found == null;
       }
       final punches = await Api.punchesOn(day);
-      final place = await Api.workLocation();
       if (!mounted) return;
       setState(() {
         _today = punches;
-        _place = place;
         _loadedFor = day;
       });
     } catch (e) {
@@ -157,20 +155,31 @@ class _PunchScreenState extends State<PunchScreen> {
       // `require_location_for_mobile` setting — refusing it here would be this
       // app deciding somebody's pay, which is exactly what it must not do.
       // The upload runs beside it: both can take seconds at a gate, and neither
-      // needs the other.
+      // needs the other. The address is looked up off the fix, still beside the
+      // upload, so on a slow photo it costs nothing.
+      Fix? located;
       final got = await Future.wait<Object?>([
-        currentFix(),
+        currentFix().then((f) {
+          located = f;
+          return addressAt(f.latitude, f.longitude);
+        }),
         snap.has ? Api.uploadPunchPhoto(snap.path!) : Future<String?>.value(null),
+        deviceText(),
       ]);
-      final fix = got[0] as Fix;
+      final fix = located!;
+      final address = got[0] as String;
       final photoUrl = got[1] as String?;
+      final device = got[2] as String;
       if (mounted) setState(() => _fix = fix);
 
       await Api.punch(
         logType: direction,
         latitude: fix.latitude,
         longitude: fix.longitude,
+        accuracy: fix.accuracy,
+        address: address,
         photoUrl: photoUrl,
+        device: device,
       );
       if (!mounted) return;
       final at = clockOf(stampOf(ServerClock.I.now()));
@@ -454,10 +463,9 @@ class _PunchScreenState extends State<PunchScreen> {
 
   /// What the punch will carry, said before the press.
   ///
-  /// The distance is shown where the site names a work location, because "you
-  /// are 1.4 km from Keezhillam" before the button is the difference between
-  /// walking fifty metres and arguing with HR afterwards. It is a reading and
-  /// not a gate — the server measures the same thing and decides.
+  /// No distance to a work location: the 1 km fence is off (29 September
+  /// 2026), and a line saying somebody is "outside the fence" would warn them
+  /// off a punch nothing refuses.
   Widget _locationLine() {
     final fix = _fix;
     final reading = _locationReading();
@@ -475,7 +483,6 @@ class _PunchScreenState extends State<PunchScreen> {
 
   Widget _locationReading() {
     final fix = _fix;
-    final place = _place;
     final style = TextStyle(fontSize: 12.5, color: Colors.black.withValues(alpha: .6));
 
     if (fix == null) {
@@ -484,26 +491,6 @@ class _PunchScreenState extends State<PunchScreen> {
     }
     if (!fix.has) {
       return Text(fix.problem, style: const TextStyle(fontSize: 12.5, color: Color(0xFF92400E)));
-    }
-    if (place != null &&
-        isRealCoordinate(place['latitude'] as num?, place['longitude'] as num?)) {
-      final metres = metresBetween(
-        fix.latitude!,
-        fix.longitude!,
-        (place['latitude'] as num).toDouble(),
-        (place['longitude'] as num).toDouble(),
-      );
-      // Advisory only — matches manna_hr/checkin.py's fallback so this reads
-      // the same as the server's answer; the server still decides. CLAUDE.md §1.
-      final radius = (place['radius_metres'] as num?)?.toDouble() ?? 1000;
-      final inside = metres <= radius;
-      return Text(
-        '${formatDistance(metres)} from ${place['location_name']} '
-        '${inside ? '· inside the fence' : '· outside the fence, so the site may refuse it'}',
-        style: TextStyle(
-            fontSize: 12.5,
-            color: inside ? const Color(0xFF166534) : const Color(0xFF92400E)),
-      );
     }
     return Text(
       'Location sent${fix.isCoarse ? ' · the fix is only good to about ${fix.accuracy!.round()} m' : ''}.',

@@ -76,7 +76,15 @@ const CHECKINS = [
 	   one near the gate, and one that arrived with the location switched off. */
 	.concat([
 		{ name: "ci8", employee: "HR-EMP-00002", time: `${today} 08:47:00`, log_type: "IN",
-			device_id: "PHONE-HR-EMP-00002", latitude: 9.591412, longitude: 76.522318 },
+			device_id: "PHONE-HR-EMP-00002", latitude: 9.591412, longitude: 76.522318,
+			creation: `${today} 08:47:03`, custom_location_accuracy: 13.99,
+			custom_device_info: "vivo 1906 · Android 11", custom_geofence_result: "inside",
+			custom_punch_address: "HJR2+H9X, Main Road, Kottayam, Kerala, 686001" },
+		/* The same finger twice, so Duration From Previous Punch has a gap in it. */
+		{ name: "ci10", employee: "HR-EMP-00002", time: `${today} 08:47:45`, log_type: "IN",
+			device_id: "PHONE-HR-EMP-00002", latitude: 9.591418, longitude: 76.522301,
+			creation: `${today} 08:47:46`, custom_location_accuracy: 4.9,
+			custom_device_info: "vivo 1906 · Android 11", custom_geofence_result: "inside" },
 		{ name: "ci9", employee: "HR-EMP-00003", time: `${today} 17:55:00`, log_type: "OUT",
 			device_id: "PHONE-HR-EMP-00003" },
 	]);
@@ -133,7 +141,14 @@ const DATA = {
 		{ name: "Manna Polymers", abbr: "MP", default_holiday_list: "Manna 2026" },
 		{ name: "Manna Logistics", abbr: "ML", default_holiday_list: "" },
 	],
-	"Shift Type": [{ name: "General" }, { name: "Night" }],
+	/* With times, so Late and Early have something to measure against: the
+	   punches above include two arrivals after 09:00 and two departures before
+	   17:30. A shift with no window measures nothing, and a picture of that is
+	   a picture of blank columns. */
+	"Shift Type": [
+		{ name: "General", start_time: "09:00:00", end_time: "17:30:00" },
+		{ name: "Night", start_time: "21:00:00", end_time: "06:00:00" },
+	],
 	"Holiday List": [{ name: "Manna 2026" }],
 	"Leave Type": [{ name: "Casual Leave" }, { name: "Sick Leave" }, { name: "Earned Leave" }],
 	Attendance: [],
@@ -231,15 +246,21 @@ const PAGES = [
 	["attendance-daily", "/attendance/daily", "Daily Detail — one row per person per day, one table"],
 	["leave", "/leave", "Apply Leave"],
 	["leave-balances", "/leave/balances", "Leave Balance Report — assigned, availed, balance"],
-	["payroll", "/payroll", "Salary Process"],
+	["leave-monthly", "/leave/monthly", "Leave Monthly Availed — brought in, earned, taken, available"],
+	["payroll", "/payroll", "Adhoc Payments/Deductions"],
 	["onboard", "/onboard", "Create Letter"],
 	["approvals", "/dashboard/approvals", "the approval queues"],
 	["updates", "/dashboard/updates", "Product Updates — their third tab"],
 	["settings", "/settings", "what the site is set up for"],
 	["coverage", "/settings/coverage", "their 160 menu items against ours"],
+	["security", "/settings/security", "Security — which pages every login is shown"],
+	/* The fourth item is a button to press first, for the half of a page that
+	   has no address of its own. */
+	["security-fields", "/settings/security", "Security → Employee fields — Write, Read or Hidden", "Employee fields"],
 	["payroll-all", "/payroll/all", "Payroll — all of their menu"],
 	["msp", "/attendance/msp", "MSP — the punches somebody has to fix"],
 	["present", "/attendance/present", "Present Report — with where each punch-in was made"],
+	["app-punches", "/attendance/app", "App Punches — Factor HR's In / Out report layout", "Generate"],
 	["reports", "/reports", "All Reports — every one on Factor HR's Reports menu"],
 	["blueprint", "/attendance/manage-attendance-policy", "a blueprint — the biggest unbuilt item"],
 	["refused", "/attendance/online-attendance", "the one item that will not be built"],
@@ -350,7 +371,7 @@ async function main() {
 		const oops = [];
 		page.on("pageerror", (e) => oops.push(String(e)));
 
-		for (const [slug, route, what] of PAGES) {
+		for (const [slug, route, what, press] of PAGES) {
 			/* `domcontentloaded`, never `networkidle`. Vite's dev server holds an
 			   HMR socket open and pings it, so a network-idle wait against a dev
 			   build can sit there until the timeout on every single page. What
@@ -361,6 +382,10 @@ async function main() {
 			/* The page strip and the first panel, so a shot is never of a
 			   half-drawn screen. */
 			await page.waitForTimeout(350);
+			if (press) {
+				await page.getByRole("button", { name: press, exact: true }).click();
+				await page.waitForTimeout(200);
+			}
 			const file = `${OUT}/${device}-${slug}.png`;
 			await page.screenshot({ path: file, fullPage: device === "desktop" });
 			process.stdout.write(`  ${file}  — ${what}\n`);

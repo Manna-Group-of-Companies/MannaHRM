@@ -135,9 +135,9 @@ export const PROFILE_PANES = {
 		note: GUESSED,
 	},
 
-	/* Transcribed off the screenshot, label for label and in its order. Six of
-	   the sixteen have no field behind them on ERPNext's Employee, and each says
-	   which one it is and where the answer actually lives. */
+	/* Transcribed off the screenshot, label for label and in its order. Four
+	   of the sixteen read fields this app adds (custom_), and the rows still
+	   drawn from nothing say where the answer actually lives. */
 	joining: {
 		groups: [
 			["Joining Details", [
@@ -145,10 +145,9 @@ export const PROFILE_PANES = {
 				["Employment Type", "employment_type"],
 				["Company Email Id", "company_email"],
 				["Date Of Joining", "date_of_joining"],
-				["Group Joining Date", null,
-					"Manna is a group, and Factor HR dates service to the group as well as to the company "
-					+ "that employs a person. ERPNext has one joining date. It decides gratuity, so this is a "
-					+ "field to add rather than a row to drop."],
+				["Group Joining Date", "custom_group_joining_date",
+					"Ours — Manna is a group, and Factor HR dates service to the group as well as to the "
+					+ "company that employs a person. ERPNext has one joining date, above."],
 				["Gratuity Start Date", null,
 					"hrms computes gratuity from date_of_joining when a Gratuity is raised; there is no "
 					+ "per-person start date on Employee. The two differ exactly when somebody has moved "
@@ -159,13 +158,12 @@ export const PROFILE_PANES = {
 				["Expected Confirmation Date", null,
 					"The date probation was due to end. ERPNext holds the confirmation itself but not the "
 					+ "date it was expected."],
-				["Probation Period In Days", null,
-					"No field, and without it nothing can compute the row above."],
+				["Probation Period In Days", "custom_probation_period_days"],
 				["Confirmation Date", ["custom_confirmation_date", "final_confirmation_date"]],
 				["Date Of Leaving", "relieving_date"],
-				["Last Working Date", null,
-					"Factor HR keeps the two apart — the date a resignation takes effect, and the last day "
-					+ "somebody was actually at the gate. ERPNext has one relieving date, above."],
+				["Last Working Date", "custom_last_working_date",
+					"Ours — Factor HR keeps the two apart: the date a resignation takes effect, above, and "
+					+ "the last day somebody was actually at the gate."],
 				["Retirement Date", "date_of_retirement"],
 				["Pay Structure Applied From Date", null,
 					"Lives on the Salary Structure Assignment (from_date), one per revision. Payroll has "
@@ -433,13 +431,14 @@ export const PROFILE_PANES = {
 				["Currency", "salary_currency"],
 				["CTC", "ctc"],
 				["Payroll Cost Center", "payroll_cost_center"],
-				["IFSC", null,
-					"No field on ERPNext's Employee. A bank transfer file for an Indian payroll cannot be "
-					+ "written without it, so it is one of the two things this pane is short of."],
+				["IFSC", "custom_ifsc",
+					"Ours — ERPNext's Employee has no IFSC, and a bank transfer file for an Indian payroll "
+					+ "cannot be written without it."],
 			]],
 		],
 		note: "IBAN is ERPNext's field and belongs to the UAE company; the Kerala companies need IFSC, which "
-			+ "is not here. See docs/SITE_SURVEY.md §7 — the UAE company is a finding that keeps surfacing.",
+			+ "is ours. Bank details came across from Factor HR's Employee Detail Report "
+			+ "(tools/load_employee_detail.py) for the 86 people it held them for.",
 	},
 };
 

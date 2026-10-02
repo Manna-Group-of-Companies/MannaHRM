@@ -28,8 +28,12 @@ const hay = (p) => [p.employee_name, p.employee_number, p.attendance_device_id, 
     a menu of two thousand buttons is slow to open and no easier to read. */
 const CAP = 100;
 
-/** @param {{people: any[], value: string, onChange: (v: string) => void, all: string, ariaLabel?: string}} props */
-export default function EmpPick({ people, value, onChange, all, ariaLabel = "Employee" }) {
+/** `everyone` false leaves the "everybody" row off the list, for a box that
+    adds people one at a time — there, everybody is not a choice, and `all` is
+    only the placeholder.
+
+    @param {{people: any[], value: string, onChange: (v: string) => void, all: string, ariaLabel?: string, everyone?: boolean}} props */
+export default function EmpPick({ people, value, onChange, all, ariaLabel = "Employee", everyone = true }) {
 	const [q, setQ] = useState("");
 	const [open, setOpen] = useState(false);
 	const [hi, setHi] = useState(0);
@@ -44,7 +48,7 @@ export default function EmpPick({ people, value, onChange, all, ariaLabel = "Emp
 		: people;
 	/* "Everybody" is the first choice while nothing is typed, so clearing a
 	   pick is one click — the same place it was on the `<select>`. */
-	const items = (words.length ? [] : [{ name: "", all: true }]).concat(matches.slice(0, CAP));
+	const items = (words.length || !everyone ? [] : [{ name: "", all: true }]).concat(matches.slice(0, CAP));
 
 	const pick = (v) => {
 		onChange(v);

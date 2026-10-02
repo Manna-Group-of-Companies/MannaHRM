@@ -208,10 +208,13 @@ export const PSL_COLS = [
   ["Month",        (r) => r.month, "mono"],
   ["Email",        (r) => r.email || "— none —", "mono"],
   ["CTC / year",   (r) => (r.e.ctc ? fmt(Math.round(Number(r.e.ctc))) : "—"), "mono"],
-  ["Payment days", () => "—", "mono gone"],
-  ["Gross",        () => "—", "mono gone"],
-  ["Deductions",   () => "—", "mono gone"],
-  ["Net pay",      () => "—", "mono gone"],
+  /* Off the month's Salary Slip since 29 Sep 2026 — hrms's figures. A row with
+     no slip keeps the dash and the shading: nobody's run produced one. */
+  ["Payment days", (r) => (r.slip ? fmt(r.slip.payment_days) : "—"), "mono", (r) => !r.slip],
+  ["Gross",        (r) => (r.slip ? fmt(Math.round(r.slip.gross_pay)) : "—"), "mono", (r) => !r.slip],
+  ["Deductions",   (r) => (r.slip ? fmt(Math.round(r.slip.total_deduction)) : "—"), "mono", (r) => !r.slip],
+  ["Net pay",      (r) => (r.slip ? fmt(Math.round(r.slip.net_pay)) + (Number(r.slip.docstatus) === 0 ? " (draft)" : "") : "—"),
+    "mono", (r) => !r.slip],
 ];
 
 /** The payslip document itself, as a list of the lines Format 7 would carry.
@@ -590,11 +593,15 @@ export const SREG_COLS = [
   ["Employee Name", (r) => r.emp.employee_name || r.emp.name, ""],
   ["Department", (r) => tidyDept(r.emp.department), ""],
   ["Designation", (r) => r.emp.designation || "—", ""],
-  ["Payment Days", () => "—", "mono gone"],
-  ["LWP", () => "—", "mono gone"],
-  ["Gross", () => "—", "mono gone"],
-  ["Total Deduction", () => "—", "mono gone"],
-  ["Net Pay", () => "—", "mono gone"],
+  /* Off the person's Salary Slips for the period, added together — hrms's
+     figures, never ours. "no slip" is a person the run did not pay, which is
+     not the same thing as a zero and is not drawn as one. */
+  ["Payment Days", (r) => (r.slip ? fmt(r.slip.payment_days) : "no slip"), "mono", (r) => !r.slip],
+  ["LWP", (r) => (r.slip ? fmt(r.slip.leave_without_pay) : "—"), "mono", (r) => !r.slip],
+  ["Gross", (r) => (r.slip ? fmt(Math.round(r.slip.gross)) : "—"), "mono", (r) => !r.slip],
+  ["Total Deduction", (r) => (r.slip ? fmt(Math.round(r.slip.deduction)) : "—"), "mono", (r) => !r.slip],
+  ["Net Pay", (r) => (r.slip ? fmt(Math.round(r.slip.net)) + (r.slip.draft ? " (draft)" : "") : "—"),
+    "mono", (r) => !r.slip],
   /* Not a payroll figure and never labelled as one. It is the master's annual
      CTC divided by twelve, which is what somebody is *contracted* for rather
      than what a month paid them — the two differ by exactly the thing this
@@ -657,12 +664,11 @@ export const SP_TILES = [
        + "month — they are still owed the days they worked. Countable here off Employee." },
   { k: "pending", label: "Pending count", seen: "147",
     map: "Employee",
-    why: "Who is still to be processed. Nothing is processed on this site, so pending is everybody in "
-       + "the run — which is the honest figure rather than a placeholder." },
+    why: "Who in the run has no salary slip for the month yet, off the site's Salary Slips. Somebody "
+       + "with no salary structure stays here after the run — hrms leaves them off it." },
   { k: "process", label: "Process count", seen: "0 / 160",
     map: "Salary Slip",
-    why: "Slips generated, out of the run. Zero of them, and not because a filter found nothing: no "
-       + "Payroll Entry has ever run here." },
+    why: "Salary slips on the site for the month, draft or finalized, out of the run." },
   { k: "stopsal", label: "Stop salary", seen: "0",
     map: "",
     why: "Their hold on somebody's whole salary. Frappe HR ships no such flag on Employee or on Salary "
@@ -678,11 +684,11 @@ export const SP_TILES = [
 ];
 
 /** The three controls under SALARY PROCESS, and where each one actually lives.
-    Every one of them writes, so every one of them opens on the site. */
+    Start is done here (api/payroll.js); Finalize and the gear open on the site. */
 export const SP_ACTIONS = [
   ["Start Salary Process", "Payroll Entry",
-   "Picks the people, the dates and the structure, and generates the slips. Opens a new Payroll Entry "
-   + "on the site — nothing here writes payroll."],
+   "Makes this month's Payroll Entry for the company in the top bar, and hrms picks who is on it — "
+   + "everybody active in the month with a salary structure. A draft: nobody is paid by it."],
   ["Finalize Process", "Salary Slip",
    "Submits what was generated, which is the point of no return: a submitted slip is cancelled and "
    + "amended, never edited. It is done on the site, against the Payroll Entry that made them."],

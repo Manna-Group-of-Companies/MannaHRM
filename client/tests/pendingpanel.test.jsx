@@ -6,9 +6,8 @@ import Regularization from "@/features/attendance/Regularization";
 import { store, set, resetStore, getState } from "@/store";
 import { loadedState } from "./fixture";
 
-/* Attendance Regularization decides its own requests: a correction sent for
-   approval is listed at the top of the page with Approve and Reject, and a
-   request is never decided by the login that raised it. */
+/* Attendance Regularization used to decide its own requests in a box at the
+   top of the page. It does not any more — see the note in the describe below. */
 
 const decided = [];
 vi.mock("@/features/approvals/decide", async (importOriginal) => ({
@@ -47,53 +46,28 @@ function setup(owner) {
 	});
 }
 
-describe("Attendance Regularization lists what is waiting for approval", () => {
+describe("Attendance Regularization leaves approvals to Dashboard → Approvals", () => {
+	/* The "Waiting for approval" box came off this page on 29 September 2026 —
+	   most days it only said "Nothing waiting". A correction is decided on
+	   Dashboard → Approvals through the same decideCorrection, whose rules
+	   (the raiser cannot decide it, approving writes the punch) are pinned in
+	   decide.test.jsx. What is pinned here is that this page no longer offers
+	   the decision, even with a correction waiting in the cycle on screen. */
 	beforeEach(() => { decided.length = 0; resetStore(); });
 
-	it("approves a request from the page it was raised on", async () => {
+	it("draws no approval box and no Approve, with a correction waiting", async () => {
 		setup("hr@example.invalid");
 		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });
 
-		expect(screen.getByRole("region", { name: "Waiting for approval" })).toBeTruthy();
-		fireEvent.change(screen.getByLabelText("Decision note, HR-REG-2026-00009"), { target: { value: "ok" } });
-		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Approve HR-REG-2026-00009" })); });
-
-		expect(decided).toEqual([["HR-REG-2026-00009", "Approve", "ok"]]);
-		expect(screen.getByRole("status").textContent).toContain("approved");
-	});
-
-	it("will not let the login that raised a request decide it", async () => {
-		setup("admin@example.invalid");
-		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });
-
-		expect(screen.getByRole("button", { name: "Approve HR-REG-2026-00009" })).toBeDisabled();
-		expect(screen.getByRole("button", { name: "Reject HR-REG-2026-00009" })).toBeDisabled();
-	});
-});
-
-describe("the approval box is there even when nothing is waiting", () => {
-	beforeEach(() => resetStore());
-
-	it("says a request is waiting in another month rather than hiding", async () => {
-		setup("hr@example.invalid");
-		set({ reg: { ...getState().reg, cycle: "2026-08" }, regGrid: { key: "2026-08", state: "ok", err: "", leave: [], ar: [], punches: [] } });
-		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });
-
-		const box = screen.getByRole("region", { name: "Waiting for approval" });
-		expect(box.textContent).toContain("Waiting in: Sep-2026");
-	});
-});
-
-describe("a login that is not the approver", () => {
-	beforeEach(() => resetStore());
-
-	it("sees who the request is waiting for, and no Approve", async () => {
-		setup("clerk@example.invalid");
-		set({ user: "clerk@example.invalid" });
-		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });
-
-		const box = screen.getByRole("region", { name: "Waiting for approval" });
-		expect(box.textContent).toContain("Waiting for admin@example.invalid");
+		expect(screen.queryByRole("region", { name: "Waiting for approval" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "Approve HR-REG-2026-00009" })).toBeNull();
+		expect(screen.queryByText(/Nothing waiting/)).toBeNull();
+		expect(decided).toEqual([]);
+	});
+
+	it("still draws the register under the bar", async () => {
+		setup("hr@example.invalid");
+		const { container } = await act(async () => render(<Provider store={store}><Regularization /></Provider>));
+		expect(container.querySelector("table.rgrid")).toBeTruthy();
 	});
 });

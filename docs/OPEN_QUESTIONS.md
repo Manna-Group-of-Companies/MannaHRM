@@ -136,10 +136,11 @@ These are currently set from the sales system's numbers, which were right for
 
 - **Punch window** — 05:00 to 21:30 today. Does any shift start earlier or end
   later?
-- **Geofence radius** — 1000 m (1 km) default as of 19 September 2026, raised
-  from 300 m for a group now assigning employees across five Work Locations
-  rather than one gate. Set `radius_metres` on a Work Location itself for
-  anywhere smaller than that should still count.
+- **Geofence** — off, as of 29 September 2026: a phone punch is taken from
+  anywhere, and the app no longer shows a distance to the work location. The
+  coordinate is still recorded. It had been a 1000 m (1 km) default since 19
+  September, raised from 300 m. Turning it back on is `Enforce Geofence` on
+  Manna HR Settings; the radii are still there.
 - **Weekly off** — the sales system assumes Sunday. Is that true for every
   company, and for factory shifts?
 - **Who approves whose corrections.** Currently: a person's manager, and HR for

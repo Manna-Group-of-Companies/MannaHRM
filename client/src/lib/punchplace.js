@@ -95,6 +95,18 @@ const FENCE = {
 	no_location: "fence could not judge",
 };
 
+/** The server's fence verdict on a punch in words, or "" when it gave none. */
+export const fenceVerdict = (r) => FENCE[r?.custom_geofence_result] || "";
+
+/** Factor HR's Terminal column: which machine took the punch. A phone is not
+    a machine, so every phone punch reads the same rather than as the
+    `PHONE-<employee>` id nobody needs to read. */
+export function terminalOf(r) {
+	const dev = String(r?.device_id || "");
+	if (dev.startsWith(PHONE_PREFIX) || (!dev && coordOf(r))) return "Mobile App";
+	return dev;
+}
+
 /**
  * One line on where a punch was: `35 m from Main Gate`, then the server's
  * verdict when it gave one.

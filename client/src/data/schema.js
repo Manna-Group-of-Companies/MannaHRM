@@ -2161,8 +2161,8 @@ export const SCHEMA = {
 				name: "enforce_geofence",
 				label: "Enforce Geofence",
 				kind: "check",
-				def: "1",
-				hint: "Off records the coordinates but never refuses a punch. Use it for the first weeks of a rollout, while the radii are still being learned from real distances."
+				def: "0",
+				hint: "Off records the coordinates but never refuses a punch. Off by default: a phone punch is taken from anywhere."
 			},
 			{
 				name: "default_radius_metres",
@@ -2244,6 +2244,18 @@ export const SCHEMA = {
 				label: "Last Synced",
 				kind: "readonly",
 				hint: "Set by Sync Now, never typed. Empty means the Sheet has not been read yet."
+			},
+			{
+				name: "page_visibility",
+				label: "Page Visibility",
+				kind: "long",
+				hint: "Set from the dashboard's Settings → Security, not typed here: which modules and pages every login is shown, as only what differs from the build's defaults — {\"employees/all\": \"show\", \"leave\": \"hide\"}. A menu, not a permission. Only the logins in manna_hr/rules.py PAGE_ADMINS may change it."
+			},
+			{
+				name: "employee_field_access",
+				label: "Employee Field Access",
+				kind: "long",
+				hint: "Set from the dashboard's Settings → Security → Employee fields, not typed here: which Employee fields each login may only read, or is not shown, on Create Employee (\"new\") and on Employee Profile (\"edit\") — {\"new\": {\"attendance_device_id\": \"read\"}, \"edit\": {\"ctc\": \"hidden\"}}. The site refuses a change to either; hidden is also taken off the forms. Binds every login except manna_hr/rules.py PAGE_ADMINS."
 			}
 		]
 	},

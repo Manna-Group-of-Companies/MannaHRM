@@ -77,6 +77,21 @@ void main() {
     );
   });
 
+  test('a folder with no bridge in it is told to run INSTALL.bat', () {
+    expect(missingKey(r'C:\MannaBridge', exists: (_) => false),
+        r'No bridge found in C:\MannaBridge. Run INSTALL.bat on this PC first.');
+  });
+
+  test('an installed bridge with no key yet is told to restart, not to install again', () {
+    // The key is written by the console as it starts. Sending this PC to
+    // INSTALL.bat was a loop: the install ran, the old console kept running,
+    // and the key never came back until a restart.
+    final why = missingKey(r'C:\MannaBridge', exists: (p) => p == r'C:\MannaBridge\console.py');
+    expect(why, contains('installed in C:\\MannaBridge'));
+    expect(why, contains('Restart this PC'));
+    expect(why, isNot(contains('INSTALL.bat')));
+  });
+
   test('a named bridge folder wins, and the installer default is the last guess', () {
     expect(bridgeFolder(env: {'MANNA_BRIDGE_DIR': r'E:\B'}, executable: r'C:\x\y.exe', exists: (_) => true), r'E:\B');
     expect(bridgeFolder(env: {}, executable: r'C:\x\y.exe', exists: (_) => false), r'C:\MannaBridge');

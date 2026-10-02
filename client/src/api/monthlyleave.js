@@ -1,7 +1,7 @@
 import { apiCreate, apiCreateSubmitted, apiWrite, getDoc, listAll } from "@/api/client";
 import {
-	LEAVE_TYPE, LEAVE_TYPE_NAME, assignmentFor, isMonthly, leavePolicy, notMonthly, policyTitle,
-	typeDiffers,
+	LEAVE_TYPE, LEAVE_TYPE_NAME, assignmentFor, casualLeaveRefusal, isMonthly, leavePolicy, notMonthly,
+	policyTitle, typeDiffers,
 } from "@/lib/monthlyleave";
 
 /* ---------------------------------------------------------------------------
@@ -58,6 +58,8 @@ async function findOrMakePolicy(perMonth, leaveType) {
     sentence on the done screen, not a reason to lose that.
     @returns {Promise<{ok: true, from: string, policy: string} | {ok: false, error: string}>} */
 export async function giveNewJoinerLeave(emp, perMonth, today, leaveType = LEAVE_TYPE_NAME) {
+	const no = leaveType === LEAVE_TYPE_NAME ? casualLeaveRefusal(emp.designation, emp.employee_name) : null;
+	if (no) return { ok: false, error: no };
 	try {
 		const policy = await ensurePolicy(perMonth, leaveType);
 		const doc = assignmentFor(emp, policy, today);
@@ -71,10 +73,13 @@ export async function giveNewJoinerLeave(emp, perMonth, today, leaveType = LEAVE
 	}
 }
 
-/** Give the monthly leave to each of `emps` who has no assignment this year.
+/** Give the monthly leave to each of `emps` who has no assignment this year
+    and whose designation gets Casual Leave — office staff, supervisors and
+    drivers. Everybody else is counted in `passed` and nothing is written for
+    them; the site would refuse it anyway (manna_hr/casualleave.py).
 
     One at a time, so one refusal names one person and the rest still go.
-    @returns {Promise<{given: string[], had: string[], refused: {emp: string, error: string}[]}>} */
+    @returns {Promise<{given: string[], had: string[], passed: string[], refused: {emp: string, error: string}[]}>} */
 export async function giveMonthlyLeave(emps, today, onStep = () => {}) {
 	const policy = await ensurePolicy();
 	const year = today.slice(0, 4);
@@ -84,8 +89,12 @@ export async function giveMonthlyLeave(emps, today, onStep = () => {}) {
 		["effective_from", "<=", year + "-12-31"],
 	])).map((r) => r.employee));
 
-	const out = { given: [], had: [], refused: [] };
+	const out = { given: [], had: [], passed: [], refused: [] };
 	for (const e of emps) {
+		if (casualLeaveRefusal(e.designation)) {
+			out.passed.push(e.name);
+			continue;
+		}
 		if (held.has(e.name)) {
 			out.had.push(e.name);
 			continue;

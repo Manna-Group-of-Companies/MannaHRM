@@ -34,7 +34,18 @@ export const USER_MENUS = {
 	   below), and of it, Onboarding alone — Letters, Documents and Assets are
 	   still built and still at their addresses, just not on its strip. Its
 	   Employees module is still USER_ONLY's four. */
-	"hr@mannarubber.com": { onboard: ["overview"] },
+	"hr@mannarubber.com": { onboard: ["overview"], settings: ["overview", "coverage", "security"] },
+};
+
+/* Who may change which pages everybody is shown — Settings → Security, asked
+   for on 29 September 2026. The site refuses anybody else the same change
+   (`PAGE_ADMINS` in manna_hr/rules.py, pinned to this by tests/pagerules.test.jsx);
+   this list only decides who is shown the page. */
+export const PAGE_ADMINS = ["hr@mannarubber.com"];
+
+/* Pages only the logins named are shown, whatever their menu says. */
+export const PAGES_ONLY_FOR = {
+	settings: { security: PAGE_ADMINS },
 };
 
 /* What a login that is not an admin is shown, asked for on 17 September 2026:
@@ -65,6 +76,12 @@ export const ONLY_FOR = {
 const login = (user) => String(user || "").trim().toLowerCase();
 const loginMenu = (user) => USER_MENUS[login(user)] || null;
 
+/** Whether this login may be shown this page at all. */
+export const pageAllowed = (section, subtab, user) => {
+	const only = PAGES_ONLY_FOR[section]?.[subtab];
+	return !only || only.includes(login(user));
+};
+
 /** Whether a module is on this login's rail at all. */
 export const sectionFor = (section, admin, user) =>
 	section in ONLY_FOR ? ONLY_FOR[section].includes(login(user))
@@ -85,8 +102,9 @@ export function allowedFor(section, user, admin = null) {
 /** A module's tabs as this login sees them — the given order, not the module's. */
 export function tabsFor(section, tabs, user, admin = null) {
 	const only = allowedFor(section, user, admin);
-	if (!only) return tabs;
-	const by = new Map(tabs.map((t) => [t[0], t]));
+	const mine = PAGES_ONLY_FOR[section] ? tabs.filter((t) => pageAllowed(section, t[0], user)) : tabs;
+	if (!only) return mine;
+	const by = new Map(mine.map((t) => [t[0], t]));
 	return only.map((k) => by.get(k)).filter(Boolean);
 }
 
@@ -103,5 +121,6 @@ export const EVERYONE = {
 export function landingFor(section, subtab, user, admin = null) {
 	if ((EVERYONE[section] || []).includes(subtab)) return subtab;
 	const only = allowedFor(section, user, admin);
-	return !only || only.includes(subtab) ? subtab : only[0];
+	const want = !only || only.includes(subtab) ? subtab : only[0];
+	return pageAllowed(section, want, user) ? want : "overview";
 }

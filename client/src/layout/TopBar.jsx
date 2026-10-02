@@ -13,7 +13,7 @@ import { useApp, set } from "@/store";
 import { logout } from "@/api/client";
 import { MODULES } from "@/routes/registry";
 import { blueprintsFor } from "@/data/blueprints";
-import { modeIcon, modeLabel, nextMode, saveMode } from "@/lib/mode";
+import { modeLabel, nextMode, saveMode } from "@/lib/mode";
 import { initials } from "@/lib/format";
 import Link from "@/routes/Link";
 
@@ -26,6 +26,16 @@ const ICON = {
 	bell: "M18 16V11a6 6 0 1 0-12 0v5l-2 2h16zM10 21h4",
 	gear: "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z",
 	out: "M15 12H4M8 8l-4 4 4 4M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5",
+};
+
+/* The appearance control's three states, drawn in the same stroke as the
+   rest of the bar. They were emoji — and 🖥 has no glyph in Windows' own
+   font at this size, so on the machines HR actually uses the button was a
+   grey box. */
+const MODE_GLYPH = {
+	system: "M3 5h18v11H3zM8 20h8M12 16v4",
+	light: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
+	dark: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z",
 };
 
 const Glyph = ({ d }) => (
@@ -156,7 +166,7 @@ export default function TopBar() {
 					title={`Appearance: ${modeLabel(mode)} — click for ${modeLabel(nextMode(mode))}`}
 					onClick={() => set({ mode: saveMode(nextMode(mode)) })}
 				>
-					<span aria-hidden="true">{modeIcon(mode)}</span>
+					<Glyph d={MODE_GLYPH[mode] || MODE_GLYPH.light} />
 				</button>
 
 				{/* The bell and the gear both lead off a user's menu (data/menus.js

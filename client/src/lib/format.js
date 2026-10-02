@@ -31,6 +31,19 @@ export function dayOf(iso) {
 	return isNaN(d.getTime()) ? "" : DAY[d.getDay()];
 }
 
+/** "Day" or "Night" for a punch-in — a whole `2026-09-10 20:32:00` or a bare
+    `8:30:00`. 06:00 up to (not including) 18:00 is Day. The company shifts
+    start at 08:30 and 20:30, so both cuts sit hours from either start, and an
+    early or a late arrival still reads as the shift it came for. No time is
+    "", never Day: a blank guessed as a shift is a claim nobody made. */
+export function periodOf(t) {
+	const s = String(t || "").trim();
+	const m = /^(\d{1,2}):(\d{2})/.exec(/^\d{4}-\d{2}-\d{2}[ T]/.test(s) ? s.slice(11) : s);
+	if (!m) return "";
+	const mins = Number(m[1]) * 60 + Number(m[2]);
+	return mins >= 6 * 60 && mins < 18 * 60 ? "Day" : "Night";
+}
+
 /* All of these through `ymd`, never toISOString — see the note on it below.
    toISOString made `monthEnd` a day short every day of the year, and every
    other one here name yesterday between local midnight and 05:30, which is the

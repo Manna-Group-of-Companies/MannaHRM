@@ -1,5 +1,15 @@
 /* ---------------------------------------------------------------------------
-   The front page — Factor HR's **Start Up**, panel for panel and in its order.
+   The front page — Factor HR's **Start Up**, in its order, less the panels
+   that could only ever be empty.
+
+   **Trimmed on 29 September 2026** to what has something behind it. F&F
+   Summary, Support Escalation Matrix, Help Desk, Mood Analysis, Important
+   Files, Employee Performance, the "not on this page" list and the coverage
+   legend were drawn empty on purpose, as a comparison against Factor HR — and
+   to the people using this every morning they were eight boxes of dashes
+   between them and the numbers. The comparison lives on Settings → Module
+   coverage and each module's All tab; `data/startup.js` still holds the
+   placeholders' wording if any of them comes back with data behind it.
 
    Read off the tenant on 8 September 2026 at 3pm; the capture is
    docs/FACTOHR_SCREENS.md §6 and the panel list is `data/startup.js`. Their
@@ -30,13 +40,9 @@
      Payroll Summary           `ctc` off the employee list, where the site has
                                it. Their six tiles are all Salary Slip states
                                and no payroll has been run, so all six read "—"
-     F&F Summary               nothing — and nothing on their side either
      Recruitment Status        `cands` — read on demand, see the button on it
-     Employee Performance      nothing. There is no appraisal doctype on this
-                               site; the panel says which inputs it would need.
      Recent Activities         punches, corrections, leave and letters, merged
      Headcount by …            `employees`, grouped
-     On their page, not here   `data/startup.NOT_BUILT`, hand-written
 
    Everything except Recruitment is already in the store by the time this page
    draws, so opening the dashboard costs no requests at all.
@@ -53,14 +59,18 @@ import {
 	attendanceToday, byStanding, celebrations, findPeople, futureLeave, joinersByMonth,
 	mergeActivity, startupBuckets,
 } from "@/lib/summary";
-import { Bars, Cols, Empty, Html, Legend, Note, Panel, Tile, Tiles } from "@/components/ui";
+import { Bars, Cols, Empty, Html, Note, Panel, Tile, Tiles } from "@/components/ui";
 import { Columns, Donut, Meter, Stat, Stats } from "@/components/charts";
 import Link from "@/routes/Link";
 import { LocCell } from "@/components/PunchMap";
-import {
-	ATT_BUCKETS, ESCALATION, FNF_TILES, HELP_DESK, NOT_BUILT, PAYROLL_TILES, QUICK_LINKS,
-	QUICK_REPORTS, THEIRS_EMPTY,
-} from "@/data/startup";
+import { ATT_BUCKETS, PAYROLL_TILES, QUICK_LINKS, QUICK_REPORTS } from "@/data/startup";
+import { isHidden } from "@/data/sections";
+
+/** Quick Links and Quick Reports, less the ones whose page is hidden. A link
+    into a hidden module lands back on this page, which reads as a broken
+    link; left off, it comes back by itself when the module is shown again. */
+export const shownLinks = (rows) => rows.filter(([, section, subtab]) =>
+	!section || !(isHidden(section) || isHidden(section, subtab)));
 
 /** Every panel on this page, so Collapse All can name them.
 
@@ -74,19 +84,16 @@ export const PANELS = [
 	"Quick Links",
 	"Quick Reports",
 	"Payroll Summary",
-	"F&F Summary",
 	"Wish Celebration",
-	"Support Escalation Matrix",
-	"Help Desk",
+	"CEO Speak",
+	"Announcements",
 	"Leave Requests",
 	"Pending Approvals",
 	"Headcount by company",
 	"Headcount by department",
 	"New joiners",
 	"Recruitment Status",
-	"Employee Performance",
 	"Recent Activities",
-	"Mood Analysis", "Important Files", "CEO Speak", "Announcements",
 ];
 
 /** The four sources the feed is merged from, each row carrying its own kind so
@@ -277,8 +284,8 @@ export default function Dashboard({ company }) {
 				<Note>
 					<b>{fmt(found.length)}</b> of {fmt(scope.length)} match “{find}”.{" "}
 					{found.length
-						? "The counts below are the whole company — their search filters the list, not the tiles."
-						: "Nothing matches, so the tiles below are unchanged."}
+						? "The search finds people; the counts below are still for everyone."
+						: "Nobody matches that search."}
 				</Note>
 			) : null}
 
@@ -288,13 +295,14 @@ export default function Dashboard({ company }) {
 				<Stat ico="📈" k="New Employees" n={fmt(joinedMonth)} tone={joinedMonth ? "info" : undefined}
 					s="joined this month" />
 				<Stat ico="👋" k="Left Employees" n={fmt(all.length - a.length)}
-					s="skipped by default on every screen" />
-				{/* Their fourth is what factoHR bills for. ERPNext does not charge
-				    per head at all, so the honest answer is the licence they are
-				    paying for today — the like-for-like figure in any cost
-				    comparison, and the one that goes to zero. */}
-				<Stat ico="🎫" k="Licensed Employees" n="—" tone="info"
-					s="ERPNext does not licence per head" />
+					s="no longer with the group" />
+				{/* Their fourth was Licensed Employees, which is what factoHR
+				    bills for. ERPNext does not charge per head, so it could only
+				    ever read "—" — a card that never changes is a card people
+				    learn to skip. What is waiting on somebody is the number HR
+				    acts on first thing, so it has the slot. */}
+				<Stat ico="📥" k="Waiting approval" n={fmt(waiting)} tone={waiting ? "warn" : undefined}
+					s="corrections and leave" />
 			</Stats>
 
 			<Cols>
@@ -337,7 +345,7 @@ export default function Dashboard({ company }) {
 				    one kind of gap this project exists to make visible. */}
 				<Panel title="Quick Links" cov="live" ico="🔗" shut={shut.has("Quick Links")} onToggle={() => fold("Quick Links")}>
 					<ul className="quicklist">
-						{QUICK_LINKS.map(([label, section, subtab, why]) => (
+						{shownLinks(QUICK_LINKS).map(([label, section, subtab, why]) => (
 							<li key={label}>
 								{section ? (
 									<Link section={section} subtab={subtab}>{label}</Link>
@@ -351,7 +359,7 @@ export default function Dashboard({ company }) {
 
 				<Panel title="Quick Reports" cov="live" ico="📑" shut={shut.has("Quick Reports")} onToggle={() => fold("Quick Reports")}>
 					<ul className="quicklist">
-						{QUICK_REPORTS.map(([label, section, subtab, why]) => (
+						{shownLinks(QUICK_REPORTS).map(([label, section, subtab, why]) => (
 							<li key={label}>
 								{section ? (
 									<Link section={section} subtab={subtab}>{label}</Link>
@@ -390,21 +398,6 @@ export default function Dashboard({ company }) {
 					</div>
 				</Panel>
 
-				{/* Their F&F Summary. All five read zero on their screen too, on a
-				    tenant with 347 leavers — which is the finding: Factor HR's exit
-				    module is switched on there and has never been used. Four of the
-				    five have somewhere real to come from here the moment anybody
-				    resigns; the fifth does not exist in hrms. */}
-				<Panel title="F&F Summary" cov="none" ico="🚪" shut={shut.has("F&F Summary")} onToggle={() => fold("F&F Summary")}>
-					<div className="stiles">
-						{FNF_TILES.map(([label, why]) => (
-							<div className="stile off" key={label} title={why}>
-								<b>—</b>
-								<span className="sk">{label}</span>
-							</div>
-						))}
-					</div>
-				</Panel>
 
 				{/* Their Wish Celebration. Birthdays and work anniversaries are both
 				    off the Employee record and both real; their third tab is
@@ -415,9 +408,8 @@ export default function Dashboard({ company }) {
 				<Panel title="Wish Celebration" cov={wishes.length ? "live" : "part"} ico="🎂" shut={shut.has("Wish Celebration")} onToggle={() => fold("Wish Celebration")}>
 					{wishes.length === 0 ? (
 						<Empty title="Nobody to wish in the next 30 days">
-							Off <code>date_of_birth</code> and <code>date_of_joining</code>. A blank
-							birthday is the commonest gap on a migrated record, so an empty month
-							here is worth checking against the master before it is believed.
+							Birthdays and work anniversaries show here. If this looks wrong,
+							check that dates of birth are filled in on Employee Master.
 						</Empty>
 					) : (
 						<>
@@ -447,41 +439,7 @@ export default function Dashboard({ company }) {
 					)}
 				</Panel>
 
-				{/* **The rest of their page, drawn rather than dropped.**
 
-				    Four of these are empty in Factor HR too, and that is the finding
-				    worth seeing: those features are switched on at that tenant and no
-				    employee has ever used one. A panel simply missing from this side
-				    reads as work outstanding — the same panel, empty, with a sentence
-				    saying what it would take, reads as the decision it actually is. */}
-				{/* Their Support Escalation Matrix — four named people at factoHR,
-				    Level 1 to Level 4. The names are theirs, so the levels are
-				    drawn and nobody is invented into them. The question it asks is
-				    a real one and has no answer yet: who is called when attendance
-				    is wrong at six in the morning on a payday week. */}
-				<Panel title="Support Escalation Matrix" cov="none" ico="🆘" shut={shut.has("Support Escalation Matrix")} onToggle={() => fold("Support Escalation Matrix")}>
-					<div className="rows">
-						{ESCALATION.map((lvl) => (
-							<div className="row" key={lvl}>
-								<span>{lvl}</span>
-								<span className="val">—</span>
-							</div>
-						))}
-					</div>
-				</Panel>
-
-				{/* Their Help Desk. Three tickets, all Open — raised with factoHR,
-				    about factoHR. It goes with the product. */}
-				<Panel title="Help Desk" cov="skip" ico="🎫" shut={shut.has("Help Desk")} onToggle={() => fold("Help Desk")}>
-					<div className="stiles">
-						{HELP_DESK.map(([label, why]) => (
-							<div className="stile off" key={label} title={why}>
-								<b>—</b>
-								<span className="sk">{label}</span>
-							</div>
-						))}
-					</div>
-				</Panel>
 
 				{/* **Their Announcements and CEO Speak, and these two are live.**
 
@@ -499,9 +457,8 @@ export default function Dashboard({ company }) {
 							ico={kind === "CEO Speak" ? "🗣" : "📣"}
 							shut={shut.has(label)} onToggle={() => fold(label)}>
 							{rows.length === 0 ? (
-								<Empty title={`Nothing posted (${rows.length})`}>
-									Empty in Factor HR too — nobody there has ever posted one. The difference
-									is that this one can be filled in: <Link section="dashboard" subtab="notices">
+								<Empty title="Nothing posted yet">
+									Post one from <Link section="dashboard" subtab="notices">
 									Announcements &amp; CEO Speak</Link>.
 								</Empty>
 							) : (
@@ -525,14 +482,6 @@ export default function Dashboard({ company }) {
 					);
 				})}
 
-				{THEIRS_EMPTY.filter(([t]) => t !== "CEO Speak" && t !== "Announcements").map(([title, ico, what, need]) => (
-					<Panel title={title} cov="none" ico={ico} key={title}
-						shut={shut.has(title)} onToggle={() => fold(title)}>
-						<Empty title="Nothing here, and nothing there either">
-							<Html html={what} />
-						</Empty>
-					</Panel>
-				))}
 
 				{/* ---------------------------------------------------------------
 				    **Below here is not on their page.**
@@ -574,9 +523,6 @@ export default function Dashboard({ company }) {
 						<Link section="dashboard" subtab="approvals" className="embtn pri">
 							Open the queue
 						</Link>
-						<span className="text-fine text-ink-3">
-							Five of the seven queues are field lists, not backlogs.
-						</span>
 					</div>
 				</Panel>
 
@@ -614,46 +560,25 @@ export default function Dashboard({ company }) {
 						</Empty>
 					) : (
 						<>
+							{/* Read on demand rather than with the first load: one request
+							    against a site with a daily compute limit, and most people
+							    opening the dashboard are not hiring today. */}
 							<p className="text-read text-ink-2">
-								Candidates are read on demand rather than on every page load —
-								this is one request against a site with a daily compute limit,
-								and most people opening the dashboard are not hiring today.
+								See where each candidate is in onboarding.
 							</p>
 							<div className="pbar mt-[.8rem] mb-0">
 								<button type="button" className="embtn pri"
 									disabled={s.candState === "loading"}
 									onClick={() => loadCandidates()}>
-									{s.candState === "loading" ? "Reading…" : "Read the pipeline"}
+									{s.candState === "loading" ? "Loading…" : "Show candidates"}
 								</button>
 							</div>
 						</>
 					)}
 				</Panel>
 
-				<Panel title="Employee Performance" cov="none" ico="⭐" shut={shut.has("Employee Performance")} onToggle={() => fold("Employee Performance")}>
-					<Empty title="No review cycle exists on this site">
-						Nothing here is a placeholder for a number that could be worked out:
-						there is no appraisal record on the site to work one out from.
-					</Empty>
-					<div className="mt-[.8rem] rows">
-						<Line l="Appraisal Cycle" note="who is reviewed, and over what period" />
-						<Line l="Appraisal Template" note="the criteria and their weights" />
-						<Line l="Goal" note="what was agreed, so a rating means something" />
-					</div>
-				</Panel>
 			</Cols>
 
-			{/* The two of theirs with no panel of their own here, and why. */}
-			<Panel title="On their page, not on this one" cov="skip" ico="🚧" shut={shut.has("On their page, not on this one")} onToggle={() => fold("On their page, not on this one")}>
-				<div className="rows">
-					{NOT_BUILT.map(([label, why]) => (
-						<div className="row" key={label}>
-							<span>{label}</span>
-							<Html className="col-[1/-1] text-fine text-ink-3" html={why} />
-						</div>
-					))}
-				</div>
-			</Panel>
 
 			<Panel title="Recent Activities" cov={feed.length ? "live" : "part"} ico="🔔" shut={shut.has("Recent Activities")} onToggle={() => fold("Recent Activities")}>
 				{feed.length === 0 ? (
@@ -675,34 +600,6 @@ export default function Dashboard({ company }) {
 				)}
 			</Panel>
 
-			{/* The key to the chips on every panel above. It sat at the top of this
-			    page and has been moved under it: it explains the page rather than
-			    being part of it, and four rows of legend above the first number is
-			    four rows nobody reads twice. */}
-			<Legend
-				title="Coverage against Factor HR"
-				states={[
-					["live", "built and running on real data"],
-					["part", "built, waiting on data or shifts"],
-					["none", "exists in Factor HR, not here"],
-					["skip", "dropped from this release by decision"],
-				]}
-			/>
 		</>
-	);
-}
-
-/** One "this does not exist yet" row on the performance panel. Deliberately
-    not the `Line` on Settings, which reports a count off the site — this one
-    has no count to report, and a zero beside it would read as "the site has
-    none of these" rather than "nothing asked". */
-function Line({ l, note }) {
-	return (
-		<div className="row">
-			<span>
-				{l} <span className="cov none">Not built</span>
-			</span>
-			<span className="col-[1/-1] text-fine text-ink-3">{note}</span>
-		</div>
 	);
 }

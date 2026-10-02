@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { set, getState, useApp } from "@/store";
 import { isAdmin, whoami } from "@/api/client";
+import { clearPageRules, loadPageRules } from "@/api/pagerules";
 import Login from "@/features/auth/Login";
 import { loadAll } from "@/store/thunks";
 import { startRouter } from "@/routes/router";
@@ -54,9 +55,11 @@ export default function App() {
 	   never drawn with the last one's menu. */
 	useEffect(() => {
 		set({ admin: null });
+		clearPageRules();
 		if (!user) return undefined;
 		let live = true;
 		isAdmin().then((admin) => { if (live) set({ admin }); });
+		void loadPageRules();
 		return () => { live = false; };
 	}, [user]);
 

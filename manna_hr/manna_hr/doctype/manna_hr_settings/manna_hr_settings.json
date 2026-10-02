@@ -24,7 +24,10 @@
   "onboarding_oauth_client_id",
   "onboarding_oauth_client_secret",
   "onboarding_oauth_refresh_token",
-  "onboarding_last_sync"
+  "onboarding_last_sync",
+  "section_pages",
+  "page_visibility",
+  "employee_field_access"
  ],
  "fields": [
   {
@@ -33,8 +36,8 @@
    "label": "Geofence"
   },
   {
-   "default": "1",
-   "description": "Off records the coordinates but never refuses a punch. Use it for the first weeks of a rollout, while the radii are still being learned from real distances.",
+   "default": "0",
+   "description": "Off records the coordinates but never refuses a punch. Off by default: a phone punch is taken from anywhere.",
    "fieldname": "enforce_geofence",
    "fieldtype": "Check",
    "label": "Enforce Geofence"
@@ -148,6 +151,23 @@
    "fieldtype": "Datetime",
    "label": "Last Synced",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_pages",
+   "fieldtype": "Section Break",
+   "label": "Pages"
+  },
+  {
+   "description": "Set from the dashboard's Settings → Security, not typed here: which modules and pages every login is shown, as only what differs from the build's defaults — {\"employees/all\": \"show\", \"leave\": \"hide\"}. A menu, not a permission. Only the logins in manna_hr/rules.py PAGE_ADMINS may change it.",
+   "fieldname": "page_visibility",
+   "fieldtype": "Long Text",
+   "label": "Page Visibility"
+  },
+  {
+   "description": "Set from the dashboard's Settings → Security → Employee fields, not typed here: which Employee fields each login may only read, or is not shown, on Create Employee (\"new\") and on Employee Profile (\"edit\") — {\"new\": {\"attendance_device_id\": \"read\"}, \"edit\": {\"ctc\": \"hidden\"}}. The site refuses a change to either; hidden is also taken off the forms. Binds every login except manna_hr/rules.py PAGE_ADMINS.",
+   "fieldname": "employee_field_access",
+   "fieldtype": "Long Text",
+   "label": "Employee Field Access"
   }
  ],
  "index_web_pages_for_search": 1,

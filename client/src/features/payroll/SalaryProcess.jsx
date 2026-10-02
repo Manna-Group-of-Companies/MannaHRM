@@ -3,14 +3,16 @@ import { useEffect } from "react";
 import { listAll } from "@/api/client";
 import { getState, patch, set, useApp } from "@/store";
 import { scoped } from "@/lib/scope";
-import { MON, fmt, todayIso } from "@/lib/format";
+import { MON, dmyTime, fmt, todayIso } from "@/lib/format";
 import { download, toCsv } from "@/lib/csv";
-import { deskNew, deskUrl } from "@/lib/desk";
+import { deskUrl } from "@/lib/desk";
 import {
 	PSL_PAYROLL_TYPES, SP_ACTIONS, SP_CAPTURE, SP_PROCESS_FOR, SP_TILES,
 	fyList, fyMonths, fyOf,
 } from "@/data/payroll";
 import { Desk, Gap, Scroll, panelProps, tabProps } from "@/components/ui";
+import { createSalarySlips, loadPayroll, payKey, startSalaryProcess } from "@/api/payroll";
+import { RUN_STATES, entryFor, periodOf, runState, slipTotals, withoutStructure } from "@/lib/payroll";
 
 
 /* Factor HR's SALARY PROCESS, photographed 29 August 2026 on MAR 2026, drawn
@@ -26,17 +28,20 @@ import { Desk, Gap, Scroll, panelProps, tabProps } from "@/components/ui";
    they are the same twelve months the Payslip screen already walks, off the
    same fyMonths().
 
-   **Below it, it is payroll state**, and none of that is readable: no payroll
-   doctype is read by this dashboard and no Payroll Entry has ever run. So the
-   tiles are filled from `Employee` where `Employee` can honestly answer, and
-   left as a dash where nothing on this side means what the tile means. Two of
-   the six are the second kind, and that is a finding rather than a shortfall —
-   see SP_TILES.
+   **Below it, it is payroll state**, read off the site since 29 Sep 2026: the
+   month's Payroll Entry, its Salary Slips and who has a salary structure —
+   api/payroll.js, and lib/payroll.js for what they mean. Stop Salary, Stop
+   Payment and Arrears are still dashes: nothing on the site means what those
+   tiles mean. See SP_TILES.
 
-   The three buttons all write, so all three open on the site. The gear is worth
-   more than it looks: it goes to Payroll Settings, where **Consider Unmarked
-   Attendance As** decides whether a day the shift job has not processed yet is
-   a day's pay gone. CLAUDE.md §5 arriving from the payroll side. */
+   **Two steps of the run are here and the third is not.** Start Salary Process
+   makes the draft Payroll Entry and picks the people; Create Salary Slips
+   submits it and hrms makes a draft slip each. Neither pays anybody. Finalize
+   submits the slips, which books the pay, and it opens the entry on the desk —
+   see apiSubmitDraft in api/client.js. The gear goes to Payroll Settings, where
+   **Consider Unmarked Attendance As** decides whether a day the shift job has
+   not processed yet is a day's pay gone. CLAUDE.md §5 arriving from the
+   payroll side. */
 
 /** Their date format on the summary line — "01 Mar - 31 Mar 2026". Not `dmy`,
     which writes 01-Mar-2026: this is one line of their screen and it is written
@@ -44,14 +49,6 @@ import { Desk, Gap, Scroll, panelProps, tabProps } from "@/components/ui";
 const spanSaid = (a, b) =>
 	`${a.getDate().toString().padStart(2, "0")} ${MON[a.getMonth()]} - `
 	+ `${b.getDate().toString().padStart(2, "0")} ${MON[b.getMonth()]} ${b.getFullYear()}`;
-
-/** First day, last day and the calendar-day count of a `YYYY-MM`. */
-function periodOf(ym) {
-	const [y, m] = String(ym).split("-").map(Number);
-	const from = new Date(y, m - 1, 1);
-	const till = new Date(y, m, 0);
-	return { from, till, days: till.getDate(), iso: [ym + "-01", ym + "-" + till.getDate()] };
-}
 
 /* One extra read, made the first time somebody opens this screen — not part of
    the load every page pays for.
@@ -157,7 +154,20 @@ export default function SalaryProcess() {
 	const [start, end] = per.iso;
 	const label = (MON[Number(month.slice(5, 7)) - 1] + " " + month.slice(0, 4)).toUpperCase();
 
+	/* The month on the site. Read again when the month or the company changes;
+	   one company's month is one Payroll Entry, so "All companies" reads the
+	   group's slips and can start nothing. */
+	const company = s.company;
+	useEffect(() => { void loadPayroll(company, start, end); }, [company, start, end]);
+	const pay = s.pay[payKey(company, start, end)] || { state: "" };
+	const ok = pay.state === "ok";
+	const entry = ok ? entryFor(pay.entries) : null;
+	const slips = ok ? pay.slips : [];
+	const state = ok ? runState(entry, slips) : "";
+	const tot = slipTotals(slips);
+
 	const run = runFor(s, per.iso);
+	const bare = ok ? withoutStructure(run, pay.assignments, end) : [];
 	const joined = run.filter((e) => e.date_of_joining >= start && e.date_of_joining <= end);
 	const leftIn = s.spLeft
 		? run.filter((e) => {
@@ -185,12 +195,41 @@ export default function SalaryProcess() {
 
 	const value = {
 		total: fmt(run.length),
-		pending: fmt(run.length),
-		process: "0 / " + fmt(run.length),
+		pending: ok ? fmt(Math.max(0, run.length - tot.count)) : "…",
+		process: ok ? fmt(tot.count) + " / " + fmt(run.length) : "…",
 		stopsal: null,
 		stoppay: null,
 		arrears: null,
 	};
+
+	/* Why Start is refused, in the order somebody would fix them. */
+	const startWhy = !company ? "Pick a company in the top bar — a salary run is one company's month."
+		: month > now ? `${label} has not happened yet.`
+			: !ok ? "Reading this month's payroll…"
+				: entry ? `${entry.name} is already this month's run.`
+					: f.busy ? "Busy…" : "";
+
+	async function onStart() {
+		patch("sp", { busy: "start", msg: "", err: "", confirm: "" });
+		try {
+			const name = await startSalaryProcess(company, start, end, end);
+			patch("sp", { busy: "", msg: `${name} made, and hrms has picked who is on it. Check the list on the site if you want to, then Create Salary Slips.` });
+		} catch (e) {
+			patch("sp", { busy: "", err: e.message || String(e) });
+		}
+		await loadPayroll(company, start, end, { fresh: true });
+	}
+
+	async function onSlips() {
+		patch("sp", { busy: "slips", msg: "", err: "" });
+		try {
+			await createSalarySlips(entry.name);
+			patch("sp", { busy: "", confirm: "", msg: `${entry.name} submitted — hrms is making the draft slips. Nothing is paid until Finalize.` });
+		} catch (e) {
+			patch("sp", { busy: "", confirm: "", err: e.message || String(e) });
+		}
+		await loadPayroll(company, start, end, { fresh: true });
+	}
 
 	return (
 		<>
@@ -270,8 +309,8 @@ export default function SalaryProcess() {
 						<span title="Identical to the payroll date in their capture. Theirs are two separate ranges, which is how an attendance cut-off other than the month end would be said; a Payroll Entry has one period for both.">
 							<i>Attendance date:</i> {spanSaid(per.from, per.till)} | Calendar days {per.days}
 						</span>
-						<span className="st" title="No Payroll Entry has ever run on this site, so every month reads the same. Not a filter that found nothing.">
-							<i>Status:</i> NOT GENERATED
+						<span className="st" title={entry ? `${entry.name} on the site.` : "No Payroll Entry for this month on the site."}>
+							<i>Status:</i> {ok ? RUN_STATES[state] : pay.state === "error" ? "COULD NOT BE READ" : "READING…"}
 						</span>
 					</div>
 
@@ -295,8 +334,8 @@ export default function SalaryProcess() {
 					</div>
 
 				<div className="spgen">
-					<span><i>Generated By:</i> —</span>
-					<span><i>Generated On:</i> —</span>
+					<span><i>Generated By:</i> {entry?.owner || "—"}</span>
+					<span><i>Generated On:</i> {entry?.creation ? dmyTime(entry.creation) : "—"}</span>
 					<label htmlFor="sp-rem"><i>Payslip Remarks:</i></label>
 					<input id="sp-rem" disabled value={f.remarks} onChange={() => {}}
 						title="A note carried onto the run. Nothing here writes payroll, so there is nothing for it to be carried onto — it is written against the Payroll Entry, on the site." />
@@ -304,16 +343,36 @@ export default function SalaryProcess() {
 
 				<div className="spacts">
 					<b className="font-display">Salary Process</b>
-					<Desk className="embtn pri" href={s.site && deskNew(s.site, "Payroll Entry")}
-						label="Start Salary Process" title={SP_ACTIONS[0][2]}>
-						Start Salary Process
-					</Desk>
+					<button type="button" className="embtn pri" disabled={Boolean(startWhy)}
+						title={startWhy || SP_ACTIONS[0][2]} onClick={() => void onStart()}>
+						{f.busy === "start" ? "Starting…" : "Start Salary Process"}
+					</button>
 					{/* Their split caret, which has never been opened. */}
 					<button className="embtn pri split" disabled aria-label="Start options"
 						title="Their caret, never opened. What it offers is unknown and nothing is invented in its place.">
 						▾
 					</button>
-					<Desk className="embtn pri" href={s.site && deskUrl(s.site, "Payroll Entry")}
+					{state === "draft" ? (
+						f.confirm === "slips" ? (
+							<>
+								<button type="button" className="embtn pri" disabled={Boolean(f.busy)}
+									onClick={() => void onSlips()}>
+									{f.busy === "slips" ? "Creating…" : `Yes, create ${fmt(entry.number_of_employees || run.length)} slips`}
+								</button>
+								<button type="button" className="embtn" disabled={Boolean(f.busy)}
+									onClick={() => patch("sp", { confirm: "" })}>
+									Cancel
+								</button>
+							</>
+						) : (
+							<button type="button" className="embtn pri"
+								title="Submits the Payroll Entry, and hrms makes a draft salary slip for each person on it. Nothing is paid until Finalize."
+								onClick={() => patch("sp", { confirm: "slips", msg: "", err: "" })}>
+								Create Salary Slips
+							</button>
+						)
+					) : null}
+					<Desk className="embtn pri" href={s.site && (entry ? deskUrl(s.site, "Payroll Entry", entry.name) : deskUrl(s.site, "Payroll Entry"))}
 						label="Finalize Process" title={SP_ACTIONS[1][2]}>
 						Finalize Process
 					</Desk>
@@ -321,6 +380,11 @@ export default function SalaryProcess() {
 						label="Payroll settings" title={SP_ACTIONS[2][2]}>
 						⚙
 					</Desk>
+					<button type="button" className="embtn" disabled={pay.state === "loading"}
+						title="Read this month's payroll off the site again — slips made in the background appear here once they exist."
+						onClick={() => void loadPayroll(company, start, end, { fresh: true })}>
+						Refresh
+					</button>
 					<button className="embtn spexp" onClick={() => spCsv(run, month, s)}
 						title="Export who this month's run would cover, with the two fields that decide their payment days. Not a payroll file — there is no amount on this side to put in one.">
 						Export the run
@@ -328,7 +392,35 @@ export default function SalaryProcess() {
 				</div>
 			</div>
 
+			{f.msg ? <Gap>{f.msg}</Gap> : null}
+			{f.err ? <Gap><b>Not done.</b> {f.err}</Gap> : null}
+
 			<div className="mt-[1rem]">
+				{pay.state === "error" ? <Gap><b>Payroll could not be read.</b> {pay.err}</Gap> : null}
+				{ok && tot.count ? (
+					<Gap>
+						<b>{fmt(tot.count)} slip{tot.count === 1 ? "" : "s"}</b> for {label}
+						{company ? <> at {company}</> : <> across the group</>}
+						{" · "}{fmt(tot.submitted)} finalized, {fmt(tot.count - tot.submitted)} in draft
+						{" · "}gross {fmt(Math.round(tot.gross))}, deductions {fmt(Math.round(tot.deduction))},
+						net <b>{fmt(Math.round(tot.net))}</b>. Every figure is hrms&apos;s own, off the slips.
+						{tot.count > tot.submitted ? <> A draft slip pays nobody — Finalize does.</> : null}
+					</Gap>
+				) : null}
+				{state === "queued" ? (
+					<Gap>
+						<b>hrms is making the slips.</b> Past thirty people it does it in the background; press
+						Refresh in a minute. If nothing appears, the entry on the site says why.
+					</Gap>
+				) : null}
+				{ok && bare.length ? (
+					<Gap>
+						<b>{fmt(bare.length)} of {fmt(run.length)} people have no salary structure for {label}</b>
+						{" "}— {bare.slice(0, 8).map((e) => e.employee_name || e.name).join(", ")}
+						{bare.length > 8 ? ` and ${fmt(bare.length - 8)} more` : ""}. hrms leaves them off the run
+						without a word, so they are not paid. Each needs a Salary Structure Assignment on the site.
+					</Gap>
+				) : null}
 
 				<div className="mt-[.7rem]">
 					{noList.length ? (

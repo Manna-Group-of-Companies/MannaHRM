@@ -33,7 +33,9 @@ export function Cov({ cov }) {
  * panel, not for losing it, and a reader who has collapsed nine of eleven still
  * needs to see which nine.
  */
-export function Panel({ title, cov, ico, shut, onToggle, children }) {
+/** `tag` is a short word drawn as a chip at the header's right — a step's
+    state, say — kept out of `title` so the fold button's label stays a title. */
+export function Panel({ title, cov, ico, shut, onToggle, tag, children }) {
 	return (
 		<section className={"panel" + (cov === "none" || cov === "skip" ? " dim" : "") + (shut ? " shut" : "")}>
 			<header>
@@ -47,6 +49,7 @@ export function Panel({ title, cov, ico, shut, onToggle, children }) {
 					<span className="ico">{ico || "▪"}</span>
 					{title}
 				</h3>
+				{tag ? <span className="ptag">{tag}</span> : null}
 				<Cov cov={cov} />
 			</header>
 			<div className="body">{children}</div>

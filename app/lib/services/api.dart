@@ -418,42 +418,13 @@ class Api {
     return (rows ?? const []).take(limit).toList();
   }
 
-  /// Where this person is meant to punch, if the site says. Best effort: the
-  /// field is ours and a site that has not been migrated has not got it, which
-  /// is not a reason to fail a screen.
-  static Future<Map<String, dynamic>?> workLocation() async {
-    final emp = Session.I.employeeId;
-    if (emp.isEmpty) return null;
-    try {
-      final rows = await _list('Employee', ['name', 'custom_work_location'],
-          filters: [
-            ['name', '=', emp]
-          ]);
-      final name = '${rows.isEmpty ? '' : rows.first['custom_work_location'] ?? ''}';
-      if (name.isEmpty) return null;
-      final places = await _list(
-        'Work Location',
-        ['name', 'location_name', 'latitude', 'longitude', 'radius_metres', 'is_active'],
-        filters: [
-          ['name', '=', name]
-        ],
-      );
-      return places.isEmpty ? null : places.first;
-    } catch (_) {
-      return null;
-    }
-  }
-
   // ----------------------------------------------------------------- writes --
 
   /// Record a punch.
   ///
-  /// The coordinate is sent because the server geofences a mobile punch against
-  /// the person's `Work Location`, and a punch with no coordinate is the one
-  /// thing that fence cannot judge. It is sent even when it is going to fail
-  /// the fence: the distance is written on every punch, not only the refused
-  /// ones, because a month of distances is what tells you whether the radius is
-  /// right — refusals alone only ever tell you where it was too small.
+  /// The coordinate is sent although the geofence is off by default: it is
+  /// the evidence of where a punch was made, which HR reads on the dashboard,
+  /// and what the fence would judge if `Manna HR Settings` ever turns it on.
   ///
   /// `time` is the *server's* clock as this app last saw it, not the phone's.
   /// The site overwrites it anyway on a self-service punch — see
@@ -465,11 +436,18 @@ class Api {
   /// checkin and may not edit one — and Frappe's own `attach_files_to_document`
   /// hook, which runs on every insert, is what ties the uploaded file to this
   /// row, so HR's read on the checkin is what lets them see the photo.
+  ///
+  /// [accuracy], [address] and [device] ride on the same insert for the dashboard's Punch
+  /// Info column. A site that has not got their fields yet drops them on the
+  /// insert rather than refusing it, so they cannot cost a punch.
   static Future<Map<String, dynamic>> punch({
     required String logType,
     double? latitude,
     double? longitude,
+    double? accuracy,
+    String? address,
     String? photoUrl,
+    String? device,
   }) async {
     final emp = Session.I.employeeId;
     if (emp.isEmpty) {
@@ -487,7 +465,10 @@ class Api {
     if (latitude != null && longitude != null) {
       doc['latitude'] = latitude;
       doc['longitude'] = longitude;
+      if (accuracy != null) doc[kAccuracyField] = accuracy;
+      if ((address ?? '').isNotEmpty) doc[kAddressField] = address;
     }
+    if ((device ?? '').isNotEmpty) doc[kDeviceInfoField] = device;
     if ((photoUrl ?? '').isNotEmpty) doc[kPhotoField] = photoUrl;
 
     final r = await Session.I.dio.post(_res(kCheckinDoctype), data: doc);

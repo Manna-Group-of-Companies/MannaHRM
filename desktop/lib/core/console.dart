@@ -125,18 +125,53 @@ String bridgeFolder({Map<String, String>? env, String? executable, bool Function
 
 const consoleTask = 'Manna HR Console';
 
+/// What to say when the console's key is not in [folder].
+///
+/// **Two different things, which used to be one sentence.** A folder with no
+/// bridge in it wants INSTALL.bat. A folder with the bridge installed and no
+/// key means the console has not started since it was installed — the key is
+/// written by the console when it starts, not by the installer — and telling
+/// that PC to run INSTALL.bat sent people round a loop that only a restart
+/// ended — see Stop-Console in bridge/install.ps1.
+String missingKey(String folder, {bool Function(String path)? exists}) {
+  exists ??= (path) => File(path).existsSync();
+  if (!exists('$folder\\console.py')) {
+    return 'No bridge found in $folder. Run INSTALL.bat on this PC first.';
+  }
+  return 'The bridge is installed in $folder, but its console has not started yet. '
+      'Restart this PC, then open Manna Attendance again.';
+}
+
+/// Start the console's own task — never a second console, which would fight
+/// the first for the port. As SYSTEM, so a login that is not an administrator
+/// may be refused; the caller finds out by the key or the port not appearing.
+Future<void> startConsoleTask() => Process.run('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      "Start-ScheduledTask -TaskName '$consoleTask'",
+    ]);
+
 /// The console's key, and a console that is up to use it.
 ///
 /// The console's own task starts it at boot; if it is not answering (a PC that
-/// has only just come up, or somebody stopped the task) this starts that task
-/// rather than a second console, which would fight the first for the port.
+/// has only just come up, or somebody stopped the task) this starts that task.
+/// The same when the key is missing but the bridge is there: the console
+/// writes the key as it starts, so a console that has never started since the
+/// install is asked to, and given a few seconds to write it.
 Future<Console> connect(String folder) async {
   final file = File('$folder\\console-token.txt');
+  if (!file.existsSync() && File('$folder\\console.py').existsSync()) {
+    await startConsoleTask();
+    for (var i = 0; i < 15 && !file.existsSync(); i++) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+  }
   String token;
   try {
     token = (await file.readAsString()).trim();
   } on PathNotFoundException {
-    throw Refused('No bridge found in $folder. Run INSTALL.bat on this PC first.');
+    throw Refused(missingKey(folder));
   } on FileSystemException {
     throw const Refused('This needs an administrator: the console\'s key is locked to them. '
         'Right-click Manna Attendance and choose Run as administrator.');
@@ -146,12 +181,7 @@ Future<Console> connect(String folder) async {
   final console = Console(token);
   if (await serving(console.host, console.port)) return console;
 
-  await Process.run('powershell.exe', [
-    '-NoProfile',
-    '-NonInteractive',
-    '-Command',
-    "Start-ScheduledTask -TaskName '$consoleTask'",
-  ]);
+  await startConsoleTask();
   for (var i = 0; i < 20; i++) {
     await Future<void>.delayed(const Duration(seconds: 1));
     if (await serving(console.host, console.port)) return console;

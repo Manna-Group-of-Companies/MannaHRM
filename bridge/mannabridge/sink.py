@@ -125,8 +125,13 @@ class ErpSink:
 
 		raise DeliveryError("HTTP {0}: {1}".format(response.status_code, body[:300]))
 
-	def mark_synced(self, base_url, up_to):
-		"""Tell every auto-attendance shift how far the checkins now reach.
+	def mark_synced(self, base_url, reached):
+		"""Tell each shift this bridge delivered on how far its checkins now reach.
+
+		`reached` is `{shift name: newest punch delivered on it}`, from drain.
+		**Only those shifts, each to its own time.** Moving every shift in the
+		group to the newest punch on any of them let one plant's bridge close
+		another plant's day while the second bridge was off — see run_once.
 
 		**Frappe HR does nothing at all without this.** `process_auto_attendance`
 		returns immediately unless `last_sync_of_checkin` is set, so punches can
@@ -139,10 +144,14 @@ class ErpSink:
 		the future would have it close today's shift while people are still on
 		the floor and mark them on whatever hours they had at that moment.
 		"""
+		reached = {k: str(v)[:19] for k, v in (reached or {}).items() if k and v}
+		if not reached:
+			return 0
 		try:
 			r = self._session.get(
 				base_url.rstrip("/") + "/api/resource/Shift Type",
-				params={"fields": '["name","last_sync_of_checkin"]', "filters": '[["enable_auto_attendance","=",1]]',
+				params={"fields": '["name","last_sync_of_checkin"]',
+				        "filters": json.dumps([["enable_auto_attendance", "=", 1], ["name", "in", sorted(reached)]]),
 				        "limit_page_length": 200},
 				timeout=self._timeout)
 			shifts = [(s["name"], (s.get("last_sync_of_checkin") or "")[:19]) for s in r.json().get("data", [])]
@@ -152,13 +161,17 @@ class ErpSink:
 
 		done = 0
 		for name, current in shifts:
+			up_to = reached.get(name)
+			if not up_to:
+				# The site answered with a shift nobody asked about. Never moved.
+				continue
 			# Forward only. A bridge knows only what *it* delivered, so the
 			# second of two bridges - a laptop filling in while the box was off -
 			# once dragged this from Saturday afternoon back to Friday night,
 			# and hrms stopped closing every shift in between until something
 			# moved it forward again. Moving it back never helps: whatever is
 			# past it was delivered by somebody.
-			if current and current >= str(up_to)[:19]:
+			if current and current >= up_to:
 				continue
 			try:
 				self._session.put(

@@ -453,6 +453,34 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Attach Image",
 			"insert_after": "custom_distance_metres",
 		},
+		{
+			# What the phone claimed about its own fix, which phone it was, and
+			# where it said it was — the dashboard's Punch Info and Location
+			# columns, Factor HR's In / Out report
+			# layout, asked for 2 October 2026. Set by the app on the insert,
+			# so not read-only. **Nothing judges by either**: both are the
+			# punching person's own handset talking.
+			"fieldname": "custom_location_accuracy",
+			"label": "Location Accuracy (m)",
+			"fieldtype": "Float",
+			"precision": "1",
+			"insert_after": "custom_photo",
+		},
+		{
+			"fieldname": "custom_device_info",
+			"label": "Device Info",
+			"fieldtype": "Data",
+			"insert_after": "custom_location_accuracy",
+		},
+		{
+			# The phone's own geocoder's name for the coordinate. A caption: a
+			# geocoder names the nearest thing it knows, which at a gate can be
+			# the shop across the road. The coordinate is the evidence.
+			"fieldname": "custom_punch_address",
+			"label": "Address",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_device_info",
+		},
 	],
 	# ---- the box Assets Details draws dead ----
 	#

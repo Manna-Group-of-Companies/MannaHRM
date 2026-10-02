@@ -1,6 +1,6 @@
 import { NEW_EMP_ELSEWHERE, NEW_EMP_STEPS, punchesOnApp, punchesOnMachine } from "../data/employees.js";
 import { ageOn, todayIso } from "./format.js";
-import { LEAVE_TYPE_NAME, notMonthly, perMonthProblem } from "./monthlyleave.js";
+import { LEAVE_TYPE_NAME, casualLeaveGroup, notMonthly, perMonthProblem } from "./monthlyleave.js";
 
 /* ---------------------------------------------------------------------------
    What the Create Employee wizard will send, and what it refuses to send,
@@ -197,12 +197,24 @@ export function clashes(f, employees) {
 
 /** What is wrong with the leave once something is typed in it. Empty is a
     gap, not a mistake — `missing` reports that one. A type that is not
-    monthly matters only when some leave is asked for: 0 of it writes nothing. */
+    monthly matters only when some leave is asked for: 0 of it writes nothing.
+
+    Casual Leave for a designation that does not get it is refused here, before
+    the Employee exists, rather than on the done screen after: HR typed a 1 and
+    should hear at once that it should be a 0. Judged only once a designation
+    is typed — an empty one is a gap `missing` already reports. */
 export function leaveProblems(f, leaveTypes) {
 	if (!typed(f.leaves_a_month)) return [];
 	const p = perMonthProblem(f.leaves_a_month);
 	if (p) return [p];
-	const t = Number(f.leaves_a_month) > 0 ? notMonthly(f.leave_type, leaveTypes) : null;
+	if (!(Number(f.leaves_a_month) > 0)) return [];
+	if ((f.leave_type || LEAVE_TYPE_NAME) === LEAVE_TYPE_NAME && typed(f.designation)) {
+		if (!casualLeaveGroup(f.designation)) {
+			return [`${String(f.designation).trim()} gets no ${LEAVE_TYPE_NAME} — it is only for office staff, `
+				+ "supervisors and drivers. Set Leaves A Month to 0."];
+		}
+	}
+	const t = notMonthly(f.leave_type, leaveTypes);
 	return t ? [t] : [];
 }
 

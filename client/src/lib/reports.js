@@ -292,6 +292,21 @@ export function leaveHistory(leaveRows) {
 		.sort((a, b) => day(b.from_date).localeCompare(day(a.from_date)));
 }
 
+/** An application's status as the history reads it: **Pending** for one
+    nobody has decided — the site's `Open`, or no status at all, for the reason
+    `pendingLeave` gives — and the site's own word for everything else. */
+export const leaveStatus = (r) => (!r.status || r.status === "Open" ? "Pending" : r.status);
+
+/** Leave Application History narrowed to one status — "pending", "approved" —
+    or every application for anything else. Pending Leave Applications and
+    Leave Availed Detail were this with the choice made for you; both pages
+    were hidden on 26 Sep 2026 and the choice moved here. */
+export function leaveByStatus(leaveRows, status) {
+	if (status === "pending") return pendingLeave(leaveRows);
+	if (status === "approved") return availedLeave(leaveRows);
+	return leaveHistory(leaveRows);
+}
+
 /** Pending Leave Application Report — the ones still waiting on somebody.
 
     A status the site has not set counts as pending: an application nobody has
@@ -305,23 +320,4 @@ export function pendingLeave(leaveRows) {
     actually been taken. */
 export function availedLeave(leaveRows) {
 	return leaveHistory(leaveRows).filter((r) => r.status === "Approved");
-}
-
-/** Leave Monthly Availed Report — approved days by month and type.
-
-    Grouped on the month the leave *started*. A trip crossing a month boundary
-    lands wholly in the first, which is what their report does and is worth
-    knowing before anybody reconciles the two. */
-export function monthlyLeave(leaveRows) {
-	const by = new Map();
-	for (const r of availedLeave(leaveRows)) {
-		const k = day(r.from_date).slice(0, 7) + " " + (r.leave_type || "—");
-		const g = by.get(k) || { month: day(r.from_date).slice(0, 7), type: r.leave_type || "—", days: 0, people: new Set() };
-		g.days += leaveDays(r) || 0;
-		g.people.add(r.employee);
-		by.set(k, g);
-	}
-	return [...by.values()]
-		.map((g) => ({ ...g, people: g.people.size }))
-		.sort((a, b) => b.month.localeCompare(a.month) || a.type.localeCompare(b.type));
 }

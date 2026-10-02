@@ -51,9 +51,17 @@ import MonthlySummary from "@/features/attendance/MonthlySummary";
 import Statutory from "@/features/attendance/Statutory";
 import Shifts from "@/features/attendance/Shifts";
 import ApplyLeave from "@/features/leave/ApplyLeave";
+import LeaveMonthly from "@/features/leave/LeaveMonthly";
 import LeaveBalances from "@/features/leave/LeaveBalances";
+import PayrollRun from "@/features/payroll/PayrollRun";
+import SalarySetup from "@/features/payroll/SalarySetup";
+import AdvancesLoans from "@/features/payroll/AdvancesLoans";
+import Payslips from "@/features/payroll/Payslips";
+import BankSheet from "@/features/payroll/BankSheet";
 import Adhoc from "@/features/payroll/Adhoc";
+import FrappePayroll from "@/features/payroll/FrappePayroll";
 import SalaryProcess from "@/features/payroll/SalaryProcess";
+import SalarySheet from "@/features/payroll/SalarySheet";
 import FnF from "@/features/payroll/FnF";
 import ITDeclarations from "@/features/payroll/ITDeclarations";
 import BankTransfer from "@/features/payroll/BankTransfer";
@@ -68,6 +76,7 @@ import Survey from "@/features/simple/Survey";
 import ReportsHub from "@/features/reports/ReportsHub";
 import Settings from "@/features/settings/Settings";
 import Coverage from "@/features/settings/Coverage";
+import Security from "@/features/settings/Security";
 
 /* Factor HR's second-level menus, under the module each belongs to, in its
    order. Only pages the tenant has actually been seen to have are listed:
@@ -178,10 +187,17 @@ const TABS = {
 
 	   Their menu says Final Settlement where §1 read the same screen as
 	   "F&F Summary"; their name is the one on the tab. */
-	payroll: [["overview", "Adhoc Payments/Deductions"],
-		["process", "Salary Process"], ["fnf", "Final Settlement"], ["itdec", "IT Declarations"],
-		["bank", "Bank Transfer"], ["bonus", "Bonus Working Report"], ["payslip", "Salary Payslip"],
-		["register", "Salary Register"], ["ptax", "Prof. Tax Statement"], ["all", "All"]],
+	/* Frappe Payroll, 29 Sep 2026 — the payroll hrms already runs on the site.
+	   It opened the module for an afternoon and was hidden the same day (see
+	   HIDDEN_PAGES in data/sections.js). 2 Oct 2026: `overview` is now the Payroll
+	   page — one guided page that runs the month (features/payroll/PayrollRun.jsx)
+	   — beside four more of ours: Salary Setup, Advances & Loans, Payslips and
+	   Bank Transfer. The older tabs are hidden, not deleted. */
+	payroll: [["overview", "Payroll"], ["setup", "Salary Setup"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
+		["transfer", "Bank Transfer"], ["adhoc", "Adhoc Payments/Deductions"], ["process", "Salary Process"],
+		["sheet", "Salary Sheet"], ["payslip", "Salary Payslip"], ["register", "Salary Register"],
+		["bank", "Bank Transfer"], ["frappe", "Frappe Payroll"], ["fnf", "Final Settlement"],
+		["itdec", "IT Declarations"], ["bonus", "Bonus Working Report"], ["ptax", "Prof. Tax Statement"], ["all", "All"]],
 	/* Captured 29 Aug 2026, the menu and nothing else. None of the four pages
 	   under it has been opened, and no doctype on this site can hold a loan, so
 	   each is a reading of what the name has to mean rather than a copy. */
@@ -189,7 +205,9 @@ const TABS = {
 		["projection", "Loan Projection"], ...managedTabs("loans"), ["all", "All"]],
 	survey: [["overview", "Survey"], ...managedTabs("survey")],
 	reports: [["overview", "All Reports"]],
-	settings: [["overview", "Setup readiness"], ["coverage", "Module coverage"]],
+	/* Security is ours, 29 Sep 2026: which pages everybody is shown, for the
+	   one login in data/menus.js PAGE_ADMINS and nobody else's strip. */
+	settings: [["overview", "Setup readiness"], ["coverage", "Module coverage"], ["security", "Security"]],
 };
 
 /* One entry per page. Nested by module so the dispatch reads in the same shape
@@ -238,10 +256,10 @@ const PAGES = {
 		...managedPages("attendance"), ...blueprintPages("attendance") },
 	leave: { overview: ApplyLeave, balances: LeaveBalances,
 		history: report("leave", "history"), pending: report("leave", "pending"),
-		availed: report("leave", "availed"), monthly: report("leave", "monthly"),
+		availed: report("leave", "availed"), monthly: LeaveMonthly,
 		all: moduleAll("leave", "Leave"),
 		...blueprintPages("leave") },
-	payroll: { overview: Adhoc, process: SalaryProcess, fnf: FnF,
+	payroll: { overview: PayrollRun, setup: SalarySetup, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
 		itdec: ITDeclarations, bank: BankTransfer, bonus: BonusReport, payslip: Payslip,
 		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
 		...blueprintPages("payroll") },
@@ -250,7 +268,7 @@ const PAGES = {
 		...managedPages("loans"), ...blueprintPages("loans") },
 	survey: { overview: Survey, ...managedPages("survey"), ...blueprintPages("survey") },
 	reports: { overview: ReportsHub },
-	settings: { overview: Settings, coverage: Coverage },
+	settings: { overview: Settings, coverage: Coverage, security: Security },
 };
 /* A page opened from another page rather than from a menu.
 

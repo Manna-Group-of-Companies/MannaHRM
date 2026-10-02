@@ -119,3 +119,74 @@ def test_a_type_is_monthly_only_when_earned_and_monthly():
 	assert not lp.is_monthly({"is_earned_leave": 1, "earned_leave_frequency": "Yearly"})
 	assert not lp.is_monthly({"is_earned_leave": 0, "earned_leave_frequency": "Monthly"})
 	assert not lp.is_monthly({})
+
+
+# ------------------------------------------------- who gets Casual Leave ---
+# HR, 2 October 2026: office staff, supervisors and drivers. Nobody else.
+
+def test_a_plant_helper_gets_no_casual_leave():
+	assert lp.casual_leave_group("PLANT HELPER") is None
+
+
+def test_the_factory_floor_gets_no_casual_leave():
+	for d in ("MACHINE OPERATOR", "TYRE WORKER", "ASST.MACHINE OPERATOR", "COOK", "TECHNICIAN",
+			"WELDER", "FITTER", "MAINTENANCE ASSISTANT", "PRODUCTION FOREMAN"):
+		assert lp.casual_leave_group(d) is None, d
+
+
+def test_every_kind_of_supervisor_is_a_supervisor():
+	assert lp.casual_leave_group("QUALITY/PRODUCTION SUPERVISOR") == "Supervisor"
+	assert lp.casual_leave_group("SHIFT SUPERVISOR") == "Supervisor"
+
+
+def test_a_driver_is_a_driver_however_the_site_capitalises_it():
+	assert lp.casual_leave_group("DRIVER") == "Driver"
+	assert lp.casual_leave_group("Driver") == "Driver"
+	assert lp.casual_leave_group("Senior Driver") == "Driver"
+
+
+def test_an_office_job_on_an_other_location_shift_is_still_office():
+	# Purchase, audit and accounts managers are not on an Office shift, which
+	# is why designation decides and shift does not.
+	for d in ("PURCHASE MANAGER", "AUDIT IN-CHARGE", "ASST.MANAGER-ACCOUNTS"):
+		assert lp.casual_leave_group(d) == "Office", d
+
+
+def test_office_designations_match_without_regard_to_case_or_spacing():
+	assert lp.casual_leave_group("  h.r   manager ") == "Office"
+
+
+def test_a_word_inside_another_word_is_not_that_job():
+	assert lp.casual_leave_group("SCREWDRIVER STORES") is None
+
+
+def test_nobody_without_a_designation_gets_casual_leave():
+	assert lp.casual_leave_group("") is None
+	assert lp.casual_leave_group(None) is None
+	assert "Set the designation" in lp.casual_leave_refusal(None, "A")
+
+
+def test_the_refusal_names_the_person_and_their_job():
+	why = lp.casual_leave_refusal("PLANT HELPER", "RAJU")
+	assert why.startswith("RAJU (PLANT HELPER) gets no Casual Leave")
+	assert "office staff, supervisors and drivers" in why
+
+
+def test_somebody_entitled_is_not_refused():
+	assert lp.casual_leave_refusal("DRIVER", "A") is None
+
+
+def test_every_office_designation_is_already_in_the_form_it_is_compared_in():
+	# An entry with a stray lower-case letter or double space would never match.
+	for d in lp.OFFICE_DESIGNATIONS:
+		assert d == lp._designation_key(d), d
+
+
+def test_the_site_refuses_casual_leave_at_both_doors_not_only_the_dashboard():
+	# Read as text: hooks.py imports nothing from frappe, but casualleave.py does.
+	here = os.path.dirname(__file__)
+	hooks = open(os.path.join(here, "..", "hooks.py"), encoding="utf-8").read()
+	assert '"before_submit": "manna_hr.casualleave.guard_assignment"' in hooks
+	assert '"before_submit": "manna_hr.casualleave.guard_allocation"' in hooks
+	guard = open(os.path.join(here, "..", "casualleave.py"), encoding="utf-8").read()
+	assert "def guard_assignment(" in guard and "def guard_allocation(" in guard

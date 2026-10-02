@@ -35,6 +35,60 @@ export const LEAVE_POLICY = {
 	leave_policy_details: [{ leave_type: LEAVE_TYPE_NAME, annual_allocation: ANNUAL_ALLOCATION }],
 };
 
+/** Who gets Casual Leave (HR, 2 October 2026): office staff, supervisors and
+    drivers, by designation. leavepolicy.casual_leave_group, and the list is
+    pinned to the Python one by tests/leave.test.js. A designation not here
+    gets none — see the Python for why that is the cheaper way to be wrong. */
+export const DESIGNATION_WORDS = [["SUPERVISOR", "Supervisor"], ["DRIVER", "Driver"]];
+
+export const OFFICE_DESIGNATIONS = new Set([
+	"ACCOUNTANT",
+	"ACCOUNTS MANAGER",
+	"ASST.MANAGER-ACCOUNTS",
+	"AUDIT IN-CHARGE",
+	"BRANCH ACCOUNTANT",
+	"BRANCH MANAGER",
+	"GENERAL MANAGER",
+	"H.R MANAGER",
+	"HEAD, MAINTENANCE",
+	"LAB ASSISTANT",
+	"MANAGER-INTERNATIONAL SALES&MKTG",
+	"OPERATIONS INCHARGE",
+	"PRODUCTION ACCOUNTANT",
+	"PRODUCTION MANAGER",
+	"PURCHASE MANAGER",
+	"SHOP MANAGER",
+	"SHOP SALESMAN",
+	"STACK DEVELOPER",
+	"STORES IN-CHARGE",
+	"VICE PRESIDENT-OPERATIONS",
+]);
+
+const designationKey = (d) => String(d ?? "").replace(/\s+/g, " ").trim().toUpperCase();
+
+/** "Office", "Supervisor", "Driver", or null for a job that gets no Casual
+    Leave. leavepolicy.casual_leave_group. */
+export function casualLeaveGroup(designation) {
+	const key = designationKey(designation);
+	if (!key) return null;
+	for (const [word, group] of DESIGNATION_WORDS) {
+		if (new RegExp(`\\b${word}\\b`).test(key)) return group;
+	}
+	return OFFICE_DESIGNATIONS.has(key) ? "Office" : null;
+}
+
+/** Why `who` gets no Casual Leave, or null when they do. The site refuses
+    with the same sentence — leavepolicy.casual_leave_refusal. */
+export function casualLeaveRefusal(designation, who = "This employee") {
+	if (casualLeaveGroup(designation)) return null;
+	if (!designationKey(designation)) {
+		return `${who} has no designation, so gets no ${LEAVE_TYPE_NAME} — it is only for office staff, `
+			+ "supervisors and drivers. Set the designation first.";
+	}
+	return `${who} (${String(designation).trim()}) gets no ${LEAVE_TYPE_NAME} — it is only for office staff, `
+		+ "supervisors and drivers.";
+}
+
 /** The most a month the Create Employee wizard takes — a ceiling on a typo,
     not a rule HR gave. leavepolicy.MAX_PER_MONTH. */
 export const MAX_PER_MONTH = 5;

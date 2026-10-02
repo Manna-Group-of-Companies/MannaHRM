@@ -165,6 +165,22 @@ describe("select an employee and add a shift", () => {
 		fireEvent.change(screen.getByLabelText("Shift from"), { target: { value: "" } });
 		expect(screen.getByRole("button", { name: "Add shift" })).toBeDisabled();
 	});
+
+	it("a shift over one already there says, before Add, what happens to the old one", async () => {
+		set(loadedState());
+		const emp = getState().employees.find((e) => e.status === "Active") || getState().employees[0];
+		set({
+			reg: { ...getState().reg, emp: emp.name, cycle: "2026-09" }, shiftTypes: [{ name: "Night" }], section: "attendance", subtab: "overview",
+			regMonth: { key: `${emp.name}|2026-09`, state: "ok", err: "", leave: [], ar: [], punches: [],
+				assignments: [{ name: "SA-1", shift_type: "Day", start_date: "2026-09-01", end_date: "" }] },
+		});
+		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });
+		fireEvent.change(screen.getByLabelText("Shift"), { target: { value: "Night" } });
+		fireEvent.change(screen.getByLabelText("Shift from"), { target: { value: "2026-09-28" } });
+		fireEvent.change(screen.getByLabelText("Shift to"), { target: { value: "2026-10-03" } });
+		expect(screen.getByText(/will also change/).textContent)
+			.toBe("Adding this shift will also change: Day (SA-1) now ends 27-Sep-2026 · Day resumes 04-Oct-2026 →.");
+	});
 });
 
 describe("clicking a time opens the clock", () => {

@@ -32,6 +32,7 @@
    happened yet as far as a month's hours are concerned. */
 
 import { clockOf, dailyRows, hm, minutesOf } from "./dailydetail.js";
+import { periodOf } from "./format.js";
 
 const hmSigned = (mins) => (mins < 0 ? "-" + hm(-mins) : hm(mins) || "0:00");
 
@@ -50,16 +51,11 @@ function shiftDayMinutes(shiftName, windows) {
 }
 
 /** "Day" or "Night", read off a shift's own start time — nothing on Shift
-    Type says which it is, so this reads the clock the same way
-    `shiftDayMinutes` does rather than looking it up. 06:00 up to (not
-    including) 18:00 is Day; everything else, including a shift with no
-    known start time, is Night — the way it's meant, not a database field. */
+    Type says which it is. The same cut as a punch-in's (`periodOf`), so a
+    shift and the people who punch in for it are never called two things. */
 export function shiftPeriod(shiftName, windows) {
 	const w = (windows || {})[shiftName];
-	if (!w) return "";
-	const s = minutesOf(w.start_time);
-	if (s == null) return "";
-	return s >= 6 * 60 && s < 18 * 60 ? "Day" : "Night";
+	return w ? periodOf(w.start_time) : "";
 }
 
 /** Days of a leave application that fall inside `[from, till]`, clamped at

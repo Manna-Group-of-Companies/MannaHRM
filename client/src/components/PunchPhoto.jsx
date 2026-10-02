@@ -41,13 +41,14 @@ export function openPhoto(r, e = {}) {
 }
 
 /** A thumbnail that opens the viewer; a dash when the punch has no photo, or
-    when the one it names will not load. */
-export function PhotoCell({ r, e }) {
+    when the one it names will not load. `big` is the portrait App Punches
+    draws, the size Factor HR's report shows a face at. */
+export function PhotoCell({ r, e, big }) {
 	const src = photoOf(r);
 	const [broken, setBroken] = useState("");
 	if (!src || broken === src) return <span className="text-ink-3">—</span>;
 	return (
-		<button type="button" className="photobtn" title="Show the photo taken at this punch"
+		<button type="button" className={"photobtn" + (big ? " big" : "")} title="Show the photo taken at this punch"
 			onClick={(ev) => { ev.stopPropagation(); openPhoto(r, e); }}>
 			<img src={src} alt="Punch photo" loading="lazy" onError={() => setBroken(src)} />
 		</button>

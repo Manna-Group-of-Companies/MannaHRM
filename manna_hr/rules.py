@@ -945,3 +945,115 @@ def sheet_serial_to_iso(value):
 	if isinstance(value, bool) or not isinstance(value, (int, float)):
 		return value
 	return (datetime.date(1899, 12, 30) + datetime.timedelta(days=int(value))).isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Settings → Security: who may change which pages everybody is shown.
+#
+# A menu, not a permission — hiding a page reads nothing less off the site. But
+# who may change it is still decided here and not in the page, because every
+# company login is an HR Manager and could otherwise write the field with
+# `curl` and take a page off the whole group's menu. Pinned to the client's
+# PAGE_ADMINS in client/src/data/menus.js by client/tests/pagerules.test.jsx.
+# ---------------------------------------------------------------------------
+
+#: Lower-case logins. Administrator is Frappe's own superuser, who may do this
+#: from Desk whatever the list says.
+PAGE_ADMINS = ("hr@mannarubber.com",)
+
+
+def may_set_page_visibility(user):
+	"""Whether this login may change `Manna HR Settings.page_visibility`."""
+	who = str(user or "").strip()
+	return who == "Administrator" or who.lower() in PAGE_ADMINS
+
+
+def page_visibility_problem(text):
+	"""Why this text cannot be stored as the page rules, or "" if it can.
+
+	Only the shape is judged: a JSON object whose values are "show" or "hide".
+	Which keys name real pages is the client's to know — the page list lives
+	there — and it drops any it does not recognise rather than obeying it."""
+	import json
+
+	if not text:
+		return ""
+	try:
+		value = json.loads(text)
+	except ValueError:
+		return "Page Visibility is not valid JSON."
+	if not isinstance(value, dict):
+		return "Page Visibility must be a JSON object of page to \"show\" or \"hide\"."
+	bad = sorted(k for k, v in value.items() if v not in ("show", "hide"))
+	if bad:
+		return "Page Visibility may only say \"show\" or \"hide\"; not for: " + ", ".join(bad)
+	return ""
+
+
+# ---------------------------------------------------------------------------
+# Settings → Security → Employee fields: which fields a login may not set.
+#
+# `Manna HR Settings.employee_field_access` is {"new": {field: level},
+# "edit": {field: level}} with level "read" or "hidden"; both mean "may not
+# write" here. Hidden is also taken off the dashboard's forms, but the site
+# cannot hide a field from a login that reads the Employee — that is a
+# permlevel, which is per role and not per login. Bound by everybody except the
+# page admins, as client/src/lib/fieldaccess.js is.
+# ---------------------------------------------------------------------------
+
+FIELD_ACCESS_FORMS = ("new", "edit")
+FIELD_ACCESS_LEVELS = ("read", "hidden")
+
+
+def _as_compared(value):
+	"""A value as two saves of the same field compare: blank is blank whatever
+	its type, and a number is its number — the request sends "5000", the
+	document before it holds 5000.0, and those are not a change."""
+	if value is None or value == "":
+		return ""
+	text = str(value)
+	try:
+		return repr(float(text))
+	except ValueError:
+		return text
+
+
+def employee_access_refusals(access, user, is_new, before, after, defaults=None):
+	"""The fieldnames this save may not make, sorted; empty when it may.
+
+	On a new Employee a locked field must be left as the doctype leaves it —
+	blank, or its default. On an existing one it must not change. `before` and
+	`after` need only the locked fields; `defaults` is the doctype's own."""
+	if may_set_page_visibility(user):
+		return []
+	rules = (access or {}).get("new" if is_new else "edit") or {}
+	locked = [f for f, level in rules.items() if level in FIELD_ACCESS_LEVELS]
+	defaults = defaults or {}
+	out = []
+	for field in locked:
+		now = _as_compared(after.get(field))
+		if is_new:
+			# 0 is how Frappe leaves an untouched Check, so it is not a value set.
+			if now not in ("", repr(0.0)) and now != _as_compared(defaults.get(field)):
+				out.append(field)
+		elif now != _as_compared((before or {}).get(field)):
+			out.append(field)
+	return sorted(out)
+
+
+def field_access_problem(text):
+	"""Why this text cannot be stored as the field rules, or "" if it can."""
+	import json
+
+	if not text:
+		return ""
+	try:
+		value = json.loads(text)
+	except ValueError:
+		return "Employee Field Access is not valid JSON."
+	if not isinstance(value, dict) or any(k not in FIELD_ACCESS_FORMS for k in value):
+		return "Employee Field Access must be {\"new\": {...}, \"edit\": {...}}."
+	for form, rows in value.items():
+		if not isinstance(rows, dict) or any(v not in FIELD_ACCESS_LEVELS for v in rows.values()):
+			return "Employee Field Access may only say \"read\" or \"hidden\", under " + form + "."
+	return ""

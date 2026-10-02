@@ -153,8 +153,9 @@ describe("the Reports page", () => {
 	});
 
 	it("leaves off the reports of modules hidden from the rail", async () => {
+		/* Loans are hidden; Payroll was shown again on 2 Oct 2026, so its
+		   reports are listed. */
 		const { container } = await draw();
-		expect(container.textContent).not.toContain("Salary Register");
 		expect(container.textContent).not.toContain("Loan Register");
 		expect(container.textContent).not.toContain("Form 16");
 	});
@@ -173,4 +174,43 @@ describe("the Reports page", () => {
 		await wb.xlsx.load(await bytes(blobs[0]));
 		expect(wb.worksheets).toHaveLength(shown().length);
 	}, SLOW);
+});
+
+describe("Leave Application History", () => {
+	const LEAVE = [
+		{ name: "L1", employee: "A", employee_name: "Anil", leave_type: "Casual Leave", from_date: "2026-09-01", to_date: "2026-09-01", status: "Approved" },
+		{ name: "L2", employee: "B", employee_name: "Mary", leave_type: "Casual Leave", from_date: "2026-09-10", to_date: "2026-09-10", status: "Open" },
+		{ name: "L3", employee: "C", employee_name: "Joseph", leave_type: "Sick Leave", from_date: "2026-09-12", to_date: "2026-09-12", status: "Rejected" },
+	];
+	beforeEach(() => {
+		resetStore();
+		const s = loadedState();
+		set({ ...s, approvals: { ...s.approvals, leave: LEAVE } });
+	});
+
+	const draw = async () => {
+		const { default: Report } = await import("@/features/reports/Report");
+		let out;
+		await act(async () => { out = render(<Provider store={store}><Report section="leave" id="history" /></Provider>); });
+		return out;
+	};
+	const statuses = (out) => {
+		const heads = [...out.container.querySelectorAll("thead th")].map((th) => th.textContent);
+		const at = heads.indexOf("Status");
+		return [...out.container.querySelectorAll("tbody tr")].map((tr) => tr.children[at].textContent);
+	};
+
+	it("shows every application with Open read as Pending", async () => {
+		expect(statuses(await draw())).toEqual(["Rejected", "Pending", "Approved"]);
+	});
+
+	it("narrows to pending or to approved from its Status picker", async () => {
+		const out = await draw();
+		const pick = out.getByLabelText("Status");
+		await act(async () => { fireEvent.change(pick, { target: { value: "pending" } }); });
+		expect(statuses(out)).toEqual(["Pending"]);
+		await act(async () => { fireEvent.change(pick, { target: { value: "approved" } }); });
+		expect(statuses(out)).toEqual(["Approved"]);
+		expect(askText(reportFor("leave", "history"), { status: "approved" }, "")).toBe("All companies · Approved");
+	});
 });

@@ -227,7 +227,7 @@ export const FACTOHR_MENU = [
 	["payroll", "Transaction", "Off-cycle Process",
 		"Bonus Incentive Calculation", "Bonus incentive calculation", null],
 	["payroll", "Transaction", "Off-cycle Process",
-		"Adhoc Payments/Deductions", "Record any ad-hoc payments to or deductions from employee or claim reimbursement", ["payroll", "overview"]],
+		"Adhoc Payments/Deductions", "Record any ad-hoc payments to or deductions from employee or claim reimbursement", ["payroll", "adhoc"]],
 	["payroll", "Transaction", "Off-cycle Process",
 		"Stop Payment", "Add employees whose payments need to be stopped", null],
 	["payroll", "Transaction", "Off-cycle Process",

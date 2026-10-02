@@ -8,6 +8,7 @@ import OnMachine from "@/components/OnMachine";
 import MachineNumber from "@/components/MachineNumber";
 import { deskUrl } from "@/lib/desk";
 import { createEmployee } from "@/api/employee";
+import { accessFor, lockedFields } from "@/lib/fieldaccess";
 import { markCandidate } from "@/api/candidate";
 import { giveNewJoinerLeave } from "@/api/monthlyleave";
 import { todayIso } from "@/lib/format";
@@ -119,21 +120,28 @@ function optionsFor(s, all, f) {
 /** An option as `[value, label]`, however the list wrote it. */
 const pair = (o) => (Array.isArray(o) ? o : [o, o]);
 
+/** On the label of a box Settings → Security keeps this login from setting. */
+const LOCKED_WHY = "Read only for this login — HR set it in Settings → Security. Whoever enrols this "
+	+ "person fills it in, or HR does afterwards.";
+
 /** One field, drawn from its row in the table and nothing else.
 
     Every control on all three steps comes through here — text, date, email,
     tel, a strict select, a suggesting datalist and a checkbox — because a form
     with two ways of drawing a field is a form where two fields end up a
     different height, and this one is a copy of somebody else's screen. */
-function Field({ row, opts, value, onChange }) {
+function Field({ row, opts, value, onChange, readOnly }) {
 	const [name, label, type, req, key, span] = row;
 	const dead = NEW_EMP_NOFIELD[label];
+	/* Settings → Security: shown, and not this login's to set. Drawn as the same
+	   box, disabled, so the form keeps its shape and nobody wonders where it went. */
+	const ro = Boolean(readOnly);
 	/* On the label rather than under the box. These used to be a grey sentence
 	   beneath every second field, which turned a form somebody fills in twice a
 	   month into a page of reading — and the sentences people actually need are
 	   the ones they go looking for, not the ones sitting there on every visit.
 	   Hovering the label still gets them. */
-	const why = dead || NEW_EMP_HINT[label] || undefined;
+	const why = dead || (ro ? LOCKED_WHY : "") || NEW_EMP_HINT[label] || undefined;
 	const id = "ne-" + (name || label.toLowerCase().replace(/\W+/g, "-"));
 	const [list, strict] = opts[key] || [[], false];
 	const listId = key ? "nelist-" + key : undefined;
@@ -170,12 +178,12 @@ function Field({ row, opts, value, onChange }) {
 					   default. Sending 0 would be this form asserting an answer it was
 					   never given. */
 					<span className="onoff">
-						<input id={id} type="checkbox" checked={value === 1}
+						<input id={id} type="checkbox" checked={value === 1} disabled={ro}
 							onChange={(e) => onChange(e.target.checked ? 1 : "")} />
 						<span>{value === 1 ? "Yes" : "No"}</span>
 					</span>
 				) : type === "select" && strict ? (
-					<select id={id} required={Boolean(req)} value={value}
+					<select id={id} required={Boolean(req)} value={value} disabled={ro}
 						onChange={(e) => onChange(e.target.value)}>
 						<option value="">—</option>
 						{list.map(pair).map(([v, text]) => (
@@ -184,14 +192,14 @@ function Field({ row, opts, value, onChange }) {
 					</select>
 				) : type === "select" ? (
 					<>
-						<input id={id} type="text" list={listId} value={value} autoComplete="off"
+						<input id={id} type="text" list={listId} value={value} autoComplete="off" disabled={ro}
 							required={Boolean(req)} onChange={(e) => onChange(e.target.value)} />
 						<datalist id={listId}>
 							{list.map(pair).map(([v]) => <option key={v} value={v} />)}
 						</datalist>
 					</>
 				) : (
-					<input id={id} type={type} value={value} required={Boolean(req)}
+					<input id={id} type={type} value={value} required={Boolean(req)} disabled={ro}
 						/* A negative notice period is not a shorter one. */
 						min={type === "number" ? 0 : undefined}
 						/* Half days are real leave; nothing else on this form is fractional. */
@@ -213,6 +221,8 @@ export default function CreateEmployee() {
 	const here = NEW_EMP_STEPS[step];
 	const last = step === NEW_EMP_STEPS.length - 1;
 	const gapsHere = missing(step, f);
+	/** "write", "read" or "hidden" for one row — lib/fieldaccess.js. */
+	const access = (row) => (row[0] ? accessFor(s.fieldAccess, "new", row[0], s.user) : "write");
 	const setF = (k, v) => patch("newemp", { f: { ...f, [k]: v }, err: "" });
 	const goStep = (i) =>
 		patch("newemp", { step: Math.max(0, Math.min(NEW_EMP_STEPS.length - 1, i)) });
@@ -224,7 +234,7 @@ export default function CreateEmployee() {
 	async function create() {
 		patch("newemp", { busy: "creating", err: "", done: null });
 		try {
-			const doc = await createEmployee(f, extra);
+			const doc = await createEmployee(f, extra, lockedFields(s.fieldAccess, s.user, "new"));
 			/* Filled from an onboarding candidate: say so on the candidate, after
 			   the Employee exists and never before — api/candidate.js says why
 			   that order. A refused mark is reported, not hidden: the person
@@ -418,13 +428,15 @@ export default function CreateEmployee() {
 					    does not fill its last row cannot pull the next group's first
 					    field up beside it. Step 1 has a single group with no heading,
 					    which is their screenshot — the step title is the heading there. */}
-					{here[2].map(([heading, rows]) => (
+					{here[2].map(([heading, all]) => [heading, all.filter((r) => access(r) !== "hidden")])
+						.filter(([, rows]) => rows.length).map(([heading, rows]) => (
 						<section className="wizgroup" key={heading || here[0]}>
 							{heading ? <h4>{heading}</h4> : null}
 							<div className="wizform">
 								{rows.map((row) => (
 									<Field key={row[1]} row={row} opts={opts}
 										value={row[0] ? (f[row[0]] ?? "") : ""}
+										readOnly={access(row) === "read"}
 										onChange={(v) => setF(row[0], v)} />
 								))}
 							</div>

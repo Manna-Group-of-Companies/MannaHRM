@@ -9,10 +9,9 @@
  *  AppShell. All this component does is press the button.
  */
 
-import { VISIBLE_SECTIONS, COV_LABEL, groupOf } from "@/data/sections";
+import { visibleSections, COV_LABEL, groupOf } from "@/data/sections";
 import { sectionFor } from "@/data/menus";
 import { useApp, set } from "@/store";
-import { initials } from "@/lib/format";
 import Link from "@/routes/Link";
 import { saveRail } from "@/lib/rail";
 
@@ -24,9 +23,22 @@ const RAIL_GLYPH = {
 	slim: "M3 4h18v16H3zM9 4v16M13 9l3 3-3 3",
 };
 
+/* The four a phone's bottom bar keeps, in the order it draws them. Nine in a
+   390px bar is nine labels cut to "Attend…" and two off the edge; four and a
+   More is every label whole. These are the four somebody opens on a phone —
+   the rest are one tap further, in the drawer More opens. */
+const BAR = ["dashboard", "employees", "attendance", "leave"];
+
 export default function Sidebar() {
 	const { section, rail, drawer, user, conn, connState, admin } = useApp();
 	const slim = rail === "slim";
+
+	const shown = visibleSections().filter((m) => sectionFor(m.key, admin, user));
+	/* A login shown fewer than four of BAR has its bar topped up from the rest
+	   of the menu, in the menu's order, so the bar is never two items wide. */
+	const bar = new Set(shown.filter((m) => BAR.includes(m.key)).map((m) => m.key));
+	for (const m of shown) if (bar.size < BAR.length) bar.add(m.key);
+	const more = shown.length > bar.size;
 
 	/* The whole rail in one pass, so a heading is drawn by the first item under
 	   it rather than by a nested loop. Nine items and four headings read in one
@@ -34,7 +46,7 @@ export default function Sidebar() {
 	   `display: none` and the links are already in the right order. */
 	const rows = [];
 	let group = "";
-	for (const s of VISIBLE_SECTIONS.filter((m) => sectionFor(m.key, admin, user))) {
+	for (const s of shown) {
 		const g = groupOf(s.key);
 		if (g && g !== group) {
 			group = g;
@@ -59,6 +71,7 @@ export default function Sidebar() {
 				   Deferred?" on the dot beside it. */
 				title={`${s.label} — ${COV_LABEL[s.cov]}`}
 				aria-current={section === s.key ? "page" : undefined}
+				data-bar={bar.has(s.key) ? "" : undefined}
 			>
 				<svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 					<path d={s.icon} />
@@ -103,16 +116,35 @@ export default function Sidebar() {
 				</button>
 			</div>
 
-			<nav className="railnav" aria-label="Modules">{rows}</nav>
+			<nav className="railnav" aria-label="Modules">
+				{rows}
+				{/* Only ever drawn on a phone — `.navmore` is hidden everywhere
+				    else. It opens the same drawer the tablet's hamburger does, so
+				    Escape, the scrim and a followed link all close it the same
+				    way. A button and not a `.nav`: it goes nowhere, and the rail's
+				    links are counted as the modules. `data-on` rather than
+				    `aria-current`, because the page it would claim is not this. */}
+				{more ? (
+					<button
+						type="button"
+						className="navmore"
+						aria-expanded={drawer}
+						aria-label={drawer ? "Close the menu" : "More modules"}
+						data-on={bar.has(section) ? undefined : ""}
+						onClick={() => set({ drawer: !drawer })}
+					>
+						<svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+							<path d="M5 12h.01M12 12h.01M19 12h.01" />
+						</svg>
+						<span className="lab">More</span>
+					</button>
+				) : null}
+			</nav>
 
+			{/* **No "signed in as" block here since 29 September 2026.** The header's
+			    avatar already says whose account this is, with sign-out under it,
+			    and the same address twice on one screen is one too many. */}
 			<div className="railfoot">
-				<div className="railwho">
-					<span className="railava" aria-hidden="true">{initials(user || "?")}</span>
-					<span className="who">
-						<b>{user || "Not signed in"}</b>
-						<span>Signed in on this site</span>
-					</span>
-				</div>
 				{/* The same two words the status line always said, kept beside the
 				    thing they describe. `aria-live` because this one changes on its
 				    own: a read that fails turns it red without anybody pressing
