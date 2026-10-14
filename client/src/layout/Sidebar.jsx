@@ -15,6 +15,8 @@ import { MODULES } from "@/routes/registry";
 import { useApp, set } from "@/store";
 import Link from "@/routes/Link";
 import { saveRail } from "@/lib/rail";
+import mannaLogo from "@/assets/manna-logo.png";
+import mannaMark from "@/assets/manna-mark.png";
 
 /* The two glyphs the collapse control uses. Panels rather than arrows: an arrow
    says "go left", which is not what this does — it says how much of the rail is
@@ -126,13 +128,15 @@ export default function Sidebar() {
 	return (
 		<aside className="side">
 			<div className="brand">
+				{/* The Manna logo (14 October 2026): the whole logo where the rail
+				    has room, the M alone where it is an icon strip — index.css
+				    shows one or the other, by the same rules the labels follow. */}
 				<span className="mark" aria-hidden="true">
-					<span className="o">M</span>
-					<span className="c">H</span>
+					<img src={mannaMark} alt="" />
 				</span>
 				<span className="brandtext">
-					<b>Manna HR</b>
-					<small>Group HRMS</small>
+					<img className="brandlogo" src={mannaLogo} alt="Manna Group" />
+					<small>HRMS</small>
 				</span>
 				<button
 					type="button"

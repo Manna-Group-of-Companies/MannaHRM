@@ -213,6 +213,19 @@
   .mark .c { @apply text-rail-fg; }
   .brandtext { @apply flex flex-col min-w-0 leading-none; }
   .brandtext b { @apply font-display font-bold text-norm text-rail-fg truncate; }
+  /* **The Manna logo** (14 October 2026), on its own white paper in every
+     palette: its grey lettering is the logo's, and on the dark rail it would
+     vanish. Like the orange above, the one thing here that never themes. The
+     M is the rail's icon-strip form of it; only one of the two shows at once,
+     by the same rules that hide `.brandtext` — see the slim and tablet rules. */
+  .mark { overflow: hidden; background: #fff; box-shadow: none; }
+  .mark img { @apply block w-full h-full; }
+  .brand .mark { display: none; }
+  .brandlogo { @apply block w-auto rounded-md shrink-0; height: 2.7rem; padding: .2rem .4rem; background: #fff; }
+  /* On the rail, HRMS beside the logo rather than under it: under it, two
+     lines in a 4rem bar left the logo touching the top. */
+  .side .brandtext { @apply flex-row items-center gap-[.55rem]; }
+  .side .brandtext small { @apply mt-0 font-display font-bold text-read tracking-[.04em] text-rail-fg; }
   .brandtext small {
     @apply block font-body text-tiny text-rail-ink mt-[.25rem] truncate;
   }
@@ -297,6 +310,7 @@
   .shell[data-rail="slim"] .nav .lab { @apply sr-only; }
   .shell[data-rail="slim"] .navgroup { @apply sr-only; }
   .shell[data-rail="slim"] .brandtext { @apply sr-only; }
+  .shell[data-rail="slim"] .brand .mark { display: inline-flex; }
   .shell[data-rail="slim"] .brand { @apply flex-col gap-[.3rem] px-[.35rem] py-[.6rem]; }
   .shell[data-rail="slim"] .railtoggle { @apply ml-0; }
 
@@ -537,6 +551,9 @@
   }
   .loginbox .mark { @apply w-[2.6rem] h-[2.6rem] text-sub; }
   .loginbox .brandtext { @apply items-center text-center; }
+  .loginbrand { @apply flex flex-col items-center gap-[.45rem] pb-[.2rem]; }
+  .loginbrand .brandlogo { height: 4.2rem; }
+  .loginbrand small { @apply font-display font-bold text-read tracking-[.04em] text-ink-3; }
   .loginbox .brandtext b { @apply text-ink text-sub; }
   .loginbox .brandtext small { @apply text-ink-3; }
   .loginbox h1 { @apply font-display text-head font-bold text-center; }
@@ -6060,6 +6077,7 @@ tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
   }
   .nav .cdot { position: absolute; top: .35rem; right: .35rem; margin-left: 0; }
   .brand { flex-direction: column; gap: .3rem; padding: .5rem .35rem; }
+  .brand .mark { display: inline-flex; }
   .railtoggle { margin-left: 0; }
   .railfoot { padding-left: .35rem; padding-right: .35rem; align-items: center; }
 
@@ -6092,6 +6110,7 @@ tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
   .shell[data-drawer="open"] .navgroup:first-child { padding-top: .3rem; }
   .shell[data-drawer="open"] .nav .cdot { position: static; margin-left: auto; }
   .shell[data-drawer="open"] .brand { flex-direction: row; gap: .6rem; padding: 0 .75rem; }
+  .shell[data-drawer="open"] .brand .mark { display: none; }
   .shell[data-drawer="open"] .railtoggle { margin-left: auto; }
   .shell[data-drawer="open"] .railfoot { padding-left: .75rem; padding-right: .75rem; align-items: stretch; }
   /* The open module's pages: none on the icon rail, where there is no room for

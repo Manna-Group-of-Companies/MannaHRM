@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { login } from "@/api/client";
 import { set } from "@/store";
+import mannaLogo from "@/assets/manna-logo.png";
 
 export default function Login() {
 	const [usr, setUsr] = useState("");
@@ -35,14 +36,12 @@ export default function Login() {
 				{/* The same two elements the rail's wordmark is built from, so the
 				    door to the app and the app itself are the same mark. `.loginbox`
 				    resets what belongs to the rail — see index.css. */}
-				<div className="brand">
-					<span className="mark" aria-hidden="true">
-						<span className="o">M</span><span className="c">H</span>
-					</span>
-					<span className="brandtext">
-						<b>Manna HR</b>
-						<small>Group HRMS</small>
-					</span>
+				{/* Its own class, not the rail's `.brand`: the rail's narrow-screen
+				    rules hide `.brandtext` wherever it is, which took the logo off
+				    this card on a tablet. */}
+				<div className="loginbrand">
+					<img className="brandlogo" src={mannaLogo} alt="Manna Group" />
+					<small>HRMS</small>
 				</div>
 				<h1>Sign in</h1>
 				<label className="lvf">

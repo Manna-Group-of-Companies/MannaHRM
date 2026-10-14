@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { LocCell } from "@/components/PunchMap";
 import ReportForm, { Tiles, pickable } from "@/components/ReportForm";
 import { HEAD_FILL, LATE_FILL, ZEBRA_FILL, statusFill } from "@/lib/fills";
+import mannaLogo from "@/assets/manna-logo.png";
 
 /* Factor HR's Daily Detail Attendance Report panel, photographed 28 Aug 2026:
    the title, one row of labelled controls — Particular Employee, Employee
@@ -386,9 +387,7 @@ function DdaReport({ s }) {
 		<div className="ddaout">
 			{f.layout.logo && (
 				<div className="ddalogo">
-					<span className="mark">
-						<span className="o">MA</span><span className="c">NN</span><span className="o">A</span>
-					</span>
+					<img className="brandlogo" src={mannaLogo} alt="Manna Group" />
 					<span>
 						<b>Daily Detail Attendance Report</b>
 						{longDate(f.from || todayIso())} - {longDate(f.to || todayIso())}
