@@ -6,7 +6,7 @@ export default function Simple({ title, gap, cov }) {
 	return (
 		<Cols>
 			<Panel title={title} cov={cov || "none"} ico="▪">
-				<Gap>{gap}</Gap>
+				{gap ? <Gap>{gap}</Gap> : null}
 			</Panel>
 		</Cols>
 	);

@@ -60,8 +60,11 @@ class Config:
 		because it is one machine either way — the same name, the same gate,
 		the same row in `Attendance Device` on the site.
 		"""
+		# Only what `Device` opens a socket with: the serial and timezone are
+		# ADMS's, the company is autoenrol's, and `Device(**d)` refuses a key it
+		# has not got.
 		return [
-			{k: v for k, v in d.items() if k != "serial"}
+			{k: v for k, v in d.items() if k not in ("serial", "company", "timezone")}
 			for d in self.devices
 			if d.get("host")
 		]
@@ -181,6 +184,13 @@ def load_config(path):
 				# never set up for in/out reports 0 on every punch, which reads
 				# as a day nobody left. See adms.log_type_for.
 				"report_direction": bool(entry.get("report_direction", False)),
+				# The company an Employee made for an unknown device user on this
+				# machine belongs to (autoenrol.py). Blank: nobody is made here.
+				"company": str(entry.get("company", "")).strip(),
+				# What this machine is told its time zone is when it pushes, in
+				# place of [adms] timezone. Blank: the [adms] one. Exists because
+				# firmware disagrees about "5.5" — see config.example.toml.
+				"timezone": str(entry.get("timezone", "")).strip(),
 			}
 		)
 

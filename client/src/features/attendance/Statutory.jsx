@@ -210,9 +210,6 @@ function SrForm({ s }) {
 							<span className="text-ink-3">–</span>
 							<input type="date" aria-label="To date" value={f.till}
 								onChange={(e) => stale({ till: e.target.value })} />
-							<span className="hint">
-								the Date wise control has not been screenshotted; a range is the reading
-							</span>
 						</span>
 					</>
 				)}
@@ -223,11 +220,7 @@ function SrForm({ s }) {
 						<option value="">Select report type</option>
 						{forms.map((t) => <option key={t.name}>{t.name}</option>)}
 					</select>
-					<span className="hint">
-						{forms.length
-							? "our statutory Letter Types — theirs has never been opened"
-							: "none loaded on this site"}
-					</span>
+					{!forms.length && <span className="hint">none loaded on this site</span>}
 				</span>
 
 				<label htmlFor="srstatus">Employee Status:</label>
@@ -270,7 +263,6 @@ function SrForm({ s }) {
 					<select id="srby" className="wide" value={f.by} onChange={(e) => stale({ by: e.target.value })}>
 						{SR_BY.map((b) => <option key={b[0]} value={b[0]}>{b[1]}</option>)}
 					</select>
-					<span className="hint">groups the output</span>
 				</span>
 
 				<label htmlFor="srout">Report Output:</label>
@@ -334,7 +326,7 @@ function SrReport({ s }) {
 		return (
 			<div className="mt-[.9rem]">
 				<Empty title="Nobody in scope">
-					No employee is left after these filters. Reset Fields puts them back.
+					No employee is left after these filters.
 				</Empty>
 			</div>
 		);
@@ -391,8 +383,7 @@ function SrReport({ s }) {
 
 			{f.hidehdr && (
 				<div className="mt-[.5rem] muted">
-					Header hidden, as asked. On their side that is for pasting straight into a form that carries
-					its own headings.
+					Header hidden, as asked.
 				</div>
 			)}
 		</>
@@ -426,8 +417,7 @@ export default function Statutory() {
 					{/* The period is still nobody's choice until Generate is pressed, but
 					    who the return would cover does not depend on the period — so the
 					    screen shows them rather than a sentence about why it will not. */}
-					<People people={srRows(s)}
-						note="Everybody this return would cover, at the criteria above. Generate adds the statutory columns and checks which of them this site can actually fill." />
+					<People people={srRows(s)} />
 				</div>
 			)}
 

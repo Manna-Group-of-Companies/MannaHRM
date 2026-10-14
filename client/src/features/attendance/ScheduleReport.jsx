@@ -110,7 +110,6 @@ function describe(s, f, R) {
     while somebody is still filling the first of them is a form that tells them
     off for typing slowly. */
 function Field({ row, miss, children }) {
-	const off = row.state === "build";
 	return (
 		<div className={"lvf" + (row.where === "wide" ? " wide" : "") + (miss ? " miss" : "")}>
 			{/* No `htmlFor` on the one row that is not a control: Report Name is
@@ -124,7 +123,6 @@ function Field({ row, miss, children }) {
 				{row.suffix ? <b className="sfx"> {row.suffix}</b> : null}
 			</label>
 			<span className="ctl">{children}</span>
-			{off ? <span className="hint" title={row.why}>no field on the site</span> : null}
 		</div>
 	);
 }
@@ -264,9 +262,6 @@ export default function ScheduleReport({ onClose }) {
 					{fmt(aud.people)} {aud.people === 1 ? "person" : "people"}
 					{s.company ? ` in ${s.company}` : " across every company"}
 					{aud.nomail ? `, and the site holds no email for ${fmt(aud.nomail)} of them` : ""}.
-					{" "}Resolved <b>now</b> and written into Email To — ERPNext's Auto Email Report takes a
-					list of addresses, not a rule it can re-run, so anybody who joins after today is not on
-					this schedule until somebody edits it.
 					{aud.named.length ? (
 						<div className="srepwho">
 							{aud.named.slice(0, 12).join(", ")}
@@ -285,15 +280,6 @@ export default function ScheduleReport({ onClose }) {
 
 	const sched = (
 		<>
-			{/* Said before the controls rather than in a tooltip: this step is
-			    assembled and the one before it is photographed, and a reader has to
-			    be able to tell those apart without opening the source. */}
-			<div className="note">
-				<b>This step is not a photograph.</b> Factor HR's second step has never been opened here, so
-				what is drawn is the scheduling half of their other scheduler — the one on Employee Detail,
-				captured 4 September 2026 — off the same lists. See <code>data/schedreport.js</code>.
-			</div>
-
 			<div className="lvform">
 				{SREP_STEP2.map((r) => (
 					<Field key={r.key} row={r}>
@@ -348,10 +334,6 @@ export default function ScheduleReport({ onClose }) {
 				{dropped.length ? (
 					<p className="gap">
 						<b>{dropped.join(" and ")}</b> {dropped.length > 1 ? "are" : "is"} not carried over.
-						ERPNext's Auto Email Report has one address list and no copies — and these are not
-						written into the description either, because somebody copied in believes they were
-						copied in, and a note saying so while nothing mails them would be worse than the field
-						being missing.
 					</p>
 				) : null}
 			</details>

@@ -68,9 +68,6 @@ export function MapDialog() {
 					<br />
 					<span className="font-mono">{m.lat.toFixed(6)}, {m.lng.toFixed(6)}</span>
 					{m.where ? ` · ${m.where}` : ""}
-					<br />
-					This is what the phone reported, and a phone indoors can be off by tens of metres. Whether the
-					punch was inside the fence is the server's call, and it is only shown here when the site made one.
 				</>
 			}
 			extra={<iframe className="iomap" title="Map of the punch" src={mapEmbed(m.lat, m.lng)} loading="lazy" />}

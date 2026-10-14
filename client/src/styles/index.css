@@ -62,8 +62,16 @@
      the lot with `transition-duration: .01ms !important`, so this does not need
      its own guard. */
   :root {
-    --ui-fast: .14s;
-    --ui-ease: ease;
+    --ui-fast: .16s;
+    --ui-ease: cubic-bezier(.4, 0, .2, 1);
+    /* Two more since 6 October 2026, when the app started *moving* rather
+       than only changing colour. `--ui-med` is for something arriving — a
+       menu, a card, a page — which needs long enough to be seen and short
+       enough not to be waited for. `--ease-out` decelerates into place, which
+       is how a thing that has arrived should look; `--ui-ease` is symmetric
+       and right for a hover that comes and goes. */
+    --ui-med: .26s;
+    --ease-out: cubic-bezier(.2, .8, .2, 1);
   }
 
   /* One focus ring for the whole app, and a wide one. The old 2px accent ring
@@ -156,7 +164,7 @@
     @apply grid min-h-screen;
     /* On `.shell` rather than `:root` so the two states are one attribute, and
        so the transition has something to animate between. */
-    --rail-w: 15.4rem;
+    --rail-w: 16rem;
     grid-template-columns: var(--rail-w) 1fr;
     transition: grid-template-columns .18s var(--ui-ease);
   }
@@ -170,7 +178,10 @@
      token, so the dark rail is the same rules with the dark numbers. */
   .side  {
     @apply flex flex-col sticky top-0 h-screen overflow-y-auto overflow-x-hidden z-30;
-    background: linear-gradient(180deg, rgb(var(--rail-3)) 0%, rgb(var(--rail)) 26%, rgb(var(--rail-2)) 100%);
+    /* Flat since 6 October 2026. The gradient was there to give a dark
+       rail some depth; with the open module's pages listed in it, the rail
+       is now read like a page, and a page reads best on one colour. */
+    background: rgb(var(--rail));
     /* The seam with the page. On dark the two darks are close enough that it
        otherwise reads as a rendering gap; on light it is the only edge. */
     box-shadow: inset -1px 0 0 rgb(var(--rail-fg) / .08);
@@ -185,8 +196,8 @@
      in the rail's own ink. Scales cleanly and needs no asset. */
   .brand {
     @apply flex items-center gap-[.65rem] px-[.9rem] shrink-0 sticky top-0 z-10;
-    min-height: 3.75rem;
-    background: rgb(var(--rail-3));
+    min-height: 4rem;
+    background: rgb(var(--rail));
   }
   .mark {
     @apply inline-flex items-center justify-center shrink-0 rounded-md font-display font-bold
@@ -218,12 +229,17 @@
   .railtoggle:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
 
   /* ---- the menu ---- */
-  .railnav { @apply flex flex-col gap-[.15rem] py-[.5rem]; }
+  .railnav { @apply flex flex-col gap-[.12rem] py-[.4rem]; }
   /* Four headings over the nine items, in Factor HR's order and without moving
      one of them. A reading aid and nothing else: a nine-item list with no
      breaks in it is one people re-read from the top every time. */
   .navgroup {
-    @apply px-[1.2rem] pt-[.9rem] pb-[.3rem] font-body text-tiny font-semibold text-rail-ink;
+    @apply px-[1.3rem] pt-[1.1rem] pb-[.35rem] font-body text-micro font-semibold text-rail-ink
+           tracking-[.06em] uppercase;
+    /* Capitals here and nowhere else. The 29 September note against
+       wide-tracked caps was about *labels a person reads to do their job*;
+       these two are signposts in the margin, and caps are what stops them
+       being read as two more menu items. */
   }
   .navgroup:first-child { @apply pt-[.3rem]; }
 
@@ -233,10 +249,17 @@
            no-underline cursor-pointer;
     /* 44px is the smallest thing a thumb hits reliably, and this is the control
        pressed more than any other in the app. */
-    min-height: 2.6rem;
+    min-height: 2.5rem;
+    border-radius: 10px;
     transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
   }
-  .nav svg { @apply w-[1.2rem] h-[1.2rem] shrink-0 stroke-current fill-none; stroke-width: 1.7; }
+  .nav svg {
+    @apply w-[1.2rem] h-[1.2rem] shrink-0 stroke-current fill-none; stroke-width: 1.7;
+    transition: transform var(--ui-med) var(--ease-out);
+  }
+  /* The icon leans toward the pointer. Small enough not to be noticed as an
+     animation, large enough that the rail feels like it answered. */
+  .nav:hover svg { transform: translateX(2px); }
   .nav .lab { @apply min-w-0 truncate; }
   /* **The coverage dots are not drawn any more.** They said how much of each
      module matched Factor HR, which is a question for whoever is building
@@ -257,7 +280,9 @@
     content: "";
     @apply absolute left-0 top-[.5rem] bottom-[.5rem] w-[3px] rounded-full;
     background: rgb(var(--rail-mark));
+    animation: mark-in var(--ui-med) var(--ease-out) both;
   }
+  .nav[aria-current="page"]:hover svg { transform: none; }
   .nav[aria-current="page"] svg { color: rgb(var(--rail-mark)); }
   .nav:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
 
@@ -300,17 +325,29 @@
     --topbar-h: 3.75rem;
   }
   .topbar {
-    @apply sticky top-0 z-20 flex items-center gap-[.7rem] px-[1.5rem] py-[.5rem]
-           bg-card text-ink border-b border-line;
+    @apply sticky top-0 z-20 flex items-center gap-[.7rem] px-[1.75rem] py-[.5rem]
+           text-ink border-b border-line;
     min-height: var(--topbar-h);
+    /* Frosted rather than solid: the page scrolls under the bar and shows
+       through it faintly, which is what tells a reader the bar is above the
+       page and not the top of it. The fallback is the solid card for a
+       browser without backdrop-filter, where 82% would just look grey. */
+    background: rgb(var(--card));
+  }
+  @supports (backdrop-filter: blur(1px)) {
+    .topbar { background: rgb(var(--card) / .82); backdrop-filter: saturate(1.6) blur(12px); }
   }
 
   /* Where you are, in two lines: the module over the page. It replaces the
      company name that used to sit here — that moved into the picker beside it,
      which is where anyone wanting to change it was already reaching. */
-  .tbwhere { @apply flex flex-col min-w-0 leading-tight mr-[.2rem]; }
-  .tbwhere b { @apply font-display font-semibold text-sub text-ink truncate; }
-  .tbwhere span { @apply text-mini text-ink-3 truncate; }
+  /* The page's name is what the reader most needs from the header, so it is
+     the last thing to give way: it keeps up to 24rem and the search box
+     shrinks first. "Daily Detail A…" was the header naming no page at all. */
+  .tbwhere { @apply flex items-baseline gap-[.5rem] min-w-0 leading-tight mr-[.4rem]; flex: 0 1 auto; max-width: 24rem; }
+  .tbwhere b { @apply font-body font-medium text-read text-ink-3 truncate shrink-0; }
+  .tbwhere i { @apply not-italic text-read text-line-2; }
+  .tbwhere span { @apply font-display font-semibold text-norm text-ink truncate; }
 
   /* The hamburger. Only ever on a narrow window — see the responsive block —
      and it toggles the same `data-rail` the collapse control does. */
@@ -325,8 +362,8 @@
      anybody types into, and it takes whatever the icons leave. */
   .tbfind {
     @apply flex items-center gap-[.45rem] min-w-0 px-[.65rem] rounded-full border border-line bg-wash;
-    flex: 1 1 22rem;
-    max-width: 34rem;
+    flex: 1 1 12rem;
+    max-width: 30rem;
     min-height: 2.3rem;
     transition: border-color var(--ui-fast) var(--ui-ease), box-shadow var(--ui-fast) var(--ui-ease);
   }
@@ -425,7 +462,7 @@
      used to be the third dark band in a row; as pills it reads as belonging to
      the page it switches, which is what it does. */
   .subbar {
-    @apply flex flex-nowrap gap-[.25rem] mx-[1.5rem] mt-[1rem] p-[.3rem] bg-card border border-line
+    @apply flex flex-nowrap gap-[.25rem] mx-[1.75rem] mt-[1.25rem] p-[.3rem] bg-card border border-line
            rounded-lg shadow-raise overflow-x-auto;
     scrollbar-width: none;
   }
@@ -456,7 +493,7 @@
     .tbme .cx  { @apply block; }
   }
 
-  .content { @apply px-[1.5rem] pt-[1rem] pb-[2.5rem] flex flex-col gap-[1rem]; }
+  .content { @apply px-[1.75rem] pt-[1.25rem] pb-[2.5rem] flex flex-col gap-[1rem]; }
   /* The page is a landmark and takes focus from the skip link, so it can be
      focused — but it is not a control and must never draw the app's ring. */
   .content:focus { @apply outline-none; }
@@ -475,11 +512,17 @@
      as the door to the app rather than as an empty page of it. */
   .login {
     @apply min-h-screen flex items-center justify-center p-[1.5rem];
-    background: linear-gradient(160deg, rgb(var(--nav-3)) 0%, rgb(var(--nav)) 40%, rgb(var(--nav-2)) 100%);
+    /* Two soft pools of the brand over the dark chrome — the door to the app
+       in the app's own colour, without a picture to download first. */
+    background:
+      radial-gradient(60rem 40rem at 15% 10%, rgb(var(--brand-dark) / .35), transparent 60%),
+      radial-gradient(50rem 36rem at 90% 95%, rgb(var(--chart-2) / .18), transparent 60%),
+      linear-gradient(160deg, rgb(var(--nav-3)) 0%, rgb(var(--nav)) 40%, rgb(var(--nav-2)) 100%);
   }
   .loginbox {
-    @apply bg-card border border-line rounded-lg shadow-modal flex flex-col gap-[.9rem] px-[1.6rem] pt-[1.2rem] pb-[1.5rem];
-    width: min(24rem, 100%);
+    @apply bg-card border border-line rounded-lg shadow-modal flex flex-col gap-[.9rem] px-[1.8rem] pt-[1.6rem] pb-[1.8rem];
+    width: min(25rem, 100%);
+    animation: rise .5s var(--ease-out) both;
   }
   /* **The rail's `.brand` undone.** That one is a sticky row on a dark bar with
      a collapse control at the end of it; here it is a wordmark centred over a
@@ -538,18 +581,25 @@
     /* Barely there, and deliberately so: enough to lift a panel off the page
        without turning a dense comparison screen into a stack of floating cards. */
     @apply bg-card border border-line rounded-lg overflow-hidden shadow-raise;
+    transition: box-shadow var(--ui-med) var(--ui-ease), border-color var(--ui-med) var(--ui-ease);
   }
+  /* A panel answers the pointer with depth, not colour: the edge darkens a
+     step and the shadow grows. No movement — forty panels jumping as the
+     pointer crosses a page is a page that will not hold still. */
+  .panel:hover { @apply border-line-2 shadow-lift; }
   .panel > header {
     /* The header carries a wash rather than only a rule under it, so the title
        row survives being scrolled past in a long stack of panels. */
     @apply flex flex-wrap gap-y-[.4rem] gap-x-[.7rem] items-center justify-between
-           px-[1.1rem] py-[.75rem] border-b border-rule;
+           px-[1.15rem] py-[.8rem] border-b border-rule;
   }
-  .panel > header h3 { @apply text-norm font-semibold flex items-center gap-[.6rem]; }
+  .panel > header h3 { @apply text-norm font-semibold flex items-center gap-[.65rem]; }
   .panel > header h3 .ico {
-    @apply w-[1.9rem] h-[1.9rem] rounded-md bg-brand-soft
+    @apply w-[2rem] h-[2rem] bg-brand-soft text-brand
            inline-flex items-center justify-center text-fine shrink-0;
+    border-radius: 10px;
   }
+  .panel > header h3 .ico .icon { @apply w-[1.05rem] h-[1.05rem]; }
   /* The coverage chip in a panel's corner is for whoever is building this,
      not whoever is reading it — LIVE on forty panels says nothing to HR.
      Settings → Module coverage still spells every one out. */
@@ -594,9 +644,13 @@
     grid-template-areas: "ico k" "ico n" "ico s";
     column-gap: .9rem;
     row-gap: .15rem;
-    transition: box-shadow var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease);
+    transition: box-shadow var(--ui-med) var(--ui-ease), border-color var(--ui-med) var(--ui-ease),
+                transform var(--ui-med) var(--ease-out);
   }
-  .stat:hover { @apply shadow-lift border-line-2; }
+  /* The one card that rises under the pointer. There are four of them, in a
+     row, at the top of the page — few enough that movement reads as response
+     rather than as noise. */
+  .stat:hover { @apply shadow-lift border-line-2; transform: translateY(-2px); }
   /* The tint down the leading edge, which is what makes four of these read as a
      row of related cards rather than as four boxes. Two pixels and an opacity —
      a filled card would be four saturated blocks under the header. */
@@ -612,9 +666,17 @@
 
   .stat .sico {
     grid-area: ico;
-    @apply self-center inline-flex items-center justify-center w-[2.75rem] h-[2.75rem] rounded-full
-           text-sub leading-none bg-brand-soft;
+    @apply self-center inline-flex items-center justify-center w-[2.9rem] h-[2.9rem]
+           text-sub leading-none bg-brand-soft text-brand;
+    border-radius: 12px;
+    transition: transform var(--ui-med) var(--ease-out);
   }
+  .stat .sico .icon { @apply w-[1.35rem] h-[1.35rem]; }
+  .stat:hover .sico { transform: scale(1.06); }
+  .stat.good .sico { color: rgb(var(--chart-1)); }
+  .stat.info .sico { color: rgb(var(--chart-2)); }
+  .stat.warn .sico { color: rgb(var(--chart-3)); }
+  .stat.bad  .sico { color: rgb(var(--bad)); }
   .stat.good .sico { background: rgb(var(--chart-1) / .14); }
   .stat.info .sico { background: rgb(var(--chart-2) / .14); }
   .stat.warn .sico { background: rgb(var(--chart-3) / .14); }
@@ -652,6 +714,10 @@
        charts.jsx, not a cap. */
     stroke-linecap: butt;
     transition: stroke-width var(--ui-fast) var(--ui-ease);
+    /* Drawn round the ring on arrival. `from` only: the end state is the
+       attribute the component wrote, so the animation cannot disagree with
+       the number in the legend. */
+    animation: arc-draw .9s var(--ease-out) both;
   }
   .darc:hover { stroke-width: 5.2; }
   .darc.c1 { stroke: rgb(var(--chart-1)); }
@@ -687,6 +753,8 @@
     max-width: 2.4rem;
     background: linear-gradient(180deg, rgb(var(--chart-2)), rgb(var(--chart-2) / .55));
     transition: filter var(--ui-fast) var(--ui-ease);
+    transform-origin: bottom;
+    animation: grow-y .7s var(--ease-out) both;
   }
   .cols-chart .bar:hover i { filter: brightness(1.1); }
   .cols-chart .bar .v { @apply font-mono text-micro tabular-nums text-ink-2 leading-none; }
@@ -698,7 +766,12 @@
   .mlab b { @apply ml-auto font-mono text-fine text-ink font-semibold; }
   .mlab .of { @apply text-ink-3 font-normal; }
   .mtrack { @apply h-[8px] rounded-full overflow-hidden; background: rgb(var(--track)); }
-  .mfill { @apply block h-full rounded-full; transition: width .25s var(--ui-ease); }
+  .mfill {
+    @apply block h-full rounded-full;
+    transition: width .25s var(--ui-ease);
+    transform-origin: left;
+    animation: grow-x .8s var(--ease-out) both;
+  }
   .mfill.brand { background: linear-gradient(90deg, rgb(var(--brand)), rgb(var(--brand-dark))); }
   .mfill.good  { background: rgb(var(--chart-1)); }
   .mfill.info  { background: rgb(var(--chart-2)); }
@@ -719,11 +792,19 @@
   }
   .feedwrap::-webkit-scrollbar { width: 8px; }
   .feedwrap::-webkit-scrollbar-thumb { @apply rounded-full; background: rgb(var(--line-2)); }
-  .feed { @apply flex flex-col m-0 p-0 list-none; }
-  .feed li {
-    @apply relative flex flex-col gap-[.1rem] pl-[1.35rem] py-[.5rem];
+  .feed { @apply relative flex flex-col m-0 p-0 list-none; }
+  /* One rule down the left that every node sits on, so the list reads as a
+     timeline rather than as rows with dots on them. */
+  .feed::before {
+    content: "";
+    @apply absolute left-[.47rem] top-[.9rem] bottom-[.9rem] w-px;
+    background: rgb(var(--line));
   }
-  .feed li + li { @apply border-t border-rule; }
+  .feed li {
+    @apply relative flex flex-col gap-[.1rem] pl-[1.6rem] pr-[.5rem] py-[.55rem] rounded-md;
+    transition: background-color var(--ui-fast) var(--ui-ease);
+  }
+  .feed li:hover { @apply bg-wash; }
   .feed li::before {
     content: "";
     @apply absolute left-[.25rem] top-[.85rem] w-[.5rem] h-[.5rem] rounded-full;
@@ -748,12 +829,21 @@
   .startbar { @apply mb-0; }
   /* One control that happens to be three buttons — joined, so it reads as a
      switch with one answer rather than three things that can all be on. */
-  .segs { @apply inline-flex; }
-  .segs .embtn { @apply rounded-none; }
-  .segs .embtn:first-child { @apply rounded-l; }
-  .segs .embtn:last-child { @apply rounded-r; }
-  .segs .embtn + .embtn { @apply -ml-px; }
-  .segs .embtn[aria-pressed="true"] { @apply relative z-[1]; }
+  /* A switch drawn as a track with the chosen answer raised out of it,
+     since 6 October 2026 — the way an operating system draws one. Three
+     joined outlined buttons read as three buttons; a track with one lit
+     segment reads as one control with one answer. */
+  .segs { @apply inline-flex p-[3px] gap-[2px] bg-rule border border-line; border-radius: 11px; }
+  .segs .embtn {
+    @apply border-transparent bg-transparent shadow-none text-ink-2;
+    min-height: 2rem;
+    border-radius: 8px;
+  }
+  .segs .embtn:hover:not([disabled]) { @apply bg-card/60 border-transparent text-ink; }
+  .segs .embtn[aria-pressed="true"],
+  .segs .embtn[aria-pressed="true"]:hover:not([disabled]) {
+    @apply relative z-[1] bg-card text-ink border-transparent shadow-raise;
+  }
   .segs .n { @apply font-mono text-micro tabular-nums text-ink-3 ml-[.35rem]; }
   .segs .embtn[aria-pressed="true"] .n { @apply text-brand-deep; }
 
@@ -762,10 +852,15 @@
      still needs to see which nine. */
   .panel.shut > .body { display: none; }
   .pfold {
-    @apply inline-flex items-center justify-center w-[1.2rem] h-[1.2rem] mr-[.15rem] rounded
-           text-ink-3 bg-transparent border-0 cursor-pointer leading-none;
+    @apply inline-flex items-center justify-center w-[1.5rem] h-[1.5rem] -ml-[.3rem] rounded-md
+           text-ink-3 bg-transparent border-0 cursor-pointer leading-none p-0;
+    transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
   }
+  .pfold svg { @apply w-[.95rem] h-[.95rem]; transition: transform var(--ui-med) var(--ease-out); }
+  .panel.shut .pfold svg { transform: rotate(-90deg); }
   .pfold:hover { @apply text-brand-deep bg-brand-soft; }
+  /* An opened panel's body arrives rather than appearing. */
+  .panel:not(.shut) > .body { animation: fade-in var(--ui-med) var(--ease-out); }
 
   /* ---- Factor HR's own summary tiles ---- */
   /* Six small counts in a row, which is how their attendance summary and their
@@ -794,9 +889,12 @@
     .stiles:has(> :nth-child(5):last-child) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   }
   .stile {
-    @apply flex flex-col items-center gap-[.1rem] rounded-md border border-line bg-wash
-           px-[.25rem] py-[.55rem] text-center min-w-0;
+    @apply flex flex-col items-center gap-[.15rem] rounded-md border border-line bg-wash
+           px-[.25rem] py-[.65rem] text-center min-w-0;
+    transition: border-color var(--ui-fast) var(--ui-ease), background-color var(--ui-fast) var(--ui-ease);
   }
+  .stile:not(.off):hover { @apply border-brand-tint bg-brand-soft; }
+  .stile .sico .icon { @apply w-[1.1rem] h-[1.1rem] text-brand mb-[.15rem]; }
   .stile b { @apply font-display text-sub font-bold tabular-nums leading-none text-ink; }
   .stile .sico { @apply text-read leading-none; }
   /* Wrapping rather than truncating: "Salary Not Proceed" truncated is "Salary
@@ -814,12 +912,20 @@
   /* ---- their Quick Links and Quick Reports ---- */
   /* Two columns of plain links. `.links` next door is the same idea and is
      already spoken for by Settings, where the rows are labelled pairs. */
-  .quicklist {
-    @apply grid gap-x-[.9rem] gap-y-[.3rem] m-0 p-0 list-none text-read;
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  .quicklist { @apply flex flex-col m-0 p-0 list-none text-read; }
+  .quicklist li + li { @apply border-t border-rule; }
+  .quicklist a {
+    @apply flex items-center gap-[.5rem] px-[.5rem] py-[.5rem] -mx-[.5rem] rounded-md text-ink no-underline;
+    transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
   }
-  .quicklist a { @apply text-accent no-underline; }
-  .quicklist a:hover { @apply underline; }
+  .quicklist a span { @apply flex-1 min-w-0 truncate; }
+  .quicklist a .icon {
+    @apply w-[1rem] h-[1rem] shrink-0 text-ink-3;
+    transition: transform var(--ui-med) var(--ease-out), color var(--ui-fast) var(--ui-ease);
+  }
+  .quicklist a:hover { @apply bg-brand-soft text-brand-deep; }
+  .quicklist a:hover .icon { @apply text-brand; transform: translateX(3px); }
+  .quicklist .gone { @apply block py-[.5rem]; }
   /* A link of theirs with nowhere to go here. Struck through rather than
      dropped: a row quietly missing from a list somebody is comparing against
      theirs is the one gap this page exists to make visible. */
@@ -970,7 +1076,12 @@
   .row   { @apply grid gap-y-[.1rem] gap-x-[.7rem] items-center text-read; grid-template-columns: 1fr auto; }
   .row .val { @apply font-mono text-fine text-ink-2 tabular-nums; }
   .track { @apply h-[7px] rounded-full overflow-hidden; grid-column: 1/-1; background: rgb(var(--track)); }
-  .track i { @apply block h-full rounded-full; background: linear-gradient(90deg, rgb(var(--brand)), rgb(var(--brand-dark))); }
+  .track i {
+    @apply block h-full rounded-full;
+    background: linear-gradient(90deg, rgb(var(--brand)), rgb(var(--brand-dark)));
+    transform-origin: left;
+    animation: grow-x .8s var(--ease-out) both;
+  }
 
   .scroll {
     @apply overflow-x-auto border border-line rounded-lg bg-card;
@@ -989,7 +1100,7 @@
      a row a reader loses their place in. This is about 2.35rem a row. */
   th, td { @apply text-left px-[.85rem] py-[.6rem] border-b border-rule whitespace-nowrap; }
   thead th {
-    @apply sticky top-0 bg-wash font-body text-mini text-ink-2 font-semibold z-[1]
+    @apply sticky top-0 bg-wash font-body text-mini text-ink-3 font-semibold z-[1]
            border-b border-line;
   }
   tbody tr:last-child td { @apply border-b-0; }
@@ -1011,7 +1122,7 @@
 
   .empty {
     @apply px-[1rem] py-[1.6rem] text-center text-ink-2 text-read bg-wash
-           border border-rule rounded-md;
+           border border-dashed border-line-2 rounded-md;
   }
   .empty b { @apply block font-display text-norm text-ink mb-[.2rem]; }
 
@@ -1067,9 +1178,12 @@
     @apply text-read font-medium px-[.8rem] py-[.4rem] border border-line-2 rounded
            bg-card text-ink cursor-pointer inline-flex items-center justify-center gap-[.4rem];
     min-height: 2.3rem;
+    border-radius: 9px;
     box-shadow: 0 1px 2px rgb(var(--char) / .05);
-    transition: background-color var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
+    transition: background-color var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease),
+                color var(--ui-fast) var(--ui-ease), box-shadow var(--ui-fast) var(--ui-ease);
   }
+  .embtn .icon { @apply w-[1rem] h-[1rem] shrink-0; }
   /* A neutral hover. Orange under the pointer on every button in the app
      made a toolbar of six look like six things demanding attention. */
   .embtn:hover:not([disabled]) { @apply border-line-ctl text-ink bg-wash; }
@@ -1143,8 +1257,13 @@
   .empdrop { @apply relative inline-flex; }
   .empdrop .cx { @apply text-micro text-ink-3 leading-none; }
   .emmenu {
-    @apply absolute left-0 z-20 min-w-[10rem] bg-card border border-line-2 rounded-md p-[.3rem] flex flex-col shadow-pop;
-    top: calc(100% + .35rem);
+    @apply absolute left-0 z-20 min-w-[10rem] bg-card border border-line-2 p-[.3rem] flex flex-col shadow-pop;
+    top: calc(100% + .4rem);
+    border-radius: 12px;
+    /* Runs every time the menu is shown: `hidden` takes it out of the box
+       tree, and an element coming back into it starts its animation over. */
+    animation: pop-in .18s var(--ease-out);
+    transform-origin: top left;
   }
   .emmenu[hidden] { @apply hidden; }
   /* Anchors as well as buttons: the Generate list's two scheduling items open
@@ -1166,7 +1285,7 @@
 
   /* The export list hangs off the right-hand edge of the form, so it opens
      leftwards — anchored left it would run off the page on a narrow screen. */
-  .emmenu.end { left: auto; right: 0; }
+  .emmenu.end { left: auto; right: 0; transform-origin: top right; }
 
   /* components/EmpPick.jsx — a searchable employee box on the report forms.
      The list is an `.emmenu`, capped in height because a search that matches
@@ -1248,6 +1367,17 @@
   .ecard:hover .ename .go { @apply text-brand; }
   .estat { @apply flex items-center gap-[.3rem] text-mini text-ink-2 mt-[.2rem] mb-[.4rem]; }
   .eline { @apply flex items-center gap-[.5rem] text-fine text-accent py-[.1rem]; }
+  /* A card for somebody not Active: the name and the status, dimmed. */
+  .ecard.ecard-off { @apply bg-wash shadow-none; }
+  .ecard.ecard-off .ava { @apply opacity-60 grayscale; }
+  .ecard .eoff { @apply text-fine text-ink-3 py-[.1rem]; }
+  .ecard .eneeds { @apply ml-[.4rem] px-[.45rem] py-[.05rem] rounded-full text-tiny font-semibold bg-part-wash text-part; }
+  .empneeds {
+    @apply flex flex-wrap items-center justify-between gap-[.6rem] px-[.9rem] py-[.6rem] rounded-md
+           bg-part-wash border border-part/40 text-read text-ink;
+  }
+  .empneeds.on { @apply border-part; }
+  tr.emp-off > td { @apply text-ink-3; }
   .eline svg { @apply w-[14px] h-[14px] stroke-ink-3 fill-none; flex: 0 0 14px; stroke-width: 1.6; }
   .eline span { @apply overflow-hidden text-ellipsis whitespace-nowrap; }
   .eline.off { @apply text-ink-3; }
@@ -1691,6 +1821,55 @@
   .onbcard > .top .who b { @apply font-display text-read text-ink; }
   .onbcard > .top .who .sub { @apply text-fine text-ink-3; }
   .onbcard > .top .acts { @apply ml-auto flex gap-[.4rem] items-center; }
+
+  /* ---- Recruitment (features/employees/Recruitment.jsx) -------------------
+     The criteria are a grid that folds to one column at phone width, and the
+     score is a number with a short bar beside it: the bar is what a ranked
+     list is scanned by, the number is what is compared. */
+  .recruit .rnew input, .recruit .onbbar select {
+    @apply text-read px-[.6rem] py-[.35rem] border border-line-ctl rounded bg-card text-ink;
+    min-height: 2rem;
+  }
+  .recruit .onbbar select { max-width: min(26rem, 100%); }
+  .rcrit { @apply px-[.9rem] py-[.7rem] border-b border-line; }
+  .rcrit h4 { @apply font-display text-read font-bold text-ink mb-[.5rem]; }
+  /* `rcgrid`, not `rgrid`: the attendance register's table is `table.rgrid`,
+     and a bare `.rgrid` here made that table a CSS grid (14 October 2026). */
+  .rcgrid { @apply grid gap-[.6rem]; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+  .rcgrid label { @apply flex flex-col gap-[.25rem] text-fine text-ink-2; }
+  .rcgrid input {
+    @apply text-read px-[.6rem] py-[.4rem] border border-line-ctl rounded bg-card text-ink;
+    min-height: 2.1rem;
+  }
+  .rcgrid .racts { @apply flex items-end; }
+  .rwarn { @apply text-read text-ink-2; }
+  .rwarn code { @apply font-mono text-fine; }
+  .rbatch { @apply border-b border-line; }
+  .rbatch td input, .rbatch td select {
+    @apply text-fine px-[.45rem] py-[.25rem] border border-line-ctl rounded bg-card text-ink w-full;
+    min-width: 7.5rem;
+  }
+  .rfile { @apply text-fine text-ink-2; max-width: 9rem; overflow-wrap: anywhere; }
+  .rbatch td { vertical-align: top; }
+  .rerr { @apply text-mini text-bad mt-[.2rem]; max-width: 16rem; }
+  .rsub { @apply text-mini text-ink-3; }
+  .rscore { @apply inline-flex items-center gap-[.4rem] whitespace-nowrap; }
+  .rscore i { @apply block w-[4.5rem] h-[6px] rounded-full bg-rule overflow-hidden; }
+  .rscore i b { @apply block h-full rounded-full bg-ink-3; }
+  .rscore.hi i b { @apply bg-live; }
+  .rscore.mid i b { @apply bg-part; }
+  .rscore.lo i b { @apply bg-bad; }
+  .rscore .v { @apply font-mono tabular-nums font-bold text-ink; }
+  .rscore .of { @apply font-mono text-mini text-ink-3; }
+  .rscore.none { @apply text-fine text-ink-3; }
+  .rwhy { @apply mt-[.25rem] flex flex-col gap-[.1rem]; }
+  .rwhy li { @apply text-mini text-ink-2; }
+  .rdel { @apply whitespace-nowrap; }
+  .rdel .embtn + .embtn { @apply ml-[.3rem]; }
+  .rask { @apply text-fine font-semibold text-bad mr-[.4rem]; }
+  .rseat { @apply text-fine text-ink-2 mb-[.6rem]; }
+  .recruit .rcrit { @apply px-0; }
+  .recruit .onbbar { @apply px-0; }
   /* Their round grey avatar. Bigger than the letters register's and grey rather
      than brand-tinted, because a candidate is not an employee yet and the two
      lists sit one click apart. */
@@ -2494,7 +2673,7 @@
   /* The page number is the one blue thing in the group on their screen, and it
      is blue because it is the only part of it you can type into. */
   .lettab .fhpage input {
-    @apply w-[2.2rem] border-0 bg-transparent text-read text-brand-dark font-semibold px-0;
+    @apply w-[2.2rem] border-0 bg-transparent text-read text-accent font-semibold px-0;
   }
   .lettab .fhpage input:focus { box-shadow: none; }
 
@@ -2557,7 +2736,7 @@
      presses to get out of a form is the wrong thing to have said. */
   .afbar .embtn[data-act="new"] svg { @apply text-live; }
   .afbar .embtn[data-act="delete"] svg { @apply text-bad; }
-  .afbar .embtn[data-act="edit"] svg { @apply text-brand-dark; }
+  .afbar .embtn[data-act="edit"] svg { @apply text-accent; }
   .afbar .embtn[data-act="close"] svg { @apply text-ink-2; }
   /* Save is the only control on this bar that writes, so it is the only one
      that is a filled button rather than a lit outline. Cancel beside it stays
@@ -2757,7 +2936,7 @@
      button — the native control cannot be styled, and a button that opens a
      picker has to *be* the input or it stops working from the keyboard. */
   .bulkbrowse {
-    @apply inline-flex items-center justify-center shrink-0 text-read text-brand-dark
+    @apply inline-flex items-center justify-center shrink-0 text-read text-accent
            bg-card border border-brand rounded px-[.9rem] py-[.4rem] cursor-pointer;
     min-height: 2.1rem;
   }
@@ -3001,7 +3180,7 @@
   .asgscreen .asgbar .find { flex: 1 1 clamp(180px, 26vw, 340px); }
   /* Same outlined blue as Salary Master's, because it is the same button on
      their bar — the one control on it meant to be found by colour. */
-  .asgscreen .asgbar .list { @apply ml-auto border-brand text-brand-dark px-[.7rem]; }
+  .asgscreen .asgbar .list { @apply ml-auto border-brand text-accent px-[.7rem]; }
   .asgscreen .asgbar .list:hover:not([disabled]) { @apply border-brand-dark text-white bg-brand-dark; }
 
   /* Their ASSETS table. The two columns with nothing behind them are drawn like
@@ -3204,6 +3383,8 @@
   .modal {
     @apply fixed inset-0 flex items-start justify-center px-[1rem] z-50;
     background: rgb(var(--char) / .48);
+    backdrop-filter: blur(3px);
+    animation: fade-in .2s var(--ui-ease);
     padding-top: 5vh; padding-bottom: 5vh;
     /* A last resort rather than the mechanism: the box below is capped at 90vh
        and the padding either side is 5vh, so this has nothing to scroll by
@@ -3215,6 +3396,7 @@
   .modal .box {
     @apply bg-card border border-line rounded-lg shadow-modal flex flex-col overflow-hidden;
     width: min(560px, 100%);
+    animation: pop-in var(--ui-med) var(--ease-out);
     /* 5vh of padding above and below, so the box gets the rest. Without this a
        dialog is as tall as its content and the bottom of a long form — which is
        where its buttons are — is off the screen and unreachable. */
@@ -3241,18 +3423,39 @@
   .modal .foot { @apply px-[1rem] py-[.7rem] border-t border-line flex flex-wrap gap-[.5rem] items-center; }
 
   .btn {
-    @apply font-body text-read font-semibold px-[1rem] py-[.5rem] rounded border border-transparent
-           text-white cursor-pointer inline-flex items-center justify-center gap-[.4rem] shadow-raise;
+    @apply font-body text-read font-semibold px-[1.05rem] py-[.5rem] border border-transparent
+           text-white cursor-pointer inline-flex items-center justify-center gap-[.45rem] shadow-raise no-underline;
     min-height: 2.35rem;
-    transition: background-color var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease), box-shadow var(--ui-fast) var(--ui-ease);
+    border-radius: 9px;
+    transition: background-color var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease),
+                box-shadow var(--ui-fast) var(--ui-ease), transform var(--ui-fast) var(--ease-out),
+                filter var(--ui-fast) var(--ui-ease);
   }
+  .btn .icon { @apply w-[1rem] h-[1rem] shrink-0; transition: transform var(--ui-med) var(--ease-out); }
+  .btn:hover:not([disabled]) .icon:last-child { transform: translateX(2px); }
+  .btn.wide { @apply w-full; }
   .btn:active:not([disabled]) { @apply shadow-none; }
   .btn.go  { @apply bg-live-dark; }
-  .btn.tpl { background: linear-gradient(180deg, rgb(var(--brand)), rgb(var(--brand-dark))); }
+  /* A flat fill since 6 October 2026. The gradient ran from `brand` to
+     `brand-dark`, which on dark is a light indigo to a deep one — white text
+     on its top half failed AA, and a gradient is the one button finish that
+     cannot be checked by `npm run contrast`. `brand-dark` is the step white
+     text is checked on, in both modes. */
+  .btn.tpl {
+    @apply bg-brand-dark;
+    /* A hairline of light along the top edge — the one thing that makes a
+       flat fill read as a raised button rather than as a coloured box. */
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .14), 0 1px 2px rgb(var(--brand-dark) / .3),
+                0 4px 12px -4px rgb(var(--brand-dark) / .45);
+  }
   .btn.imp { @apply bg-char; }
   .btn.go:hover  { filter: brightness(1.12); }
-  .btn.tpl:hover { background: linear-gradient(180deg, rgb(var(--brand-dark)), rgb(var(--brand-deep))); }
-  .btn:hover:not([disabled]) { @apply shadow-lift; }
+  .btn.tpl:hover { filter: brightness(1.12); }
+  .btn:hover:not([disabled]) { @apply shadow-lift; transform: translateY(-1px); }
+  .btn.tpl:hover:not([disabled]) {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .14), 0 2px 4px rgb(var(--brand-dark) / .3),
+                0 10px 22px -6px rgb(var(--brand-dark) / .55);
+  }
   .btn.imp:hover { @apply bg-nav-2; }
   /* The caret half of a split button: the same fill, half the padding. */
   .btn.split { @apply px-[.5rem]; }
@@ -3499,7 +3702,7 @@
            border-b-2 border-b-transparent px-[.1rem] py-[.5rem] text-ink-3 cursor-pointer;
     font: inherit;
   }
-  .iotab[aria-selected="true"] { @apply text-brand-dark border-b-brand font-semibold; }
+  .iotab[aria-selected="true"] { @apply text-accent border-b-brand font-semibold; }
   .iobody { @apply px-[.9rem] pt-[.9rem] pb-[1rem]; }
   .iorow  { @apply flex flex-wrap gap-y-[.8rem] gap-x-[1.5rem] items-end mb-[.9rem]; }
   .iorow:last-child { @apply mb-0; }
@@ -3529,7 +3732,7 @@
            font-body text-tiny text-ink-3;
   }
   .iofun svg { @apply w-[15px] h-[15px] stroke-current fill-none; stroke-width: 1.6; stroke-linejoin: round; }
-  .iofun:hover, .iofun[aria-expanded="true"] { @apply text-brand-dark; }
+  .iofun:hover, .iofun[aria-expanded="true"] { @apply text-accent; }
 
   .nopend { @apply px-[.9rem] py-[1.1rem] text-ink-2 text-norm bg-wash border border-line border-t-0 rounded-b-md; }
 
@@ -3602,15 +3805,17 @@
   .lvbal { @apply flex flex-wrap gap-[.6rem]; }
   .lvbal > .muted { @apply text-read text-ink-2; }
   .lvbal.col { @apply flex-col items-start bg-card border border-line rounded-md px-[.8rem] py-[.7rem]; }
+  /* What the automatic leave rules could not do for this person — one line each. */
+  .lvbal > .lvrules { @apply flex flex-col gap-[.15rem] basis-full; }
   .lvbalrow { @apply flex flex-wrap items-baseline gap-x-[.5rem] gap-y-[.1rem] bg-card border border-line
                      rounded-md px-[.8rem] py-[.55rem] text-read; }
-  .lvbalrow .big { @apply font-display font-semibold text-fig leading-none text-brand-dark tabular-nums; }
+  .lvbalrow .big { @apply font-display font-semibold text-fig leading-none text-accent tabular-nums; }
   .lvbalrow .muted { @apply text-fine text-ink-3; }
   .lvf .hint.warn { @apply text-bad; }
   .lvpair { @apply grid gap-[1rem]; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
   .lvcal { @apply bg-card border border-line rounded-md p-[.7rem] flex flex-col gap-[.7rem]; }
   .lvcalbar { @apply flex flex-wrap items-center gap-[.5rem]; }
-  .lvcalbar b { @apply font-display font-semibold text-fig leading-none text-brand-dark; }
+  .lvcalbar b { @apply font-display font-semibold text-fig leading-none text-accent; }
   .lvcalbar .who { @apply flex flex-col gap-[.3rem] min-w-0; }
   .lvcalbar .who small { @apply text-fine text-ink-2 truncate; }
   .lvcalbar .nav { @apply ml-auto flex gap-[.4rem]; }
@@ -3618,7 +3823,7 @@
      2026. Worth copying rather than tidying: a filled pair of chevrons sitting
      a few centimetres from a filled Submit puts two primary actions on one
      screen, and only one of them is what somebody came here to press. */
-  .lvcalbar .embtn      { @apply border-brand-tint text-brand-dark px-[.7rem] py-[.3rem]; }
+  .lvcalbar .embtn      { @apply border-brand-tint text-accent px-[.7rem] py-[.3rem]; }
   .lvcalbar .embtn.step { @apply border-brand px-[.8rem] text-sub leading-none; }
 
   /* Ruled on all four sides, as their grid is. The top and left rules come from
@@ -3660,6 +3865,7 @@
                font-sans text-mini font-semibold text-ink-2 leading-none; }
   .lvdot.present { background: #3BB273; }
   .lvdot.absent  { background: #EF6C6C; }
+  .lvdot.autocl  { background: #4FA3E0; }
   .lvdot.weekoff { background: #9A96A6; }
   .lvdot.unappr  { background: #F2D24B; }
   .lvdot.partial { background: #F0932B; }
@@ -3691,7 +3897,7 @@
   /* The month's leave arriving, on the 1st: a small tag on the right, under the
      day number, so it never sits where the state letter or the punches go. */
   .lvearn { @apply absolute right-[.4rem] bottom-[.25rem] font-sans text-mini font-semibold
-                   text-brand-dark leading-none; }
+                   text-accent leading-none; }
   .lvmonth { @apply flex flex-wrap items-baseline gap-x-[1rem] gap-y-[.2rem] text-fine text-ink-2
                     bg-brand-soft rounded px-[.7rem] py-[.45rem]; }
   .lvmonth b { @apply text-ink tabular-nums; }
@@ -3881,7 +4087,7 @@
      almost but not quite the brand reads as a mistake rather than an emphasis.
      So it is the brand ramp, and the outline is what sets it apart on a bar of
      grey-edged buttons. */
-  .salbar .list { @apply ml-auto border-brand text-brand-dark px-[.7rem]; }
+  .salbar .list { @apply ml-auto border-brand text-accent px-[.7rem]; }
   .salbar .list:hover:not([disabled]) { @apply border-brand-dark text-white bg-brand-dark; }
 
   /* Their empty state carries a washed-out drawing. Kept, and kept quiet: it is
@@ -4079,7 +4285,7 @@
   /* The way back. It sits where the subtab strip would be if this page had not
      taken it, so the eye finds it in the place it already looks. */
   .srback { @apply flex flex-wrap gap-y-[.3rem] gap-x-[.7rem] items-center; }
-  .srback .embtn { @apply gap-[.3rem] border-brand text-brand-dark px-[.7rem] font-semibold; }
+  .srback .embtn { @apply gap-[.3rem] border-brand text-accent px-[.7rem] font-semibold; }
   .srback .embtn:hover { @apply bg-brand-dark border-brand-dark text-white; }
   .srback .muted { @apply text-fine; }
 
@@ -4146,7 +4352,7 @@
   .wizsteps li.ok::before, .wizsteps li.ok::after { @apply border-live; }
 
   .wizdot {
-    @apply w-[1.65rem] h-[1.65rem] rounded-full border-2 border-brand bg-card text-brand-dark
+    @apply w-[1.65rem] h-[1.65rem] rounded-full border-2 border-brand bg-card text-accent
            font-mono text-mini font-semibold cursor-pointer inline-flex items-center justify-center p-0;
     transition: background-color var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
   }
@@ -4366,7 +4572,7 @@
     @apply w-full flex items-center gap-[.3rem] bg-transparent border-0 cursor-pointer
            px-[.6rem] py-[.5rem] font-body text-tiny text-ink-2 text-left;
   }
-  table.eltab .hd:hover { @apply text-brand-dark; }
+  table.eltab .hd:hover { @apply text-accent; }
   table.eltab .hd:disabled { @apply cursor-default text-ink-3; }
   table.eltab th.empty .hd { @apply italic; }
   .srt { @apply shrink-0 fill-ink-3; }
@@ -4493,7 +4699,7 @@
   .srplan li.warn { @apply text-bad; }
   .srplan li.warn::before { @apply text-bad; content: "!"; }
   .srplan code { @apply font-mono text-mini bg-wash px-[.2rem] rounded; }
-  .srplan .lk { @apply font-mono text-mini text-brand-dark underline underline-offset-2; }
+  .srplan .lk { @apply font-mono text-mini text-accent underline underline-offset-2; }
   .srplan .lk:hover { @apply text-brand-deep; }
 
   /* The site's own words, wrapped and scrollable. A validation from hrms can be
@@ -4660,7 +4866,7 @@
     @apply bg-transparent border-0 border-b-2 border-b-transparent cursor-pointer font-body
            text-tiny text-ink-3 px-[.1rem] py-[.5rem];
   }
-  .ddatabs button[aria-selected="true"] { @apply text-brand-dark border-b-brand; }
+  .ddatabs button[aria-selected="true"] { @apply text-accent border-b-brand; }
   /* The Salary Register pins refresh and Generate to the tab row, where every
      other report of theirs carries them on the bar below. So the row is a
      wrapper and the tablist keeps its own border and its own type — which must
@@ -4757,7 +4963,22 @@
   .prowho  { @apply min-w-0 flex-1 flex flex-col gap-[.5rem]; }
   .proname { @apply flex flex-wrap gap-x-[.7rem] gap-y-[.4rem] items-center; }
   .proname b { @apply font-display text-sub font-bold; }
-  .proacts { @apply ml-auto flex gap-[.3rem]; }
+  .proacts { @apply ml-auto flex flex-wrap gap-[.3rem]; }
+  /* Deactivate's "are you sure", the two buttons held together so a wrap on a
+     narrow header cannot put Cancel on a line of its own. */
+  .prodeact { @apply inline-flex gap-[.3rem]; }
+  /* Somebody who is not Active: the header alone, quieter than a live one. */
+  .prohead.prooff { @apply bg-wash; }
+  .prohead.prooff .ava { @apply opacity-60 grayscale; }
+  .prooffnote { @apply text-read text-ink-2 max-w-[60ch]; }
+  /* A record made from a fingerprint punch: amber, because it is work for HR
+     rather than something wrong. */
+  .proneeds {
+    @apply flex flex-wrap items-center justify-between gap-[.6rem] px-[.9rem] py-[.7rem] rounded-md
+           bg-part-wash border border-part/40 text-read text-ink;
+  }
+  .proneeds > div { @apply min-w-0; flex: 1 1 22rem; }
+  .proneeds b { @apply font-display; }
   .prochips { @apply flex flex-wrap gap-x-[.9rem] gap-y-[.3rem] items-center text-mini text-ink-2; }
   .prostat { @apply inline-flex items-center gap-[.3rem] font-semibold text-ink; }
   .prochip { @apply inline-flex items-center gap-[.3rem]; }
@@ -4874,7 +5095,7 @@
        the wrong order while one is passing the other. */
     top: calc(var(--topbar-h, 3.5rem) + .4rem);
   }
-  .probar > b { @apply font-display text-norm text-brand-dark; }
+  .probar > b { @apply font-display text-norm text-accent; }
   .probar .right { @apply ml-auto flex gap-[.5rem]; }
   .probar.done { @apply border-live/40; }
   .pecount { @apply text-ink-3; }
@@ -4900,7 +5121,7 @@
     @apply inline-block w-[.4rem] h-[.4rem] rounded-full ml-[.35rem] align-middle;
     background: rgb(var(--brand-dark));
   }
-  .pefield.changed > .lab { @apply text-brand-dark; }
+  .pefield.changed > .lab { @apply text-accent; }
   .pefield.changed input, .pefield.changed select, .pefield.changed textarea { @apply border-brand-tint; }
   .pefield .hint .fn { @apply font-mono text-micro text-ink-3; }
   .pefield .onoff { height: auto; }
@@ -5032,7 +5253,7 @@
      it, which is worth copying: it is the one control on the rail that undoes
      every other control on the rail. */
   .btreset { @apply px-[.8rem] py-[.7rem] border-t border-line; }
-  .btreset .embtn { @apply w-full justify-center border-brand text-brand-dark; }
+  .btreset .embtn { @apply w-full justify-center border-brand text-accent; }
   .btreset .embtn:hover { @apply bg-brand-dark border-brand-dark text-white; }
 
   .btmain { @apply bg-card border border-line rounded-md overflow-hidden min-w-0 shadow-raise; }
@@ -5177,6 +5398,12 @@
   .paypage .fld > .lab, .paypage .flds .lab { @apply text-tiny font-semibold text-ink-3; }
   .paypage .fldrow { @apply flex gap-[.4rem] items-center; }
   .paypage .fldrow > input { flex: 1 1 8rem; }
+  /* The upload on Salary Setup: a file box beside the button that gives the blank list. */
+  .paypage input[type="file"] { @apply text-fine py-[.3rem]; }
+  .paypage .suup { @apply items-end; }
+  .sulist { @apply mt-[.4rem] mb-[.4rem] pl-[1.1rem] list-disc text-fine; }
+  .suprog { @apply flex flex-col gap-[.3rem] my-[.5rem]; }
+  .suprog progress { @apply w-full h-[.55rem]; }
 
   /* The button that does the step, with a rule above it: the end of a form. */
   .paypage .paygo { @apply pt-[.8rem] mt-[.2rem] border-t border-rule; }
@@ -5198,6 +5425,11 @@
   }
   .susetup .sufield { @apply m-0 border border-line rounded-md bg-wash px-[.9rem] pt-[.3rem] pb-[.8rem] min-w-0; }
   .susetup .sufield > legend { @apply px-[.4rem] text-fine; }
+  /* Increments: which way a salary went — up, down — said in words as well as
+     colour, so it reads the same to somebody who cannot tell the two apart. */
+  .susetup .way.up { @apply text-live-dark font-semibold; }
+  .susetup .way.down { @apply text-bad-deep font-semibold; }
+  .susetup small.warn { @apply text-bad-deep; }
   .susetup .sufield.earnings > legend b { @apply text-live; }
   .susetup .sufield.deductions > legend b { @apply text-bad; }
   .susetup .suline {
@@ -5241,6 +5473,472 @@
     height: 34rem; background: #fff;
   }
 }
+/* ===========================================================================
+   The interface of 6 October 2026: navigation, fields, the dashboard, motion.
+
+   **Outside `@layer` on purpose, and before the media queries below.**
+   Tailwind moves everything inside `@layer components` up to where
+   `@tailwind components` sits, so a rule written here comes after every
+   component rule and after the utilities — which is what the field rules need
+   to win over forty screens that each style their own inputs. And because the
+   responsive blocks are also outside a layer and come *after* this one, a
+   phone or a tablet still gets the last word on equal specificity.
+   =========================================================================== */
+
+/* ------------------------------------------------- the rail's page list ---- */
+/* The open module's pages, under its link, on a guide line that runs down from
+   the module's icon. The current page lights its stretch of the line, so the
+   rail says where you are at both levels without a second strip of pills. */
+.navsub {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: .15rem .6rem .45rem 1.9rem;
+  padding-left: .7rem;
+  border-left: 1px solid rgb(var(--rail-fg) / .1);
+  animation: navsub-in var(--ui-med) var(--ease-out);
+}
+.navpage {
+  position: relative;
+  display: block;
+  padding: .36rem .6rem;
+  border-radius: 8px;
+  color: rgb(var(--rail-ink));
+  font-size: theme(fontSize.mini);
+  font-weight: 500;
+  line-height: 1.3;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease),
+              padding-left var(--ui-med) var(--ease-out);
+}
+.navpage:hover { color: rgb(var(--rail-fg)); background: rgb(var(--rail-fg) / .05); padding-left: .75rem; }
+.navpage[aria-current="page"] { color: rgb(var(--rail-on-ink)); background: rgb(var(--rail-on)); font-weight: 600; }
+.navpage[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: calc(-.7rem - 1px);
+  top: .4rem;
+  bottom: .4rem;
+  width: 2px;
+  border-radius: 2px;
+  background: rgb(var(--rail-mark));
+  animation: mark-in var(--ui-med) var(--ease-out) both;
+}
+.navpage:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
+/* A slim rail is icons only, so it has nowhere to put a page name — the strip
+   over the page carries them there, as it always did. */
+.shell[data-rail="slim"] .navsub { display: none; }
+
+/* With the rail open on a desktop, the pages are in the rail and the strip
+   would be the same list twice. Keyed on the width as well as the attribute:
+   below 901px `data-rail` is ignored (see the tablet block), and the strip is
+   the only list of pages there is. */
+@media (min-width: 901px) {
+  .shell:not([data-rail="slim"]) .subbar { display: none; }
+}
+
+/* ------------------------------------------------- the header's go-to ---- */
+.tbgo {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  min-height: 2.2rem;
+  padding: 0 .45rem 0 .6rem;
+  margin-right: .25rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 9px;
+  background: rgb(var(--wash));
+  color: rgb(var(--ink-3));
+  font-size: theme(fontSize.mini);
+  cursor: pointer;
+  transition: border-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease),
+              background-color var(--ui-fast) var(--ui-ease);
+}
+.tbgo svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.tbgo:hover { border-color: rgb(var(--line-ctl)); color: rgb(var(--ink)); background: rgb(var(--card)); }
+.tbgo .lab { white-space: nowrap; }
+kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: .05rem .35rem;
+  border: 1px solid rgb(var(--line-2));
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: rgb(var(--card));
+  color: rgb(var(--ink-3));
+  font-family: theme(fontFamily.body);
+  font-size: theme(fontSize.micro);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+/* The words come off before anything else does: the arrow and the shortcut
+   still say what the button is. */
+@media (max-width: 1600px) { .tbgo .lab { display: none; } }
+/* A tablet or a phone has no Ctrl key to press, so the hint goes and the
+   button is the arrow alone — the same size as the header's other icons. */
+@media (max-width: 900px) {
+  .tbgo { width: 2.2rem; padding: 0; margin-right: 0; justify-content: center; }
+  .tbgo kbd { display: none; }
+}
+
+/* ------------------------------------------------------- go to a page ---- */
+.goto {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 1rem 1rem;
+  background: rgb(var(--char) / .42);
+  backdrop-filter: blur(4px);
+  animation: fade-in .18s var(--ui-ease);
+}
+.gotobox {
+  display: flex;
+  flex-direction: column;
+  width: min(36rem, 100%);
+  max-height: 70vh;
+  overflow: hidden;
+  border: 1px solid rgb(var(--line));
+  border-radius: 16px;
+  background: rgb(var(--card));
+  box-shadow: var(--sh-modal);
+  animation: pop-in var(--ui-med) var(--ease-out);
+}
+.gotofind {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid rgb(var(--line));
+}
+.gotofind .icon { width: 1.2rem; height: 1.2rem; color: rgb(var(--ink-3)); flex-shrink: 0; }
+.gotofind input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: rgb(var(--ink));
+  font-size: theme(fontSize.sub);
+  outline: none;
+}
+.gotolist { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: .4rem; list-style: none; }
+.gotolist li[role="option"] {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .55rem .7rem;
+  border-radius: 10px;
+  color: rgb(var(--ink));
+  cursor: pointer;
+  font-size: theme(fontSize.read);
+}
+.gotolist li .icon { width: 1.05rem; height: 1.05rem; color: rgb(var(--ink-3)); flex-shrink: 0; }
+.gotolist .gl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gotolist li.top .gl { font-weight: 600; }
+.gotolist .gm { color: rgb(var(--ink-3)); font-size: theme(fontSize.mini); white-space: nowrap; }
+.gotolist .ge { opacity: 0; transform: translateX(-4px); transition: opacity var(--ui-fast), transform var(--ui-fast) var(--ease-out); }
+.gotolist li[aria-selected="true"] { background: rgb(var(--brand-soft)); color: rgb(var(--brand-deep)); }
+.gotolist li[aria-selected="true"] .icon, .gotolist li[aria-selected="true"] .gm { color: rgb(var(--brand-deep)); }
+.gotolist li[aria-selected="true"] .ge { opacity: 1; transform: none; }
+.gotonone { padding: 1.4rem 1rem; text-align: center; color: rgb(var(--ink-3)); }
+.gotofoot {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .55rem 1rem;
+  border-top: 1px solid rgb(var(--line));
+  background: rgb(var(--wash));
+  color: rgb(var(--ink-3));
+  font-size: theme(fontSize.tiny);
+}
+.gotofoot span { display: inline-flex; align-items: center; gap: .25rem; }
+.gotofoot .grow { flex: 1; }
+
+/* ------------------------------------------------------- the dashboard ---- */
+.dash { display: flex; flex-direction: column; gap: 1.1rem; }
+
+.dhero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  padding: 1.5rem 1.6rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 18px;
+  /* The brand, faintly, behind the greeting — the one place on the page that
+     is about the place rather than about a number. */
+  background:
+    radial-gradient(40rem 16rem at 0% 0%, rgb(var(--brand) / .14), transparent 70%),
+    radial-gradient(30rem 14rem at 100% 100%, rgb(var(--chart-2) / .10), transparent 70%),
+    rgb(var(--card));
+  box-shadow: var(--sh-raise);
+  animation: rise .5s var(--ease-out) both;
+}
+.dhello { min-width: 0; }
+.dgreet { margin: 0 0 .2rem; color: rgb(var(--brand)); font-size: theme(fontSize.read); font-weight: 600; }
+.dhero h1 { font-size: theme(fontSize.mega); font-weight: 700; line-height: 1.15; color: rgb(var(--ink)); letter-spacing: -.02em; }
+.dsub { margin: .4rem 0 0; color: rgb(var(--ink-2)); font-size: theme(fontSize.read); }
+.dsub b { color: rgb(var(--ink)); font-weight: 600; }
+.dheroacts { display: flex; flex-wrap: wrap; gap: .6rem; }
+.dheroacts .embtn, .dheroacts .btn { text-decoration: none; min-height: 2.5rem; }
+/* The count on Review approvals: a chip inside the button rather than a
+   badge hanging off it, so the button's edge stays a clean edge. */
+.pilln {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 .4rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / .22);
+  font-size: theme(fontSize.tiny);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.startbar .find { gap: .5rem; }
+.startbar .find .icon { width: 1rem; height: 1rem; color: rgb(var(--ink-3)); flex-shrink: 0; }
+
+/* Twelve columns, and each panel says how many it takes. `dense` lets a short
+   panel fill a hole left by a tall one; `stretch` makes the two panels of a
+   row the same height, which is most of what makes a grid of cards look
+   designed rather than poured. A panel folded shut opts out of the stretch —
+   a header standing in a tall empty box is not a folded panel. */
+.dgrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+  gap: 1rem;
+  align-items: stretch;
+}
+.dgrid > .panel { display: flex; flex-direction: column; }
+.dgrid > .panel > .body { flex: 1; }
+.dgrid > .panel.shut { align-self: start; }
+.span-4 { grid-column: span 4; }
+.span-6 { grid-column: span 6; }
+.span-8 { grid-column: span 8; }
+@media (max-width: 1100px) {
+  .span-4, .span-6, .span-8 { grid-column: span 6; }
+  .dgrid > .span-8 { grid-column: 1 / -1; }
+}
+@media (max-width: 720px) {
+  .dgrid > .panel { grid-column: 1 / -1; }
+  .dhero { padding: 1.15rem 1.1rem; }
+  .dhero h1 { font-size: theme(fontSize.title); }
+  .dheroacts { width: 100%; }
+  /* Side by side while each fits on one line, stacked when it would not —
+     "Today's attendance" broken over two lines reads as two buttons. */
+  .dheroacts > * { flex: 1 1 11rem; white-space: nowrap; }
+}
+
+/* Pending Approvals: two rows that are the queue's two doors. */
+.pend { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .2rem; }
+.pendrow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .75rem;
+  padding: .7rem .8rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 12px;
+  background: rgb(var(--wash));
+  color: rgb(var(--ink));
+  text-decoration: none;
+  transition: border-color var(--ui-fast) var(--ui-ease), background-color var(--ui-fast) var(--ui-ease),
+              transform var(--ui-med) var(--ease-out);
+}
+.pendrow:hover { border-color: rgb(var(--brand-tint)); background: rgb(var(--brand-soft)); transform: translateX(2px); }
+.pendrow .pi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 10px;
+  background: rgb(var(--brand) / .14);
+  color: rgb(var(--brand));
+}
+.pendrow.leave .pi { background: rgb(var(--chart-3) / .16); color: rgb(var(--chart-3)); }
+.pendrow .pi .icon { width: 1.1rem; height: 1.1rem; }
+.pendrow .pt { display: flex; flex-direction: column; min-width: 0; }
+.pendrow .pt b { font-size: theme(fontSize.read); font-weight: 600; }
+.pendrow .pt small { font-size: theme(fontSize.tiny); color: rgb(var(--ink-3)); }
+.pendrow strong {
+  font-family: theme(fontFamily.display);
+  font-size: theme(fontSize.fig);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.paysum { display: grid; grid-template-columns: auto 1fr; gap: 1.2rem; align-items: center; margin-bottom: .9rem; }
+.paysum .ctc { display: flex; flex-direction: column; padding: .8rem 1rem; border-radius: 12px; background: rgb(var(--wash)); border: 1px solid rgb(var(--line)); }
+.paysum .ctc .k { font-size: theme(fontSize.tiny); font-weight: 600; color: rgb(var(--ink-3)); }
+.paysum .ctc b { font-family: theme(fontFamily.display); font-size: theme(fontSize.hero); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.paysum .ctc .s { font-size: theme(fontSize.mini); color: rgb(var(--ink-2)); }
+@media (max-width: 720px) { .paysum { grid-template-columns: 1fr; } }
+.dfoot { margin: .7rem 0 0; font-size: theme(fontSize.mini); color: rgb(var(--ink-3)); }
+
+/* ------------------------------------------------------------- fields ---- */
+/* **Every input, select and text box in the app, drawn once.**
+
+   Forty screens each styled their own boxes, and they agreed on the border and
+   little else: some had a hover, some a focus ring, most a native select arrow
+   that is a different shape on every operating system. These rules are the
+   floor every one of them now stands on — the edge, the hover, the focus, the
+   arrow, the date picker, the file button, the tick boxes. A screen's own rule
+   still decides its size and spacing.
+
+   `:where()` keeps the base at zero specificity, so any screen that drew a box
+   deliberately — the borderless search inside the header's pill, a cell
+   editor in a grid — still wins on every property it sets. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"],
+                 [type="submit"], [type="button"], [type="reset"], [type="image"], [type="hidden"]),
+       select, textarea) {
+  border-radius: 8px;
+  transition: border-color var(--ui-fast) var(--ui-ease), box-shadow var(--ui-fast) var(--ui-ease),
+              background-color var(--ui-fast) var(--ui-ease);
+}
+/* The focus: the edge turns the brand and a soft halo of it spreads round
+   the box. A halo rather than the app's double ring, which is right for a
+   button and heavy on a form of twenty boxes — and a halo shows which box has
+   the caret from across the room. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"],
+                 [type="submit"], [type="button"], [type="reset"], [type="image"]),
+       select, textarea):focus-visible {
+  outline: none;
+  border-color: rgb(var(--brand));
+  box-shadow: 0 0 0 3px rgb(var(--brand) / .2);
+}
+/* A box that is part of a bigger control: the wrapper draws the edge and the
+   ring (`:focus-within`), so the box inside must draw neither. */
+.tbfind input, .gotofind input, .letfind input, .lvf .find input, .defilepick input {
+  box-shadow: none !important;
+}
+/* Typed into and refused by the browser's own check — after the person has
+   touched it, never on an empty form they have not started. */
+:where(input, select, textarea):user-invalid { border-color: rgb(var(--bad)); }
+
+/* **The select arrow, drawn here instead of by the operating system.** Two
+   small triangles from two gradients make a chevron that takes the theme's
+   ink — an SVG data URL cannot read a custom property, so it would be one grey
+   in both modes. `!important` on the padding because every screen's own rule
+   sets both sides at once, and the arrow needs the right-hand side clear. */
+select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgb(var(--ink-3)) 50%),
+    linear-gradient(135deg, rgb(var(--ink-3)) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.9rem !important;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+select:not([multiple]):not([size]):hover:not([disabled]) {
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgb(var(--ink)) 50%),
+    linear-gradient(135deg, rgb(var(--ink)) 50%, transparent 50%);
+}
+/* The options list is the browser's, and on Windows it ignores almost
+   everything — but it does take a background and a colour, which is what
+   keeps it from being a white list over a dark page. */
+select option { background: rgb(var(--card)); color: rgb(var(--ink)); }
+
+/* Tick boxes and radios stay the browser's own — a hand-drawn one loses the
+   keyboard and the screen reader for a look — and take the brand. */
+input[type="checkbox"], input[type="radio"], input[type="range"], progress {
+  accent-color: rgb(var(--brand-dark));
+}
+input[type="checkbox"], input[type="radio"] { cursor: pointer; }
+
+/* The calendar button inside a date box. */
+input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: .55;
+  border-radius: 5px;
+  padding: 2px;
+  transition: opacity var(--ui-fast) var(--ui-ease), background-color var(--ui-fast) var(--ui-ease);
+}
+input::-webkit-calendar-picker-indicator:hover { opacity: 1; background-color: rgb(var(--brand-soft)); }
+
+/* The file button: one of ours, not the grey bevel every OS draws. */
+input[type="file"] { cursor: pointer; font-size: theme(fontSize.read); color: rgb(var(--ink-2)); }
+input[type="file"]::file-selector-button {
+  margin-right: .75rem;
+  padding: .4rem .85rem;
+  border: 1px solid rgb(var(--line-2));
+  border-radius: 8px;
+  background: rgb(var(--wash));
+  color: rgb(var(--ink));
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease),
+              color var(--ui-fast) var(--ui-ease);
+}
+input[type="file"]::file-selector-button:hover {
+  background: rgb(var(--brand-soft));
+  border-color: rgb(var(--brand-tint));
+  color: rgb(var(--brand-deep));
+}
+
+/* A browser's saved-password fill paints the box pale yellow over a dark
+   form. The inset shadow is the one property autofill does not override. */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(var(--ink));
+  -webkit-box-shadow: 0 0 0 100px rgb(var(--card)) inset;
+  caret-color: rgb(var(--ink));
+}
+
+/* --------------------------------------------------- rows and the rest ---- */
+tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
+.railconn .dot.live { animation: beacon 2.4s var(--ui-ease) infinite; }
+
+/* Arrival, a beat apart. The headline cards and the dashboard's panels rise
+   in reading order rather than all at once, which is what makes a page that
+   loaded in one frame look like it was laid out rather than dropped. Capped
+   at twelve: a page that is still arriving a second later is a slow page. */
+.stats > .stat, .dgrid > .panel { animation: rise .5s var(--ease-out) both; }
+.stats > .stat:nth-child(2) { animation-delay: .04s; }
+.stats > .stat:nth-child(3) { animation-delay: .08s; }
+.stats > .stat:nth-child(4) { animation-delay: .12s; }
+.dgrid > .panel:nth-child(1)  { animation-delay: .10s; }
+.dgrid > .panel:nth-child(2)  { animation-delay: .14s; }
+.dgrid > .panel:nth-child(3)  { animation-delay: .18s; }
+.dgrid > .panel:nth-child(4)  { animation-delay: .22s; }
+.dgrid > .panel:nth-child(5)  { animation-delay: .26s; }
+.dgrid > .panel:nth-child(6)  { animation-delay: .30s; }
+.dgrid > .panel:nth-child(n+7) { animation-delay: .34s; }
+
+/* ----------------------------------------------------------- keyframes ---- */
+/* Every one of these is an arrival and ends where the element already is, so
+   the reduced-motion block at the foot of the file — which shortens each to a
+   hundredth of a millisecond — leaves every element exactly where it would
+   have been. Nothing here is required to read the page. */
+@keyframes rise     { from { opacity: 0; transform: translateY(8px); } }
+@keyframes fade-in  { from { opacity: 0; } }
+@keyframes pop-in   { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+@keyframes navsub-in { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes mark-in  { from { transform: scaleY(0); } }
+@keyframes grow-x   { from { transform: scaleX(0); } }
+@keyframes grow-y   { from { transform: scaleY(0); } }
+@keyframes arc-draw { from { stroke-dasharray: 0 100; } }
+@keyframes beacon {
+  0%, 100% { box-shadow: 0 0 0 3px rgb(var(--beacon-live) / .22); }
+  50%      { box-shadow: 0 0 0 6px rgb(var(--beacon-live) / 0); }
+}
+
 /* Payroll on a phone: every control full width and a thumb high, the
    explanations under the buttons rather than squeezed beside them, and the
    month picker across the header instead of hanging off its right edge. */
@@ -5396,6 +6094,12 @@
   .shell[data-drawer="open"] .brand { flex-direction: row; gap: .6rem; padding: 0 .75rem; }
   .shell[data-drawer="open"] .railtoggle { margin-left: auto; }
   .shell[data-drawer="open"] .railfoot { padding-left: .75rem; padding-right: .75rem; align-items: stretch; }
+  /* The open module's pages: none on the icon rail, where there is no room for
+     a name, and back in the drawer, where there is — so the drawer is the
+     whole menu at both levels, and the strip over the page is still there for
+     somebody who never opens it. */
+  .navsub { display: none; }
+  .shell[data-drawer="open"] .navsub { display: flex; }
 
   /* The scrim under the open rail. It is a button, so the way out is the same
      gesture on a touch screen as the Escape key is on a keyboard — see
@@ -5812,4 +6516,260 @@
     break-inside: avoid;
     box-shadow: none;
   }
+}
+
+/* ---------------------------------------------------------- hierarchy ---- */
+/* Employees → Hierarchy Chart: seven bands, top down, narrowing as they go so
+   the page reads as a ladder and not a list. A suggested placing is dashed —
+   the one visual difference between a grade on the record and a guess off the
+   designation, and it must stay visible in both palettes. */
+.hchart { display: flex; flex-direction: column; gap: 1rem; }
+.hcbar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
+.hctiers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.hctier {
+  --inset: calc(var(--tier, 0) * 1.2rem);
+  margin: 0 var(--inset);
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) 1fr;
+  gap: .75rem;
+  padding: .6rem .8rem;
+  border: 1px solid rgb(var(--line));
+  border-left: 4px solid rgb(var(--accent));
+  border-radius: .6rem;
+  background: rgb(var(--card));
+}
+.hclevel { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
+.hcrank { color: rgb(var(--ink-3)); font-size: theme(fontSize.tiny); }
+.hctitle { font-weight: 600; color: rgb(var(--ink)); }
+.hccount { margin-left: auto; font-variant-numeric: tabular-nums; }
+.hcpeople { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; }
+.hcperson {
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: .05rem;
+  padding: .3rem .55rem;
+  border: 1px solid rgb(var(--line-2));
+  border-radius: .5rem;
+  background: rgb(var(--page));
+  color: rgb(var(--ink));
+  font: inherit; text-align: left; cursor: pointer;
+}
+.hcperson:hover { border-color: rgb(var(--accent)); }
+.hcsuggest { border-style: dashed; background: rgb(var(--accent-wash)); }
+.hcname { font-weight: 600; font-size: theme(fontSize.sm); }
+.hcmeta { color: rgb(var(--ink-3)); font-size: theme(fontSize.tiny); }
+.hcnone { font-size: theme(fontSize.sm); align-self: center; }
+.hch3 { margin: 0 0 .3rem; font-size: theme(fontSize.read); font-weight: 600; color: rgb(var(--ink)); }
+.hcfloor .hcperson { background: transparent; }
+.hcfloorbox { padding: .6rem .8rem; border: 1px solid rgb(var(--line)); border-radius: .6rem; background: rgb(var(--card)); }
+.hcfloorbox p { margin: 0 0 .5rem; font-size: theme(fontSize.sm); }
+@media (max-width: 640px) {
+  .hctier { --inset: 0; grid-template-columns: 1fr; }
+}
+/* The group chart over the ladder: the head office node, a trunk down from it,
+   and one branch to each company. Drawn with borders rather than SVG so the
+   lines are the palette's `--line` in both modes and reflow with the nodes. */
+.hcgroup { display: flex; flex-direction: column; align-items: center; max-width: 72rem; margin: 0 auto; }
+.hcnode {
+  display: inline-flex; flex-direction: column; align-items: center; gap: .1rem;
+  padding: .55rem 1rem; min-width: 11rem;
+  border: 1px solid rgb(var(--line)); border-radius: .6rem;
+  background: rgb(var(--card)); color: rgb(var(--ink));
+  font: inherit; cursor: pointer; text-align: center;
+}
+.hcbranch .hcnode { min-width: 0; width: 100%; }
+.hcbranch .hcnode b { overflow-wrap: anywhere; }
+.hcnode:hover { border-color: rgb(var(--accent)); }
+.hcnode[aria-pressed="true"] { border-color: rgb(var(--accent)); box-shadow: inset 0 0 0 1px rgb(var(--accent)); background: rgb(var(--accent-wash)); }
+.hcnode b { font-weight: 600; }
+.hcnode .hcmeta { font-size: theme(fontSize.tiny); }
+.hchead { border-left: 4px solid rgb(var(--accent)); min-width: 14rem; }
+.hctrunk { width: 2px; height: 1.4rem; background: rgb(var(--line-2)); }
+/* One line, always: a wrapped row puts a company under another company,
+   which reads as ownership. The boxes share the width and a long name
+   breaks inside its box instead. */
+.hcbranches { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; flex-wrap: nowrap; width: 100%; }
+/* `stretch` so every box is as tall as the tallest, and the node centres its
+   text — a row of equal boxes reads as centred where one tall box did not. */
+.hcbranch { position: relative; display: flex; flex-direction: column; align-items: stretch; padding: 1.2rem .4rem 0; flex: 1 1 0; min-width: 0; max-width: 18rem; }
+.hcbranches { align-items: stretch; }
+.hcbranch .hcnode { flex: 1; justify-content: center; }
+/* The bar across the top of the row, and the drop to each node. The first
+   and last branch draw only half the bar, so the line starts and ends at a
+   node rather than running past it. */
+.hcbranch::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: rgb(var(--line-2)); }
+.hcbranch:first-child::before { left: 50%; }
+.hcbranch:last-child::before { right: 50%; }
+.hcbranch:only-child::before { display: none; }
+.hcbranch::after {
+  content: ""; position: absolute; top: 0; left: calc(50% - 1px); width: 2px; height: 1.2rem; background: rgb(var(--line-2));
+}
+.hcarrow { position: absolute; top: .75rem; left: calc(50% - .35rem); width: 0; height: 0;
+  border-left: .35rem solid transparent; border-right: .35rem solid transparent; border-top: .45rem solid rgb(var(--line-2)); }
+.hcpick { width: 100%; margin-top: 1rem; }
+.hcpick h2 { margin: 0 0 .6rem; font-size: theme(fontSize.read); font-weight: 600; color: rgb(var(--ink)); }
+@media (max-width: 640px) {
+  .hcbranches { flex-direction: column; align-items: stretch; }
+  .hcbranch { padding: .6rem 0 0; }
+  .hcbranch::before, .hcbranch::after, .hcarrow { display: none; }
+}
+/* One company's flow chart: a column of level boxes, centred, an arrow from
+   each to the next. The arrow is a line and a head drawn in `--line-2`, the
+   same stroke as the group chart's branches, so the two pages read as one. */
+.hcflow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.hcbox {
+  width: min(100%, 52rem);
+  border: 1px solid rgb(var(--line)); border-top: 4px solid rgb(var(--accent)); border-radius: .6rem;
+  background: rgb(var(--card)); padding: .6rem .8rem;
+}
+.hcbox .hclevel { margin-bottom: .45rem; }
+.hcboxrest { border-top-color: rgb(var(--line-2)); }
+.hcflowarrow { display: flex; flex-direction: column; align-items: center; height: 2rem; }
+.hcflowarrow::before { content: ""; flex: 1; width: 2px; background: rgb(var(--line-2)); }
+.hcflowarrow::after { content: ""; width: 0; height: 0; border-left: .4rem solid transparent; border-right: .4rem solid transparent; border-top: .5rem solid rgb(var(--line-2)); }
+.hcflowhead { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; width: 100%; margin-bottom: 1rem; }
+.hcflowhead h1 { margin: 0; font-size: theme(fontSize.read); font-weight: 600; color: rgb(var(--ink)); }
+/* The ID card on a company's chart: a badge on a lanyard — a coloured band
+   with the photo sitting half over it, the name, the job, the code, and the
+   department as the footer. A suggested placing keeps the dashed edge; the
+   lift on hover is a transform, so the reduced-motion block leaves the card
+   where it is. */
+.hcid {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: .15rem;
+  width: 11rem; padding: 0 .6rem; overflow: hidden;
+  border: 1px solid rgb(var(--line)); border-radius: .8rem;
+  background: rgb(var(--card)); color: rgb(var(--ink));
+  box-shadow: var(--sh-lift);
+  font: inherit; text-align: center; cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.hcid::before { content: ""; align-self: stretch; margin: 0 -.6rem; height: 2.4rem; background: rgb(var(--accent)); }
+.hcid:hover, .hcid:focus-visible { transform: translateY(-2px); border-color: rgb(var(--accent)); box-shadow: var(--sh-raise); outline: none; }
+.hcid.hcsuggest { border-style: dashed; border-color: rgb(var(--accent)); }
+.hcid.hcsuggest::before { background: rgb(var(--accent-wash)); }
+.hcidava { width: 4.2rem; height: 4.2rem; margin-top: -2.1rem; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: rgb(var(--wash)); color: rgb(var(--ink-2)); font-weight: 700; font-size: theme(fontSize.read);
+  border: 3px solid rgb(var(--card)); box-shadow: var(--sh-lift); margin-bottom: .35rem; }
+.hcidava img { width: 100%; height: 100%; object-fit: cover; }
+.hcidname { font-weight: 700; font-size: theme(fontSize.sm); line-height: 1.2; }
+.hcidjob { color: rgb(var(--ink-2)); font-size: theme(fontSize.tiny); line-height: 1.25; min-height: 2.5em; display: flex; align-items: center; }
+.hcidcode { color: rgb(var(--ink-3)); font-size: theme(fontSize.tiny); letter-spacing: .04em; }
+.hcidfoot {
+  align-self: stretch; margin: .55rem -.6rem 0; padding: .3rem .5rem;
+  background: rgb(var(--wash)); color: rgb(var(--ink-2)); border-top: 1px solid rgb(var(--line));
+  font-size: theme(fontSize.tiny); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* A level is a row of cards under a numbered pill; the arrow between rows is
+   the chart. */
+.hcrow { display: flex; flex-direction: column; align-items: center; gap: .6rem; width: 100%; }
+.hcrowlabel {
+  display: inline-flex; align-items: center; gap: .4rem; padding: .2rem .7rem .2rem .3rem;
+  border: 1px solid rgb(var(--line)); border-radius: 999px; background: rgb(var(--card));
+  font-size: theme(fontSize.tiny); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: rgb(var(--ink-2));
+}
+.hcrowlabel i { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: 50%;
+  background: rgb(var(--accent)); color: rgb(var(--card)); font-style: normal; font-size: theme(fontSize.tiny); }
+.hcrowcards { justify-content: center; gap: .8rem; }
+.hcflowarrow { height: 2.4rem; }
+.hcflowhead { align-items: center; }
+.hcflowhead h1 { font-size: theme(fontSize.mega); font-weight: 700; letter-spacing: -.01em; }
+.hcflowhead .hcsub { flex-basis: 100%; margin-top: -.5rem; color: rgb(var(--ink-2)); font-size: theme(fontSize.sm); }
+@media (max-width: 640px) {
+  .hcrowcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .hcid { width: auto; }
+  .hcflowhead h1 { font-size: theme(fontSize.read); }
+}
+/* A head-office seat nobody fills: the card's outline, dashed and quiet. */
+.hcid.hcvacant { cursor: default; border-style: dashed; box-shadow: none; background: transparent; }
+.hcid.hcvacant::before { background: rgb(var(--line)); }
+.hcid.hcvacant:hover { transform: none; border-color: rgb(var(--line)); }
+.hcid.hcvacant .hcidname { color: rgb(var(--ink-3)); font-weight: 600; }
+/* An open seat's way to its resumes (lib/vacancy.js): inside a vacant card,
+   and under the card of somebody serving notice, with what the record says. */
+.hcseatbtn { margin-top: .45rem; padding: .25rem .6rem; font-size: theme(fontSize.tiny); }
+.hcslot { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+.hcleave { font-size: theme(fontSize.tiny); font-weight: 600; color: rgb(var(--bad)); }
+.hcrowfit .hcslot { min-width: 0; }
+.hcrowfit .hcslot > .hcid { width: 100%; }
+/* The department heads are one level, so one line (HR, 10 October 2026): the
+   row shares the width between its cards instead of wrapping into a second
+   row, which would read as a level below. A phone has no width to share and
+   falls back to the two-column grid above. */
+.hcrowcards.hcrowfit { display: grid; grid-template-columns: repeat(var(--seats, 9), minmax(0, 1fr)); gap: .5rem; width: 100%; }
+.hcrowfit .hcid { width: auto; padding: 0 .35rem; }
+.hcrowfit .hcid::before { margin: 0 -.35rem; }
+.hcrowfit .hcidfoot { margin: .55rem -.35rem 0; padding: .3rem .2rem; letter-spacing: .02em; white-space: normal; overflow-wrap: anywhere; flex: 1; display: flex; align-items: center; justify-content: center; }
+.hcrowfit .hcidname { overflow-wrap: anywhere; }
+
+/* ---- The chart HR draws (DrawnChart.jsx, lib/orgchart.js) -------------------
+   Cards at fixed size, placed absolutely; the lines are an SVG underneath.
+   The canvas scrolls inside its own box, so a wide chart never pushes the
+   page sideways. In edit mode the card's own buttons are switched off — a
+   press on a card is the start of a drag. */
+.hcfreebox { width: 100%; display: flex; flex-direction: column; gap: .6rem; }
+.hcftools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; padding: .6rem .8rem;
+  border: 1px solid rgb(var(--line)); border-radius: .6rem; background: rgb(var(--card)); }
+.hcftools select, .hcftools input { padding: .3rem .5rem; border: 1px solid rgb(var(--line-ctl)); border-radius: .4rem;
+  background: rgb(var(--card)); color: rgb(var(--ink)); font-size: theme(fontSize.sm); max-width: 16rem; }
+/* No scrollbars (asked for 14 October 2026): the canvas is panned by dragging
+   empty space with the mouse. It still scrolls — a wheel, a touchpad and a
+   finger all work — the bars are only not drawn. Held to the window's height,
+   so a tall chart pans inside its box instead of stretching the page. */
+.hcfreewrap { width: 100%; overflow: auto; max-height: calc(100vh - 13rem); min-height: 18rem;
+  border: 1px solid rgb(var(--line)); border-radius: .6rem; background: rgb(var(--wash));
+  scrollbar-width: none; cursor: grab; }
+.hcfreewrap::-webkit-scrollbar { display: none; }
+.hcfreewrap.hcpanning, .hcfreewrap.hcpanning * { cursor: grabbing; user-select: none; }
+.hcfree { position: relative; margin: 0 auto; touch-action: pan-x pan-y; }
+.hcfree:not(.hcedit) .hcfcard { cursor: auto; }
+.hcfree.hcedit { background-image: radial-gradient(rgb(var(--line-2)) 1px, transparent 1px); background-size: 16px 16px; margin: 0; }
+.hcflines { position: absolute; inset: 0; pointer-events: none; }
+.hcflines path { fill: none; stroke: rgb(var(--line-2)); stroke-width: 2; }
+.hcfcard { position: absolute; display: flex; flex-direction: column; align-items: stretch; }
+.hcfcard > .hcid, .hcfcard > .hcslot { width: 100%; height: 100%; }
+.hcfcard > .hcslot > .hcid { width: 100%; flex: 1; min-height: 0; }
+/* Every card is one height so the lines meet them; the footer sits at the
+   bottom of it, like a badge, rather than leaving a blank band under it. */
+.hcfcard .hcidfoot { margin-top: auto; }
+.hcfcard .hcseatbtn { margin-top: auto; }
+.hcfcard .hcseatbtn + .hcidfoot { margin-top: .55rem; }
+.hcflabel { align-items: center; justify-content: center; }
+.hcedit .hcfcard { cursor: grab; touch-action: none; user-select: none; }
+.hcedit .hcfcard:active { cursor: grabbing; }
+.hcedit .hcfcard:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 3px; border-radius: .8rem; }
+.hcedit .hcfcard > :not(.hcfctl) { pointer-events: none; }
+.hcfctl { position: absolute; top: .3rem; left: .3rem; right: .3rem; display: flex; gap: .25rem; align-items: center; z-index: 1; }
+.hcfctl select { flex: 1; min-width: 0; padding: .1rem .25rem; border: 1px solid rgb(var(--line-ctl)); border-radius: .35rem;
+  background: rgb(var(--card)); color: rgb(var(--ink)); font-size: theme(fontSize.tiny); }
+.hcfx { width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 1px solid rgb(var(--line-ctl)); background: rgb(var(--card));
+  color: rgb(var(--ink-2)); line-height: 1; cursor: pointer; }
+.hcfx:hover { color: rgb(var(--bad)); border-color: rgb(var(--bad)); }
+.hcflabel .hcfctl { top: -1.6rem; left: auto; right: 0; }
+
+/* ---- A table that becomes cards on a phone (`stacktbl`, 14 Oct 2026) -------
+   Each row a card, each cell a line with its column's name beside it (the
+   cell's `data-label`). A table scrolling sideways inside its box hid the one
+   column people came to read; a card shows all of it down the screen. Wider
+   than a phone, it is the table it always was. */
+@media (max-width: 640px) {
+  table.stacktbl { min-width: 0; width: 100%; border-collapse: separate; border-spacing: 0; }
+  .stacktbl thead { display: none; }
+  .stacktbl tbody, .stacktbl tr, .stacktbl td { display: block; width: 100%; }
+  .stacktbl tr { margin: 0 0 .6rem; padding: .55rem .75rem; border: 1px solid rgb(var(--line));
+    border-radius: .6rem; background: rgb(var(--card)); }
+  .stacktbl tbody tr:last-child { margin-bottom: 0; }
+  .stacktbl td { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+    padding: .2rem 0; border: 0; text-align: right; }
+  .stacktbl td::before { content: attr(data-label); flex: none; text-align: left;
+    color: rgb(var(--ink-3)); font-size: theme(fontSize.fine); }
+  .stacktbl td[data-label=""]::before { content: none; }
+  .stacktbl td.stackhead { display: block; text-align: left; font-weight: 600; padding-bottom: .35rem;
+    margin-bottom: .2rem; border-bottom: 1px solid rgb(var(--line)); }
+  .stacktbl td.rowacts { justify-content: flex-end; padding-top: .45rem; }
+  .scroll:has(> .stacktbl) { overflow-x: visible; }
+}
+@media (max-width: 900px) {
+  .hcrowcards.hcrowfit { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .hcrowcards.hcrowfit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

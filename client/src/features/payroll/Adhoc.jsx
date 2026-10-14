@@ -4,7 +4,7 @@ import { fmt, tidyDept, todayIso } from "@/lib/format";
 import { download, toCsv } from "@/lib/csv";
 import { Desk, Empty, Gap, Scroll } from "@/components/ui";
 import { deskImport, deskNew, deskUrl } from "@/lib/desk";
-import { FH_ADHOC_CLIPPED, FH_ADHOC_FILTERS, FH_ADHOC_ROWS } from "@/data/payroll";
+import { FH_ADHOC_FILTERS, FH_ADHOC_ROWS } from "@/data/payroll";
 
 /* ADHOC PAYMENTS/DEDUCTIONS, photographed 29 August 2026 and drawn here control
    for control: the title with six icons pinned to its right edge, one bar of an
@@ -279,15 +279,6 @@ export default function Adhoc() {
 									<td className="g">{r.n ?? ""}</td>
 									<td className={"desc" + (r.blue ? " lnk" : "")}>
 										{r.desc}
-										{/* What would stand behind this row here. Under the name rather
-										    than in a column of its own, because their four columns are
-										    the screen and a fifth would stop it being a copy of it. */}
-										{r.map ? <small title={r.why}>{r.map}</small> : null}
-										{r.blue ? (
-											<small className="unread" title="It sits at the same indent as the component rows but is drawn bold and in their link blue, and the capture does not resolve which it is. Left as it looks.">
-												numbered 1 — heading or row, not resolvable from the capture
-											</small>
-										) : null}
 									</td>
 									{/* Their cells are empty because they are inputs. Ours are empty
 									    because there is nothing to put in them and nowhere to put it
@@ -307,15 +298,6 @@ export default function Adhoc() {
 									</td>
 								</tr>
 							) : null}
-							{FH_ADHOC_CLIPPED && !find ? (
-								<tr className="clip">
-									<td />
-									<td colSpan={4}>
-										Their list runs on past the bottom of the capture. {listed} rows were read; how
-										many there are is not known, so this page states no total.
-									</td>
-								</tr>
-							) : null}
 						</tbody>
 					</table>
 				</Scroll>
@@ -326,12 +308,7 @@ export default function Adhoc() {
 
 
 				<div className="mt-[.7rem]">
-					<Empty title="No adhoc payments exist, for anybody">
-						Not a filter that found nothing: <code>Additional Salary</code> holds no rows on this
-						site and payroll is deferred, so there is nothing to list under any employee, year or
-						process. The picker above is live because <code>Employee</code> is —{" "}
-						{fmt(pool.length)} people are in scope for it.
-					</Empty>
+					<Empty title="No adhoc payments exist, for anybody" />
 				</div>
 
 				<div className="mt-[.7rem] text-right">

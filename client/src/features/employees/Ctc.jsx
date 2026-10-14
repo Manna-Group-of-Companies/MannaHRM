@@ -304,7 +304,6 @@ export default function Ctc() {
 									<option key={b[0]} value={b[0]}>{b[1]}</option>
 								))}
 							</select>
-							<span className="hint">groups the output</span>
 						</span>
 					</div>
 				</fieldset>
@@ -324,7 +323,6 @@ export default function Ctc() {
 						<input type="date" id="ctcfrom" value={f.from} onChange={(e) => field("from", e.target.value)} />
 						<label htmlFor="ctctill" className="text-ink-2">Date Till:</label>
 						<input type="date" id="ctctill" value={f.till} onChange={(e) => field("till", e.target.value)} />
-						<span className="hint">on date of joining — no relieving date came across</span>
 					</span>
 
 					<label htmlFor="ctcemp">Particular Employee:</label>
@@ -363,7 +361,6 @@ export default function Ctc() {
 					<span className="ctl">
 						<input type="date" id="ctcwef" value={f.wef || todayIso()}
 							onChange={(e) => field("wef", e.target.value)} />
-						<span className="hint">(Categories / Salary Rates WEF)</span>
 						<Chk k="incr" label="With Increment History" />
 					</span>
 

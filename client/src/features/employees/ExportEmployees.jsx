@@ -273,19 +273,12 @@ export default function ExportEmployees({ onClose }) {
 				<div className="expform">
 					{seeded ? (
 						<span className="hint">
-							Opened holding this page&rsquo;s filters. The search box on the bar is not carried in —
-							their form has no free-text criterion, and a hidden one would make the count on
-							Generate Report disagree with the file.
+							Opened holding this page&rsquo;s filters.
 						</span>
 					) : null}
 
 					<div className="expgrid">
-						<Field id="expCompany" label="Company"
-							note={<span className="hint">
-								{company === (s.company || "")
-									? "The company on the top bar."
-									: "Only for this file — the top bar is unchanged."}
-							</span>}>
+						<Field id="expCompany" label="Company">
 							<select id="expCompany" value={company}
 								onChange={(e) => setF({ company: e.target.value, emp: "", empText: "", filterVal: "" })}>
 								<option value="">All companies</option>
@@ -326,7 +319,7 @@ export default function ExportEmployees({ onClose }) {
 								? <span className="bad">Nobody is called that — the file would cover everybody.</span>
 								: hit
 									? <span className="hint">{hit.name} · {hit.designation || "no designation"}</span>
-									: <span className="hint">Empty means everybody the criteria leave.</span>}>
+									: null}>
 							<span className="exppair">
 								<button type="button" className="embtn" disabled title={EXPORT_DEAD.dot}
 									aria-label="Search scope — not available here">
@@ -384,12 +377,7 @@ export default function ExportEmployees({ onClose }) {
 							) : null}
 						</Field>
 
-						<Field id="expGroup" label="Group By"
-							note={<span className="hint">
-								{f.groupBy
-									? "Rows ordered by it on every sheet — which is what grouping means in a flat file."
-									: "Optional. With none, the file is in the order the site sent."}
-							</span>}>
+						<Field id="expGroup" label="Group By">
 							<select id="expGroup" value={f.groupBy}
 								onChange={(e) => setF({ groupBy: e.target.value })}>
 								<option value="">-- Select Group By --</option>

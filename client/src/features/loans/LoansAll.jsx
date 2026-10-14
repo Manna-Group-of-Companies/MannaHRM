@@ -22,9 +22,7 @@ export default function LoansAll() {
 				]}
 			/>
 
-			<Empty title="Loans, all pages">
-				The four Loans pages are on the bar above. This index has nothing of its own to show.
-			</Empty>
+			<Empty title="Loans, all pages" />
 		</>
 	);
 }

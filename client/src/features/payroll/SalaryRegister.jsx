@@ -228,18 +228,7 @@ function SregForm({ s }) {
 				   keeping anyway: it says their register's columns are configurable per
 				   run, which is a different thing from ours having a fixed set. */
 				<div className="ddapane" {...panelProps("sregpane", "sregtab-" + f.tab)}>
-					<Empty title="Add Additional Column was not opened">
-						Only the tab&rsquo;s name has been seen. Whatever it offers — extra salary components,
-						master fields, a statutory column — is a list nobody here has read, and a plausible one
-						invented on this side would be worse than an empty tab, because somebody would compare
-						against it.
-						<span className="block mt-[.5rem]">
-							What is known is what it implies: <b>their register&rsquo;s columns are chosen per run.</b>{" "}
-							On our side that is a Query Report with its own column set, or a Script Report — so
-							matching this tab is a decision about how configurable the register has to be, and it
-							has to be taken before E1 is unpacked rather than after.
-						</span>
-					</Empty>
+					<Empty title="Add Additional Column was not opened" />
 				</div>
 			) : (
 				<div className="ddapane" {...panelProps("sregpane", "sregtab-" + f.tab)}>
@@ -333,11 +322,6 @@ function SregForm({ s }) {
 								onChange={(e) => stale({ ptype: e.target.value })}>
 								{SREG_PAYROLL_TYPES.map((t) => <option key={t}>{t}</option>)}
 							</select>
-							<span className="hint">
-								Monthly is the only value their list has been seen holding, so it is the only one
-								offered. Whether the factories run a weekly or a fortnightly payroll is a question
-								nobody has answered — and it is a policy answer, not a dropdown.
-							</span>
 						</div>
 
 						<div className="ddafield">
@@ -348,11 +332,6 @@ function SregForm({ s }) {
 								onChange={(e) => stale({ year: e.target.value, month: "" })}>
 								{fyList(todayIso()).map((y) => <option key={y}>{y}</option>)}
 							</select>
-							<span className="hint">
-								April to March — the year every Indian payroll return is filed against. It stops at
-								the current one: a register for a month that has not happened is not a document
-								anybody should be able to ask for.
-							</span>
 						</div>
 
 						<div className="ddafield">
@@ -365,14 +344,6 @@ function SregForm({ s }) {
 							{/* Their box was empty, and an empty month is not a missing filter
 							    — it is a different report. Said here rather than left to be
 							    worked out from a register twelve times too long. */}
-							<span className="hint">
-								{f.month
-									? <>One month, <b>{sregPeriod(f)}</b> — a pay run, which is what a register
-										normally means.</>
-									: <>Empty in their capture and empty here, which is not nothing: with no month
-										this covers <b>{sregPeriod(f)}</b>, and a year is a different document from
-										a pay run.</>}
-							</span>
 						</div>
 
 						<div className="ddafield">
@@ -383,12 +354,6 @@ function SregForm({ s }) {
 							</select>
 							{/* Not a dead control padded out with plausible currencies. What it
 							    is short of is a fact about the site, and the fact is the finding. */}
-							<span className="hint">
-								Default is all this can offer, and that is a gap rather than a preference:{" "}
-								<code>Company</code> is read here without <code>default_currency</code>, and{" "}
-								<b>one of the group&rsquo;s companies is in another country</b>. A register that
-								adds a dirham column to a rupee column is wrong in a way no total shows.
-							</span>
 						</div>
 
 						<div className="ddafield">
@@ -409,10 +374,6 @@ function SregForm({ s }) {
 									</option>
 								))}
 							</select>
-							<span className="hint">
-								Sections the register by category. Stacks above <b>Filter By</b> on the bar, which is
-								what two grouping controls on one form has to mean.
-							</span>
 						</div>
 					</div>
 
@@ -449,11 +410,6 @@ function SregForm({ s }) {
 						</div>
 						{/* Which of their five chips do anything, said on the form rather
 						    than found out by pressing Generate twice and seeing no change. */}
-						<span className="hint">
-							Two of the five change this report — Include Employee Master and Include Zero Value
-							Employees. The other three are drawn because they are theirs, and each says what it is
-							short of when it is picked up or put down.
-						</span>
 					</div>
 				</div>
 			)}

@@ -41,6 +41,11 @@ export const MANAGED = [
 		+ "attendance reports show — a late punch-out is hours worked until a row here says otherwise. "
 		+ "Usually entered by clicking a day on Attendance Regularization."],
 
+	/* ---- Payroll ---- */
+	["payroll", "actualsalary", "Actual Salary", "Employee Actual Salary",
+		"Each person's actual salary from a date. Kept apart from payroll: the salary slip, PF and "
+		+ "ESI come from the salary structure assignment, never from here."],
+
 	/* ---- Employees ---- */
 	["employees", "cattypes", "Category Types", "Employee Category Type",
 		"Factor HR's Categories: the master lists an employee record is filed against. Adding a "

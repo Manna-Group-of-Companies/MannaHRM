@@ -1,4 +1,4 @@
-import { slipLines } from "@/lib/payroll";
+import { lossOfPay, slipLines } from "@/lib/payroll";
 import { periodLabel } from "@/lib/salarysheet";
 
 /* ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ export function slipBlock(slip, details, info, emp, ym) {
 <div class="title">PAYSLIP — ${esc(periodLabel(ym).toUpperCase())}</div>
 <table class="who"><tr>${kv("Employee", slip.employee_name)}${kv("Code", code)}</tr>
 <tr>${kv("Designation", slip.designation)}${kv("Department", slip.department)}</tr>
-<tr>${kv("Pay days", slip.payment_days)}${kv("Loss of pay days", n(slip.leave_without_pay) ? slip.leave_without_pay : "")}</tr></table>
+<tr>${kv("Pay days", slip.payment_days)}${kv("Loss of pay days", lossOfPay(slip) || "")}</tr></table>
 <table class="pay"><thead><tr><th>Earnings</th><th class="a">₹</th><th>Deductions</th><th class="a">₹</th></tr></thead><tbody>${body}
 <tr class="tot"><td>Gross pay</td><td class="a">${inr(slip.gross_pay)}</td><td class="sep">Total deductions</td><td class="a">${inr(slip.total_deduction)}</td></tr></tbody></table>
 <div class="net"><span>Net pay</span><span>₹ ${inr(slip.net_pay)}</span></div>

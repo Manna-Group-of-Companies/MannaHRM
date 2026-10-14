@@ -311,9 +311,7 @@ export default function SalaryMaster() {
 						<Empty title={`No salary revisions for ${emp.employee_name}`}>
 							{emp.ctc ? (
 								<>
-									The record carries <code>ctc</code> ₹{fmt(emp.ctc)} and nothing else about pay. That
-									is one undated number — <b>what somebody costs, not how they are paid, and not when
-									it last changed</b>. A revision needs a Salary Structure Assignment, and none exist.
+									The record carries <code>ctc</code> ₹{fmt(emp.ctc)} and nothing else about pay.
 								</>
 							) : (
 								<>

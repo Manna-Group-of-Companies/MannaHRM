@@ -35,15 +35,23 @@ export function Cov({ cov }) {
  */
 /** `tag` is a short word drawn as a chip at the header's right — a step's
     state, say — kept out of `title` so the fold button's label stays a title. */
-export function Panel({ title, cov, ico, shut, onToggle, tag, children }) {
+/** `className` places the panel in a layout — the dashboard's `span-4` /
+    `span-8` grid — and changes nothing about how the panel itself is drawn. */
+export function Panel({ title, cov, ico, shut, onToggle, tag, className, children }) {
 	return (
-		<section className={"panel" + (cov === "none" || cov === "skip" ? " dim" : "") + (shut ? " shut" : "")}>
+		<section className={"panel" + (cov === "none" || cov === "skip" ? " dim" : "") + (shut ? " shut" : "")
+			+ (className ? " " + className : "")}>
 			<header>
 				<h3>
 					{onToggle ? (
 						<button type="button" className="pfold" onClick={onToggle}
 							aria-expanded={!shut} aria-label={shut ? `Open ${title}` : `Collapse ${title}`}>
-							{shut ? "▸" : "▾"}
+							{/* One chevron, turned by CSS — see `.pfold`. Two glyphs
+							    swapped cannot be animated between. */}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+								strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+								<path d="M6 9l6 6 6-6" />
+							</svg>
 						</button>
 					) : null}
 					<span className="ico">{ico || "▪"}</span>

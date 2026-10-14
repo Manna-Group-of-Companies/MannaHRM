@@ -57,9 +57,11 @@ describe("Payroll opens on its own page", () => {
 		expect(isHidden("payroll")).toBe(false);
 	});
 
-	it("shows its five custom pages on the strip, in the order a month is worked", () => {
+	it("shows its seven custom pages on the strip, in the order a month is worked", () => {
+		/* Increments joined on 5 Oct 2026, beside Salary Setup: January's raises.
+		   Actual Salary on 14 Oct 2026, beside it too: kept apart from payroll. */
 		const shown = MODULES.payroll.tabs.map((t) => t[0]).filter((k) => !hiddenUnder({}, "payroll", k));
-		expect(shown).toEqual(["overview", "setup", "advances", "slips", "transfer"]);
+		expect(shown).toEqual(["overview", "setup", "actualsalary", "increments", "advances", "slips", "transfer"]);
 	});
 
 	it("still has every other page, hidden and not deleted, at its own address", () => {

@@ -53,16 +53,19 @@ log = logging.getLogger(__name__)
 # with nobody on it yet costs nothing and is ready the day somebody is.
 # Manna Tyre Retreads is not here on purpose: its 24- and 22-hour shifts are
 # told apart by the machine, not the hour (client/src/lib/direction.js).
+#
+# Names are HR's shift sheet of 8 October 2026 (tools/apply_shift_sheet.py),
+# which retired each company's Day / Night / General. A key that names no
+# shift on the site matches nobody, so a name changed there and not here
+# fails safe: those punches go through with no night given, as before this.
 NIGHT_OF = {
 	# Manna Rubber Products: 08:30–20:30 and 20:30–08:30.
 	"Manna Rubber Products Pvt.Ltd-Production12hrshift1": "Manna Rubber Products Pvt.Ltd-Production12hrshift2",
-	# Manna Rubber Products' eight-hour pair: 08:30–16:30 and 20:30–04:30.
-	"Manna Rubber Products Pvt.Ltd-Production8hrshift1": "Manna Rubber Products Pvt.Ltd-Production8hrshift2",
-	# Each company's Day and Night, all 08:30–20:30 and 20:30–08:30.
-	"MRPPL-Day Shift": "MRPPL-Night Shift",
-	"HRI-Day Shift": "HRI-Night Shift",
-	"MT-Day Shift": "MT-Night Shift",
-	"MTR-Day Shift": "MTR-Night Shift",
+	# The eight-hour pair worked as twelve with four of overtime, 08:30–16:30
+	# and 20:30–04:30 — Production8hrshift1 and 2 before the sheet.
+	"Manna Rubber Products Pvt.Ltd-Productionshift (08:30-16:30)": "Manna Rubber Products Pvt.Ltd-Production8hrshift (20:30-04:30)",
+	# Hi-Tech Pretreads' pair, the same windows under the sheet's same note.
+	"Hi-Tech Pretreads-Production shift3 (08:30-16:30)": "Hi-Tech Pretreads-Production shift4 (20:30-04:30)",
 }
 
 EVENING = (17, 24)

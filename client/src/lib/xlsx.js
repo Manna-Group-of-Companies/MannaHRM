@@ -321,7 +321,7 @@ export async function monthlySummaryXlsx(rows, opts) {
 	await downloadWorkbook(wb, name);
 }
 
-async function downloadWorkbook(wb, name) {
+export async function downloadWorkbook(wb, name) {
 	const buf = await wb.xlsx.writeBuffer();
 	const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 	const a = document.createElement("a");

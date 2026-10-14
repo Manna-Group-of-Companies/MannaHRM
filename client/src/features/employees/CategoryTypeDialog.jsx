@@ -2,7 +2,7 @@ import { patch, set, useApp } from "@/store";
 import { Desk, Modal } from "@/components/ui";
 import { deskCustomize } from "@/lib/desk";
 import {
-	CT_CUSTOM_WHY, CT_EDIT_WHY, CT_FORM, CT_PARENTS, CT_RCD, CT_VIEW_WHY, CT_VISIBLE,
+	CT_FORM, CT_PARENTS, CT_RCD, CT_VIEW_WHY, CT_VISIBLE,
 	catValues, ctTypes, fieldnameFor,
 } from "@/data/categorytype";
 import { fmt } from "@/lib/format";
@@ -308,7 +308,6 @@ export default function CategoryTypeDialog({ onClose }) {
 							</button>
 						) : null}
 					</div>
-					<p className="hint">{CT_CUSTOM_WHY}</p>
 
 					{/* The half of this record that is real, under the half that is
 					    dashes. A dialog of twelve dashes helps nobody; what this side
@@ -329,7 +328,6 @@ export default function CategoryTypeDialog({ onClose }) {
 								<span className="val">{t.field ? `${fmt(held)} of ${fmt(a.length)}` : "—"}</span>
 							</div>
 						</div>
-						<p className="hint">{view ? CT_VIEW_WHY : CT_EDIT_WHY}</p>
 					</div>
 
 					{c.msg ? <div className="note">{c.msg}</div> : null}
@@ -351,13 +349,6 @@ export default function CategoryTypeDialog({ onClose }) {
 										values.length ? `values         = ${values.length} on the site` : "",
 									].filter(Boolean).join("\n")}
 								</pre>
-								<p>
-									Changing a field's properties changes the shape of every Employee record on the
-									site, so it is done there rather than here — this API's whole security model is
-									an allowlist of fields, and a dashboard that could change one could walk round
-									it. Customize Form writes these as Property Setters, which is the same thing an
-									upgrade knows how to leave alone.
-								</p>
 						</details>
 					) : null}
 				</div>

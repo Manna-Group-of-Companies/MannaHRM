@@ -383,18 +383,13 @@ export default function Onboarding() {
 			) : null}
 
 			{s.candState === "loading" ? (
-				<Empty title="Reading the onboarding queue…">
-					Employee Onboarding is read when this page opens.
-				</Empty>
+				<Empty title="Reading the onboarding queue…" />
 			) : s.candState === "error" ? (
 				<Empty title="The onboarding queue could not be read">
 					{s.candErr}
 				</Empty>
 			) : !rows.length ? (
-				<Empty title="Nobody has submitted the form yet">
-					Share the Google Form with an employee. Once somebody has filled it in, download the
-					responses Sheet (File → Download → .xlsx) and use Upload Responses.
-				</Empty>
+				<Empty title="Nobody has submitted the form yet" />
 			) : (
 				<div className="onblist">
 					{rows.map((c) => (

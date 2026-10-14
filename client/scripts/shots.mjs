@@ -195,6 +195,30 @@ const DATA = {
 			designation: "Inspector", employee: "HR-EMP-00003", docstatus: 1, owner: "hr@manna",
 			creation: `${ago(70)} 10:00:00`, modified: `${ago(60)} 10:00:00`, modified_by: "hr@manna" },
 	],
+	/* Resumes for an open seat: the head office's Logistics seat (the fixture's
+	   head office is its first company) has an opening with criteria, and three
+	   applicants — one strong, one weak, one whose resume could not be read. */
+	"Job Opening": [
+		{ name: "HR-OPN-2026-0001", job_title: "Logistics (Head Office)", designation: "Machine Operator",
+			company: "Manna Rubber", department: "Production - MR", status: "Open", posted_on: `${ago(5)} 10:00:00`,
+			custom_must_have: "PLC, Welding, Preventive Maintenance", custom_good_to_have: "AutoCAD",
+			custom_min_experience: 3, custom_qualification: "ITI / Diploma", custom_preferred_location: "Kottayam" },
+	],
+	"Job Applicant": [
+		{ name: "HR-APP-2026-00001", applicant_name: "Arun Thomas", email_id: "arun.thomas@example.com",
+			phone_number: "+91 98470 11111", job_title: "HR-OPN-2026-0001", source: "LinkedIn", status: "Open",
+			applicant_rating: 0.88, resume_attachment: "/private/files/arun-thomas.pdf", creation: `${ago(2)} 11:00:00`,
+			custom_score_detail: "Must have: ✓ PLC, ✓ Welding, ✓ Preventive Maintenance — 5/5\nExperience: 6.5 yrs of 3 — 2/2\nQualification: ✓ ITI / Diploma — 1.5/1.5\nGood to have: ✗ AutoCAD — 0/1\nLocation: ✗ Kottayam — 0/0.5" },
+		{ name: "HR-APP-2026-00002", applicant_name: "Deepa Raj", email_id: "deepa-x81@indeedemail.com",
+			phone_number: "", job_title: "HR-OPN-2026-0001", source: "Indeed", status: "Open",
+			applicant_rating: 0.41, resume_attachment: "/private/files/deepa-raj.docx", creation: `${ago(1)} 15:00:00`,
+			custom_score_detail: "Must have: ✓ Welding, ✗ PLC, ✗ Preventive Maintenance — 1.7/5\nExperience: 1.2 yrs of 3 — 0.8/2\nQualification: ✓ ITI / Diploma — 1.5/1.5\nGood to have: ✗ AutoCAD — 0/1\nLocation: ✗ Kottayam — 0/0.5" },
+		{ name: "HR-APP-2026-00003", applicant_name: "Scanned Resume", email_id: "applicant@example.com",
+			phone_number: "", job_title: "HR-OPN-2026-0001", source: "LinkedIn", status: "Open",
+			applicant_rating: 0, resume_attachment: "/private/files/scan.pdf", creation: `${ago(1)} 16:00:00`,
+			custom_score_detail: "No text could be read from this file." },
+	],
+	"Job Applicant Source": [{ name: "LinkedIn" }, { name: "Indeed" }],
 };
 
 /** The doctype out of `/api/resource/Employee%20Checkin?…`. */
@@ -241,6 +265,8 @@ const PAGES = [
 	["dashboard", "/dashboard", "Factor HR's Start Up, panel for panel"],
 	["employees", "/employees", "Employee Master"],
 	["employee-profile", "/employees/profile", "one person's record"],
+	["hierarchy", "/employees/hierarchy", "Hierarchy Chart — the head office and the companies under it"],
+	["company-chart", "/employees/chart", "one company's flow chart — levels as boxes, arrows between"],
 	["attendance", "/attendance", "the correction queue"],
 	["attendance-inout", "/attendance/inout", "In / Out activity"],
 	["attendance-daily", "/attendance/daily", "Daily Detail — one row per person per day, one table"],
@@ -298,7 +324,7 @@ const SIZES = [
     Read off themes.css by hand, deliberately: a checker that computed the
     expected value the same way the page does would agree with the page about
     anything. */
-const BRAND = { dark: "251 146 60", light: "234 88 12" };
+const BRAND = { dark: "129 140 248", light: "79 70 229" };
 
 /** Which palette each device pass is photographed in.
 
@@ -387,7 +413,11 @@ async function main() {
 				await page.waitForTimeout(200);
 			}
 			const file = `${OUT}/${device}-${slug}.png`;
-			await page.screenshot({ path: file, fullPage: device === "desktop" });
+			/* 90s, not Playwright's 30. A screenshot waits for web fonts, and on
+			   this office's line fonts.gstatic.com answers in one to six seconds
+			   per file — one slow fetch was enough to end the run on a random
+			   page with every page after it unphotographed. */
+			await page.screenshot({ path: file, fullPage: device === "desktop", timeout: 90000 });
 			process.stdout.write(`  ${file}  — ${what}\n`);
 
 			/* A page that threw is a page whose screenshot is a lie: the

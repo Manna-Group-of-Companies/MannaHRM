@@ -622,13 +622,6 @@ export default function MonthlyBasic() {
 							</button>
 						</>
 					}
-					why={
-						<>
-							This is the document itself, not a drawing of it — the same HTML that Print, PDF and Word
-							are handed, rendered here so it can be read before it goes anywhere. A muster this wide
-							prints on landscape A4; a shorter range prints better than a smaller font reads.
-						</>
-					}
 					extra={<iframe className="iopaper" title="Report preview" srcDoc={s.mbDoc} />}
 				/>
 			)}

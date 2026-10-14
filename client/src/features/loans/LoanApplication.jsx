@@ -174,14 +174,13 @@ const RESET = {
 /** One of their fields. `req` draws the yellow their form uses to mark a
     mandatory one — copied because it is the only thing on that screen telling
     somebody which four fields it will refuse to save without. */
-function Fld({ id, label, req, children, hint }) {
+function Fld({ id, label, req, children }) {
 	return (
 		<>
 			<label htmlFor={id}>{label}:</label>
 			<span className="ctl">
 				{children}
 				{req ? <span className="hint" title="Shaded yellow on their form">required</span> : null}
-				{hint ? <span className="hint">{hint}</span> : null}
 			</span>
 		</>
 	);
@@ -255,16 +254,14 @@ function LoanForm({ s }) {
 						</>
 					) : null}
 
-					<Fld id="la-type" label="Loan Type" req
-						hint="the two seen in use, off their Projection screen">
+					<Fld id="la-type" label="Loan Type" req>
 						<select className={"wide " + YELLOW} {...text("type")}>
 							<option value="">Select loan type</option>
 							{LOAN_TYPES.map((t) => <option key={t}>{t}</option>)}
 						</select>
 					</Fld>
 
-					<Fld id="la-interest" label="Interest Type"
-						hint="ours — their list has never been opened">
+					<Fld id="la-interest" label="Interest Type">
 						<select className="wide" {...text("interest")}>
 							{LOAN_INTEREST.map((i) => (
 								<option key={i[0]} value={i[0]} title={i[2]}>{i[1]}</option>
@@ -276,8 +273,7 @@ function LoanForm({ s }) {
 						<input type="number" min="0" step="1" {...text("requested")} />
 					</Fld>
 
-					<Fld id="la-sanctioned" label="Sanctioned Amount"
-						hint="what the schedule is computed on">
+					<Fld id="la-sanctioned" label="Sanctioned Amount">
 						<input type="number" min="0" step="1" {...text("sanctioned")} />
 					</Fld>
 
@@ -293,16 +289,15 @@ function LoanForm({ s }) {
 						<input type="date" className={YELLOW} {...text("date")} />
 					</Fld>
 
-					<Fld id="la-start" label="Deduction Start From" hint="the first payslip that carries one">
+					<Fld id="la-start" label="Deduction Start From">
 						<input type="date" {...text("start")} />
 					</Fld>
 
-					<Fld id="la-pay" label="Payment Date" hint="disbursement — when money moved">
+					<Fld id="la-pay" label="Payment Date">
 						<input type="date" {...text("pay")} />
 					</Fld>
 
-					<Fld id="la-required" label="Loan Required For"
-						hint="a tax field: medical treatment is exempt from the perquisite">
+					<Fld id="la-required" label="Loan Required For">
 						<input type="text" className="wide" {...text("required")} />
 					</Fld>
 
@@ -372,27 +367,18 @@ function OurBox({ s }) {
 					<input id="la-rate" type="number" min="0" step="0.01" value={f.rate}
 						disabled={f.interest === "free"}
 						onChange={(e) => stale({ rate: e.target.value })} />
-					<span className="hint">
-						{f.interest === "free"
-							? "nothing charged, so no rate — and this is the case the perquisite is for"
-							: "off the Loan Type master over there, and off Loan Product here"}
-					</span>
 				</span>
 
 				<label htmlFor="la-months">Term (months):</label>
 				<span className="ctl">
 					<input id="la-months" type="number" min="1" step="1" value={f.months}
 						onChange={(e) => stale({ months: e.target.value })} />
-					<span className="hint">the instalment count — also off that master</span>
 				</span>
 
 				<label htmlFor="la-perk">Perquisite rate (%):</label>
 				<span className="ctl">
 					<input id="la-perk" type="number" min="0" step="0.01" value={f.perk}
 						onChange={(e) => stale({ perk: e.target.value })} />
-					<span className="hint">
-						the State Bank rate for this kind of loan on 1 April — a notification, held nowhere here
-					</span>
 				</span>
 			</div>
 
@@ -557,12 +543,7 @@ export default function LoanApplication() {
 							<Sched s={s} />
 						</>
 					) : (
-						<>
-							<Empty title={tab[1]}>
-								Only the tab label has been seen. What follows is a reading of what that name has to
-								mean here, not a copy of their screen.
-							</Empty>
-						</>
+						<Empty title={tab[1]} />
 					)}
 				</div>
 

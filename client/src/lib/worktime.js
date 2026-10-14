@@ -22,6 +22,10 @@
        HRI-Night Shift   20:30–08:30      (times changed per company on
        HRI-General Shift 09:00–18:00       Manage Shift ✎)
 
+   HR's shift sheet of 8 October 2026 retires these, and the company's shifts
+   off it are offered after them (`SHIFT_PREFIX`); the three stay here for a
+   site the sheet has not been applied to.
+
    Workers are offered Day and Night. A supervisor — a designation with
    "supervisor" in it — is offered all three. Shifts already in use by the
    company (named some other way, from before) stay offered, so nobody on one
@@ -30,6 +34,19 @@
    --------------------------------------------------------------------------- */
 
 export const SHIFT_KINDS = ["Day Shift", "Night Shift", "General Shift"];
+
+/* HR's shift sheet of 8 October 2026 (tools/apply_shift_sheet.py) retires the
+   three above and names every shift by its company, in the company's own
+   spelling rather than the Company record's — `Manna Rubber Products Pvt.Ltd`
+   for `Manna Rubber Products Private Limited`. By abbreviation, because that is
+   what a Company row carries. Hi-Tech Pretreads has no Company on the site, so
+   its shifts are offered among everybody's. */
+export const SHIFT_PREFIX = {
+	MRPPL: "Manna Rubber Products Pvt.Ltd-",
+	HRI: "Hi-Tech Rubber Industries-",
+	MTR: "Manna Tyre Retreads-",
+	MT: "MANNA TREADS PVT.LTD-",
+};
 
 /** Whether this person works supervisor shifts. */
 export const isSupervisor = (e) => /supervisor/i.test(String((e && e.designation) || ""));
@@ -53,7 +70,9 @@ export function shiftChoices(e, shiftTypes, companies, employees) {
 	const names = (shiftTypes || []).map((x) => (typeof x === "string" ? x : x.name));
 	const abbr = abbrOf(e && e.company, companies);
 	const kinds = isSupervisor(e) ? SHIFT_KINDS : SHIFT_KINDS.slice(0, 2);
-	const own = abbr ? kinds.map((k) => `${abbr}-${k}`).filter((n) => names.includes(n)) : [];
+	const prefix = (SHIFT_PREFIX[abbr] || "").toLowerCase();
+	const sheet = prefix ? names.filter((n) => n.toLowerCase().startsWith(prefix)).sort() : [];
+	const own = (abbr ? kinds.map((k) => `${abbr}-${k}`).filter((n) => names.includes(n)) : []).concat(sheet);
 	const used = new Set((employees || []).filter((x) => x.company === (e && e.company) && x.default_shift).map((x) => x.default_shift));
 	if (e && e.default_shift) used.add(e.default_shift);
 	const legacy = [...used].filter((n) => !own.includes(n) && !SHIFT_KINDS.some((k) => n.endsWith("-" + k))).sort();

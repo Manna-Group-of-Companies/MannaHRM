@@ -190,3 +190,30 @@ def test_the_site_refuses_casual_leave_at_both_doors_not_only_the_dashboard():
 	assert '"before_submit": "manna_hr.casualleave.guard_allocation"' in hooks
 	guard = open(os.path.join(here, "..", "casualleave.py"), encoding="utf-8").read()
 	assert "def guard_assignment(" in guard and "def guard_allocation(" in guard
+
+
+def test_a_month_allocation_is_one_day_of_that_month_and_carries_nothing_forward():
+	doc = lp.month_allocation("E1", "2026-09")
+	assert doc["from_date"] == "2026-09-01" and doc["to_date"] == "2026-09-30"
+	assert doc["leave_type"] == "Casual Leave" and doc["new_leaves_allocated"] == 1
+	assert doc["carry_forward"] == 0
+
+
+def test_a_month_allocation_has_no_policy_assignment_so_sunday_leave_never_takes_it_for_a_first():
+	from manna_hr import sundayleave as sl
+	assert "leave_policy_assignment" not in lp.month_allocation("E1", "2026-09")
+	assert not sl.counts(lp.month_allocation("E1", "2026-09"))
+	assert sl.counts({"leave_policy_assignment": "HR-LPOL-ASSGN-00004"})
+
+
+def test_only_somebody_absent_that_month_with_no_allocation_covering_it_needs_one():
+	absent = {"JIJU": ["2026-09-14"], "PAUL": ["2026-09-28"], "OCTONLY": ["2026-10-03"]}
+	allocations = [
+		{"employee": "PAUL", "from_date": "2026-09-01", "to_date": "2026-12-31"},
+		{"employee": "JIJU", "from_date": "2026-10-01", "to_date": "2026-12-31"},
+	]
+	assert lp.needs_month_allocation(absent, allocations, "2026-09") == ["JIJU"]
+
+
+def test_february_ends_on_its_own_last_day():
+	assert lp.month_allocation("E1", "2027-02")["to_date"] == "2027-02-28"

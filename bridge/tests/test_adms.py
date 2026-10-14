@@ -137,7 +137,10 @@ def site():
 	server = adms.AdmsServer(
 		("127.0.0.1", 0), adms.AdmsHandler,
 		queue=queue,
-		devices={"KNOWN01": {"name": "BIO-TREADS-GATE1", "report_direction": False}},
+		devices={
+			"KNOWN01": {"name": "BIO-TREADS-GATE1", "report_direction": False},
+			"HALFHOUR": {"name": "BIO-HALFHOUR", "report_direction": False, "timezone": "330"},
+		},
 		options={"first_stamp": "0", "block": {"delay": 10, "timezone": "5.5"}},
 		wake=threading.Event(),
 	)
@@ -169,6 +172,19 @@ def test_a_device_saying_hello_is_told_how_to_behave(site):
 	assert status == 200
 	assert "GET OPTION FROM: KNOWN01" in body
 	assert "Delay=10" in body
+
+
+def test_a_machine_with_its_own_timezone_is_told_that_one_and_only_it(site):
+	"""Some firmware reads "5.5" as 5 and runs half an hour behind IST, which
+	stamps every arrival 30 minutes early. The fix for one machine must not
+	move the clock on a machine that was reading 5.5 correctly."""
+	_server, _queue, base = site
+	_status, own = get(base, "/iclock/cdata?SN=HALFHOUR&options=all")
+	_status, other = get(base, "/iclock/cdata?SN=KNOWN01&options=all")
+	_status, stranger = get(base, "/iclock/cdata?SN=NOBODY9&options=all")
+	assert "TimeZone=330\n" in own
+	assert "TimeZone=5.5\n" in other
+	assert "TimeZone=5.5\n" in stranger
 
 
 def test_a_punch_is_stored_and_then_acknowledged(site):

@@ -9,6 +9,7 @@ import {
 import { lastMonth } from "@/lib/payrollrun";
 import { deskUrl } from "@/lib/desk";
 import { payRows } from "@/features/payroll/shared";
+import SalaryUpload from "@/features/payroll/SalaryUpload";
 import { Desk, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 
 /* PAYROLL → SALARY SETUP. Ours, 2 October 2026 — where payroll starts.
@@ -21,7 +22,11 @@ import { Desk, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
    submitted; hrms checks them on the site.
 
    **Nothing here picks a rate or works out a wage.** Whatever is typed is what
-   is stored. */
+   is stored.
+
+   Above both, since 9 October 2026, one sheet does the two steps at once for
+   everybody — salary, bank and cash, PF and ESI (features/payroll/SalaryUpload.jsx).
+   It replaced the base-pay-only upload that used to sit in step 2. */
 
 const rs = (v) => "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
@@ -42,7 +47,11 @@ export default function SalarySetup() {
 	const [find, setFind] = useState("");
 
 	const end = periodOf(lastMonth()).iso[1];
-	const read = async () => setData(await loadSetup(company));
+	const read = async () => {
+		const d = await loadSetup(company);
+		setData(d);
+		return d;
+	};
 	useEffect(() => {
 		let live = true;
 		setData({ components: undefined, structures: undefined, assignments: undefined });
@@ -163,6 +172,8 @@ export default function SalarySetup() {
 			{!company && <Note className="warn">Pick a company in the top bar. A salary structure belongs to one company, and so does everybody you give it to.</Note>}
 			{data.structures === null && <Note className="warn">This login may not read salary structures on the site — it needs HR Manager.</Note>}
 
+			<SalaryUpload company={company} data={data} open={open("upload", true)} onToggle={toggle("upload", true)} onSaved={read} />
+
 			<Panel title={`1. Salary structure — ${structures.length ? `${structures.length} made` : "none yet"}`} ico="▦"
 				shut={!open("structure", structures.length === 0)} onToggle={toggle("structure", structures.length === 0)}>
 				{structures.length > 0 && (
@@ -171,11 +182,6 @@ export default function SalarySetup() {
 						<Desk href={site && deskUrl(site, "Salary Structure")} label="Salary Structures in Frappe">Open in Frappe</Desk>
 					</p>
 				)}
-				<p className="muted lead">
-					A salary structure says what a salary slip is made of. Say what each part is — a percentage of the base pay, a
-					percentage of Basic, or a fixed rupee amount — and Frappe works it out for each person on the salary run.
-					Nothing is chosen for you.
-				</p>
 				<div className="flds">
 					<div className="fld wide">
 						<label className="lab" htmlFor="su-name">Name of the structure</label>
@@ -199,7 +205,6 @@ export default function SalarySetup() {
 							Make the structure
 						</button>
 					)}
-					<span className="hint">It is saved and submitted, ready to give to people.</span>
 				</div>
 			</Panel>
 
@@ -234,7 +239,6 @@ export default function SalarySetup() {
 									<button type="button" className="embtn" disabled={!chosen.length || !pick.bulk} onClick={fillBulk}>Fill</button>
 								</span>
 							</div>
-							<span className="hint">Or type each person's base pay in the table.</span>
 						</div>
 						<Scroll>
 							<table className="fptable sutable" aria-label="People without a salary structure">
@@ -277,7 +281,7 @@ export default function SalarySetup() {
 									Give the structure to {chosen.length || "the ticked"}
 								</button>
 							)}
-							<span className="hint">{chosen.length} ticked. Each is saved and submitted; Frappe checks each one.</span>
+							<span className="hint">{chosen.length} ticked.</span>
 						</div>
 					</>
 				)}

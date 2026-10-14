@@ -4,7 +4,7 @@ import { listAll } from "@/api/client";
 import { read, remove } from "@/api/crud";
 import { download, toCsv } from "@/lib/csv";
 import { todayIso } from "@/lib/format";
-import { Empty, Gap, Modal, Note, Scroll } from "@/components/ui";
+import { Empty, Gap, Modal, Scroll } from "@/components/ui";
 import { canCreate, canDelete } from "@/lib/write";
 import { SCHEMA, listFields } from "@/data/schema";
 import RecordForm from "@/features/records/RecordForm";
@@ -39,7 +39,11 @@ import { cell } from "@/features/records/cell";
      character until somebody reloaded.
    --------------------------------------------------------------------------- */
 
-export default function RecordList({ doctype, title, note }) {
+/* `stack` (14 October 2026): on a phone each row becomes a card of labelled
+   lines instead of a table that scrolls sideways — asked for on Actual Salary,
+   where the column that matters was off the screen. Opt-in, so no other page
+   changes shape under somebody. */
+export default function RecordList({ doctype, title, stack = false }) {
 	const spec = SCHEMA[doctype];
 	const [rows, setRows] = useState(null);
 	const [err, setErr] = useState("");
@@ -147,15 +151,13 @@ export default function RecordList({ doctype, title, note }) {
 
 			{rows && rows.length === 0 && !err ? (
 				<Empty title={`No ${doctype} records yet`}>
-					{creatable.ok
-						? "New makes the first one. It is written straight to the site."
-						: creatable.why}
+					{creatable.ok ? null : creatable.why}
 				</Empty>
 			) : null}
 
 			{shown.length ? (
 				<Scroll>
-					<table>
+					<table className={stack ? "stacktbl" : undefined}>
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -166,16 +168,16 @@ export default function RecordList({ doctype, title, note }) {
 						<tbody>
 							{shown.map((r) => (
 								<tr key={r.name}>
-									<td className="mono">{r.name}</td>
+									<td className="mono" data-label="ID">{r.name}</td>
 									{cols.map((f) => (
-										<td key={f.name} className={f.kind === "check" ? "num" : undefined}>
+										<td key={f.name} className={f.kind === "check" ? "num" : undefined} data-label={f.label}>
 											{cell(r[f.name], f)}
 										</td>
 									))}
 									{/* Their two row icons, in their order. The bin is absent
 									    rather than disabled where the doctype should not be
 									    deleted — the reason is printed under the table. */}
-									<td className="rowacts">
+									<td className="rowacts" data-label="">
 										<button type="button" className="embtn" title="Edit record"
 											onClick={() => edit(r.name)}>Edit</button>
 										{deletable.ok ? (
@@ -189,14 +191,6 @@ export default function RecordList({ doctype, title, note }) {
 					</table>
 				</Scroll>
 			) : null}
-
-			{!deletable.ok && deletable.why ? (
-				<Note>
-					<b>Records here are not deleted.</b> {deletable.why}
-				</Note>
-			) : null}
-
-			{note ? <Note>{note}</Note> : null}
 
 			{killing ? (
 				<Modal

@@ -400,11 +400,10 @@ export default function AppPunches() {
 				{s.apState === "loading" ? (
 					<Empty title="Reading the site">Every punch between {dmy(from)} and {dmy(till)}.</Empty>
 				) : s.apState !== "done" ? (
-					<Empty title="Not generated yet">Pick a range and press Generate.</Empty>
+					<Empty title="Not generated yet" />
 				) : !rows.length ? (
 					<Empty title="No app punches in that range">
 						Nothing in Employee Checkin over {s.apRan} carries a coordinate or the phone app's device prefix.
-						It stays empty until the phone app is live for the people who use it — see docs/APP_USERS.md.
 					</Empty>
 				) : (
 					<>
@@ -412,15 +411,6 @@ export default function AppPunches() {
 							<span className="cov live">{count}</span>
 							{view === "punches" && (
 								<span className="muted">Date from {dmy(apRange(s)[0])} till {dmy(apRange(s)[1])}</span>
-							)}
-							{view === "grid" && (
-								<span className="muted">
-									Each day is first in over last out. Green is a full day, amber a punch missing, red text a
-									punch outside the fence. A dot is a day with no app punch — not an absence.
-								</span>
-							)}
-							{view === "daily" && (
-								<span className="muted">A night shift's out after midnight is counted on the day it started.</span>
 							)}
 						</div>
 						{view === "daily" ? (

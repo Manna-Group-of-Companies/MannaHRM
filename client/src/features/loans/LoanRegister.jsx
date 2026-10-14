@@ -132,9 +132,6 @@ function LregForm({ s }) {
 							{v}
 						</label>
 					))}
-					<span className="hint">
-						the four values <code>Employee.status</code> holds — all ticked, so nobody is filtered out
-					</span>
 				</span>
 
 				<label htmlFor="lregemp">Particular Employee:</label>
@@ -170,18 +167,12 @@ function LregForm({ s }) {
 				<span className="ctl">
 					<input id="lregfrom" type="date" value={from}
 						onChange={(e) => stale({ from: e.target.value })} />
-					<span className="hint">
-						empty resolves to the start of the payroll year before this one
-					</span>
 				</span>
 
 				<label htmlFor="lregtill">Till Date:</label>
 				<span className="ctl">
 					<input id="lregtill" type="date" value={till}
 						onChange={(e) => stale({ till: e.target.value })} />
-					<span className="hint">
-						empty resolves to the end of this month, off the clock
-					</span>
 				</span>
 
 				<label>Loan Type:</label>
@@ -200,9 +191,6 @@ function LregForm({ s }) {
 						onClick={() => stale({ types: [...LOAN_TYPES] })}>✓</button>
 					<button className="dots" title="Clear both" aria-label="Clear the loan types"
 						onClick={() => stale({ types: [] })}>✕</button>
-					<span className="hint">
-						<b>both of theirs are advances, not loans</b> — the whole shape of this module
-					</span>
 				</span>
 
 				<label htmlFor="lregby">Filter By:</label>
@@ -211,7 +199,6 @@ function LregForm({ s }) {
 						onChange={(e) => stale({ by: e.target.value })}>
 						{LOAN_BY.map((b) => <option key={b[0]} value={b[0]}>{b[1]}</option>)}
 					</select>
-					<span className="hint">empty in the capture and never opened; ours are the six fields</span>
 				</span>
 
 				<label htmlFor="lreggby">Group By:</label>
@@ -220,10 +207,6 @@ function LregForm({ s }) {
 						onChange={(e) => stale({ gby: e.target.value })}>
 						{LOAN_BY.map((b) => <option key={b[0]} value={b[0]}>{b[1]}</option>)}
 					</select>
-					<span className="hint">
-						two grouping controls on one form, which is their habit — Daily Detail and the Leave
-						Balance Report carry the same pair
-					</span>
 				</span>
 
 				<label htmlFor="lregtype">Report Type:</label>
@@ -232,10 +215,6 @@ function LregForm({ s }) {
 						onChange={(e) => stale({ type: e.target.value })}>
 						{LOAN_REPORT_TYPES.map((v) => <option key={v}>{v}</option>)}
 					</select>
-					<span className="hint">
-						one value, and the list was never opened. <b>The value is the evidence</b>: a month wise
-						recovery report only exists if recovery runs over months
-					</span>
 				</span>
 			</div>
 

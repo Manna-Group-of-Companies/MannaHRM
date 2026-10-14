@@ -268,9 +268,6 @@ export default function ScheduleReport({ onClose }) {
 												{SCHED_WEEKDAYS.map((d) => <option key={d}>{d}</option>)}
 											</select>
 										) : null}
-										<span className="hint" title={job[2]}>
-											the site runs this as <b>{job[1]}</b>
-										</span>
 									</>
 								) : r.kind === "number" ? (
 									<input id={"sch_" + r.key} type="number" value={f[r.key]}
@@ -312,9 +309,6 @@ export default function ScheduleReport({ onClose }) {
 												{s.company ? ` in ${s.company}` : " across every company"}
 												{aud.nomail
 													? `, and the site holds no email for ${fmt(aud.nomail)} of them` : ""}.
-												{" "}Resolved now and written into Email To — Auto Email Report takes a list
-												of addresses, not a rule it can re-run, so anybody who joins after today is
-												not on this schedule until somebody edits it.
 											</span>
 										) : null}
 									</span>
@@ -344,10 +338,6 @@ export default function ScheduleReport({ onClose }) {
 						{dropped.length ? (
 							<p className="gap">
 								<b>{dropped.join(" and ")}</b> {dropped.length > 1 ? "are" : "is"} not carried over.
-								ERPNext's Auto Email Report has one address list and no copies — and these are not
-								written into the description either, because somebody copied in believes they were
-								copied in, and a note saying so while nothing mails them would be worse than the
-								field being missing.
 							</p>
 						) : null}
 					</details>

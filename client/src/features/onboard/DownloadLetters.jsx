@@ -229,9 +229,7 @@ export default function DownloadLetters({ onClose }) {
 						) : null}
 
 						<span className="bulklab">Upload File</span>
-						<SheetDrop file={up.file} sheet={up.sheet} busy={busy} onTake={up.take}
-							hint={<>Optional — a CSV of <span className="mono">employee_number</span> to narrow
-								this to those people. Drag it here or click &ldquo;Browse Files&rdquo;.</>} />
+						<SheetDrop file={up.file} sheet={up.sheet} busy={busy} onTake={up.take} />
 
 						<RunInBackground />
 					</div>
@@ -247,13 +245,7 @@ export default function DownloadLetters({ onClose }) {
 
 					<div className="rows bulkrows">
 						<div className="row">
-							<span>
-								In range{" "}
-								<span className="muted">
-									Letters already on the register that match. Nothing is issued here — this
-									dialog only reads.
-								</span>
-							</span>
+							<span>In range</span>
 							<span className="val">
 								<span className={"cov " + (rows.length ? "live" : "none")}>
 									{rows.length} of {s.letters.length}
@@ -276,10 +268,6 @@ export default function DownloadLetters({ onClose }) {
 							{busy ? `Collecting ${done} of ${rows.length}…` : "Download"}
 						</button>
 						<button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
-						<span className="bulkwhy">
-							Writes one HTML file — a page per letter, each carrying the text as it was issued.
-							Open it and print, and the batch is the batch that went out.
-						</span>
 					</div>
 				</div>
 			}

@@ -487,15 +487,12 @@ function Register({ reg, s, rows, full }) {
 						shown.length ? (
 							<>
 								{fmt(from + 1)}–{fmt(from + here.length)} of {fmt(shown.length)}
-								{pick ? ` ${DOC_KINDS.find((k) => k.key === pick).label}` : ""} · five to a
-								page, as theirs is
+								{pick ? ` ${DOC_KINDS.find((k) => k.key === pick).label}` : ""}
 							</>
 						) : (
-							<>Nothing here{s.dreg.q || pick ? " matches" : ""}. {reg.why}</>
+							<>Nothing here{s.dreg.q || pick ? " matches" : ""}.</>
 						)
-					) : (
-						reg.why
-					)}
+					) : null}
 				</span>
 				{/* `clip` goes with the page: the row an open popover belongs to is not
 				    on the next one, and a panel left hanging over a different row is
@@ -579,16 +576,7 @@ function DocView({ r, s }) {
 				<h5>The scan filed against this document</h5>
 				<div className="rows">
 					<div className="row">
-						<span>
-							Attachment{" "}
-							<span className="muted">
-								{s.fileErr
-									? "The attachments could not be read, so this is unknown rather than empty."
-									: files.length
-										? `${files.length} file${files.length > 1 ? "s" : ""} on Frappe's File table, against this record and this field.`
-										: "Frappe's File table hangs off a record and a field. Nothing has been filed against this one."}
-							</span>
-						</span>
+						<span>Attachment</span>
 						<span className="val">
 							{files.length && !s.fileErr
 								? files.map((f) => (
@@ -687,24 +675,12 @@ function DocDelete({ r, s, onClose }) {
 			<div className="rows">
 				<div className="row">
 					<span>
-						Cleared on <span className="mono">{r.name}</span>{" "}
-						<span className="muted">
-							{fields.length > 1
-								? "The whole block, not just the number — an expiry date left behind is one the watch list keeps counting down to."
-								: "The one field this document is."}
-						</span>
+						Cleared on <span className="mono">{r.name}</span>
 					</span>
 					<span className="val mono">{fields.join(", ")}</span>
 				</div>
 				<div className="row">
-					<span>
-						Scans deleted{" "}
-						<span className="muted">
-							{held.length
-								? "The File rows and the bytes behind them. This is the part that does not come back."
-								: "Nothing is attached to this document."}
-						</span>
-					</span>
+					<span>Scans deleted</span>
 					<span className="val">
 						{held.length
 							? held.map((f) => <span key={f.name} className="dedelfile">{f.file_name || f.name}</span>)
@@ -903,9 +879,7 @@ function DocEdit({ r, s, onClose, making }) {
 			    explanation at the bottom looks like. */}
 			{making && !row ? (
 				<div className="denote">
-					<b>Pick an employee and a document type first.</b> The six boxes below stay off until
-					both are chosen — a document here is a field on a person, so those two decide which
-					field the number is written to.
+					<b>Pick an employee and a document type first.</b>
 				</div>
 			) : null}
 
@@ -1157,20 +1131,6 @@ function DocEdit({ r, s, onClose, making }) {
 					{busy ? "Saving…" : "Save"}
 				</button>
 				<button className="btn ghost" disabled={busy} onClick={onClose}>Close</button>
-				<span className="dewhy">
-					{row ? (
-						<>
-							Writes <span className="mono">{[kind.num, kind.exp, kind.place, kind.iss].filter(Boolean).join(", ")}</span>{" "}
-							on <span className="mono">{row.name}</span>. Nothing else about this person can be
-							changed from here.
-						</>
-					) : (
-						<>
-							Pick an employee and a document type. A document on this side is a field on a
-							person, so those two choices are what decides where the number is written.
-						</>
-					)}
-				</span>
 			</div>
 		</div>
 	);
@@ -1261,9 +1221,7 @@ export default function DocumentEntry() {
 		<div className="fhcat docscr">
 			<header>
 				<h3 className="caps">DOCUMENT</h3>
-				<span className={"cov " + (s.docErr ? "none" : "part")}>
-					{s.docErr ? "The read failed" : "Their screen, our fields"}
-				</span>
+				{s.docErr ? <span className="cov none">The read failed</span> : null}
 
 				<span className="right">
 					<button className="embtn ic" aria-label="Search the documents" aria-pressed={s.dreg.find}

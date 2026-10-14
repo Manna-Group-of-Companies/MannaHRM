@@ -45,7 +45,6 @@ export default function Login() {
 					</span>
 				</div>
 				<h1>Sign in</h1>
-				<p className="muted">Use your ERPNext user. The dashboard reads and writes as you.</p>
 				<label className="lvf">
 					<span className="lab">Email / user id</span>
 					<span className="ctl">

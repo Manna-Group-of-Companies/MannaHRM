@@ -150,7 +150,7 @@ export default function AssetImport({ onClose }) {
 
 	const Count = ({ label, n, why, bad }) => (
 		<div className="row">
-			<span>{label} <span className="muted">{why}</span></span>
+			<span>{label}{why ? <> <span className="muted">{why}</span></> : null}</span>
 			<span className="val">
 				<span className={"cov " + (n ? (bad ? "none" : "live") : "live")}>{n}</span>
 			</span>
@@ -164,9 +164,7 @@ export default function AssetImport({ onClose }) {
 				<div className="bulk">
 					<div className="bulkcard">
 						<span className="bulklab">Upload File</span>
-						<SheetDrop file={up.file} sheet={up.sheet} busy={busy} onTake={up.take}
-							hint={<>A CSV of assets. A blank <span className="mono">name</span> creates a
-								draft; a filled one updates that asset. Download template writes one.</>} />
+						<SheetDrop file={up.file} sheet={up.sheet} busy={busy} onTake={up.take} />
 
 						<button className="bulklink" type="button" disabled={busy}
 							title="The ten columns this reads, with two example rows — one that creates and one that updates."
@@ -186,32 +184,17 @@ export default function AssetImport({ onClose }) {
 
 					{up.sheet && !missingCols.length ? (
 						<div className="rows bulkrows">
-							<Count label="Create" n={makes.length}
-								why="Rows with no name. Each becomes a draft Asset — nothing is submitted, so nothing goes on the books until somebody does that on the site." />
-							<Count label="Update" n={edits.length}
-								why="Rows naming a draft asset that is on this site. Only the columns the sheet filled are written; a blank cell leaves the field alone." />
+							<Count label="Create" n={makes.length} />
+							<Count label="Update" n={edits.length} />
 							<Count label="No such asset" n={missing.length} bad={!!missing.length}
 								why={missing.length
-									? `Nothing on this site is called ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " and others" : ""}. Skipped rather than created under that name, which would be a second asset with the id of one somebody meant to correct.`
-									: "Every name in the file is an asset here."} />
-							<Count label="Submitted" n={locked.length} bad={!!locked.length}
-								why={locked.length
-									? "These are on the books and a submitted document is history. The site cancels one before amending it, and that has an approval behind it."
-									: "No row names a submitted asset."} />
-							<Count label="No name to create with" n={noName.length} bad={!!noName.length}
-								why={noName.length
-									? "A new asset needs asset_name — the register lists by it and Search matches on it."
-									: "Every creating row carries a name."} />
+									? `Nothing on this site is called ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " and others" : ""}.`
+									: null} />
+							<Count label="Submitted" n={locked.length} bad={!!locked.length} />
+							<Count label="No name to create with" n={noName.length} bad={!!noName.length} />
 							{strayCat.size ? (
 								<div className="row">
-									<span>
-										Unknown asset type{" "}
-										<span className="muted">
-											Not on the Asset Type master, so these will be written as typed and
-											the master will not match them. Add them from the form&rsquo;s
-											&ldquo;Add Asset Types&rdquo;, or expect a category nothing lists.
-										</span>
-									</span>
+									<span>Unknown asset type</span>
 									<span className="val bulkmiss">{[...strayCat].slice(0, 5).join(", ")}</span>
 								</div>
 							) : null}
@@ -232,11 +215,6 @@ export default function AssetImport({ onClose }) {
 							{busy ? `Importing ${done} of ${work}…` : "Import"}
 						</button>
 						<button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
-						<span className="bulkwhy">
-							Writes the same nine fields the form writes, through the same allowlist. Everything
-							created is a draft. It runs in this tab, so leaving the page stops it part-way;
-							what is written stays.
-						</span>
 					</div>
 				</div>
 			}

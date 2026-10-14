@@ -285,14 +285,7 @@ function AssetDelete({ s, asset, onClose }) {
 
 			<div className="rows">
 				<div className="row">
-					<span>
-						Status{" "}
-						<span className="muted">
-							{submitted
-								? "A submitted asset is on the books. The site cancels one before deleting it, and cancelling has an approval behind it."
-								: "A draft is a record on file and nothing else — it is on nobody's books until it is submitted."}
-						</span>
-					</span>
+					<span>Status</span>
 					<span className="val">
 						<span className={"cov " + (submitted ? "none" : "live")}>
 							{submitted ? "Submitted — cannot be deleted" : "Draft"}
@@ -300,14 +293,7 @@ function AssetDelete({ s, asset, onClose }) {
 					</span>
 				</div>
 				<div className="row">
-					<span>
-						Movements{" "}
-						<span className="muted">
-							{moves.length
-								? "A movement names its asset by string, so deleting this one leaves them recording a handover of nothing."
-								: "Nothing has been issued or returned, so no history is left behind."}
-						</span>
-					</span>
+					<span>Movements</span>
 					<span className="val">
 						{moves.length
 							? <span className="cov none">{fmt(moves.length)} against this asset</span>
@@ -587,16 +573,11 @@ function AddTypesDialog({ s, onClose }) {
 			</Scroll>
 
 			<p className="attwhy">
-				Their dialog edits the Name on every row. This one does not, and it is not a shortcut:
-				a category is named by itself, so the name is the record&rsquo;s id and every asset points
-				at it by that string. Renaming rewrites all of them at once, which is{" "}
-				<span className="mono">rename_doc</span> on the site.{" "}
 				<Desk className="aflink" label="Open the Asset Category master"
 					href={s.site && deskNew(s.site, "Asset Category")}
 					title="Open a blank Asset Category on the ERPNext site — where a category also carries its depreciation schedule, which nothing here sets.">
-					Open it there
-				</Desk>{" "}
-				to rename one, or for the depreciation schedule a category carries and this dialog does not.
+					Open the Asset Category master
+				</Desk>
 			</p>
 		</div>
 	);
@@ -967,23 +948,13 @@ export default function AssetEntry() {
 			{!busyForm ? (
 				<div className="afnote">
 					{submitted ? (
-						<>
-							<b>Submitted — read only.</b> This asset is at docstatus 1, so its record is
-							history and neither this form nor the site will let it be typed into. A draft one
-							can be. Open it on the site to amend it, where that act has an approval behind it.
-						</>
+						<b>Submitted — read only.</b>
 					) : asset ? (
-						<>
-							<b>Read only — press Edit to type.</b> The boxes show what the record holds until
-							then. Nine of the thirteen can be changed here; the greyed four have no field
-							behind them on ERPNext&rsquo;s Asset, and status and custodian are moved by an
-							Asset Movement rather than typed.
-						</>
+						<b>Read only — press Edit to type.</b>
 					) : (
 						<>
 							<b>No asset picked.</b> Press <b>New</b> for a blank one, or <b>Search</b> to put a
-							record from the register into the boxes. Nothing here takes typing until one of
-							those has been done.
+							record from the register into the boxes.
 						</>
 					)}
 				</div>
@@ -1014,10 +985,7 @@ export default function AssetEntry() {
 
 			{rows.length ? null : (
 				<div className="mt-[.7rem]">
-					<Empty title="Search has nothing to offer">
-						The register is empty, so no record can be put in the boxes. The form is drawn anyway —
-						it is what their screen looks like before anything is loaded too.
-					</Empty>
+					<Empty title="Search has nothing to offer" />
 				</div>
 			)}
 		</div>

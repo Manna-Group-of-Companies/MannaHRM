@@ -50,6 +50,7 @@ EXPECTED = [
 	"Employee Survey Answer", "Employee Survey Question", "Employee Survey Response",
 	"Letter Type", "Manna HR Settings", "Work Location",
 	"Employee Overtime",
+	"Employee Actual Salary",
 ]
 
 #: Doctypes that must arrive **only** with `bench install-app`, never as a

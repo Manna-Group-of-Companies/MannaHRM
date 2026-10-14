@@ -185,7 +185,6 @@ export default function EditLetter({ name, onClose }) {
 			title="Edit Letter"
 			wide
 			msg={doc ? `${doc.name}${doc.letter_date ? ` · issued ${dmy(doc.letter_date)}` : ""}` : name}
-			why="Their Edit Letter form. The Custom Fields table is the tokens this letter type's template could not fill from the record — answer one and the letter is merged again and the text saved, which is what the document stores."
 			actions={
 				<>
 					<button className="embtn pri" onClick={save} disabled={!ready}
@@ -299,10 +298,8 @@ export default function EditLetter({ name, onClose }) {
 									{rows && rows.length ? (
 										<p className="cfnote">
 											{gaps.length
-												? <>{gaps.length} of {rows.length} still unanswered. Anything left blank stays
-													<span className="mono"> [[Token]]</span> in the letter — visible, rather than a gap that
-													looks finished.</>
-												: <>All filled. Save merges the letter again and stores the text.</>}
+												? <>{gaps.length} of {rows.length} still unanswered.</>
+												: <>All filled.</>}
 										</p>
 									) : null}
 								</div>

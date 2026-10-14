@@ -194,12 +194,11 @@ function Table({ s, rows }) {
 				{/* The site's own hint, which is a sentence fragment rather than a
 				    sentence — so it is punctuated here rather than run into the next. */}
 				<span className="block">{s.lvbErr || "The site refused the request"}.</span>
-				No figure is shown at all rather than one that might be wrong.
 			</Empty>
 		);
 	}
 	if (s.lvbState !== "done") {
-		return <Empty title="Reading leave from the site…">Allocations and approved applications, read once.</Empty>;
+		return <Empty title="Reading leave from the site…" />;
 	}
 	if (!rows.length) {
 		return (

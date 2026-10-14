@@ -163,13 +163,10 @@ function ptExport(s) {
     the capture caught and says so, rather than growing plausible neighbours
     nobody has seen. */
 const SEEN = [
-	["ptprocess", "Payment Process", "process", PT_PROCESS, "the only value in the capture"],
-	["pttype", "Report Type", "type", PT_REPORT_TYPES,
-		"Detail — whether they also summarise is unknown"],
-	["ptpayroll", "Payroll Type", "ptype", PT_TYPES,
-		"Monthly, and PT is not monthly in every state — which is why the control exists at all"],
-	["ptstate", "State", "state", PT_STATES,
-		"All. No state is held against anybody here, so this one cannot narrow anything"],
+	["ptprocess", "Payment Process", "process", PT_PROCESS],
+	["pttype", "Report Type", "type", PT_REPORT_TYPES],
+	["ptpayroll", "Payroll Type", "ptype", PT_TYPES],
+	["ptstate", "State", "state", PT_STATES],
 ];
 
 /** One of those four, drawn the same way wherever it sits in their column. */
@@ -182,7 +179,6 @@ function SeenPick({ c, f, stale }) {
 					onChange={(e) => stale({ [c[2]]: e.target.value })}>
 					{c[3].map((v) => <option key={v}>{v}</option>)}
 				</select>
-				<span className="hint">{c[4]}</span>
 			</span>
 		</>
 	);
@@ -244,9 +240,6 @@ function PtForm({ s }) {
 						onChange={(e) => stale({ year: e.target.value })}>
 						{ptYears().map((y) => <option key={y}>{y}</option>)}
 					</select>
-					<span className="hint">
-						a fiscal year, April to March — the capture read <b>2025-26</b>
-					</span>
 				</span>
 
 				{SEEN.slice(2).map((c) => <SeenPick key={c[0]} c={c} f={f} stale={stale} />)}
@@ -258,10 +251,6 @@ function PtForm({ s }) {
 						<option value="">(start of the year)</option>
 						{PT_FY_MONTHS.map((m) => <option key={m}>{m}</option>)}
 					</select>
-					<span className="hint">
-						both ends were empty in the capture and neither list was opened; months of the chosen
-						year is the reading
-					</span>
 				</span>
 
 				<label htmlFor="pttill">Till:</label>
@@ -281,10 +270,6 @@ function PtForm({ s }) {
 							{v}
 						</label>
 					))}
-					<span className="hint">
-						theirs read the first three. <b>Left is the one to tick</b> — somebody who left in
-						August still had PT deducted for the months before it
-					</span>
 				</span>
 
 				<label htmlFor="ptemp">Employee:</label>
@@ -320,7 +305,6 @@ function PtForm({ s }) {
 					<select id="ptby" className="wide" value={f.by} onChange={(e) => stale({ by: e.target.value })}>
 						{PT_BY.map((b) => <option key={b[0]} value={b[0]}>{b[1]}</option>)}
 					</select>
-					<span className="hint">groups inside the section</span>
 				</span>
 
 				<label htmlFor="ptgby">GroupBy:</label>
@@ -330,10 +314,6 @@ function PtForm({ s }) {
 						<option value="">Select GroupBy</option>
 						{PT_BY.filter((b) => b[0]).map((b) => <option key={b[0]} value={b[0]}>{b[1]}</option>)}
 					</select>
-					<span className="hint">
-						sections the report — and the field a PT return wants here is the state, which is the
-						one this list cannot offer
-					</span>
 				</span>
 
 				<label htmlFor="ptout">Report Output:</label>
@@ -469,7 +449,7 @@ function PtReport({ s }) {
 				<span className="cov none">{fmt(rows.length)} people</span>
 				<span>
 					{ptPeriod(f)} — <b>{cols.length - empty.length} of {cols.length} columns</b> can be
-					filled, and not one of the {empty.length} that cannot is optional on a return.
+					filled.
 				</span>
 				<button className="btn ghost ml-auto" onClick={() => ptExport(s)}>⬇ Export CSV</button>
 			</div>
@@ -506,8 +486,7 @@ export default function ProfTax() {
 					{/* Who the return would cover does not depend on the period, so the screen
 					    shows them rather than a sentence about why it will not. Generate adds
 					    the return's own columns and shades the five this site cannot fill. */}
-					<People people={ptRows(s)}
-						note="Everybody this statement would cover, at the criteria above. Generate adds the columns a Professional Tax return needs and shows which of them this site can fill." />
+					<People people={ptRows(s)} />
 				</div>
 			)}
 
@@ -533,27 +512,6 @@ export default function ProfTax() {
 							The list comes off the site, and it has not answered.
 						</Empty>
 					)}
-				</Panel>
-
-				<Panel title="What their form asks and this site cannot answer" cov="none" ico="🧾">
-					<div className="rows">
-						<div className="row">
-							<span>State</span>
-							<span className="val muted">no field on <code>Employee</code></span>
-						</div>
-						<div className="row">
-							<span>PT registration / enrolment</span>
-							<span className="val muted">held nowhere on this site</span>
-						</div>
-						<div className="row">
-							<span>Slab</span>
-							<span className="val muted">no master — the mechanism exists, the table does not</span>
-						</div>
-						<div className="row">
-							<span>Amount deducted</span>
-							<span className="val muted">payroll not started</span>
-						</div>
-					</div>
 				</Panel>
 			</Cols>
 		</>

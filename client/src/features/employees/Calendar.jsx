@@ -1,8 +1,8 @@
 import { patch, set, useApp } from "@/store";
 import { go } from "@/routes/router";
-import { dayOf, dmy, fmt, monthCells, tally, thisMonth, todayIso, weekNo, ymd } from "@/lib/format";
+import { dmy, fmt, monthCells, thisMonth, todayIso, weekNo, ymd } from "@/lib/format";
 import { download, save, toCsv } from "@/lib/csv";
-import { gcalUrl, icsFor, icsName } from "@/lib/gcal";
+import { icsFor, icsName } from "@/lib/gcal";
 import { Fragment, useEffect } from "react";
 import { canDo } from "@/api/client";
 import {
@@ -10,9 +10,7 @@ import {
 	CAL_EDIT_WHY, CAL_IMPORT_COLS, CAL_MONTHS, CAL_NEW_BLANK, CAL_NEW_WHY, CAL_OFF, CAL_PAID_WHY,
 	CAL_SHOWN, CAL_TEMPLATE_DEAD, CAL_TOOLS, CAL_WEEKDAYS, CAL_WORK, CAL_WORK_WHY, IMPORT_MENU,
 } from "@/data/masters";
-import {
-	Bars, Cols, Desk, Empty, Gap, ImportMenu, Note, Panel, Scroll, Tile, Tiles,
-} from "@/components/ui";
+import { Desk, ImportMenu, Note } from "@/components/ui";
 import { deleteHolidayList } from "@/api/load";
 import { deskImport, deskNew, deskNewWith, deskUrl } from "@/lib/desk";
 
@@ -360,9 +358,6 @@ function CalNameRow({ s }) {
 						<input type="search" placeholder="Search this calendar…" aria-label="Search the calendar"
 							value={s.cal.find} onChange={(e) => patch("cal", { find: e.target.value })} />
 					</span>
-					<span className="n text-fine text-ink-3">
-						Filters what the cells show. Factor HR’s own Search dialog has never been screenshotted.
-					</span>
 				</div>
 			)}
 		</>
@@ -465,12 +460,6 @@ function CalLegend({ s }) {
 			<span className="n">
 				{fmt(n)} entries in {calList(s) || "no list"}
 				{q ? ` matching “${q}”` : ""}
-			</span>
-			{/* Two words of their label, and why they are not on ours. Here rather
-			    than on the bar itself, because it is a note about the comparison and
-			    the bar is on twenty-six cells. */}
-			<span className="n" title={CAL_PAID_WHY}>
-				Theirs reads <b>Week Off Full Paid Day</b> — the pay half is not on any record here.
 			</span>
 		</div>
 	);
@@ -765,10 +754,8 @@ function CalNew({ s }) {
 							+ fmt(picked.filter((x) => days[x].off).length) + " week off, "
 							+ fmt(picked.filter((x) => !days[x].off).length) + " named"
 						: editing
-							? "Every day on " + mk.src + " has been set back to a working day. Saving that "
-								+ "writes nothing, which is why Save is off."
-							: "Nothing picked yet. Every day is a working day until it is given a status, "
-								+ "which is what an empty grid means on this side as well as on theirs."}
+							? "Every day on " + mk.src + " has been set back to a working day."
+							: "Nothing picked yet."}
 				</span>
 			</div>
 		</div>
@@ -784,10 +771,9 @@ export const calEditor = (user) => CAL_EDITORS.includes(String(user || "").trim(
 
 export default function Calendar() {
 	const s = useApp();
-	const a = active(s);
-	const noList = a.filter((e) => !e.holiday_list);
-	const lists = s.holidayLists;
-	const read = lists.filter((h) => s.holidays[h.name]);
+	/* The two reconciliation panels that sat under the month — "Holiday lists
+	   on the site" and one per list with its dates — were taken off on
+	   6 October 2026, asked for. The month is the page. */
 
 	/* Asked of the site rather than decided from a role name here: whoever may
 	   write a Holiday List there is who this page calls an admin, so the two
@@ -830,102 +816,6 @@ export default function Calendar() {
 				</div>
 			)}
 
-			<Cols>
-				<Panel title="Holiday lists on the site" cov="live" ico="📅">
-					<Tiles>
-						<Tile k="Lists" n={fmt(lists.length)} cls={lists.length ? "good" : "warn"} />
-						<Tile k="Assigned" n={fmt(a.length - noList.length)} cls={noList.length ? "" : "good"}
-							s="active people" />
-						<Tile k="No list" n={fmt(noList.length)} cls={noList.length ? "bad" : "good"}
-							s={noList.length ? "no weekly off at all" : "everybody covered"} />
-					</Tiles>
-					{noList.length ? (
-						<>
-							<div className="mt-[.7rem]">
-								<Gap>
-									<b>{fmt(noList.length)} active people have no Holiday List.</b> A person with no
-									holiday list has no weekly off, so the shift job expects them at the gate on a
-									Sunday and marks them absent when they do not come. It costs them the day.
-								</Gap>
-							</div>
-							<div className="mt-[.7rem]">
-								<Bars pairs={tally(noList, "company")} />
-							</div>
-						</>
-					) : null}
-				</Panel>
-
-				{lists.length > 0 && !read.length && (
-					<Panel title="Dates" cov="part" ico="⏳">
-						<Empty title="reading the holiday dates…" />
-					</Panel>
-				)}
-
-				{read.map((h) => {
-					const rows = s.holidays[h.name] || [];
-					const off = rows.filter((r) => r.weekly_off).length;
-					const dated = rows
-						.filter((r) => !r.weekly_off)
-						.sort((x, y) => String(x.holiday_date).localeCompare(String(y.holiday_date)));
-					return (
-						<Panel key={h.name} title={h.name} cov="live" ico="🗓">
-							<Tiles>
-								<Tile k="Days off" n={fmt(rows.length)} s="in the list" />
-								<Tile k="Weekly off" n={fmt(off)} s="generated" />
-								<Tile k="Named holidays" n={fmt(dated.length)} cls={dated.length ? "" : "warn"}
-									s="festivals and national days" />
-							</Tiles>
-							{dated.length ? (
-								<>
-									<div className="mt-[.7rem]">
-										<Scroll style={{ maxHeight: 260, overflowY: "auto" }}>
-											<table style={{ minWidth: 0 }}>
-												<thead>
-													{/* The last column has no heading on purpose: it is one control
-													    repeated, and "Add" over a column of "＋ Google" says the same
-													    word twice. */}
-													<tr><th>Date</th><th>Day</th><th>Holiday</th><th /></tr>
-												</thead>
-												<tbody>
-													{dated.map((r) => {
-														const date = String(r.holiday_date).slice(0, 10);
-														const title = r.description || "Holiday";
-														return (
-															<tr key={String(r.holiday_date)}>
-																<td className="mono">{dmy(r.holiday_date)}</td>
-																<td className="muted">{dayOf(date)}</td>
-																<td>{title}</td>
-																<td>
-																	<a
-																		className="lnk text-mini whitespace-nowrap"
-																		href={gcalUrl({
-																			date,
-																			title,
-																			details: `From the ${h.name} holiday list in Manna HR.`,
-																		})}
-																		target="_blank"
-																		rel="noreferrer"
-																		title={`Opens Google Calendar with ${title} filled in as an all-day event on `
-																			+ `${dmy(r.holiday_date)}. Nothing is added until you press Save there — this is `
-																			+ "their compose screen, in your account, not a write from this page."}
-																	>
-																		＋ Google
-																	</a>
-																</td>
-															</tr>
-														);
-													})}
-												</tbody>
-											</table>
-										</Scroll>
-									</div>
-								</>
-							) : null}
-						</Panel>
-					);
-				})}
-
-			</Cols>
 		</>
 	);
 }

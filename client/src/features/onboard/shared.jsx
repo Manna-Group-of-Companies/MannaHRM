@@ -7,7 +7,7 @@ import { Empty } from "@/components/ui";
    "nothing recorded" rather than 0%. */
 export const onboardWait = (s, what) =>
 	s.onboardBusy ? (
-		<Empty title={`Reading ${what}…`}>Nothing is claimed until the site has answered.</Empty>
+		<Empty title={`Reading ${what}…`} />
 	) : null;
 
 /** The employee documents, scoped to the company picker and to who is here. */

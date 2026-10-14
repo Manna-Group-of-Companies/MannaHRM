@@ -139,7 +139,7 @@ export default function DocImport({ onClose }) {
 
 	const Count = ({ label, n, why, bad }) => (
 		<div className="row">
-			<span>{label} <span className="muted">{why}</span></span>
+			<span>{label}{why ? <> <span className="muted">{why}</span></> : null}</span>
 			<span className="val">
 				<span className={"cov " + (n ? (bad ? "none" : "live") : "live")}>{n}</span>
 			</span>
@@ -153,9 +153,7 @@ export default function DocImport({ onClose }) {
 				<div className="bulk">
 					<div className="bulkcard">
 						<span className="bulklab">Upload File</span>
-						<SheetDrop file={up.file} sheet={up.sheet} busy={busy} onTake={up.take}
-							hint={<>A CSV of document numbers. Drag it here or click &ldquo;Browse
-								Files&rdquo; — Download template on the same menu writes one.</>} />
+						<SheetDrop file={up.file} sheet={up.sheet} busy={busy} onTake={up.take} />
 
 						<button className="bulklink" type="button" disabled={busy}
 							title="The six columns this reads, with one example row taken from a real employee on this site."
@@ -177,22 +175,16 @@ export default function DocImport({ onClose }) {
 						<div className="rows bulkrows">
 							<Count label="Will be written" n={ok.length}
 								why={`Of ${up.sheet.rows.length} row${up.sheet.rows.length === 1 ? "" : "s"} in the file.`} />
-							<Count label="Replacing" n={replacing} bad={!!replacing}
-								why={replacing
-									? "These people already hold a number of that type. A document here is a field, so there is no second row to add — it is overwritten."
-									: "Nothing in this file lands on a document that already exists."} />
+							<Count label="Replacing" n={replacing} bad={!!replacing} />
 							<Count label="No such employee" n={noPerson.length} bad={!!noPerson.length}
 								why={noPerson.length
-									? `No employee carries ${noPerson.slice(0, 4).join(", ")}${noPerson.length > 4 ? " and others" : ""}. Skipped rather than failing the file.`
-									: "Every code in the file is somebody on this site."} />
+									? `No employee carries ${noPerson.slice(0, 4).join(", ")}${noPerson.length > 4 ? " and others" : ""}.`
+									: null} />
 							<Count label="No such type" n={noType.length} bad={!!noType.length}
 								why={noType.length
 									? `This site can write ${DOC_KINDS.filter((k) => k.num).map((k) => k.label).join(" and ")}. The file also asks for ${[...new Set(noType)].slice(0, 3).join(", ")}.`
-									: "Every type in the file is one this side has a field for."} />
-							<Count label="No number" n={noNumber.length} bad={!!noNumber.length}
-								why={noNumber.length
-									? "A document is its number — a row without one would write nothing and leave no row on the register."
-									: "Every row carries a number."} />
+									: null} />
+							<Count label="No number" n={noNumber.length} bad={!!noNumber.length} />
 						</div>
 					) : null}
 
@@ -210,11 +202,6 @@ export default function DocImport({ onClose }) {
 							{busy ? `Importing ${done} of ${ok.length}…` : "Import"}
 						</button>
 						<button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
-						<span className="bulkwhy">
-							Writes document fields on <span className="mono">Employee</span> — the same five the
-							Document Entry form writes, and nothing else about a person. It runs in this tab,
-							so leaving the page stops it part-way; what is written stays.
-						</span>
 					</div>
 				</div>
 			}

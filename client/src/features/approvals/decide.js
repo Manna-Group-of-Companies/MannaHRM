@@ -5,6 +5,7 @@ import { dmy } from "@/lib/format";
 import { supersededBy } from "@/lib/punchedit";
 import { byMachine } from "@/lib/direction";
 import { ATTENDANCE_APPROVER, isAttendanceApprover } from "@/data/approver";
+import { afterCorrection, giveBack } from "@/api/absencerule";
 
 /* ---------------------------------------------------------------------------
    Deciding one time correction — the tick and the cross on a card.
@@ -207,15 +208,23 @@ export async function decideCorrection(r, action, note) {
  *
  * @param {object} r  the correction: `employee`, `attendance_date`, `requested_in`, `requested_out`
  * @param {string} user  who decided it, for the punch's `device_id`
- * @returns {Promise<{ok: boolean, error?: string, made: object[], kept: object[], setAside: object[], stuck: string[], marked: object[]}>}
+ * @returns {Promise<{ok: boolean, error?: string, made: object[], kept: object[], setAside: object[], stuck: string[], marked: object[], leave: object|null}>}
  */
 export async function writeCorrection(r, user) {
 	const day = String(r.attendance_date || "").slice(0, 10);
 	const wanted = punchesFor(r);
 	const made = [];
 	const restored = [];
-	const none = { made, restored, kept: [], setAside: [], stuck: [], marked: [] };
+	const none = { made, restored, kept: [], setAside: [], stuck: [], marked: [], leave: null };
 	if (!wanted.length) return { ...none, ok: false, error: "there is neither a punch-in nor a punch-out time to record." };
+
+	/* The office absence rule's leave for this day goes back before any punch
+	   is written, as regularization.apply does on the site: while it stands,
+	   hrms builds the corrected day as On Leave whatever the punches say, and
+	   sets them aside. A leave that cannot be given back stops the correction
+	   here, with nothing written. */
+	const back = await giveBack(r.employee, day);
+	if (!back.ok) return { ...none, ok: false, error: `${back.error}. No punch was written — try again.` };
 
 	let existing;
 	try {
@@ -280,6 +289,13 @@ export async function writeCorrection(r, user) {
 		else stuck.push(`${c.name} (${said(p)}): ${w.error}`);
 	}
 
+	/* The office absence rule: the leave this day gave back (above) goes to
+	   the month's next absence, if it has one. */
+	const after = await afterCorrection(r.employee, day);
+	const leave = back.returned.length || after
+		? { given: [], refused: [], waiting: [], ...(after || {}), returned: [...back.returned, ...((after && after.returned) || [])] }
+		: null;
+
 	/* `hrms` will not rebuild a day it has already marked — it returns quietly
 	   when a row exists. Cancelling it is `regularization.py`'s job, on the
 	   server; this page never writes Attendance, so it says so instead. */
@@ -287,13 +303,28 @@ export async function writeCorrection(r, user) {
 		[["employee", "=", r.employee], ["attendance_date", "=", day], ["docstatus", "=", 1]])
 		.catch(() => []);
 
-	return { ok: true, made, restored, kept: wanted.filter((p) => !made.includes(p) && !restored.includes(p)), setAside, stuck, marked };
+	return { ok: true, made, restored, kept: wanted.filter((p) => !made.includes(p) && !restored.includes(p)), setAside, stuck, marked, leave };
+}
+
+/** What the office absence rule did after a correction, as one sentence, or "". */
+export function leaveSummary(leave) {
+	if (!leave) return "";
+	const back = leave.returned.map((x) => dmy(x.day)).join(", ");
+	const given = leave.given.map((x) => dmy(x.day)).join(", ");
+	const refused = leave.refused.map((x) => `${dmy(x.day)} (${x.error})`).join("; ");
+	return (back ? `The Casual Leave the month's first absence took on ${back} is given back. ` : "")
+		+ (given && back ? `${given}, the next absence, takes it instead. ` : "")
+		+ (given && !back ? `${given} is taken as this month's Casual Leave, the first absence. ` : "")
+		+ (refused ? `The office absence rule could not finish: ${refused}. ` : "")
+		+ (!given && (leave.waiting || []).length
+			? `${leave.waiting.map((x) => dmy(x.day)).join(", ")} stays Absent: no Casual Leave left to give. ` : "");
 }
 
 /** What `writeCorrection` did, in the sentences the page shows. */
 export function correctionSummary(w, day) {
 	return (w.made.length ? `Punches written for ${dmy(day)}: ${w.made.map(said).join(", ")}. ` : "")
 		+ ((w.restored || []).length ? `Put back from set aside: ${w.restored.map(said).join(", ")}. ` : "")
+		+ leaveSummary(w.leave)
 		+ (w.kept.length ? `Already on the site: ${w.kept.map(said).join(", ")}. ` : "")
 		+ (w.setAside.length ? `Set aside, kept on record: ${w.setAside.map(said).join(", ")}. ` : "")
 		+ (w.stuck.length ? `Could not set aside ${w.stuck.join("; ")} — mark it Skip Auto Attendance on the desk. ` : "")

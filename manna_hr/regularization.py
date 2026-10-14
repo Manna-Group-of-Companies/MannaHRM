@@ -16,6 +16,8 @@ import frappe
 from frappe import _
 from frappe.utils import get_datetime, getdate, now_datetime
 
+from manna_hr import absencerule_site
+
 # The workflow owns these — manna_hr/workflow.py is where the transitions
 # between them are, and this module imports the names rather than restating
 # them so the two cannot drift into disagreeing about a spelling.
@@ -58,6 +60,10 @@ def _guard_self_approval(doc):
 
 def apply(doc):
 	"""Write the corrected punches and let the shift job rebuild the day."""
+	# An office absence the month took as Casual Leave is given back first —
+	# while it stands, the rebuilt day comes out On Leave whatever the punches
+	# say. See absencerule_site.after_regularization.
+	absencerule_site.after_regularization(doc.employee, doc.attendance_date)
 	_clear_generated_attendance(doc.employee, doc.attendance_date)
 
 	device = "REG-{0}".format(frappe.session.user)
@@ -76,6 +82,9 @@ def apply(doc):
 
 	doc.db_set("decided_by", frappe.session.user, update_modified=False)
 	doc.db_set("decided_on", now_datetime(), update_modified=False)
+
+	# The leave given back goes to the month's next absence, if it has one.
+	absencerule_site.next_absence(doc.employee, doc.attendance_date)
 
 	return made
 

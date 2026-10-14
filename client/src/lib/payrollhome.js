@@ -94,7 +94,7 @@ export function homeSteps({ setup, extras, pay, people, end }) {
 		? { state: "done", text: "Everything is submitted. Download the sheet, the register and the bank file." }
 		: ok && tot && tot.count
 			? { state: "todo", text: "Look over the Salary Sheet while the slips are in draft." }
-			: { state: "todo", text: "Available once the salary slips exist." };
+			: { state: "todo", text: "The salary sheet comes once the salary slips exist. A preview of the wages register can be made now." };
 
 	const steps = [
 		{ id: "setup", title: "Check the set-up", ...setupStep },
@@ -104,4 +104,51 @@ export function homeSteps({ setup, extras, pay, people, end }) {
 	];
 	const current = steps.findIndex((s) => s.state !== "done");
 	return { steps, current: current < 0 ? steps.length : current, run, totals: tot };
+}
+
+/** What the two Excel buttons of "Check it and pay" can make, and the line under
+    them that says why one cannot — in words HR can act on.
+
+    The salary sheet is the slips' own, so it needs them. The wages register is
+    made from the slips when the month has any; before then it is a preview whose
+    figures Excel works out from attendance and the sheet's formulas, not from
+    any slip. With every company in the top bar it is every company's register in
+    one file, a sheet each (9 October 2026: payroll is paid for all of them, and
+    the company's own register file keeps a sheet per company). Each sheet is
+    then whichever of the two that company's month holds, and says so at its top.
+
+    @param company  the company in the top bar, or "" for all of them
+    @param label    the month in words, "September 2026"
+    @param slips    how many live salary slips the month has
+    @param state    the month's payroll read: "ok", "error", or anything else while it is read
+    @returns {{sheet: string, register: string, mode: "slips"|"preview"|"all"|"", hint: string, line: string}}
+      `sheet` and `register` are why each button is off, "" when it is on; `mode`
+      is which register the button makes. */
+export function exportWhy({ company, label, slips = 0, state }) {
+	if (state !== "ok" && state !== "error") {
+		const reading = `Reading ${label}'s payroll…`;
+		return { sheet: reading, register: reading, mode: "", hint: reading, line: reading };
+	}
+	const sheet = state === "ok" && slips > 0 ? ""
+		: state === "error"
+			? "The salary slips could not be read, so the salary sheet cannot be made."
+			: `The salary sheet needs salary slips, and there are none for ${label} yet.`;
+	if (!company) {
+		return {
+			sheet, register: "", mode: "all",
+			hint: "Every company's Form 25 wages register in one file, a sheet each: from the salary slips where a company has them, a preview where it has not.",
+			line: [sheet, "The wages register makes every company's sheet in one file. A company with no salary slips yet gets a preview that Excel works out from attendance and the sheet's formulas — do not pay from those sheets."].filter(Boolean).join(" "),
+		};
+	}
+	if (state === "ok" && slips > 0) {
+		return { sheet: "", register: "", mode: "slips", line: "", hint: "The month's salary slips as the company's Form 25 wages register." };
+	}
+	const works = state === "error"
+		? "The wages register beside it still works, as a preview: Excel works it out from attendance and the sheet's formulas."
+		: "The wages register beside it works now: Excel works it out from attendance and the sheet's formulas.";
+	return {
+		sheet, register: "", mode: "preview",
+		hint: "A preview of the Form 25 wages register. Excel works it out from attendance and the sheet's formulas, not from salary slips — do not pay from it.",
+		line: `${sheet} ${works}`,
+	};
 }

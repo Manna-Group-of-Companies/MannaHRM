@@ -18,9 +18,7 @@ export default function LeaveAll() {
 				]}
 			/>
 
-			<Empty title="Leave, all pages">
-				The Leave pages are on the bar above. This index has nothing of its own to show.
-			</Empty>
+			<Empty title="Leave, all pages" />
 		</>
 	);
 }

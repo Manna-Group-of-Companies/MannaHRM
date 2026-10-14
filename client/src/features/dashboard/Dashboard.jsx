@@ -59,12 +59,31 @@ import {
 	attendanceToday, byStanding, celebrations, findPeople, futureLeave, joinersByMonth,
 	mergeActivity, startupBuckets,
 } from "@/lib/summary";
-import { Bars, Cols, Empty, Html, Note, Panel, Tile, Tiles } from "@/components/ui";
+import { Bars, Empty, Html, Note, Panel } from "@/components/ui";
 import { Columns, Donut, Meter, Stat, Stats } from "@/components/charts";
 import Link from "@/routes/Link";
 import { LocCell } from "@/components/PunchMap";
 import { ATT_BUCKETS, PAYROLL_TILES, QUICK_LINKS, QUICK_REPORTS } from "@/data/startup";
 import { isHidden } from "@/data/sections";
+import Icon from "@/components/Icon";
+
+/** The glyph for each of their six attendance buckets, by key. `ATT_BUCKETS`
+    still carries an emoji for the same job, which other screens read. */
+const BUCKET_ICON = {
+	team: "users", in: "checkCircle", notIn: "circle", late: "alarm", leave: "palm", future: "calendar",
+};
+
+/** "Good morning" by the browser's clock. The reader's own morning is the
+    right one: this is a greeting, not a record, and nothing is decided by it. */
+function greeting(now = new Date()) {
+	const h = now.getHours();
+	return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+
+/** The date the way somebody says it — "Tuesday, 6 October 2026". */
+const longDate = (now = new Date()) => now.toLocaleDateString("en-GB", {
+	weekday: "long", day: "numeric", month: "long", year: "numeric",
+});
 
 /** Quick Links and Quick Reports, less the ones whose page is hidden. A link
     into a hidden module lands back on this page, which reads as a broken
@@ -245,17 +264,46 @@ export default function Dashboard({ company }) {
 
 	const feed = mergeActivity(activitySources(s));
 
+	/* **Rebuilt 6 October 2026** as one grid with a reading order, where it was
+	   two columns of panels in Factor HR's sequence. Every number on the old
+	   page is still here and still comes from the same place; what changed is
+	   which ones come first. Top left is what HR acts on at nine — who is in
+	   and what is waiting — and the reference panels (links, payroll, notices)
+	   are further down, where a page somebody scrolls puts reference.
+
+	   The grid is twelve columns and each panel says how many it takes
+	   (`span-4`, `span-8`), so rows fill rather than leaving a hole under the
+	   shorter of two columns. Below 1100px every panel takes the full width. */
+	const folding = (title, span) => ({
+		className: span, shut: shut.has(title), onToggle: () => fold(title),
+	});
+
 	return (
-		<>
-			{/* **Their four, in their four words.** Factor HR's Employees Summary
-			    reads Active / New / Left / Licensed, and those are the figures
-			    somebody is holding this screen up against. Departments and the
-			    approval count moved to the panels that already draw them. */}
+		<div className="dash">
+			<header className="dhero">
+				<div className="dhello">
+					<p className="dgreet">{greeting()}</p>
+					<h1>{company || s.company || "Manna Group"}</h1>
+					<p className="dsub">
+						{longDate()} · <b>{fmt(a.length)}</b> active {a.length === 1 ? "employee" : "employees"}
+						{att.done + att.still ? <> · <b>{fmt(att.done + att.still)}</b> in today</> : null}
+					</p>
+				</div>
+				<div className="dheroacts">
+					<Link section="attendance" subtab="daily" className="embtn">
+						<Icon name="clock" /> Today&apos;s attendance
+					</Link>
+					<Link section="dashboard" subtab="approvals" className="btn tpl">
+						<Icon name="inbox" /> Review approvals
+						{waiting ? <span className="pilln">{fmt(waiting)}</span> : null}
+					</Link>
+				</div>
+			</header>
+
 			{/* **Their own toolbar, in their own words.** Active / InActive / All
-			    sits above the headline counts on their page; Search is inside the
-			    attendance summary and is lifted here because it filters the same
-			    people every panel below counts; Expand All and Collapse All are
-			    theirs over the panels.
+			    sits above the headline counts on their page; Search filters the
+			    same people every panel below counts; Expand All and Collapse All
+			    are theirs over the panels.
 
 			    The switch changes what the four cards count and nothing else on
 			    the page pretends otherwise — a filter that silently applied to
@@ -270,50 +318,51 @@ export default function Dashboard({ company }) {
 					))}
 				</div>
 				<label className="find">
-					<span aria-hidden="true">🔎</span>
+					<Icon name="search" />
 					<input type="search" value={find} placeholder="Search name, code, department…"
 						aria-label="Search employees" onChange={(e) => setFind(e.target.value)} />
 				</label>
 				<span className="grow" />
-				<button type="button" className="embtn" onClick={() => setShut(new Set())}>Expand All</button>
-				<button type="button" className="embtn"
-					onClick={() => setShut(new Set(PANELS))}>Collapse All</button>
+				<button type="button" className="embtn" onClick={() => setShut(new Set())}>
+					<Icon name="expand" /> Expand All
+				</button>
+				<button type="button" className="embtn" onClick={() => setShut(new Set(PANELS))}>
+					<Icon name="collapse" /> Collapse All
+				</button>
 			</div>
 
 			{find.trim() ? (
 				<Note>
-					<b>{fmt(found.length)}</b> of {fmt(scope.length)} match “{find}”.{" "}
-					{found.length
-						? "The search finds people; the counts below are still for everyone."
-						: "Nobody matches that search."}
+					<b>{fmt(found.length)}</b> of {fmt(scope.length)} match “{find}”.
+					{found.length ? null : " Nobody matches that search."}
 				</Note>
 			) : null}
 
+			{/* Their Employees Summary was Active / New / Left / Licensed. ERPNext
+			    does not charge per head, so Licensed could only ever read "—"; what
+			    is waiting on somebody is the number HR acts on first, so it has the
+			    slot. */}
 			<Stats>
-				<Stat ico="✅" k="Active Employees" n={fmt(a.length)} tone="good"
+				<Stat ico={<Icon name="users" />} k="Active Employees" n={fmt(a.length)} tone="good"
 					s={`${fmt(depts.size)} departments`} />
-				<Stat ico="📈" k="New Employees" n={fmt(joinedMonth)} tone={joinedMonth ? "info" : undefined}
-					s="joined this month" />
-				<Stat ico="👋" k="Left Employees" n={fmt(all.length - a.length)}
+				<Stat ico={<Icon name="userPlus" />} k="New Employees" n={fmt(joinedMonth)}
+					tone={joinedMonth ? "info" : undefined} s="joined this month" />
+				<Stat ico={<Icon name="userMinus" />} k="Left Employees" n={fmt(all.length - a.length)}
 					s="no longer with the group" />
-				{/* Their fourth was Licensed Employees, which is what factoHR
-				    bills for. ERPNext does not charge per head, so it could only
-				    ever read "—" — a card that never changes is a card people
-				    learn to skip. What is waiting on somebody is the number HR
-				    acts on first thing, so it has the slot. */}
-				<Stat ico="📥" k="Waiting approval" n={fmt(waiting)} tone={waiting ? "warn" : undefined}
-					s="corrections and leave" />
+				<Stat ico={<Icon name="inbox" />} k="Waiting approval" n={fmt(waiting)}
+					tone={waiting ? "warn" : undefined} s="corrections and leave" />
 			</Stats>
 
-			<Cols>
-				<Panel title="Employee Attendance Summary" cov={s.checkins.length ? "live" : "part"} ico="🕒" shut={shut.has("Employee Attendance Summary")} onToggle={() => fold("Employee Attendance Summary")}>
+			<div className="dgrid">
+				<Panel title="Employee Attendance Summary" cov={s.checkins.length ? "live" : "part"}
+					ico={<Icon name="clock" />} {...folding("Employee Attendance Summary", "span-8")}>
 					{/* Their six words, in their order. It is what HR reads every
-					    morning, and re-sorting it into something tidier would break
-					    the comparison this page exists for. */}
+					    morning, and re-sorting it would break the comparison with the
+					    screen it replaces. */}
 					<div className="stiles">
-						{ATT_BUCKETS.map(([key, label, ico, why]) => (
+						{ATT_BUCKETS.map(([key, label, , why]) => (
 							<div className={"stile" + (buckets[key] == null ? " off" : "")} key={key} title={why.replace(/\*\*/g, "")}>
-								<span className="sico" aria-hidden="true">{ico}</span>
+								<span className="sico" aria-hidden="true"><Icon name={BUCKET_ICON[key] || "circle"} /></span>
 								<b>{buckets[key] == null ? "—" : fmt(buckets[key])}</b>
 								<span className="sk">{label}</span>
 							</div>
@@ -331,86 +380,69 @@ export default function Dashboard({ company }) {
 							{ key: "absent", label: "Not yet in", n: att.absent, c: "rest" },
 						]}
 					/>
-					{s.checkins.length === 0 ? (
-						<Note>
-							No punches have reached the site today.
-						</Note>
-					) : null}
+					{s.checkins.length === 0 ? <Note>No punches have reached the site today.</Note> : null}
 				</Panel>
 
-				{/* Their Quick Links and Quick Reports, in their order. Eight of the
-				    ten and seven of the nine land on a real page here; the rest say
-				    what they are instead of being quietly dropped, because a link
-				    missing from a list somebody is comparing against theirs is the
-				    one kind of gap this project exists to make visible. */}
-				<Panel title="Quick Links" cov="live" ico="🔗" shut={shut.has("Quick Links")} onToggle={() => fold("Quick Links")}>
-					<ul className="quicklist">
-						{shownLinks(QUICK_LINKS).map(([label, section, subtab, why]) => (
-							<li key={label}>
-								{section ? (
-									<Link section={section} subtab={subtab}>{label}</Link>
-								) : (
-									<span className="gone" title={why}>{label}</span>
-								)}
-							</li>
-						))}
-					</ul>
+				<Panel title="Pending Approvals" cov={waiting ? "live" : "part"}
+					ico={<Icon name="inbox" />} {...folding("Pending Approvals", "span-4")}>
+					<div className="pend">
+						<Link section="dashboard" subtab="approvals" className="pendrow">
+							<span className="pi"><Icon name="clock" /></span>
+							<span className="pt"><b>Attendance corrections</b></span>
+							<strong>{fmt(waitingAtt)}</strong>
+						</Link>
+						<Link section="dashboard" subtab="approvals" className="pendrow leave">
+							<span className="pi"><Icon name="palm" /></span>
+							<span className="pt"><b>Leave applications</b></span>
+							<strong>{fmt(waitingLv)}</strong>
+						</Link>
+					</div>
+					<div className="pbar mt-[.9rem] mb-0">
+						<Link section="dashboard" subtab="approvals" className="btn tpl wide">
+							Open the queue <Icon name="arrowRight" />
+						</Link>
+					</div>
 				</Panel>
 
-				<Panel title="Quick Reports" cov="live" ico="📑" shut={shut.has("Quick Reports")} onToggle={() => fold("Quick Reports")}>
-					<ul className="quicklist">
-						{shownLinks(QUICK_REPORTS).map(([label, section, subtab, why]) => (
-							<li key={label}>
-								{section ? (
-									<Link section={section} subtab={subtab}>{label}</Link>
-								) : (
-									<span className="gone" title={why}>{label}</span>
-								)}
-							</li>
-						))}
-					</ul>
-				</Panel>
-
-				{/* Their Payroll Summary, tile for tile. Every one of the six is a
-				    `Salary Slip` state, and **nothing on this site has run a
-				    payroll** — so they read "—" rather than 0. The difference
-				    matters on a screen held up beside Factor HR's: a zero says
-				    134 people were not paid, and a dash says nobody has asked. */}
-				<Panel title="Payroll Summary" cov={withCtc.length ? "part" : "none"} ico="💰" shut={shut.has("Payroll Summary")} onToggle={() => fold("Payroll Summary")}>
-					<div className="stiles">
-						{PAYROLL_TILES.map(([label, why]) => (
-							<div className="stile off" key={label} title={why}>
-								<b>—</b>
-								<span className="sk">{label}</span>
+				<Panel title="Leave Requests" cov={waitingLv ? "live" : "part"}
+					ico={<Icon name="palm" />} {...folding("Leave Requests", "span-4")}>
+					{waitingLv === 0 ? (
+						<Empty title="No open leave applications" />
+					) : (
+						<>
+							<Bars pairs={tally(s.approvals.leave, "leave_type")} />
+							<div className="mt-[.8rem]">
+								<Meter n={waitingLv} of={a.length} tone="warn"
+									label="Active employees with something open" />
 							</div>
-						))}
-					</div>
-					<div className="mt-[.8rem]">
-						<Meter n={withCtc.length} of={a.length} tone="good"
-							label="Active employees with a CTC on file"
-							hint="Read off the Employee record. It is what a salary structure would be built from, not a payslip." />
-					</div>
-					<div className="mt-[.8rem]">
-						<Tiles>
-							<Tile k="CTC on file" n={ctcTotal ? "₹" + fmt(Math.round(ctcTotal)) : "—"}
-								s={`a year, across ${fmt(withCtc.length)} people`} />
-						</Tiles>
-					</div>
+						</>
+					)}
 				</Panel>
 
+				<Panel title="Headcount by company" cov="live"
+					ico={<Icon name="building" />} {...folding("Headcount by company", "span-4")}>
+					<Bars pairs={tally(a, "company")} />
+				</Panel>
+
+				<Panel title="Headcount by department" cov="live"
+					ico={<Icon name="layers" />} {...folding("Headcount by department", "span-4")}>
+					<Bars pairs={tally(a.map((e) => ({ d: tidyDept(e.department) })), "d").slice(0, 8)} />
+				</Panel>
+
+				<Panel title="New joiners" cov="live"
+					ico={<Icon name="trend" />} {...folding("New joiners", "span-8")}>
+					<Columns rows={joiners} label="New joiners a month, six months back" />
+					<p className="dfoot">{fmt(joined90)} joined in the last 90 days.</p>
+				</Panel>
 
 				{/* Their Wish Celebration. Birthdays and work anniversaries are both
-				    off the Employee record and both real; their third tab is
-				    marriages, and ERPNext has no wedding date under any name.
-
-				    The year is thrown away and the day is kept — a birthday recurs
-				    and the stored date does not. See `lib/summary.celebrations`. */}
-				<Panel title="Wish Celebration" cov={wishes.length ? "live" : "part"} ico="🎂" shut={shut.has("Wish Celebration")} onToggle={() => fold("Wish Celebration")}>
+				    off the Employee record; their third tab is marriages, and
+				    ERPNext has no wedding date under any name. The year is thrown
+				    away and the day kept — see `lib/summary.celebrations`. */}
+				<Panel title="Wish Celebration" cov={wishes.length ? "live" : "part"}
+					ico={<Icon name="gift" />} {...folding("Wish Celebration", "span-4")}>
 					{wishes.length === 0 ? (
-						<Empty title="Nobody to wish in the next 30 days">
-							Birthdays and work anniversaries show here. If this looks wrong,
-							check that dates of birth are filled in on Employee Master.
-						</Empty>
+						<Empty title="Nobody to wish in the next 30 days" />
 					) : (
 						<>
 							<div className="wishtabs">
@@ -429,7 +461,7 @@ export default function Dashboard({ company }) {
 											<em>{tidyDept(w.department) || "—"}{w.designation ? " · " + w.designation : ""}</em>
 										</span>
 										<span className="on">
-											{w.kind === "work" ? `${w.years} yr` : "🎂"} · {w.on.split("-").reverse().join("-")}
+											{w.kind === "work" ? `${w.years} yr` : "Birthday"} · {w.on.split("-").reverse().join("-")}
 											{w.inDays === 0 ? " · today" : ""}
 										</span>
 									</li>
@@ -439,28 +471,74 @@ export default function Dashboard({ company }) {
 					)}
 				</Panel>
 
+				<Panel title="Recent Activities" cov={feed.length ? "live" : "part"}
+					ico={<Icon name="activity" />} {...folding("Recent Activities", "span-8")}>
+					{feed.length === 0 ? (
+						<Empty title="Nothing has happened yet today" />
+					) : (
+						<div className="feedwrap">
+							<ul className="feed">
+								{feed.map((r) => (
+									<li key={r.id} className={r.kind}>
+										<span className="what">{r.what}</span>
+										<span className="when">{when(r.at)}</span>
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
+				</Panel>
 
+				{/* Their Quick Links and Quick Reports, in their order. A link with
+				    no page here is drawn struck through rather than dropped. */}
+				<Panel title="Quick Links" cov="live"
+					ico={<Icon name="link" />} {...folding("Quick Links", "span-4")}>
+					<QuickList rows={QUICK_LINKS} />
+				</Panel>
 
-				{/* **Their Announcements and CEO Speak, and these two are live.**
+				{/* Their Payroll Summary, tile for tile. Every one of the six is a
+				    `Salary Slip` state, so they read "—" rather than 0: a zero says
+				    people were not paid, a dash says nobody has asked. */}
+				<Panel title="Payroll Summary" cov={withCtc.length ? "part" : "none"}
+					ico={<Icon name="wallet" />} {...folding("Payroll Summary", "span-8")}>
+					<div className="paysum">
+						<div className="ctc">
+							<span className="k">CTC on file</span>
+							<b>{ctcTotal ? "₹" + fmt(Math.round(ctcTotal)) : "—"}</b>
+							<span className="s">a year, across {fmt(withCtc.length)} people</span>
+						</div>
+						<div className="paymeter">
+							<Meter n={withCtc.length} of={a.length} tone="good"
+								label="Active employees with a CTC on file" />
+						</div>
+					</div>
+					<div className="stiles">
+						{PAYROLL_TILES.map(([label, why]) => (
+							<div className="stile off" key={label} title={why}>
+								<b>—</b>
+								<span className="sk">{label}</span>
+							</div>
+						))}
+					</div>
+				</Panel>
 
-				    They were on the not-built list this morning and are not now: the
-				    doctype behind them is `Manna Announcement`, one shape with a kind,
-				    and Dashboard → Announcements & CEO Speak writes it. Empty in Factor
-				    HR is still the finding — nobody there has ever posted one — but an
-				    empty panel with a way to fill it is a different thing from an empty
-				    panel without one. */}
-				{["CEO Speak", "Announcement"].map((kind) => {
+				<Panel title="Quick Reports" cov="live"
+					ico={<Icon name="file" />} {...folding("Quick Reports", "span-4")}>
+					<QuickList rows={QUICK_REPORTS} />
+				</Panel>
+
+				{/* Their Announcements and CEO Speak — one doctype here,
+				    `Manna Announcement`, written from Dashboard → Announcements &
+				    CEO Speak. */}
+				{["Announcement", "CEO Speak"].map((kind) => {
 					const label = kind === "CEO Speak" ? "CEO Speak" : "Announcements";
 					const rows = noticesOf(kind);
 					return (
 						<Panel key={kind} title={label} cov={rows.length ? "live" : "part"}
-							ico={kind === "CEO Speak" ? "🗣" : "📣"}
-							shut={shut.has(label)} onToggle={() => fold(label)}>
+							ico={<Icon name={kind === "CEO Speak" ? "message" : "megaphone"} />}
+							{...folding(label, "span-4")}>
 							{rows.length === 0 ? (
-								<Empty title="Nothing posted yet">
-									Post one from <Link section="dashboard" subtab="notices">
-									Announcements &amp; CEO Speak</Link>.
-								</Empty>
+								<Empty title="Nothing posted yet" />
 							) : (
 								<ul className="wishlist">
 									{rows.slice(0, 4).map((n) => (
@@ -482,67 +560,11 @@ export default function Dashboard({ company }) {
 					);
 				})}
 
-
-				{/* ---------------------------------------------------------------
-				    **Below here is not on their page.**
-
-				    Everything above is Factor HR's Start Up, panel for panel and in
-				    their order, because that is the comparison this screen exists
-				    for. What follows is this app's own — the approval backlog, the
-				    shape of the headcount, and the two panels that say plainly what
-				    the site cannot answer yet. Keeping the two halves apart is what
-				    stops somebody reading an extra panel here as a missing one
-				    there.
-				    --------------------------------------------------------------- */}
-
-				<Panel title="Leave Requests" cov={waitingLv ? "live" : "part"} ico="🌴" shut={shut.has("Leave Requests")} onToggle={() => fold("Leave Requests")}>
-					{waitingLv === 0 ? (
-						<Empty title="No open leave applications">
-							Applications appear here while their status is Open. An approved or
-							rejected one leaves this list and stays on the Leave module.
-						</Empty>
-					) : (
-						<>
-							<Bars pairs={tally(s.approvals.leave, "leave_type")} />
-							<div className="mt-[.8rem]">
-								<Meter n={waitingLv} of={a.length} tone="warn"
-									label="Active employees with something open"
-									hint="One person can hold more than one application, so this is applications rather than people." />
-							</div>
-						</>
-					)}
-				</Panel>
-
-				<Panel title="Pending Approvals" cov={waiting ? "live" : "part"} ico="📥" shut={shut.has("Pending Approvals")} onToggle={() => fold("Pending Approvals")}>
-					<Meter n={waitingAtt} of={Math.max(1, waiting)} tone="brand"
-						label="Attendance corrections" />
-					<div className="mt-[.6rem]">
-						<Meter n={waitingLv} of={Math.max(1, waiting)} tone="warn" label="Leave applications" />
-					</div>
-					<div className="pbar mt-[.9rem] mb-0">
-						<Link section="dashboard" subtab="approvals" className="embtn pri">
-							Open the queue
-						</Link>
-					</div>
-				</Panel>
-
-				<Panel title="Headcount by company" cov="live" ico="🏭" shut={shut.has("Headcount by company")} onToggle={() => fold("Headcount by company")}>
-					<Bars pairs={tally(a, "company")} />
-				</Panel>
-
-				<Panel title="Headcount by department" cov="live" ico="🗄" shut={shut.has("Headcount by department")} onToggle={() => fold("Headcount by department")}>
-					<Bars pairs={tally(a.map((e) => ({ d: tidyDept(e.department) })), "d").slice(0, 8)} />
-				</Panel>
-
-				<Panel title="New joiners" cov="live" ico="📈" shut={shut.has("New joiners")} onToggle={() => fold("New joiners")}>
-					<Columns rows={joiners} label="New joiners a month, six months back" />
-				</Panel>
-
-				<Panel title="Recruitment Status" cov={cands.length ? "live" : "part"} ico="🧲" shut={shut.has("Recruitment Status")} onToggle={() => fold("Recruitment Status")}>
+				<Panel title="Recruitment Status" cov={cands.length ? "live" : "part"}
+					ico={<Icon name="magnet" />} {...folding("Recruitment Status", "span-4")}>
 					{s.candState === "ok" && cands.length === 0 ? (
 						<Empty title="Nobody is being onboarded">
-							`Employee Onboarding` answered, and it is empty. That is a real
-							answer: it means no candidate has been raised on the site yet.
+							No candidate has been raised on the site yet.
 						</Empty>
 					) : s.candState === "ok" ? (
 						<>
@@ -554,18 +576,13 @@ export default function Dashboard({ company }) {
 						</>
 					) : s.candState === "error" ? (
 						<Empty title="The site would not answer">
-							{s.candErr || "Employee Onboarding could not be read."} On a site
-							without that doctype this is a 417, which is the same code a
-							missing field answers — the hint above says which.
+							{s.candErr || "Employee Onboarding could not be read."}
 						</Empty>
 					) : (
 						<>
 							{/* Read on demand rather than with the first load: one request
 							    against a site with a daily compute limit, and most people
 							    opening the dashboard are not hiring today. */}
-							<p className="text-read text-ink-2">
-								See where each candidate is in onboarding.
-							</p>
 							<div className="pbar mt-[.8rem] mb-0">
 								<button type="button" className="embtn pri"
 									disabled={s.candState === "loading"}
@@ -576,30 +593,28 @@ export default function Dashboard({ company }) {
 						</>
 					)}
 				</Panel>
+			</div>
+		</div>
+	);
+}
 
-			</Cols>
-
-
-			<Panel title="Recent Activities" cov={feed.length ? "live" : "part"} ico="🔔" shut={shut.has("Recent Activities")} onToggle={() => fold("Recent Activities")}>
-				{feed.length === 0 ? (
-					<Empty title="Nothing has happened yet today">
-						Punches, corrections, leave applications and issued letters appear
-						here as they land.
-					</Empty>
-				) : (
-					<div className="feedwrap">
-						<ul className="feed">
-							{feed.map((r) => (
-								<li key={r.id} className={r.kind}>
-									<span className="what">{r.what}</span>
-									<span className="when">{when(r.at)}</span>
-								</li>
-							))}
-						</ul>
-					</div>
-				)}
-			</Panel>
-
-		</>
+/** Their Quick Links or Quick Reports, as rows with an arrow — a link that
+    looks like a row is one people find without hunting for blue text. */
+function QuickList({ rows }) {
+	return (
+		<ul className="quicklist">
+			{shownLinks(rows).map(([label, section, subtab, why]) => (
+				<li key={label}>
+					{section ? (
+						<Link section={section} subtab={subtab}>
+							<span>{label}</span>
+							<Icon name="chevron" />
+						</Link>
+					) : (
+						<span className="gone" title={why}>{label}</span>
+					)}
+				</li>
+			))}
+		</ul>
 	);
 }

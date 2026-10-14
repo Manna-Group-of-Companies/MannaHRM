@@ -63,7 +63,7 @@ function lpCols(f) {
 /** One of their two multi-select boxes. The same control twice — Employee
     Status and Loan Type — so it is written once; `tools` is the green tick and
     red cross, which their Loan Type box carries and their status box does not. */
-function ChipPick({ label, all, on, onPick, tools, hint, empty }) {
+function ChipPick({ label, all, on, onPick, tools, empty }) {
 	const off = all.filter((v) => !on.includes(v));
 	return (
 		<div className="ddafield">
@@ -98,7 +98,6 @@ function ChipPick({ label, all, on, onPick, tools, hint, empty }) {
 					</span>
 				) : null}
 			</div>
-			{hint ? <span className="hint">{hint}</span> : null}
 		</div>
 	);
 }
@@ -141,13 +140,6 @@ function LpForm({ s }) {
 						on={f.status}
 						onPick={(v) => stale({ status: v })}
 						empty="— every status —"
-						hint={
-							<>
-								The four values <code>Employee.status</code> holds, all ticked, so nobody is filtered
-								out. <b>Left</b> is one of them and is the one worth looking at: 344 people have left,
-								and what happens to a balance when somebody does is the question this module ends on.
-							</>
-						}
 					/>
 
 					<div className="ddafield">
@@ -217,14 +209,6 @@ function LpForm({ s }) {
 							<input type="date" value={till} aria-label="Till date"
 								onChange={(e) => stale({ till: e.target.value })} />
 						</span>
-						{/* Their window opened seventeen months before the day it was
-						    captured, which is the finding their two dates carry. */}
-						<span className="hint">
-							Their window ran <b>01-Apr-2025 to 31-Aug-2026</b> on a form captured on 29 August
-							2026 — most of it already paid. <b>So this is not a forecast</b>: it prints every
-							instalment in a window, behind and ahead alike, and &ldquo;projection&rdquo; is their
-							word for a schedule.
-						</span>
 					</div>
 
 					<ChipPick
@@ -234,14 +218,6 @@ function LpForm({ s }) {
 						onPick={(v) => stale({ types: v })}
 						empty="nothing selected"
 						tools
-						hint={
-							<>
-								<b>Both of theirs are advances.</b> Not a list of what Factor HR offers — that
-								dropdown was never opened — but of what somebody actually selected, which is better
-								evidence: these are the two an employer recovers out of payroll rather than the two
-								an employer charges for.
-							</>
-						}
 					/>
 
 					<div className="ddafield">
@@ -252,7 +228,6 @@ function LpForm({ s }) {
 								<option key={b[0]} value={b[0]}>{b[0] ? b[1] : ""}</option>
 							))}
 						</select>
-						<span className="hint">Empty in their capture, and empty here.</span>
 					</div>
 				</div>
 
@@ -267,11 +242,6 @@ function LpForm({ s }) {
 							</label>
 						))}
 					</div>
-					<span className="hint">
-						Principal ticked and Interest clear, as their capture had them. The two boxes are the
-						cheapest question on this page: an interest-free advance is a deduction component and a
-						schedule, and interest is the <code>lending</code> app.
-					</span>
 				</div>
 
 				{/* Their three buttons, in their order. */}
@@ -328,25 +298,17 @@ function LpOut({ s }) {
 	if (!months.length) {
 		return (
 			<Empty title="The window is empty">
-				From {from} is after Till {till}, so there is no payroll month between them. Their form takes
-				two dates; an instalment lands in a month, so a window that closes before it opens has
-				nothing to unfold.
+				From {from} is after Till {till}, so there is no payroll month between them.
 			</Empty>
 		);
 	}
 	if (!f.types.length) {
-		return (
-			<Empty title="No loan type is selected">
-				The red cross clears the box, and an empty box is a projection over nothing. Their two are{" "}
-				{LOAN_TYPES.join(" and ")}; the green tick puts them both back.
-			</Empty>
-		);
+		return <Empty title="No loan type is selected" />;
 	}
 	if (!people.length) {
 		return (
 			<Empty title="Nobody is in scope">
-				No employee matches the status filter. That is the filter, not the loans — the projection
-				would have covered whoever it allowed.
+				No employee matches the status filter.
 			</Empty>
 		);
 	}

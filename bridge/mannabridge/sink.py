@@ -47,7 +47,16 @@ class DeliveryError(Exception):
 
 
 class UnmappedEmployee(Exception):
-	"""Permanent until somebody sets `attendance_device_id`. Not retried."""
+	"""Permanent until somebody sets `attendance_device_id`. Not retried.
+
+	`missing` tells the two apart: True when no Employee carries the number at
+	all — the one case autoenrol.py may make a record for — and False when one
+	does and is not Active, which is HR's decision and is left alone.
+	"""
+
+	def __init__(self, message, missing=None):
+		super().__init__(message)
+		self.missing = ("matches no Employee" in str(message)) if missing is None else missing
 
 
 class ErpSink:
@@ -105,13 +114,15 @@ class ErpSink:
 			raise UnmappedEmployee(
 				"device user {0} on {1} matches no Employee.attendance_device_id".format(
 					device_user, device_id
-				)
+				),
+				missing=True,
 			)
 
 		if INACTIVE_EMPLOYEE in body.lower():
 			raise UnmappedEmployee(
 				"device user {0} on {1} is linked to an Employee who is not Active — "
-				"they punch every day and the record says they left".format(device_user, device_id)
+				"they punch every day and the record says they left".format(device_user, device_id),
+				missing=False,
 			)
 
 		if response.status_code in (401, 403):

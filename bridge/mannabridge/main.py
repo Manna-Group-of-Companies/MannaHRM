@@ -27,6 +27,7 @@ from mannabridge import adms, clock, commands
 from mannabridge.config import load_config
 from mannabridge.device import Device
 from mannabridge.queue import PunchQueue
+from mannabridge.autoenrol import AutoEnrol, EmployeeSite
 from mannabridge.roster import EnrolmentSite, EnrolmentStore, sync_enrolments
 from mannabridge.rota import Rota
 from mannabridge.sink import DeliveryError, ErpSink, UnmappedEmployee
@@ -109,7 +110,7 @@ def _waiting_on_employee(row):
 	return "matches no Employee" in error or "not Active" in error
 
 
-def drain(queue, sink, batch=500, by_serial=None, reached=None, rota=None):
+def drain(queue, sink, batch=500, by_serial=None, reached=None, rota=None, enrol=None):
 	"""Deliver everything undelivered. Returns (sent, failed).
 
 	`reached`, when given, is filled with `{shift: newest punch delivered on it}`
@@ -127,9 +128,16 @@ def drain(queue, sink, batch=500, by_serial=None, reached=None, rota=None):
 	`rota`, when given, gives a punch-in its day or night shift before it is
 	sent (mannabridge/rota.py), so hrms matches it to the right one. Anything
 	it cannot do is logged and the punch goes anyway.
+
+	`enrol`, when given, makes the Employee for a device user nobody carries
+	(mannabridge/autoenrol.py) and the punch is sent again at once. Only for
+	"no such employee" — never for one who is not Active — and only on a
+	machine with a company in config.toml.
 	"""
 	sent = failed = 0
 	by_serial = by_serial or {}
+	if enrol is not None:
+		enrol.start_pass()
 
 	for row in queue.pending(limit=batch):
 		# The cap is for punches the line keeps failing on. One waiting on an
@@ -157,13 +165,29 @@ def drain(queue, sink, batch=500, by_serial=None, reached=None, rota=None):
 				log.warning("could not settle day or night for device user %s at %s: %s",
 				            row["device_user"], row["punched_at"], exc)
 
-		try:
-			made = sink.send(
+		def send():
+			return sink.send(
 				device_user=row["device_user"],
 				punched_at=row["punched_at"],
 				device_id=device_id,
 				log_type=row["log_type"],
 			)
+
+		try:
+			try:
+				made = send()
+			except UnmappedEmployee as exc:
+				# Its own try: a failure making the record is the record's, and
+				# the punch only waits — the rest of the queue still goes.
+				made_one = False
+				if enrol is not None and getattr(exc, "missing", False):
+					try:
+						made_one = enrol.ensure(row["device_user"], device_id, row["punched_at"])
+					except Exception:
+						log.exception("unexpected failure making an Employee for device user %s", row["device_user"])
+				if not made_one:
+					raise
+				made = send()
 		except UnmappedEmployee as exc:
 			# Master data, not network. It costs no attempt, so it is released
 			# the pass after somebody links the employee.
@@ -190,7 +214,7 @@ def drain(queue, sink, batch=500, by_serial=None, reached=None, rota=None):
 	return sent, failed
 
 
-def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fix_clocks=True, tolerance=clock.TOLERANCE_SECONDS, rota=None):
+def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fix_clocks=True, tolerance=clock.TOLERANCE_SECONDS, rota=None, enrol=None):
 	if fix_clocks and erp_url:
 		try:
 			keep_clocks(devices, queue, sink.now(erp_url), tolerance)
@@ -201,7 +225,7 @@ def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fi
 	unread = []
 	found = poll_devices(devices, queue, unread=unread)
 	reached = {}
-	sent, failed = drain(queue, sink, by_serial=by_serial, reached=reached, rota=rota)
+	sent, failed = drain(queue, sink, by_serial=by_serial, reached=reached, rota=rota, enrol=enrol)
 
 	if reached and erp_url:
 		# **Only the shifts this pass delivered punches on, each only as far as
@@ -427,6 +451,13 @@ def main():
 	command_site = commands.CommandSite(config.erp_url, config.api_key, config.api_secret)
 	devices = [Device(**d) for d in config.pollable]
 	by_serial = {d["serial"]: d["name"] for d in config.devices if d.get("serial")}
+	# Only machines with a company in config.toml make Employees; see autoenrol.py.
+	companies = {d["name"]: d.get("company", "") for d in config.devices if d.get("company")}
+	enrol = AutoEnrol(
+		EmployeeSite(config.erp_url, config.api_key, config.api_secret),
+		companies,
+		name_of=lambda device_id, user: (enrolments.known(device_id).get(user) or {}).get("name", ""),
+	) if companies else None
 
 	if args.status:
 		# Before the startup line: this command is read, not tailed.
@@ -490,7 +521,7 @@ def main():
 	while True:
 		try:
 			run_once(devices, queue, sink, config.retain_days, config.erp_url, by_serial,
-			         config.fix_clocks, config.clock_tolerance, rota=rota)
+			         config.fix_clocks, config.clock_tolerance, rota=rota, enrol=enrol)
 		except Exception:
 			log.exception("unexpected failure in poll cycle")
 

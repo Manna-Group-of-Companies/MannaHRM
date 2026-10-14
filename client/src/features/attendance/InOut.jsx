@@ -445,9 +445,7 @@ function IoReport({ s }) {
 				<Empty title="No punches in that range">
 					{got
 						? `${fmt(got)} came back for ${ran} and the filters on this form removed all of them.`
-						: `Employee Checkin is empty for ${ran}. It stays empty until the fingerprint bridge is `
-						+ "running and the phone app is live — shown as nothing recorded rather than as 0%, because "
-						+ "an empty attendance table and an empty factory produce identical numbers."}
+						: `Employee Checkin is empty for ${ran}.`}
 				</Empty>
 			</div>
 		);
@@ -545,7 +543,7 @@ export default function InOut() {
 
 			{s.ioState || ioToday(s) ? <IoReport s={s} /> : (
 				<div className="mt-[.9rem]">
-					<Empty title="Not generated">Generate reads the range above from the site.</Empty>
+					<Empty title="Not generated" />
 				</div>
 			)}
 
@@ -565,12 +563,6 @@ export default function InOut() {
 							<button className="embtn" onClick={() => ioRun(s, "Excel")}>
 								<i className="fico" aria-hidden="true">📊</i> Excel
 							</button>
-						</>
-					}
-					why={
-						<>
-							This is the document itself, not a drawing of it — the same HTML that Print, PDF and
-							Word are handed, rendered here so it can be read before it goes anywhere.
 						</>
 					}
 					extra={<iframe className="iopaper" title="Report preview" srcDoc={s.ioDoc} />}

@@ -68,7 +68,7 @@ function CustomFields() {
 				<tbody>
 					<tr>
 						<td colSpan={2} className="none">
-							None defined. Their capture shows this table with its headings and no rows.
+							None defined.
 						</td>
 					</tr>
 				</tbody>
@@ -175,7 +175,6 @@ export default function NewLetter({ onCancel }) {
 		<div className="fhcat letnew">
 			<header>
 				<h3>Create New Letter</h3>
-				<span className="cov live">Their form, our write</span>
 			</header>
 
 			<div className="wizform letnewform">

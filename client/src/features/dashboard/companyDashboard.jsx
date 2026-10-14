@@ -34,7 +34,7 @@ import Dashboard from "@/features/dashboard/Dashboard";
  * is one the site answered, and "the site does not have this company" is an
  * answer, where "0 employees" is a fabrication.
  */
-export default function companyDashboard({ slug, company, label }) {
+export default function companyDashboard({ slug, company }) {
 	function CompanyDashboard() {
 		const s = useApp();
 		/* The site's own list, not the table's. This is the question "does the
@@ -46,23 +46,13 @@ export default function companyDashboard({ slug, company, label }) {
 			<>
 				<div className="legend">
 					<b className="font-display">{company}</b>
-					<span>{onSite ? "Every panel below counts this company only" : "Not on this site"}</span>
+					{onSite ? null : <span>Not on this site</span>}
 				</div>
 
 				{onSite ? (
 					<Dashboard company={company} />
 				) : (
-					<Empty title={`${company} is not on this site`}>
-						Either the Company has not been created yet — <b>{label}</b> is one of the
-						two <code>docs/COMPANIES.md</code> still asks for — or your login is scoped
-						to a different company by a User Permission on <code>Company</code>, which
-						is how per-company access is granted here.
-						<br />
-						<br />
-						This page deliberately draws nothing rather than a headcount of zero. A
-						company the site cannot answer for and a company with nobody in it are not
-						the same finding, and only one of them is a bug.
-					</Empty>
+					<Empty title={`${company} is not on this site`} />
 				)}
 			</>
 		);

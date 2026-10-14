@@ -164,11 +164,12 @@ describe("All Fields draws the whole record", () => {
 		expect(view.container.querySelector(".proall")).toBeNull();
 	});
 
-	it("says what a pane is, under it", () => {
-		/* The notes in data/profile.js were written and never drawn. Separation's
-		   is the finding itself, so it is the one worth naming in a test. */
+	it("draws no explanation under a pane, only its fields", () => {
+		/* HR asked on 12 October 2026 for labels only on the website: the pane
+		   notes that used to sit under each pane are gone. */
 		const view = open(draw(), "separation");
-		expect(text(view)).toContain("344 people have left");
+		expect(text(view)).not.toContain("344 people have left");
+		expect(view.container.querySelector(".pronote")).toBeNull();
 	});
 });
 

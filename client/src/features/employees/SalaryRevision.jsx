@@ -442,20 +442,7 @@ export default function SalaryRevision({ emp }) {
 									<td className="g">{b.n ?? ""}</td>
 									<td colSpan={cols - 1}>{b.head || b.grp}</td>
 								</tr>
-								{b.rows.map((r) => (r.unseen ? (
-									<tr className="clip" key="unseen">
-										<td className="g" />
-										<td colSpan={cols - 1}>
-											One row sits here and the two captures overlap short of it, so its label is
-											the only thing on this form nobody has read. The group is alphabetical,
-											which puts it after <b>EMPLOYER PF CTC</b> and before{" "}
-											<b>GRATUITY CONTRIBUTION CTC</b>. One screenshot settles it — a row invented
-											here would be a wage type nobody owes.
-										</td>
-									</tr>
-								) : (
-									<Row key={r.desc} s={s} who={ro ? "" : emp.name} r={r} d={d} ro={ro} />
-								)))}
+								{b.rows.map((r) => (r.unseen ? null : <Row key={r.desc} s={s} who={ro ? "" : emp.name} r={r} d={d} ro={ro} />))}
 								<Sub b={b} d={d} cols={cols} />
 							</Fragment>
 						))}

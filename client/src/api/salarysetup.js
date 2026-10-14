@@ -20,7 +20,7 @@ const attempt = async (fn) => {
 export async function loadSetup(company) {
 	const co = company ? [["company", "=", company]] : [];
 	const [components, structures, assignments] = await Promise.all([
-		attempt(() => listAll("Salary Component", ["name", "type", "salary_component_abbr", "disabled"], [["disabled", "=", 0]], 500)),
+		attempt(() => listAll("Salary Component", ["name", "type", "salary_component_abbr", "disabled", "depends_on_payment_days"], [["disabled", "=", 0]], 500)),
 		attempt(() => listAll("Salary Structure", ["name", "company", "docstatus", "is_active", "payroll_frequency"],
 			[["docstatus", "=", 1], ...co], 500)),
 		attempt(() => listAll("Salary Structure Assignment", ["name", "employee", "employee_name", "salary_structure", "from_date", "base", "company", "docstatus"],

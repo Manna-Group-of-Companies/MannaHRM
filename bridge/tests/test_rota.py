@@ -164,7 +164,7 @@ def test_a_night_week_and_the_day_week_after_it_off_the_gate(tmp_path):
 def test_somebody_whose_working_time_has_no_night_partner_is_left_alone(tmp_path):
 	queue = PunchQueue(str(tmp_path / "q.sqlite3"))
 	queue.offer("BIO-MRP-GATE1", "516", "2026-09-30 20:24:00", "IN")
-	rota = FakeRota({"516": dict(VIKRAM, default_shift="Hi-Tech Rubber Industries-Cook shift")})
+	rota = FakeRota({"516": dict(VIKRAM, default_shift="Manna Rubber Products Pvt.Ltd-HK shift")})
 	drain(queue, Site(), rota=rota)
 	assert rota.writes == []
 
@@ -186,9 +186,9 @@ def test_the_queue_finds_the_punch_before_on_any_machine(tmp_path):
 	assert queue.previous("298", "2026-09-29 08:35:21") is None
 
 
-def test_every_company_s_day_shift_has_its_night_and_tyre_retreads_is_left_to_its_machines():
-	assert NIGHT_OF["HRI-Day Shift"] == "HRI-Night Shift"
-	assert NIGHT_OF["Manna Rubber Products Pvt.Ltd-Production8hrshift1"] == "Manna Rubber Products Pvt.Ltd-Production8hrshift2"
+def test_each_day_shift_worked_with_overtime_has_its_night_and_tyre_retreads_is_left_to_its_machines():
+	assert NIGHT_OF["Manna Rubber Products Pvt.Ltd-Productionshift (08:30-16:30)"] == "Manna Rubber Products Pvt.Ltd-Production8hrshift (20:30-04:30)"
+	assert NIGHT_OF["Hi-Tech Pretreads-Production shift3 (08:30-16:30)"] == "Hi-Tech Pretreads-Production shift4 (20:30-04:30)"
 	assert not any(k.startswith("Manna Tyre Retreads") for k in NIGHT_OF)
 	# A night is never somebody's day as well: that would make every arrival both.
 	assert not set(NIGHT_OF) & set(NIGHT_OF.values())

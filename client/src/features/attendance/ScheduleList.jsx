@@ -272,15 +272,6 @@ export default function ScheduleList({ onClose }) {
 						<div className="gap">
 							<b>This is not "no schedules" — it is "not readable from here".</b>{" "}
 							{l.err}
-							{" "}
-							{l.status === 417
-								? "Adding a doctype to the allowlist of a process holding the site's token is a "
-									+ "decision for whoever owns that key, so the list is left refused rather than "
-									+ "quietly widened."
-								: "That is the API refusing or absent rather than the doctype — the same answer "
-									+ "every other read on this dashboard would give right now. Worth checking the "
-									+ "server is running before reading anything into an empty list."}
-							{" "}Every schedule on the site is one click away, below.
 						</div>
 					) : null}
 

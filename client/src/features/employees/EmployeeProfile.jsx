@@ -5,11 +5,11 @@ import { loadProfileLeave } from "@/api/profileleave";
 import { leavePlans } from "@/lib/monthlyleave";
 import { apiDeleteFile, apiUpload } from "@/api/client";
 import { forgetEmployeeDoc, useEmployeeDoc } from "@/features/employees/useEmployeeDoc";
-import { scoped } from "@/lib/scope";
+import { needsDetails, scoped } from "@/lib/scope";
 import { clock, dmy, filled, fmt, tidyDept, todayIso } from "@/lib/format";
 import { Fragment, useEffect, useState } from "react";
 
-import { Desk, Empty, Html, Scroll } from "@/components/ui";
+import { Desk, Empty, Scroll } from "@/components/ui";
 import { saveEmployee, saveEmployeePhoto } from "@/api/employee";
 import {
 	CHOICES, LINK_LISTS, boxValue, changedCount, controlFor, patchFrom, whyNotEditable, withEdit,
@@ -89,7 +89,7 @@ function Field({ doc, row, nulls, edit }) {
 	   and drops it, so the box would look saved and be gone on reload. */
 	if (edit && access === "write") {
 		const kind = controlFor(got.key, got.how);
-		if (kind) return <EditField doc={doc} label={label} why={why} field={got.key} kind={kind} edit={edit} />;
+		if (kind) return <EditField doc={doc} label={label} field={got.key} kind={kind} edit={edit} />;
 	}
 
 	/* Three states, and telling the last two apart is the point of the screen.
@@ -137,7 +137,7 @@ function Field({ doc, row, nulls, edit }) {
     marker beside the label is the only addition: thirteen panes are one
     document and one Save, so a change made two panes ago has to be findable
     without remembering where it was made. */
-function EditField({ doc, label, why, field, kind, edit }) {
+function EditField({ doc, label, field, kind, edit }) {
 	const { draft, lists, onSet } = edit;
 	const changed = field in draft;
 	const value = changed ? draft[field] : boxValue(doc, field, kind);
@@ -194,7 +194,6 @@ function EditField({ doc, label, why, field, kind, edit }) {
 						{(lists[LINK_LISTS[field]] || []).map((o) => <option key={o.name} value={o.name} />)}
 					</datalist>
 				</div>
-				<span className="hint">{why || <span className="fn">{field}</span>}</span>
 			</div>
 		);
 	} else {
@@ -207,7 +206,6 @@ function EditField({ doc, label, why, field, kind, edit }) {
 				{label}{changed && <i className="dot" title="Changed, not yet saved" />}
 			</label>
 			<div className="ctl">{control}</div>
-			<span className="hint">{why || <span className="fn">{field}</span>}</span>
 		</div>
 	);
 }
@@ -281,10 +279,6 @@ function EditBar({ n, saving, msg, onSave, onCancel }) {
 			<span className={"pecount" + (n ? " hot" : "")}>
 				{n ? `${n} field${n === 1 ? "" : "s"} changed` : "nothing changed yet"}
 			</span>
-			{/* Said here rather than only in a tooltip: the write is made as the
-			    signed-in person, so what may be changed is what their roles say
-			    and a refusal will name the field. CLAUDE.md §1. */}
-			<span className="pewho">Saved to the site as you, on the site’s clock.</span>
 			<span className="right">
 				<button className="embtn" onClick={onCancel} disabled={saving}>Cancel</button>
 				<button className="embtn pri" onClick={onSave} disabled={saving || !n}>
@@ -313,8 +307,7 @@ function ChildTable({ doc, spec }) {
 	if (!rows.length) {
 		return (
 			<Empty title={title}>
-				The table is on the record and it is empty. That is the migration rather than the screen — it
-				loaded the master and not the paperwork behind it.
+				The table is on the record and it is empty.
 			</Empty>
 		);
 	}
@@ -557,9 +550,7 @@ function AssetsPane({ s, emp }) {
 	if (!mine.length) {
 		return (
 			<Empty title="Nothing issued to this person">
-				ERPNext's <code>Asset</code> is installed and empty — {fmt(s.assets.length)} assets on the whole
-				site. Factor HR shows 0 here too. Issuing an asset is an Asset Movement, and this page only
-				reads.
+				{fmt(s.assets.length)} assets on the whole site.
 			</Empty>
 		);
 	}
@@ -952,7 +943,7 @@ function Photo({ doc, pic, onPick }) {
 	);
 }
 
-function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto }) {
+function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto, deact }) {
 	const nulls = keepsNulls(doc);
 	const on = doc.status === "Active";
 	const chip = (row) => {
@@ -981,6 +972,21 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto 
 						{!editing && (
 							<button className="embtn" title="Edit this record" onClick={onEdit}>✎ Edit</button>
 						)}
+						{/* Asked twice, because the next thing that happens is the
+						    person's details going off every screen here. */}
+						{!editing && on && (deact.ask ? (
+							<span className="prodeact" role="group" aria-label="Confirm deactivation">
+								<button className="embtn bad" disabled={deact.busy} onClick={deact.onYes}>
+									{deact.busy ? "Deactivating…" : "Yes, deactivate"}
+								</button>
+								<button className="embtn" disabled={deact.busy} onClick={deact.onNo}>Cancel</button>
+							</span>
+						) : (
+							<button className="embtn bad" onClick={deact.onAsk}
+								title="Set this person's status to Inactive. Their details are hidden until they are activated again.">
+								Deactivate
+							</button>
+						))}
 						{/* Who changed what lives on the Version doctype, which nothing
 						    here reads — but it is also the timeline at the foot of the
 						    record on the site, which is where this goes. */}
@@ -1030,6 +1036,78 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto 
 	);
 }
 
+/**
+ * A record the bridge made from a fingerprint punch (3 October 2026): what is
+ * made up on it, and the way to say it has been put right.
+ *
+ * "Details are correct" clears `custom_needs_details` and nothing else. It is
+ * offered only where the site has that field; without it the banner goes once
+ * the placeholder date of birth is changed, which is the fix itself.
+ */
+function NeedsDetails({ doc, busy, onDone }) {
+	const flag = "custom_needs_details" in doc;
+	return (
+		<div className="proneeds" role="status">
+			<div>
+				<b>Added automatically from a fingerprint punch.</b>{" "}
+				The machine knew only the name and number, so the gender and date of birth on this record are
+				placeholders, and the joining date is the day of the first punch. Correct them with ✎ Edit
+				{flag ? ", then press Details are correct." : "."}
+			</div>
+			{flag && (
+				<button type="button" className="embtn" disabled={busy} onClick={onDone}>
+					{busy ? "Saving…" : "Details are correct"}
+				</button>
+			)}
+		</div>
+	);
+}
+
+/**
+ * A person who is not Active: the name, the status, and nothing else
+ * (3 October 2026). The details come back with the status.
+ *
+ * **This hides; it does not protect.** The record is still readable on the
+ * site by anybody whose roles allow it — this page only stops drawing it.
+ * Keeping it from a reader is a permission on the site (CLAUDE.md §5).
+ *
+ * Only Inactive offers Activate. Left and Suspended are set with dates and
+ * reasons on the site, and undoing either is more than a status write.
+ */
+function NotActive({ doc, deskHref, deact }) {
+	const inactive = doc.status === "Inactive";
+	return (
+		<section className="prohead prooff" aria-label="This person is not active">
+			<Avatar className="ava" name={doc.employee_name || doc.name} image="" />
+			<div className="prowho">
+				<div className="proname">
+					<b>{doc.employee_name || doc.name}</b>
+					<span className="proacts">
+						{inactive && (
+							<button className="embtn pri" disabled={deact.busy} onClick={deact.onActivate}
+								title="Set this person's status back to Active, and show their details again.">
+								{deact.busy ? "Activating…" : "Activate"}
+							</button>
+						)}
+						<Desk href={deskHref} title="The record on the ERPNext site.">Open on the site</Desk>
+					</span>
+				</div>
+				<div className="prochips">
+					<span className="prostat">
+						<i className="sdot off" />
+						{doc.status || "Not active"}
+					</span>
+				</div>
+				<p className="prooffnote">
+					{inactive
+						? "This person has been deactivated, so their details are hidden. Activate them to see their details again."
+						: `This person's status is ${doc.status || "not Active"}, so their details are hidden. It is changed on the site.`}
+				</p>
+			</div>
+		</section>
+	);
+}
+
 export default function EmployeeProfile() {
 	const s = useApp();
 
@@ -1041,6 +1119,8 @@ export default function EmployeeProfile() {
 
 	useEmployeeDoc(picked);
 	const doc = picked ? s.empDoc[picked] : null;
+	const [deactAsk, setDeactAsk] = useState(false);
+	const [deactBusy, setDeactBusy] = useState(false);
 
 	const refresh = () => {
 		if (picked) forgetEmployeeDoc(picked);
@@ -1058,7 +1138,51 @@ export default function EmployeeProfile() {
 			profedit: false, profdraft: {}, profmsg: "", profsaving: false,
 			profpic: { busy: false, msg: "", bad: false },
 		});
+		setDeactAsk(false);
 	}, [picked]);
+
+	/* Deactivate and Activate: one field, `status`, written as the signed-in
+	   person — the site decides whether they may, and its refusal is shown in
+	   its own words. `Inactive` is hrms's own value for somebody not working
+	   here for now; it is not `Left`, which needs a relieving date. */
+	/* One field on the record, written as the signed-in person: the status for
+	   Deactivate and Activate, the Needs details tick for "Details are correct". */
+	async function writeOne(patch, said) {
+		const who = picked;
+		setDeactAsk(false);
+		setDeactBusy(true);
+		set({ profmsg: "" });
+		const r = await saveEmployee(who, patch);
+		setDeactBusy(false);
+		if (!r.ok) {
+			if (getState().empSel === who) set({ profmsg: { ok: false, text: `The site refused this: ${r.error}` } });
+			return;
+		}
+		/* The row Employee Master draws its card from, so the card hides its
+		   details — or shows them again — without a reload. */
+		const { employees, byName } = getState();
+		if (byName[who]) {
+			const row = { ...byName[who], ...patch };
+			set({
+				employees: employees.map((e) => (e.name === who ? row : e)),
+				byName: { ...byName, [who]: row },
+			});
+		}
+		forgetEmployeeDoc(who);
+		if (getState().empSel !== who) return;
+		set({ profmsg: { ok: true, text: said } });
+	}
+	const setStatus = (status) => writeOne({ status }, status === "Active"
+		? "Activated. Their details are shown again."
+		: "Deactivated. Their details are hidden until they are activated again.");
+	const deact = {
+		ask: deactAsk,
+		busy: deactBusy,
+		onAsk: () => setDeactAsk(true),
+		onNo: () => setDeactAsk(false),
+		onYes: () => void setStatus("Inactive"),
+		onActivate: () => void setStatus("Active"),
+	};
 
 	async function savePhoto(file) {
 		/* Only what the browser can say for certain is not a picture. An empty
@@ -1136,9 +1260,10 @@ export default function EmployeeProfile() {
 			Employee{" "}
 			<select value={picked} onChange={(e) => set({ empSel: e.target.value })}>
 				<option value="">— pick somebody —</option>
+				{/* Not Active: the status in place of the code, as on their card. */}
 				{people.map((p) => (
 					<option key={p.name} value={p.name}>
-						{p.employee_name} ({p.employee_number || "-"})
+						{p.employee_name} ({p.status === "Active" ? p.employee_number || "-" : p.status || "not active"})
 					</option>
 				))}
 			</select>
@@ -1155,8 +1280,7 @@ export default function EmployeeProfile() {
 				{/* Their screen opens on whoever was last looked at. Ours cannot know
 				    that on a fresh load, so it lists the people it could open instead of
 				    asking somebody to go back to another page to choose. */}
-				<People people={people}
-					note="Click anybody to open their record. The chooser above and the cards on Employee Master do the same thing." />
+				<People people={people} />
 			</>
 		);
 	}
@@ -1176,12 +1300,35 @@ export default function EmployeeProfile() {
 		);
 	}
 
+	const deskLink = s.site && picked ? deskUrl(s.site, "Employee", picked) : "";
+	const statusMsg = s.profmsg && !s.profedit && (
+		<div className={"probar" + (s.profmsg.ok ? " done" : "")} role="status">
+			<span className={"pemsg " + (s.profmsg.ok ? "ok" : "bad")}>{s.profmsg.text}</span>
+		</div>
+	);
+
+	if (doc.status !== "Active") {
+		return (
+			<>
+				<div className="legend">
+					<button className="embtn" onClick={() => go({ section: "employees", subtab: "overview" })}>
+						← Employee Master
+					</button>
+					<b className="font-display">Employee Profile</b>
+					<span className="right">{chooser}</span>
+				</div>
+				<NotActive doc={doc} deskHref={deskLink} deact={deact} />
+				{statusMsg}
+			</>
+		);
+	}
+
 	const pane = PROFILE_PANES[tab];
 	const nulls = keepsNulls(doc);
 	const assetsMine = s.onboardRead ? s.assets.filter((a) => a.custodian === picked).length : null;
 	/* The record on the site. History and ↗ open this one document over there;
 	   everything this page writes, the photograph included, it writes itself. */
-	const deskHref = s.site && picked ? deskUrl(s.site, "Employee", picked) : "";
+	const deskHref = deskLink;
 
 	const editing = s.profedit;
 	/* The one object every box on the page reads. Assembled here so that a card
@@ -1215,9 +1362,14 @@ export default function EmployeeProfile() {
 				<span className="right">{chooser}</span>
 			</div>
 
+			{needsDetails(doc) && !editing && (
+				<NeedsDetails doc={doc} busy={deactBusy}
+					onDone={() => void writeOne({ custom_needs_details: 0 }, "Marked as complete. The Needs details flag is cleared.")} />
+			)}
+
 			<Header doc={doc} onRefresh={refresh} deskHref={deskHref}
 				editing={editing} edit={edit} onEdit={startEdit}
-				pic={s.profpic} onPhoto={savePhoto} />
+				pic={s.profpic} onPhoto={savePhoto} deact={deact} />
 
 			{/* Outside the pane rather than inside it, because the draft is the
 			    whole record: switching panes while editing must not look like the
@@ -1226,9 +1378,7 @@ export default function EmployeeProfile() {
 				<EditBar n={changed} saving={s.profsaving} msg={s.profmsg}
 					onSave={save} onCancel={cancelEdit} />
 			)}
-			{!editing && s.profmsg && s.profmsg.ok && (
-				<div className="probar done"><span className="pemsg ok">{s.profmsg.text}</span></div>
-			)}
+			{statusMsg}
 
 			<div className="probody-grid">
 				<nav className="protabs" aria-label="Profile sections">
@@ -1333,16 +1483,6 @@ export default function EmployeeProfile() {
 									</Card>
 								))}
 						</>
-					)}
-
-					{/* What this pane is, and where it is a guess rather than a
-					    comparison. Written per pane in data/profile.js — several of them
-					    are the finding itself, like Separation's "344 people have left
-					    and none of them came across". */}
-					{pane.note && (
-						<div className="pronote">
-							<Html html={pane.note} />
-						</div>
 					)}
 				</div>
 			</div>

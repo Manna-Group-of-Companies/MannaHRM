@@ -351,10 +351,7 @@ export default function FnF() {
 
 				{f.tab !== "settlement" ? (
 					<div {...panelProps("fnfpane", "fnftab-" + f.tab)} className="fnfpane">
-						<Empty title={stage[2]}>
-							Their tab, not their screen. The capture had Final Settlement open, so what these two
-							draw has never been seen — and none of it is guessed at here.
-						</Empty>
+						<Empty title={stage[2]} />
 					</div>
 				) : (
 					<div {...panelProps("fnfpane", "fnftab-settlement")} className="fnfpane">
@@ -465,9 +462,7 @@ export default function FnF() {
 
 						{!rows.length ? (
 							<Empty title={f.status === "done" ? "Nothing has been settled" : "Nobody is in the queue"}>
-								{f.status === "done" ? (
-									"FNF Done is empty by construction: no settlement can be processed on this site, so no row can ever carry that state. Their own screen had none either — sixteen waiting, none processed."
-								) : all ? (
+								{f.status === "done" ? null : all ? (
 									`${fmt(all)} people are in this queue before the filters. Clear the search, the dates or the year.`
 								) : (
 									<>

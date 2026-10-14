@@ -14,6 +14,7 @@ import { useDispatch } from "react-redux";
 import { set, getState, useApp } from "@/store";
 import { isAdmin, whoami } from "@/api/client";
 import { clearPageRules, loadPageRules } from "@/api/pagerules";
+import { startLeaveRules } from "@/api/leaverules";
 import Login from "@/features/auth/Login";
 import { loadAll } from "@/store/thunks";
 import { startRouter } from "@/routes/router";
@@ -62,6 +63,16 @@ export default function App() {
 		void loadPageRules();
 		return () => { live = false; };
 	}, [user]);
+
+	/* HR's two leave rules, by themselves (3 October 2026): a Sunday worked
+	   adds a day of Casual Leave, and the month's first absence takes one —
+	   now and every half hour, for as long as somebody from HR has the page
+	   open. Waits for the employee list, because designation is what says who
+	   is office staff. See api/leaverules.js — and why this is a stand-in for
+	   the site's own hourly jobs. */
+	const admin = useApp().admin;
+	const staffRead = useApp().employees.length > 0;
+	useEffect(() => (admin && staffRead ? startLeaveRules() : undefined), [admin, staffRead]);
 
 	/* Every drop-down that opens over the page — the status dots on Employee
 	   Master, regularization, daily detail and salary, and the export list on

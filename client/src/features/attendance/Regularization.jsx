@@ -462,9 +462,6 @@ function DayPopup({ pick, onClose, onDone }) {
 					{why && why !== "Nothing changed." ? <p className="rnote bad">{why}</p> : null}
 					{otBad ? <p className="rnote bad">OT is hours, minutes and seconds up to 16:00:00, e.g. 01:30:00.</p> : null}
 					{msg ? <p className="rnote bad" role="alert">{msg}</p> : null}
-					<p className="muted">
-						Save writes the new time to ERPNext now. The machine's punch is kept on record, set aside.
-					</p>
 				</div>
 			}
 			foot={
@@ -625,7 +622,7 @@ function RegGrid({ s, cyc, onPick }) {
 			<div className="regfoot">
 				<span className="cnt">
 					{fmt(people.length)} people · {fmt(days.length)} days · {fmt(inCycle(mine.punches, cyc))} punches ·{" "}
-					{fmt(mine.ar.length)} correction(s), every status. Click a name for that person's month.
+					{fmt(mine.ar.length)} correction(s), every status
 				</span>
 			</div>
 		</>

@@ -57,8 +57,7 @@ export default function Documents() {
 									: DOC_BACKFILL.map((f) => (
 											<div className="row" key={f[0]}>
 												<span>
-													<Html html={f[1]} />{" "}
-													<span className="muted">Factor HR export, 25 Aug</span>
+													<Html html={f[1]} />
 												</span>
 												<span className="val">{fmt(f[2])} of 504</span>
 											</div>
@@ -66,9 +65,7 @@ export default function Documents() {
 							</div>
 						</>
 					) : (
-						<Empty title="No employees read yet">
-							The document coverage is counted off the Employee master, which has not answered.
-						</Empty>
+						<Empty title="No employees read yet" />
 					))}
 				</Panel>
 			</Cols>
@@ -106,11 +103,7 @@ export default function Documents() {
 							</table>
 						</Scroll>
 					) : (
-						<Empty title="Nothing has an expiry date recorded">
-							Not one active employee carries a passport validity, so there is nothing to watch.
-							That is the finding, not a failure — it says document expiry is not tracked anywhere
-							today.
-						</Empty>
+						<Empty title="Nothing has an expiry date recorded" />
 					))}
 				</Panel>
 			</Cols>

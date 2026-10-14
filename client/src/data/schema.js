@@ -492,6 +492,73 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Employee Actual Salary": {
+		name: "Employee Actual Salary",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 0,
+		autoname: "naming_series:",
+		title: "employee_name",
+		fields: [
+			{
+				name: "naming_series",
+				label: "Series",
+				kind: "select",
+				choices: [
+					"HR-ASAL-.YYYY.-"
+				],
+				def: "HR-ASAL-.YYYY.-"
+			},
+			{
+				name: "employee",
+				label: "Employee",
+				kind: "link",
+				link: "Employee",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "employee_name",
+				label: "Employee Name",
+				kind: "readonly",
+				from: "employee.employee_name",
+				list: 1
+			},
+			{
+				name: "company",
+				label: "Company",
+				kind: "readonly",
+				link: "Company",
+				from: "employee.company"
+			},
+			{
+				name: "from_date",
+				label: "From Date",
+				kind: "date",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "actual_salary",
+				label: "Actual Salary (₹ a month)",
+				kind: "currency",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "notes",
+				label: "Notes",
+				kind: "long"
+			},
+			{
+				name: "entered_by",
+				label: "Entered By",
+				kind: "readonly",
+				link: "User"
+			}
+		]
+	},
 	"Employee Attendance Regularization": {
 		name: "Employee Attendance Regularization",
 		module: "Manna HR",

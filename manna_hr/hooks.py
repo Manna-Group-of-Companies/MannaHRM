@@ -148,6 +148,7 @@ fixtures = [
 				"name",
 				"in",
 				[
+					"Employee-custom_needs_details",
 					"Employee-custom_hr_section",
 					"Employee-custom_punch_method",
 					"Employee-custom_work_location",
@@ -178,6 +179,9 @@ fixtures = [
 					"Employee-custom_emergency_address",
 					"Employee-custom_ifsc",
 					"Employee-custom_driving_licence",
+					# How the net is paid — see CUSTOM_FIELDS in install.py.
+					"Employee-custom_bank_percent",
+					"Employee-custom_bank_amount",
 					# The candidate's own details, on hrms' `Employee Onboarding`
 					# rather than on a doctype of ours shadowing it — see
 					# CUSTOM_FIELDS in install.py.
@@ -217,6 +221,18 @@ fixtures = [
 					"Asset-custom_detail",
 					# Which company a shift is for — see CUSTOM_FIELDS in install.py.
 					"Shift Type-custom_company",
+					# Resume scoring — see CUSTOM_FIELDS in install.py.
+					"Job Opening-custom_scoring_section",
+					"Job Opening-custom_must_have",
+					"Job Opening-custom_good_to_have",
+					"Job Opening-custom_scoring_column",
+					"Job Opening-custom_min_experience",
+					"Job Opening-custom_qualification",
+					"Job Opening-custom_preferred_location",
+					"Job Applicant-custom_score_detail",
+					# The drawn org chart — see CUSTOM_FIELDS in install.py.
+					"Company-custom_org_chart",
+					"Salary Structure Assignment-custom_cash_amount",
 				],
 			]
 		],
@@ -251,6 +267,12 @@ scheduler_events = {
 		# before HR can see them. Silently skipped when no Sheet is configured —
 		# see sync_onboarding_from_sheet's own guard.
 		"manna_hr.onboard_sync.sync_if_configured",
+		# HR's two leave rules (3 October 2026): each Sunday an office employee
+		# works adds a day of Casual Leave, then the month's first Absent day
+		# becomes Casual Leave and a regularized one gives it back. One job, so
+		# the order holds — see manna_hr/leaverules_site.py, and
+		# absencerule_site.py for why not on the Attendance hook.
+		"manna_hr.leaverules_site.run",
 	],
 	"daily": [
 		# `Employee Document.status` is stored so the expiry watch can be a list

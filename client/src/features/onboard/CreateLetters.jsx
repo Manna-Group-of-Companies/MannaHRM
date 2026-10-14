@@ -232,9 +232,7 @@ export default function CreateLetters({ onCreate }) {
 		<div className="fhcat lettab">
 			<header>
 				<h3>Create Letters</h3>
-				<span className={"cov " + (full ? "live" : "part")}>
-					{full ? "Their screen, our register" : "Four of seven columns read"}
-				</span>
+				{full ? null : <span className="cov part">Four of seven columns read</span>}
 
 				<span className="right">
 					<button className="embtn ic" aria-label="Filter Columns"
@@ -418,8 +416,7 @@ export default function CreateLetters({ onCreate }) {
 				<Empty title={s.letters.length ? "Nothing matches" : "No letters on the site"}>
 					{s.letters.length
 						? <>Nothing matches, out of {fmt(s.letters.length)} issued — clear the search or a column box.</>
-						: <>The site holds no <b>Employee Letter</b> at all. Factor HR has issued exactly one in
-							three years, so an empty register here is the expected answer rather than a failed read.</>}
+						: null}
 				</Empty>
 			)}
 
@@ -465,7 +462,6 @@ export default function CreateLetters({ onCreate }) {
 					title={`${open.letter_type || "Letter"} — ${whoOf(s, open)}`}
 					wide
 					msg={`Issued ${dmy(open.letter_date)}${full && open.letter_number ? ` · letter number ${open.letter_number}` : ""}`}
-					why="The text stored on the document, as it went out. Nothing here re-merges it: a letter rebuilt from a record that has changed since is a different letter from the one that was handed over."
 					actions={
 						<Desk className="embtn" label="Open on the site"
 							href={s.site && deskUrl(s.site, "Employee Letter", open.name)}

@@ -11,7 +11,7 @@
 
 import { useApp, set } from "@/store";
 import { logout } from "@/api/client";
-import { MODULES } from "@/routes/registry";
+import { MODULES, offMenuTitle } from "@/routes/registry";
 import { blueprintsFor } from "@/data/blueprints";
 import { modeLabel, nextMode, saveMode } from "@/lib/mode";
 import { initials } from "@/lib/format";
@@ -26,6 +26,7 @@ const ICON = {
 	bell: "M18 16V11a6 6 0 1 0-12 0v5l-2 2h16zM10 21h4",
 	gear: "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z",
 	out: "M15 12H4M8 8l-4 4 4 4M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5",
+	go: "M5 12h14M12 5l7 7-7 7",
 };
 
 /* The appearance control's three states, drawn in the same stroke as the
@@ -112,9 +113,14 @@ export default function TopBar() {
 				<Glyph d={ICON.menu} />
 			</button>
 
+			{/* A breadcrumb rather than two stacked lines since 6 October 2026:
+			    the module, a separator, the page — read left to right as a path,
+			    which is what it is. The separator is decoration and is hidden
+			    from a screen reader, which hears "Attendance, Daily Detail". */}
 			<span className="tbwhere">
 				<b>{mod?.label || "Dashboard"}</b>
-				<span>{page ? page[1] : "Overview"}</span>
+				<i aria-hidden="true">/</i>
+				<span>{page ? page[1] : offMenuTitle(section, subtab) || "Overview"}</span>
 			</span>
 
 			{/* The search the employee screens read. `type="search"` rather than
@@ -149,6 +155,20 @@ export default function TopBar() {
 			</select>
 
 			<div className="tbacts">
+				{/* Go to any page — layout/GoTo.jsx. The shortcut is printed on
+				    the button, because a shortcut nobody is told about is one
+				    nobody uses. */}
+				<button
+					type="button"
+					className="tbgo"
+					title="Go to any page (Ctrl+K)"
+					aria-label="Go to a page"
+					onClick={(e) => { e.stopPropagation(); set({ palette: true, tbnotif: false, tbme: false }); }}
+				>
+					<Glyph d={ICON.go} />
+					<span className="lab">Go to page</span>
+					<kbd>Ctrl K</kbd>
+				</button>
 				{/* **One button, three states.** system → light → dark → system.
 
 				    Three radio buttons for a thing most people press once is three
@@ -192,10 +212,7 @@ export default function TopBar() {
 							<span className="n">{waiting.length}</span>
 						</h4>
 						{waiting.length === 0 ? (
-							<p className="tbnone">
-								Nothing is waiting. Corrections and leave applications appear here
-								as they are raised.
-							</p>
+							<p className="tbnone">Nothing is waiting.</p>
 						) : (
 							waiting.slice(0, 6).map((r) => (
 								<Link
@@ -245,16 +262,13 @@ export default function TopBar() {
 						<Link section="employees" subtab="profile" role="menuitem" className="tbnote"
 							onClick={() => set({ tbme: false })}>
 							<b>Employee profile</b>
-							<span>The record behind a person</span>
 						</Link>
 						{s.admin !== false && <Link section="settings" role="menuitem" className="tbnote"
 							onClick={() => set({ tbme: false })}>
 							<b>Settings</b>
-							<span>Appearance, and what this site is set up for</span>
 						</Link>}
 						<button type="button" role="menuitem" className="tbnote foot" onClick={signOut}>
 							<b>Sign out</b>
-							<span>Ends the Frappe session on this site</span>
 						</button>
 					</div>
 				</span>

@@ -597,7 +597,7 @@ export const SREG_COLS = [
      figures, never ours. "no slip" is a person the run did not pay, which is
      not the same thing as a zero and is not drawn as one. */
   ["Payment Days", (r) => (r.slip ? fmt(r.slip.payment_days) : "no slip"), "mono", (r) => !r.slip],
-  ["LWP", (r) => (r.slip ? fmt(r.slip.leave_without_pay) : "—"), "mono", (r) => !r.slip],
+  ["LWP", (r) => (r.slip ? fmt(r.slip.loss_of_pay) : "—"), "mono", (r) => !r.slip],
   ["Gross", (r) => (r.slip ? fmt(Math.round(r.slip.gross)) : "—"), "mono", (r) => !r.slip],
   ["Total Deduction", (r) => (r.slip ? fmt(Math.round(r.slip.deduction)) : "—"), "mono", (r) => !r.slip],
   ["Net Pay", (r) => (r.slip ? fmt(Math.round(r.slip.net)) + (r.slip.draft ? " (draft)" : "") : "—"),

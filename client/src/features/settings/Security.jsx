@@ -124,10 +124,6 @@ function Pages() {
 				</span>
 			</div>
 
-			<div className="onbmsg">
-				Hiding a page takes it off the menu for everybody. It does not stop anyone reading
-				what is on it — that is each login&apos;s roles on the site.
-			</div>
 			{state === "loading" ? <div className="onbmsg">Reading Manna HR Settings…</div> : null}
 			{state === "nofield" ? <div className="onbmsg">{NO_FIELD}</div> : null}
 			{state === "unread" ? (

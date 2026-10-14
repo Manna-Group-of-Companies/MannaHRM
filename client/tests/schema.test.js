@@ -42,8 +42,10 @@ describe("what the schema carries", () => {
 		// Employee Overtime on 16 September — the OT HR grants, a day at a time.
 		// Machine Command on 18 September — what somebody asks a fingerprint
 		// machine to do from a page that cannot reach one; the bridge does it.
-		expect(Object.keys(SCHEMA)).toHaveLength(26);
-		expect(RECORD_DOCTYPES).toHaveLength(20);
+		// Employee Actual Salary on 14 October — a person's actual salary, kept
+		// apart from payroll so that nothing on a slip reads it.
+		expect(Object.keys(SCHEMA)).toHaveLength(27);
+		expect(RECORD_DOCTYPES).toHaveLength(21);
 	});
 
 	it("keeps child tables and Singles out of the record list", () => {

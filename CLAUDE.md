@@ -77,6 +77,7 @@ exists — a private bench is not a preference here.
 | `bridge/` | The on-premise agent. Reads the fingerprint machines, and listens for the ones that push (`--adms`) |
 | `bridge/mannabridge/roster.py` | Who is enrolled on each machine, sent as `Attendance Device User`. Kept apart from punches: nothing in it may cost a pass of them |
 | `bridge/mannabridge/rota.py` | Day or night from the punch-in: an evening IN gives a 12-hour worker the night shift before the punch is sent. Belongs in `manna_hr/` once installed; pure halves so it moves unchanged |
+| `bridge/mannabridge/autoenrol.py` | An Employee for a device user no record carries, on a machine with a `company` in `config.toml`: placeholder gender and birth date, `custom_needs_details` ticked. Belongs in `manna_hr/` once installed — see `docs/NEW_EMPLOYEE.md` |
 | `bridge/mannabridge/commands.py` | `Machine Command`: what the dashboard asked a machine to do, done at the machine and answered. Kept apart from punches, like the roster |
 | `bridge/console.py`, `console.html` | The gate PC's console, on `127.0.0.1` only: machines, who is on them, the punch log, attendance, and a new employee on the site and the machine at once. Calls the tools below rather than repeating their rules |
 | `bridge/machine.py`, `push_users.py`, `employee_tools.py` | The only code that writes to a machine: run by hand from the Machine Tools menu, dry run first, never the log. `employee_tools.py create` also writes the Employee, site first |
@@ -162,6 +163,22 @@ names a role — `bg-card`, `text-ink-3` — and never a colour, which is what m
 a second palette forty lines in `themes.css` instead of a rewrite. Adding one is
 a block after `:root`, and source order is the whole cascade there. `lib/mode.js`
 owns the preference; nothing else touches `localStorage` or the attribute.
+Brand-coloured *text* is `accent`; `brand-dark` is a button fill and fails
+contrast as text on a dark card.
+
+**Motion is arrival, never a gate** (6 October 2026). Pages, menus, dialogs,
+cards and chart marks animate *from* something into where they already are,
+so the reduced-motion block at the foot of `index.css` leaves every element
+in place. A page change is animated with `element.animate` in `PageOutlet`,
+never a React `key`, which would remount the page and throw its state away.
+
+**The rail is the navigation on a desktop.** The open module's pages are listed
+under its link (`pagesOf` in `layout/Sidebar.jsx`) and the strip over the page
+is hidden while the rail is open; Ctrl+K (`layout/GoTo.jsx`) goes to any page
+by name. All three read `tabsFor` and `isHidden`, so they cannot disagree —
+`tests/goto.test.jsx` holds them to it. Custom form fields are one block of
+rules in `index.css` ("fields"), not a component: every screen's own inputs
+get them without being touched.
 
 **Tabs, not spaces**, in Python — Frappe's house style, so a file moved between
 this app and hrms does not reformat wholesale in the diff.
@@ -347,6 +364,115 @@ existing `Attendance Log` history should be migrated is still open.
   than the cursor and the machine is about to reuse those timestamps —
   re-sending a punch is free, losing one is somebody's day. A drift beyond six
   hours is refused and logged either way.
+- **Salary increments** (asked for 5 October 2026): Payroll → Increments takes
+  HR's January Excel sheet — downloaded pre-filled with everybody's current
+  base, one of New Base / Increment Amount / Increment % filled per person —
+  previews every row, and on Apply makes each increment a new submitted
+  **Salary Structure Assignment** on the same structure from the effective
+  date (default 1 January). The old assignment is not touched; it is what pays
+  the months before. Every row says up or down; **a decrease is applied only
+  when HR ticks for it**. An unknown code, two columns that disagree and a row
+  already applied are each said and never written; re-uploading the same sheet
+  applies only what is left. After Apply each row is read back from the site
+  (`verifyLine`), and panel 3 lists every salary starting on the effective date
+  against the one before it (`changesOn`) — the check that works any day. The
+  employee import reads each saved person back by Emp Code the same way
+  (`verifyRow`) and names any field the site holds differently. `client/src/lib/increments.js`. On 5 October
+  2026 the site held **no** Salary Structure Assignment at all, so the sheet is
+  empty until Salary Setup has given people a salary.
+- **Salary upload** (9 October 2026): Payroll → Salary Setup → Upload salaries
+  takes one sheet — Emp Code, Actual Salary, Bank ₹ / Cash ₹ (or Bank %),
+  PF %, ESI % — and the **PF and ESI rates choose the structure**: one per
+  company per pair, named `Salary PF 12 ESI 0.75 - <Company>`, Basic 100% of
+  base, PF and ESI a % of base, made and submitted on Save (with any missing
+  Basic / Provident Fund / Employee State Insurance component). Each new person
+  gets a Salary Structure Assignment at their actual salary. The bank and cash
+  split goes on the Employee (`salary_mode`, `custom_bank_percent`,
+  `custom_bank_amount` — the last two in `install.py`, **not on the site until
+  `tools/create_custom_fields.py --apply`**). The split is how the net is
+  handed over and nothing else: **PF and ESI are on the whole salary, and there
+  is deliberately no way to work them out on the bank part.** The split is of
+  the *salary* (HR, 13 October 2026): ₹29,000 = ₹21,000 bank + ₹8,000 cash
+  pays ₹8,000 cash on a full month, cut for days not worked, and PF, ESI and
+  every other deduction come out of the bank part (`writePaymentSplit` in
+  `lib/registerxlsx.js`). **EPF is one of
+  two calculations, chosen once per company** (HR, 10 October 2026):
+  Calculation 1, Basic + DA = 100% of the salary; Calculation 2, Basic + DA =
+  50% (the other half a Special Allowance) — EPF 12% of that, on ₹25,000 when
+  it is more. The choice is in the structure names (`Salary Basic 50 PF 12 …`
+  for Calculation 2), so a company with structures shows its own and cannot be
+  given the other (`companyMethod`); the 5-tab preview's EPF wages follow the
+  person's structure. **It is asked only when the 5-tab Excel is downloaded**
+  (HR, 13 October 2026) — the upload no longer asks, and a company with no
+  structures yet gets Calculation 1. ESI stops above ₹21,000. **The actual
+  salary is its own doctype** (14 October 2026), `Employee Actual Salary` —
+  one row per person per From Date, on Payroll → Actual Salary, which also
+  takes HR's Excel sheet (`lib/actualsalary.js`: matched by code, previewed,
+  confirmed, read back) — and nothing in payroll reads it. Payroll is the Salary Structure Assignment: Base is
+  what the slip pays and PF and ESI are on, and `custom_cash_amount` beside it
+  is the cash part, shown and not paid on. The 5-tab's Cash-1 and Diff Cash
+  show it as the cash beside a net that all goes by bank, cut for days not
+  worked like the salary (`cashPay` in `lib/registerxlsx.js`). Each row carries
+  the person's latest `Employee Actual Salary` by the month's end
+  (`withActualSalary`); where there is one, **Net Payable After Round up on
+  Diff Cash (only) is that actual salary** — no separate column — (cut for days not worked), the payroll net is Paid by Bank, and
+  cash is the rest — bank and cash add up to the actual salary. **The 5-tab carries only
+  people with a salary structure assigned** by the month's end
+  (`assignedOnly`), and says how many it left out. Somebody who already has a salary keeps it —
+  Increments changes pay. Matching is by code only; every saved row is read
+  back. `client/src/lib/salaryupload.js`.
+- **Employee import** (same day): Employee Master → Add New Employee ▾ → File
+  Import now opens `/employees/upload` here instead of ERPNext's Data Import.
+  The sheet's columns are Create Employee's own (`NEW_EMP_STEPS`, pinned by a
+  test); rows match on Emp Code — a code on file is patched with only what
+  differs, a new code is created with the wizard's required fields, and a
+  blank cell never clears a value. Lists (Company, Department, Designation,
+  Shift, Holiday List, Work Location, Status, Punch Method, Reporting Manager
+  by Emp Code) must name something on the site; Settings → Security's locked
+  fields are left out and said. Leave and salary are not set from it.
+  `client/src/lib/employeeimport.js`.
+- **Recruitment** (12 October 2026) is on the hierarchy chart, not a page of
+  its own (asked for): Employees → Hierarchy Chart → a company puts a
+  **Resumes** button on every open seat — a head-office seat nobody is on, a
+  seat somebody Left in the last 180 days, and under anybody serving notice
+  (resignation or relieving date on their record). Which seats are open, and
+  the `Job Opening` each is recruited under (found by a title that names the
+  seat, made on first use), is `client/src/lib/vacancy.js`; a seat drops off
+  the chart when HR closes its opening. The panel takes resumes
+  downloaded from LinkedIn and Indeed (PDF, .docx, .txt), files each as a
+  `Job Applicant` on the seat's opening with the resume private in
+  `resume_attachment`, and scores it **out of ten** against the position's
+  criteria — must have, good to have, minimum years, qualification, location,
+  worth 5 / 1 / 2 / 1.5 / 0.5 and rescaled over the ones a position sets
+  (`WEIGHTS` in `client/src/lib/resumescore.js`). The score goes in hrms's own
+  `applicant_rating` (score ÷ 10, so the desk shows stars), and its reasons in
+  `custom_score_detail`. Name, email and phone are read off the resume and
+  corrected by HR before anything is written. **It rejects nobody**: every
+  applicant is created Open, and a file with no text (a scan, an old `.doc`) is
+  *not scored* rather than scored zero. Where it guesses — years of experience
+  above all — it guesses in the applicant's favour. The score runs in the
+  browser because it is advisory and decides no pay; the site still enforces
+  hrms's required fields, valid email and duplicate rule. Resumes are untrusted
+  files: pdf.js runs with `isEvalSupported: false` and reads eight pages at
+  most. **The criteria fields are not on the site until `python
+  tools/create_custom_fields.py "Job Opening" --apply` and `"Job Applicant"
+  --apply`**; until then (13 October 2026) the criteria are kept as a comment
+  on the Job Opening, headed "Resume scoring criteria", the latest one read
+  back (`readCriteriaNote`), so scoring works without them — only the
+  breakdown is not stored, and is shown for the visit after Rescore.
+- **HR draws the company chart** (14 October 2026): Employees → Hierarchy
+  Chart → a company → **Edit chart** starts from the chart as drawn and lets
+  HR drag cards anywhere (snapped to an 8 px grid, arrow keys too), add an
+  employee, a vacant seat (with its Resumes button) or a title, remove a card,
+  and set whom each card reports to — the lines follow. Saved, it *is* that
+  company's chart; **Remove drawn chart** brings the automatic one back. A
+  person card names an Employee record, so somebody who leaves is drawn as the
+  seat they vacated. Rules in `client/src/lib/orgchart.js`, canvas in
+  `features/employees/DrawnChart.jsx`. Kept in `Company.custom_org_chart`
+  (`install.py`, **not on the site until `tools/create_custom_fields.py
+  Company --apply`**); until then, and for a login that may not write a
+  Company, as a comment on the Company headed "Org chart", latest wins
+  (`api/orgchart.js`). Each save adds a comment there.
 - **Payroll and shift rosters are untouched** — attendance first. Leave is one
   write: Apply Leave raises a Leave Application as an **Open draft**
   (`client/src/features/leave/raise.js`), and approving and submitting stay
@@ -365,3 +491,87 @@ existing `Attendance Log` history should be migrated is still open.
   nobody any leave. Factor HR's opening balances are not
   loaded yet. The site refuses an application with no Leave Allocation behind
   it, so until the tool has run, that is every Casual Leave application.
+  **Both automatic leave rules below are switched off** (HR, 14 October
+  2026): `AUTO_LEAVE_RULES = False` in `manna_hr/absencerule.py`, its copy in
+  `client/src/lib/absencerule.js` pinned to it by a test. Off, the dashboard's
+  half-hourly run, Apply Leave's run on opening somebody, a correction's
+  hand-on to the next absence and the site's hourly job all do nothing; a
+  corrected day still gives back the automatic leave made for it earlier.
+  Leave the rules already wrote stands on the site. Setting both to true
+  brings everything described here back.
+  **The absence rule** (HR, 3 October 2026) runs by itself: the first
+  Absent day in a month becomes an approved, submitted Casual
+  Leave Application whose description starts `absencerule.AUTO_MARK`; later
+  absences stay Absent, which is the salary cut **only because Payroll
+  Settings are based on Attendance** — hrms's default, `Leave`, pays every
+  Absent day, and the site was on it until 6 October 2026. The value is
+  `payrollsetup.PAYROLL_SETTINGS`; `tools/setup_payroll.py` reports drift and
+  `--apply` resets it. A slip puts the cut in `absent_days`, not
+  `leave_without_pay`, so every LWP figure on the dashboard reads
+  `lossOfPay` (`lib/payroll.js`), which adds both; a regularized day (one
+  holding a `REG-` punch) gives its leave back and the next absence takes it.
+  Everybody who earns Casual Leave — office staff, supervisors and drivers
+  (widened from office only on 6 October 2026; the mark still says "Office",
+  because it is how the rule knows applications it already made) — and nothing
+  before **1 September 2026** (HR moved it back from 1 October on 6 October).
+  September's leave comes from one-month allocations
+  `tools/backfill_casual_leave.py` makes, since most people's Casual Leave
+  starts in October; they carry no `leave_policy_assignment`, which is how
+  Sunday leave (`sundayleave.counts`) knows not to take one for a first. The factory floor earns none, so every absence there
+  is a cut. Apply Leave's calendar draws the rule's leave as **CL** and an
+  Absent day as **A** — only what the site holds, never a prediction. Opening
+  somebody whose month still has a first absence the rule has not reached runs
+  the rule for that person there and then (`firstAbsence`, the rule's own
+  `plan`; `settleFirstAbsence`), so it reads **CL** without waiting half an hour. Pure rule in `manna_hr/absencerule.py`; on the site,
+  `absencerule_site.run` hourly and `regularization.apply`, once installed.
+  Until then the dashboard is what runs it: `client/src/api/absencerule.js`
+  starts on any HR sign-in, repeats every half hour, and runs again after a
+  correction is written (`writeCorrection`). So today it runs only while
+  somebody from HR has the dashboard open. It cancels only applications
+  carrying its mark — never leave somebody asked for. No Casual Leave balance
+  means the site refuses it and the day stays Absent — and on 3 October 2026
+  only 4 of the 26 office staff held any Casual Leave allocation, so until
+  Give monthly leave has been run that is nearly everybody. The application
+  names a leave approver (own, else manager's login, else whoever runs the
+  rule) because this site's HR Settings make one mandatory.
+  **Sunday leave** (HR, 3 October 2026) runs with it and before it: each
+  Sunday an office employee works adds a day of Casual Leave. Worked means
+  the Sunday's Attendance when there is one (Present 1, Half Day ½), else an
+  in and an out punch — there is none, because no Shift Type here marks
+  attendance on holidays. It is **one hrms Leave Adjustment per Casual Leave
+  allocation** holding the total, cancelled and amended as Sundays add up,
+  reason starting `sundayleave.AUTO_MARK`. Not a Compensatory Leave Request
+  (needs holiday Attendance and a Leave Period, neither of which this site
+  has) and not `allocate_leaves_manually` (the earned-leave cap of twelve
+  would take it back out of December). Pure rule in `manna_hr/sundayleave.py`,
+  hourly `sundayleave_site.run` once installed, `client/src/api/sundayleave.js`
+  until then, both started by `client/src/api/leaverules.js`. No allocation, no
+  Sunday leave: it waits for Give monthly leave like the absence rule does.
+  Sundays count from **1 September 2026**, as the absence rule now does, and
+  a person's *first* Casual Leave allocation also takes the Sundays before it,
+  because most allocations start 1 October. Apply Leave's calendar marks a
+  Sunday "+1 CL" from the adjustment's own reason (`credited`), never from a
+  prediction. First written on the live site 3 October 2026: HR-LAD-2026-00001,
+  Saji Kumar, 20 and 27 September.
+  **After the adversarial review the same day**: a Sunday's weekly off is
+  read off the Holiday List Assignment in force *on that Sunday*
+  (`sundayleave.list_on`), never `Employee.holiday_list` or
+  `Company.default_holiday_list`, which hrms 16 does not read — lists run April
+  to March and allocations January to December, and reading today's list
+  would take January's Sundays back in April. The reach-back is only for a
+  first allocation starting by 1 October 2026 (`BACKFILL_UNTIL`). On the site
+  the two rules are **one hourly job**, `leaverules_site.run`, because Frappe
+  shuffles separate hourly jobs and runs them at once. The absence rule asks
+  hrms's `get_leave_balance_on` before writing, passes a day hrms refuses for
+  its own reason to the next absence, and gives a corrected day's leave back
+  *before* the correction's punches are written (`giveBack`, as
+  `regularization.apply` does). `freeze.guard_leave` judges a cancel by the
+  stored status — hrms sets `Cancelled` before the hook runs. The dashboard
+  runs the rules one tab at a time (Web Locks), shows what they could not do
+  on Apply Leave, and **does not run them from `npm run dev`** unless
+  `VITE_LEAVE_RULES=on`. Two known limits: a January carry-forward allocation
+  makes hrms refuse December leave written after it, so December's rules must
+  settle before Give monthly leave runs in January; and any Leave Adjustment
+  HR makes on a Casual Leave allocation (Factor HR opening balances, say)
+  blocks Sunday leave on it, because hrms allows one — load opening balances
+  through the allocation instead.

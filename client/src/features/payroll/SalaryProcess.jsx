@@ -403,7 +403,7 @@ export default function SalaryProcess() {
 						{company ? <> at {company}</> : <> across the group</>}
 						{" · "}{fmt(tot.submitted)} finalized, {fmt(tot.count - tot.submitted)} in draft
 						{" · "}gross {fmt(Math.round(tot.gross))}, deductions {fmt(Math.round(tot.deduction))},
-						net <b>{fmt(Math.round(tot.net))}</b>. Every figure is hrms&apos;s own, off the slips.
+						net <b>{fmt(Math.round(tot.net))}</b>.
 						{tot.count > tot.submitted ? <> A draft slip pays nobody — Finalize does.</> : null}
 					</Gap>
 				) : null}

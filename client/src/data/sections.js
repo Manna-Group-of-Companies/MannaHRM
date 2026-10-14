@@ -40,10 +40,11 @@ export const VISIBLE_SECTIONS = SECTIONS.filter((s) => !s.hidden);
    was built: asked for, looked at, and put away. Payroll → everything but the
    Payroll page 2 Oct 2026: the module is five custom pages of ours (Payroll,
    Salary Setup, Advances & Loans, Payslips, Bank Transfer), and the older
-   screens — modelled on another system's — stay as hidden code. */
+   screens — modelled on another system's — stay as hidden code. Attendance →
+   All 5 Oct 2026, asked for by IT, the same way as Employees → All. */
 export const HIDDEN_PAGES = {
 	employees: ["salary", "changes", "detail", "cattypes", "ctc", "directory", "weekoff", "orgchart", "letters", "all"],
-	attendance: ["submit", "statutory"],
+	attendance: ["submit", "statutory", "all"],
 	leave: ["availed", "pending"],
 	payroll: ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],
 };
@@ -119,7 +120,7 @@ export const visibleSections = () => SECTIONS.filter((s) => !isHidden(s.key));
 export const COV_LABEL = {live:"Live", part:"Partial", none:"Not built", skip:"Deferred"};
 
 /* ---------------------------------------------------------------------------
-   The rail's four headings.
+   The rail's headings.
 
    **The order of SECTIONS is not touched, and must not be.** These are breaks
    in a list, not a regrouping of it: `keys` below reads straight down the nine
@@ -130,18 +131,17 @@ export const COV_LABEL = {live:"Live", part:"Partial", none:"Not built", skip:"D
    a headcount.
 
    Nine items with no breaks in them is a list people re-read from the top every
-   time. Four groups of two or three is one people learn.
+   time. Two groups is enough to break it, and few enough not to be read.
    --------------------------------------------------------------------------- */
 export const NAV_GROUPS = [
-  { title: "Overview",  keys: ["dashboard"] },
-  { title: "People",    keys: ["onboard", "employees"] },
-  { title: "Time off",  keys: ["attendance", "leave"] },
-  { title: "Pay",       keys: ["payroll", "loans"] },
-  /* Ours, not Factor HR's — they file reports under each module, and so does
-     this app; this is the one place they are also all downloadable together.
-     Asked for 24 Sep 2026. */
-  { title: "Reports",   keys: ["reports"] },
-  { title: "Company",   keys: ["survey", "settings"] },
+  /* **Two headings since 6 October 2026, where there were six.** Six headings
+     over eight items was a heading for every item and a half — Overview over
+     Dashboard alone, Reports over Reports — and it read as a list with its own
+     table of contents. With the open module's pages now listed under it, the
+     rail needs fewer breaks, not more: the people side of HR, then the money
+     and the running of it. */
+  { title: "Workforce", keys: ["dashboard", "onboard", "employees", "attendance", "leave"] },
+  { title: "Pay & admin", keys: ["payroll", "loans", "reports", "survey", "settings"] },
 ];
 
 /** The heading a module sits under, or "" for one no group claims — which is

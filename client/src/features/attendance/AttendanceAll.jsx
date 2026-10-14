@@ -30,9 +30,7 @@ export default function AttendanceAll() {
 			/>
 
 			<AttReports />
-			<Empty title="Attendance, all pages">
-				The seven Attendance pages are on the bar above. This index has nothing of its own to show.
-			</Empty>
+			<Empty title="Attendance, all pages" />
 		</>
 	);
 }

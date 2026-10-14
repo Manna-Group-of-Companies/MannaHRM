@@ -6,7 +6,7 @@
    resolves to a custom property defined here. So a restyle is this file rather
    than four hundred class names across the app.
 
-   **Channels, not colours.** Each token is three numbers, `251 146 60`, and the
+   **Channels, not colours.** Each token is three numbers, `79 70 229`, and the
    config wraps them as `rgb(var(--brand) / <alpha-value>)`. That is what keeps
    Tailwind's opacity modifiers working — `bg-brand-soft/60` and `text-bad/70`
    are both used, and a token holding a finished `rgb(...)` string would
@@ -18,34 +18,52 @@
    instead.
 
    ---------------------------------------------------------------------------
-   One palette, dark, and no switch
+   Indigo on slate, since 6 October 2026
 
-   MANNA on dark surfaces is the whole of it, as of 5 September 2026. There is
-   no `data-theme`, no `data-mode` and no picker: `:root` is the app.
+   The brand was the logo's orange until this date. Orange is a warm accent and
+   the loudest hue on the wheel; on an interface HR reads from nine to six, with
+   a red for "wrong" and an amber for "partial" beside it, every call to action
+   was one step from a warning. The ask was a quieter, more professional look,
+   and the answer is a deep indigo: far from red and amber, far from the green
+   that means "present", and the colour most business software has taught
+   people to read as "the product, not a status".
 
-   It had two axes and lost both the same day. **Six palettes** — Cobalt,
-   Harbour, Graphite, Ember and Iris beside this one — and **a light mode**,
-   dropped in that order. What is worth keeping from that, because the next
-   person to want either will otherwise rediscover it:
+   **The logotype did not move.** `manna` in tailwind.config.js is still the
+   orange and is the only thing on the rail that wears it. A mark that changed
+   colour with the interface would not be the mark.
 
-     A palette is a block here and *nothing else*. Every rule in `index.css`
-     names a role rather than a colour, so a second palette, or a light mode,
-     needs no change to any component, any class or any page.
+   The neutrals are cool slate in both modes — a warm grey under an indigo reads
+   as dirty — and every pairing below was re-run through `npm run contrast`
+   rather than eyeballed. Two consequences worth knowing:
 
-     To bring an axis back: copy this block to `[data-theme="whatever"]` or
-     `[data-mode="light"]`, change the numbers, and put it **after** this one —
-     `:root` matches `<html>` on every page and has the same specificity as any
-     attribute selector, so source order is the whole cascade here. This app
-     shipped for a week with a palette on the root, a picker ticking it, and
-     every button painted the palette declared underneath. Then `src/lib/` needs
-     something to write the attribute with; it had exactly that until this
-     change.
+     `part` is amber now, not the brand. It was the brand on purpose when the
+     brand was orange ("work in progress should look like the product"). An
+     indigo "partial" would read as a selected state, so it is the warm hue in
+     the chart ramp instead and keeps its own wash.
+
+     `rest`, the week-off bar, moved from blue to teal. It sits beside a
+     `brand-dark` working day and has to read as a different *kind* of day;
+     blue next to indigo is the same kind, dimmer.
 
    ---------------------------------------------------------------------------
-   The trap this palette was built around
+   Two blocks: `:root` is dark, `[data-mode="light"]` is light
+
+   A palette is a block here and *nothing else*. Every rule in `index.css`
+   names a role rather than a colour, so a second palette needs no change to
+   any component, any class or any page. `lib/mode.js` writes the attribute.
+
+   `:root` matches `<html>` on every page and has the same specificity as any
+   attribute selector, so **source order is the whole cascade here**: the light
+   block must come after this one. This app shipped for a week with a palette
+   on the root, a picker ticking it, and every button painted the palette
+   declared underneath. `npm run shots` checks what `--brand` resolves to in a
+   real browser for exactly that reason.
+
+   ---------------------------------------------------------------------------
+   The trap this palette is built around
 
    A colour cannot be both body text on a dark card and a fill with white text
-   on it. Text on `#141922` needs a luminance of about .23 or better; white on a
+   on it. Text on `#131824` needs a luminance of about .23 or better; white on a
    fill needs it under .18. There is no value in both windows, so a token that
    would do both jobs has to pick one.
 
@@ -55,11 +73,16 @@
    the one destructive button. `npm run contrast` knows which is which — see
    `WHITE_ON` there — and will say so if a future edit puts one back.
 
+   On light the opposite holds: `bad`, `live` and `accent` have to be dark
+   enough to *read* on white, which makes them dark enough for white to sit on
+   — so the `-dark` and `-fill` steps stay, and are the same value or one step
+   deeper.
+
    ---------------------------------------------------------------------------
    Checking it
 
    `npm run contrast` walks every pairing these screens actually put together —
-   text on each of the four surfaces, status text on its own wash, white on each
+   text on each of the surfaces, status text on its own wash, white on each
    filled button, the control edge, the rail marker, the chart hues — and
    refuses anything under AA. A colour that has not been through it is a colour
    that fails on one screen nobody opened.
@@ -69,13 +92,11 @@
   /* **Browser furniture, told once.** Scrollbars, native form controls, the
      flash between navigations and the caret all follow this. Without it a dark
      page keeps white scrollbars and white select popups, which is the single
-     most obvious tell of a dark theme bolted on afterwards. In CSS rather than
-     set from JavaScript, because it is now a fact about the app rather than a
-     preference anybody can change. */
+     most obvious tell of a dark theme bolted on afterwards. */
   color-scheme: dark;
 
   /* ---- depth ----
-     A shadow on white is ink at 5% alpha; the same rule on `#0C0F15` is
+     A shadow on white is ink at 5% alpha; the same rule on `#0B0E16` is
      invisible, and a card with no edge and no shadow stops reading as a card.
      So these are a nearly opaque black *and* every surface keeps a hairline —
      the lift comes from the surface step above as much as from the shadow.
@@ -87,62 +108,61 @@
   --sh-modal:     0 28px 64px rgba(0, 0, 0, .72);
 
   /* ---- the brand ----
-     The mark itself (`#EF6C29`) stays the logotype's and is not interactive —
-     3.1:1 on white, which WCAG exempts for a brand mark and does not exempt for
-     anything a person has to read. See `manna` in tailwind.config.js.
-
-     `soft` is the surface and `deep` is the text on it; `tint` is a border on
-     that surface. `dark` is the fill of every primary button and the one step
-     white text sits on. `lift` is for the dark chrome — the rail's marker. */
-  --brand:        251 146 60;
-  --brand-dark:   194 65 12;
-  --brand-deep:   253 186 116;
-  --brand-soft:   43 26 16;
-  --brand-tint:   124 45 18;
-  --brand-lift:   251 146 60;
+     `brand` is the lit indigo that is *read* on a dark card — a link, a
+     selected label, the ring round a focused search. `dark` is the fill of
+     every primary button and the one step white text sits on, and it is the
+     same value in both modes so a button looks like itself everywhere. `soft`
+     is the surface and `deep` is the text on it; `tint` is a border on that
+     surface. `lift` is for the dark chrome — the rail's marker. */
+  --brand:        129 140 248;
+  --brand-dark:   67 56 202;
+  --brand-deep:   165 180 252;
+  --brand-soft:   30 27 75;
+  --brand-tint:   67 56 202;
+  --brand-lift:   129 140 248;
 
   /* ---- the chrome ----
      `nav` is the dark material — the rail in this mode, and the fill behind a
-     white section row in the muster and the salary tables in both. */
-  --char:         6 9 14;
-  --nav:          13 17 24;
-  --nav-2:        9 12 18;
-  --nav-3:        27 33 45;
+     white section row in the muster and the salary tables in both. A touch of
+     blue in it, so the rail and the page read as one navy rather than as a
+     black bar beside a grey one. */
+  --char:         6 9 16;
+  --nav:          13 17 26;
+  --nav-2:        9 12 20;
+  --nav-3:        26 32 48;
   --nav-ink:      154 165 184;
 
   /* ---- the rail ----
-     Its own tokens since 29 September 2026, when the light rail arrived: the
-     rail stopped being `nav`, and `nav` kept every other job it had. On dark
-     they are the `nav` values, so nothing here moved.
-
      `ink` is a link at rest and `fg` is one under the pointer; `on` is the
      current module's pill and `on-ink` the label on it; `mark` is the stripe
      and icon that say which one is current — 3:1 against both the rail and
-     the pill, which `npm run contrast` checks. */
-  --rail:         13 17 24;
-  --rail-2:       9 12 18;
-  --rail-3:       27 33 45;
+     the pill, which `npm run contrast` checks. The pill is an indigo-tinted
+     navy rather than a lighter grey, so the current module reads as chosen
+     and not merely as hovered. */
+  --rail:         13 17 26;
+  --rail-2:       9 12 20;
+  --rail-3:       26 32 48;
   --rail-ink:     154 165 184;
   --rail-fg:      255 255 255;
-  --rail-on:      56 40 30;
+  --rail-on:      36 36 78;
   --rail-on-ink:  255 255 255;
-  --rail-mark:    251 146 60;
+  --rail-mark:    129 140 248;
 
   /* ---- the surfaces ----
      Four of them, and the gaps between them are what makes a card read as
      raised — there is no white page to lift off. */
-  --page:         12 15 21;
-  --card:         20 25 34;
-  --wash:         26 32 42;
-  --rule:         33 40 52;
+  --page:         11 14 22;
+  --card:         19 24 36;
+  --wash:         25 31 45;
+  --rule:         32 39 55;
 
   /* `line` and `2` divide things; `ctl` is the edge of a control somebody has
      to find before they can use it, and that is a different job with a
      different bar — 3:1, per WCAG 1.4.11. Dividers stay quiet; controls get the
      contrast. */
-  --line:         42 50 64;
-  --line-2:       58 67 83;
-  --line-ctl:     122 134 152;
+  --line:         42 50 68;
+  --line-2:       58 68 88;
+  --line-ctl:     122 134 154;
 
   /* Not pure white. #FFF on a near-black surface haloes at small sizes, and
      every label in this app is small. `ink-3` names every micro-label, column
@@ -152,23 +172,19 @@
   --ink-2:        180 190 205;
   --ink-3:        141 152 170;
 
-  --accent:       251 146 60;
-  --accent-wash:  43 26 16;
+  --accent:       129 140 248;
+  --accent-wash:  30 27 75;
 
   --live:         74 222 128;
   --live-dark:    21 128 61;
   --live-wash:    18 42 30;
 
-  /* "Partial" is the brand on purpose — work in progress is the most common
-     state on this dashboard, and it is the one that should look like the
-     product. */
-  --part:         251 146 60;
-  --part-wash:    43 26 16;
+  /* Amber, and no longer the brand — see the note at the top. */
+  --part:         251 191 36;
+  --part-wash:    46 36 14;
 
-  /* Red on an orange app is the one pairing this palette has to be careful
-     about: it is the nearest hue to the brand, and it is the one that means
-     something has gone wrong. `bad` is the red somebody *reads* and `bad-fill`
-     is the one white text sits on — see the trap note above. */
+  /* `bad` is the red somebody *reads* and `bad-fill` is the one white text
+     sits on — see the trap note above. */
   --bad:          248 113 113;
   --bad-fill:     185 28 28;
   --bad-wash:     52 24 26;
@@ -179,29 +195,26 @@
   --skip:         154 165 184;
   --skip-wash:    32 39 51;
 
-  /* `rest` — the week-off bar on the Employees calendar. It is a token of its
-     own because that bar sits beside the filled `brand-dark` working day and
-     has to read as a different *kind* of day, not a quieter one: a grey chip
-     next to an orange block reads as a disabled orange block. Blue is the far
-     side of the wheel from the working day, which is the whole job. White sits
-     on it, and `npm run contrast` checks that. */
-  --rest:         30 78 140;
+  /* `rest` — the week-off bar on the Employees calendar. Teal: the far side of
+     the wheel from the working day's indigo, so it reads as a different *kind*
+     of day and not a dimmer one. White sits on it, and `npm run contrast`
+     checks that. */
+  --rest:         15 118 110;
 
-  /* Factor HR's own blue, and only the "All" dot on a status filter wears it.
-     It is also the only cool colour in the app, which is what makes their dot
-     legible here. */
-  --info:         96 165 250;
+  /* The "All" dot on a status filter, and nothing else. Sky rather than the
+     brand, so it still separates from the green and the red beside it without
+     reading as a selected control. */
+  --info:         56 189 248;
 
   /* The empty half of a coverage bar. A fill, not a border, so it is allowed to
      be quiet — the filled half carries the reading. */
-  --track:        44 53 68;
+  --track:        44 53 70;
 
   /* The fill Factor HR puts behind a box whose form wants an answer in it. A
      *fill*, not a border: it has to read as "this one is waiting" across a form
      of a dozen boxes without competing with `bad`, which is the colour of
      something that is actually wrong. Ink sits on it, so it is a surface and
-     the checker treats it as one — which is what keeps it dark enough for
-     `ink-3` to clear AA on. */
+     the checker treats it as one. */
   --need:         48 40 14;
 
   /* The connection dots on the rail. These sit on the darkest chrome there is,
@@ -214,122 +227,94 @@
      brand.** A donut's slices have to be told apart from each other; a brand
      has to be told apart from everything else. Those are different jobs, and
      tying the first to the second is how a chart ends up saying something the
-     data does not — "still in" and "on leave" as two shades of the same orange.
+     data does not.
 
-     Three, in a fixed order, and never cycled: a fourth category folds into the
-     ring's unfilled remainder (`track`) rather than inventing a hue. Run
-     through `dataviz/scripts/validate_palette.js` against `#141922` — lightness
-     band, chroma floor, adjacent-pair separation under deutan/protan/tritan,
-     and 3:1 on the surface they are drawn on. `npm run contrast` keeps the last
-     of those honest. */
-  --chart-1:      14 163 114;
-  --chart-2:      59 130 246;
-  --chart-3:      199 122 11;
+     Three, in a fixed order, and never cycled: teal, sky, amber. A fourth
+     category folds into the ring's unfilled remainder (`track`) rather than
+     inventing a hue. None of the three is the brand's indigo, so a chart never
+     looks like a button. `npm run contrast` holds each to 3:1 on the card. */
+  --chart-1:      20 184 166;
+  --chart-2:      56 189 248;
+  --chart-3:      251 191 36;
 }
 
 /* ---------------------------------------------------------------------------
-   Light, added 8 September 2026 — and the block above says exactly how.
+   Light. The block most people see: Factor HR is light, so is every other
+   system HR uses all day, and a dark app beside a light one is the difference
+   between reading and squinting.
 
-   **Why it came back.** The one palette above was the right call for a screen
-   somebody glances at; it is the wrong one for the screen HR has open from nine
-   to six in a room with a window behind them. Factor HR is light, so is every
-   other system these people use all day, and a dark app beside a light one is
-   the difference between reading and squinting. That is not a preference to
-   argue about — it is the room.
-
-   The mechanics are the ones documented above and nothing more: this is a block
-   of numbers, after `:root`, on an attribute. **No rule in `index.css` changed.**
-   Every one of them names a role rather than a colour, which is what makes a
-   second palette forty lines instead of a rewrite.
-
-   `lib/mode.js` writes the attribute. It defaults to whatever the operating
-   system asks for and remembers what the person picks, so somebody who has
-   never touched the control still gets the right one — and somebody who has
-   gets theirs on every screen and every reload.
-
-   **The trap from the block above is inverted here and just as sharp.** On dark,
-   a token cannot be both readable text and a fill with white on it, and every
-   token picks text. On light the opposite holds: `bad`, `live` and `accent`
-   have to be dark enough to *read* on white, which makes them dark enough for
-   white to sit on — so the `-dark` and `-fill` steps stay, and are the same
-   value or one step deeper. `npm run contrast` walks both palettes, so a value
-   that works on one and fails on the other is caught before anybody opens it.
+   Same roles, same checker, and nothing in `index.css` knows which block it is
+   being painted by.
    --------------------------------------------------------------------------- */
 
 [data-mode="light"] {
-  /* Browser furniture follows, the same as above and for the same reason: a
-     light page with dark scrollbars and dark select popups is the tell of a
-     theme bolted on afterwards. */
   color-scheme: light;
 
-  /* Ink at low alpha, which is what a shadow on white actually is. The dark
-     palette needs near-opaque black because there is no white to lift off;
-     here the surfaces do the lifting and the shadow only softens the edge. */
+  /* Ink at low alpha, which is what a shadow on white actually is — and the ink
+     is the slate of the palette, so a shadow is never warmer than the page it
+     falls on. */
   --sh-raise:     0 1px 2px rgba(15, 23, 42, .04), 0 2px 8px rgba(15, 23, 42, .045);
   --sh-lift:      0 4px 10px rgba(15, 23, 42, .06), 0 14px 32px rgba(15, 23, 42, .08);
   --sh-pop:       0 8px 26px rgba(15, 23, 42, .14), 0 2px 6px rgba(15, 23, 42, .08);
   --sh-modal:     0 28px 64px rgba(15, 23, 42, .22);
 
   /* ---- the brand ----
-     `brand` is the mark's own orange and stays it. `deep` is the step that has
-     to be *read* on `soft`, so it is the dark end here where it was the light
-     end above — the roles are identical and the direction is reversed. */
-  --brand:        234 88 12;
-  --brand-dark:   194 65 12;
-  --brand-deep:   124 45 18;
-  --brand-soft:   255 241 232;
-  --brand-tint:   254 215 190;
-  --brand-lift:   251 146 60;
+     `brand` is the indigo that is read on white — 6.3:1, so it is a link and a
+     selected label as well as a ring. `deep` is the step that has to be *read*
+     on `soft`, so it is the dark end here where it was the light end above —
+     the roles are identical and the direction is reversed. */
+  --brand:        79 70 229;
+  --brand-dark:   67 56 202;
+  --brand-deep:   55 48 163;
+  --brand-soft:   238 242 255;
+  --brand-tint:   199 210 254;
+  --brand-lift:   129 140 248;
 
   /* ---- the chrome ----
-     **The rail stays dark, on purpose.** It is the thing you navigate by, and
-     an app whose menu changes colour with the page loses the one fixed edge a
-     reader steers along. The header was already the page's own material — see
-     the note at the top of the chrome block in index.css — so on light it needs
-     no special case at all. */
+     The dark fills behind a section row in the muster and the salary tables
+     stay dark on light; `nav` is that material. */
   --char:         15 23 42;
-  --nav:          24 32 47;
-  --nav-2:        17 24 38;
-  --nav-3:        44 55 76;
+  --nav:          24 32 50;
+  --nav-2:        17 24 40;
+  --nav-3:        44 55 80;
   --nav-ink:      165 176 194;
 
   /* ---- the rail, on light ----
-     **White since 29 September 2026.** The dark rail was kept on purpose — see
-     the note that used to be here — as the one fixed edge a reader steers by.
-     It was also the heaviest thing on every screen, and people asked for a
-     lighter, simpler app. The edge survives as a hairline and the current
-     module as a warm pill, which is how the rail still reads as the rail. */
-  --rail:         255 255 255;
-  --rail-2:       255 255 255;
+     A whisper off white rather than white, so the rail is its own surface
+     beside white cards and not a card that happens to be tall. The edge
+     survives as a hairline and the current module as an indigo pill, which is
+     how the rail still reads as the rail. */
+  --rail:         250 251 254;
+  --rail-2:       250 251 254;
   --rail-3:       255 255 255;
   --rail-ink:     71 85 105;
   --rail-fg:      23 32 47;
-  --rail-on:      255 241 232;
-  --rail-on-ink:  124 45 18;
-  --rail-mark:    194 65 12;
+  --rail-on:      238 242 255;
+  --rail-on-ink:  55 48 163;
+  --rail-mark:    79 70 229;
 
   /* ---- the surfaces ----
      `page` is not white and `card` is. That way a card lifts off the page with
      no border needed, which is the same job the four dark steps do in reverse.
      A pure-white page with white cards is a screen with no structure at all. */
-  --page:         244 246 250;
+  --page:         245 247 251;
   --card:         255 255 255;
-  --wash:         248 250 252;
-  --rule:         236 239 244;
+  --wash:         248 250 253;
+  --rule:         237 240 246;
 
-  --line:         224 228 236;
-  --line-2:       203 210 221;
-  --line-ctl:     126 136 152;
+  --line:         226 230 239;
+  --line-2:       205 212 224;
+  --line-ctl:     124 135 153;
 
   /* Not pure black, for the mirror of the reason above: #000 on white is harsh
      at small sizes and every label here is small. Each step clears 4.5:1 on all
      four surfaces. */
-  --ink:          23 32 47;
+  --ink:          15 23 42;
   --ink-2:        71 85 105;
   --ink-3:        92 108 131;
 
-  --accent:       191 62 9;
-  --accent-wash:  255 241 232;
+  --accent:       67 56 202;
+  --accent-wash:  238 242 255;
 
   --live:         16 123 56;
   --live-dark:    21 128 61;
@@ -348,8 +333,8 @@
   --skip:         92 108 131;
   --skip-wash:    241 245 249;
 
-  --rest:         30 78 140;
-  --info:         29 78 216;
+  --rest:         15 118 110;
+  --info:         2 132 199;
 
   --track:        228 232 240;
 
@@ -357,16 +342,16 @@
      enough for `ink-3` to clear AA, warm enough not to read as an error. */
   --need:         255 251 235;
 
-  /* On a white rail now as well as on the dark fills, so the resting dot is a
-     step darker than it was — 148 163 184 was 2.5:1 on white. */
+  /* On a white rail as well as on the dark fills, so the resting dot is dark
+     enough to be found on both. */
   --beacon:       100 116 139;
   --beacon-live:  22 163 74;
   --beacon-bad:   220 38 38;
 
-  /* Validated against `#FFFFFF` rather than `#141922`: the lightness band moves
+  /* Validated against `#FFFFFF` rather than `#131824`: the lightness band moves
      with the surface, so these are the darker ends of the same three hues.
      Same order, same rule, never cycled. */
   --chart-1:      15 118 110;
-  --chart-2:      37 99 235;
+  --chart-2:      2 132 199;
   --chart-3:      180 83 9;
 }

@@ -10,6 +10,7 @@
    --------------------------------------------------------------------------- */
 
 import { tally } from "@/lib/format";
+import { lossOfPay } from "@/lib/payroll";
 
 /** The four companies these dashboards were asked for, in the order given
  *  (16 September 2026). Each has its own company-locked login — see
@@ -152,7 +153,7 @@ export function payrollSummary(slips) {
 		deductions: sum(sub, "total_deduction"),
 		net: sum(sub, "net_pay"),
 		draftNet: sum(draft, "net_pay"),
-		lwp: rows.reduce((a, r) => a + num(r.leave_without_pay), 0),
+		lwp: rows.reduce((a, r) => a + lossOfPay(r), 0),
 	};
 }
 

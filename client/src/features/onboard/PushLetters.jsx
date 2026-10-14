@@ -238,13 +238,7 @@ export default function PushLetters({ onClose }) {
 
 					<div className="rows bulkrows">
 						<div className="row">
-							<span>
-								To push{" "}
-								<span className="muted">
-									One file each, carrying the letter&rsquo;s own text, filed against the person
-									it was issued to.
-								</span>
-							</span>
+							<span>To push</span>
 							<span className="val">
 								<span className={"cov " + (work.length ? "live" : "none")}>
 									{work.length} of {chosen.length}
@@ -286,10 +280,6 @@ export default function PushLetters({ onClose }) {
 							{busy ? `Pushing ${done} of ${work.length}…` : "Push"}
 						</button>
 						<button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
-						<span className="bulkwhy">
-							Writes one <span className="mono">File</span> per letter against the employee. It
-							runs in this tab, so leaving the page stops it part-way — what is filed stays filed.
-						</span>
 					</div>
 				</div>
 			}

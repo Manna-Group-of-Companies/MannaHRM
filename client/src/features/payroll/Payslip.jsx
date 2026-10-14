@@ -512,9 +512,6 @@ function PslForm({ s }) {
 								onChange={(e) => stale({ ptype: e.target.value })}>
 								{PSL_PAYROLL_TYPES.map((v) => <option key={v}>{v}</option>)}
 							</select>
-							<span className="hint">
-								Monthly is the one value either capture of this control has held.
-							</span>
 						</div>
 
 						<div className="ddafield">
@@ -523,9 +520,6 @@ function PslForm({ s }) {
 								onChange={(e) => stale({ year: e.target.value, month: "" })}>
 								{fyList(todayIso()).map((v) => <option key={v}>{v}</option>)}
 							</select>
-							<span className="hint">
-								April to March — the year a return is filed against. Changing it clears the month.
-							</span>
 						</div>
 
 						<div className="ddafield">
@@ -534,7 +528,6 @@ function PslForm({ s }) {
 								onChange={(e) => stale({ output: e.target.value })}>
 								{PSL_OUTPUTS.map((v) => <option key={v}>{v}</option>)}
 							</select>
-							<span className="hint">What Generate produces. PDF was their selected value.</span>
 						</div>
 
 						<div className="ddafield">
@@ -544,11 +537,6 @@ function PslForm({ s }) {
 								<option value="">Select month</option>
 								{fyMonths(year).map((m) => <option key={m[0]} value={m[0]}>{m[1]}</option>)}
 							</select>
-							<span className="hint">
-								{f.month
-									? "The period every slip is headed with."
-									: "Empty in their capture, and required here — Generate refuses without it."}
-							</span>
 						</div>
 
 						<div className="ddafield">
@@ -557,10 +545,6 @@ function PslForm({ s }) {
 								onChange={(e) => stale({ format: e.target.value })}>
 								{PSL_FORMATS.map((v) => <option key={v}>{v}</option>)}
 							</select>
-							<span className="hint">
-								Format 7 was selected, so there are at least seven of them. Here a payslip layout is
-								one Print Format against <code>Salary Slip</code>, and stock ERPNext ships one.
-							</span>
 						</div>
 					</div>
 
@@ -647,22 +631,9 @@ function PslOut({ s }) {
 			{/* The one question this screen can answer, answered where it was asked. */}
 			<Gap>
 				{known ? (
-					<>
-						<b>{fmt(withMail)} of {fmt(rows.length)} have an email address on record.</b>{" "}
-						{withMail === rows.length
-							? "Every one of these slips has somewhere to go, which is the easy half of the delivery "
-								+ "question — nothing here sends them."
-							: `The other ${fmt(rows.length - withMail)} have nowhere for a payslip to be sent, and `
-								+ "their first checkbox is exactly this problem. Collecting those addresses is cheaper "
-								+ "than any of the payroll work behind this screen and blocks the same thing."}
-					</>
+					<b>{fmt(withMail)} of {fmt(rows.length)} have an email address on record.</b>
 				) : (
-					<>
-						<b>The address fields could not be read.</b> Neither <code>company_email</code> nor its
-						two siblings came back off <code>Employee</code>, so the Email column is empty for a
-						reason that has nothing to do with anybody's record — and the first checkbox is left
-						unable to filter rather than filtering everybody out.
-					</>
+					<b>The address fields could not be read.</b>
 				)}
 			</Gap>
 
@@ -704,12 +675,6 @@ export default function Payslip() {
 							<button className="embtn" onClick={() => pslRun(s, "Excel")}>
 								<i className="fico" aria-hidden="true">📊</i> Excel
 							</button>
-						</>
-					}
-					why={
-						<>
-							One page per person, and the same HTML that Print, PDF and Word are handed — rendered
-							here so it can be read before it goes anywhere near a printer or a person.
 						</>
 					}
 					extra={<iframe className="iopaper" title="Payslip run" srcDoc={s.pslDoc} />}

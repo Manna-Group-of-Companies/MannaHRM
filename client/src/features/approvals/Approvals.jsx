@@ -275,7 +275,7 @@ function Dialogs({ t, shown }) {
 				why={
 					<>
 						{t.l} queue · {shown.length} shown
-						{s.appsel.size ? `, ${s.appsel.size} selected — Export takes the selection` : ""}
+						{s.appsel.size ? `, ${s.appsel.size} selected` : ""}
 					</>
 				}
 			/>
@@ -312,11 +312,7 @@ function Dialogs({ t, shown }) {
 						<button className="btn ghost" onClick={() => mark("")}>Clear staged actions</button>
 					</>
 				}
-				why={
-					n
-						? `${n} row${n === 1 ? "" : "s"} selected. This marks them only — Save Approval Changes is what decides.`
-						: "Nothing selected. Tick the rows first, or use the box in the header to take everything shown."
-				}
+				why={n ? `${n} row${n === 1 ? "" : "s"} selected.` : "Nothing selected."}
 			/>
 		);
 	}
@@ -339,10 +335,7 @@ function Dialogs({ t, shown }) {
 					</button>
 				</>
 			}
-			why={
-				`${log.length} decision${log.length === 1 ? "" : "s"} this session. `
-				+ "Frappe keeps the durable record per document in its version log; this list is the page's own."
-			}
+			why={`${log.length} decision${log.length === 1 ? "" : "s"} this session.`}
 			extra={
 				log.length ? (
 					<Scroll style={{ maxHeight: "46vh" }}>
@@ -368,9 +361,7 @@ function Dialogs({ t, shown }) {
 						</table>
 					</Scroll>
 				) : (
-					<Empty title="Nothing decided yet">
-						Decisions made on this page appear here, with whether they reached the site.
-					</Empty>
+					<Empty title="Nothing decided yet" />
 				)
 			}
 		/>
@@ -441,9 +432,7 @@ export default function Approvals() {
 				<Empty title="Nothing waiting">
 					{rows.length ? (
 						<>Nothing matches “{s.appq}”. {rows.length} waiting in all.</>
-					) : (
-						t.empty
-					)}
+					) : null}
 				</Empty>
 			) : (
 				[...groups.entries()].map(([k, g]) => (

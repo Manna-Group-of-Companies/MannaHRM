@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { REQUIRED_COMPONENTS, missingComponents } from "@/lib/payrollsetup";
-import { homeSteps } from "@/lib/payrollhome";
+import { exportWhy, homeSteps } from "@/lib/payrollhome";
 
 /* ---------------------------------------------------------------------------
    Payroll → Payroll: the four steps of a month, and what the site needs first.
@@ -115,5 +115,49 @@ describe("the four steps", () => {
 		const v = view({ pay: { state: "error", err: "This login may not read payroll on the site." } });
 		expect(step(v, "run").state).toBe("unknown");
 		expect(step(v, "run").text).toMatch(/may not read payroll/);
+	});
+});
+
+describe("why an Excel button of Check it and pay is off, in words HR can act on", () => {
+	const label = "September 2026";
+
+	it("makes the wages register from the slips, and says nothing, when one company's month has slips", () => {
+		const w = exportWhy({ company: "Manna Rubber", label, slips: 3, state: "ok" });
+		expect(w).toMatchObject({ sheet: "", register: "", mode: "slips", line: "" });
+		expect(w.hint).toMatch(/salary slips as the company's Form 25 wages register/);
+	});
+
+	it("turns the salary sheet off without slips, keeps the register on as a preview, and says why", () => {
+		const w = exportWhy({ company: "Manna Rubber", label, slips: 0, state: "ok" });
+		expect(w.sheet).toBe("The salary sheet needs salary slips, and there are none for September 2026 yet.");
+		expect(w).toMatchObject({ register: "", mode: "preview" });
+		expect(w.line).toBe("The salary sheet needs salary slips, and there are none for September 2026 yet. "
+			+ "The wages register beside it works now: Excel works it out from attendance and the sheet's formulas.");
+		expect(w.hint).toMatch(/not from salary slips — do not pay from it/);
+	});
+
+	it("makes every company's wages register in one file when all companies are chosen, slips or none", () => {
+		const a = exportWhy({ company: "", label, slips: 3, state: "ok" });
+		expect(a).toMatchObject({ sheet: "", register: "", mode: "all" });
+		expect(a.line).toContain("makes every company's sheet in one file");
+		expect(a.line).toContain("do not pay from those sheets");
+		const b = exportWhy({ company: "", label, slips: 0, state: "ok" });
+		expect(b).toMatchObject({ register: "", mode: "all" });
+		expect(b.line).toMatch(/^The salary sheet needs salary slips, and there are none for September 2026 yet\. The wages register makes every company's sheet/);
+	});
+
+	it("keeps both off while the month is being read, rather than offering a preview of a month that may have slips", () => {
+		for (const state of [undefined, "loading"]) {
+			const w = exportWhy({ company: "Manna Rubber", label, slips: 0, state });
+			expect(w.register).toBe("Reading September 2026's payroll…");
+			expect(w.sheet).toBe(w.register);
+			expect(w.mode).toBe("");
+		}
+	});
+
+	it("says the slips could not be read, and still offers the register as a preview", () => {
+		const w = exportWhy({ company: "Manna Rubber", label, slips: 0, state: "error" });
+		expect(w).toMatchObject({ register: "", mode: "preview" });
+		expect(w.line).toMatch(/^The salary slips could not be read, so the salary sheet cannot be made\. The wages register beside it still works, as a preview/);
 	});
 });

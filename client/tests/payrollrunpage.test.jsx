@@ -10,6 +10,7 @@ import { Provider } from "react-redux";
 
 let site;
 const calls = [];
+const made = [];
 
 vi.mock("@/api/client", async (importOriginal) => {
 	const actual = await importOriginal();
@@ -20,7 +21,11 @@ vi.mock("@/api/client", async (importOriginal) => {
 				: dt === "Salary Slip" ? site.slips
 					: dt === "Salary Structure Assignment" ? site.ssa
 						: dt === "Salary Component" ? site.components
-							: dt === "Additional Salary" ? site.extras : [],
+							: dt === "Additional Salary" ? site.extras
+								: dt === "Employee" ? site.employees
+									: dt === "Attendance" ? site.attendance
+										: dt === "Shift Type" ? site.shifts
+											: dt === "Employee Checkin" ? site.punches || [] : [],
 		),
 		/* The loan doctypes are not on the site this was written for. */
 		api: (path) => (path.includes("Loan")
@@ -34,11 +39,24 @@ vi.mock("@/api/client", async (importOriginal) => {
 	};
 });
 
+/* A download needs a real browser; the workbook it would have downloaded is
+   built here and kept, so a test can open it. */
+vi.mock("@/lib/registerxlsx", async (importOriginal) => {
+	const actual = await importOriginal();
+	return {
+		...actual,
+		registerXlsx: async (rows, opts) => { made.push({ rows, opts, wb: await actual.registerWorkbook(rows, opts) }); },
+		registerBookXlsx: async (parts, opts) => { made.push({ parts, opts, wb: await actual.registerBook(parts, opts) }); },
+		registerDesignBookXlsx: async (parts, opts) => { made.push({ design: true, parts, opts, wb: await actual.registerBook(parts, opts) }); },
+	};
+});
+
 import { pageFor } from "@/routes/registry";
 import PayrollRun from "@/features/payroll/PayrollRun";
 import { payKey } from "@/api/payroll";
 import { periodOf } from "@/lib/payroll";
 import { lastMonth } from "@/lib/payrollrun";
+import { periodLabel } from "@/lib/salarysheet";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 
@@ -53,7 +71,11 @@ const ALL3 = [
 
 beforeEach(() => {
 	calls.length = 0;
-	site = { entries: [], slips: [], ssa: [], details: [], components: ALL3, extras: [], company: CO, picked: [] };
+	made.length = 0;
+	site = {
+		entries: [], slips: [], ssa: [], details: [], components: ALL3, extras: [], company: CO, picked: [],
+		employees: [], attendance: [], shifts: [],
+	};
 	resetStore();
 	act(() => set({ ...loadedState(), site: "https://erp.example.invalid", company: "Manna Rubber" }));
 });
@@ -248,6 +270,10 @@ describe("step 4 — the sheet", () => {
 	const slips = () => {
 		site.entries = [{ name: "HR-PRUN-1", docstatus: 1, company: "Manna Rubber", creation: "2026-09-01" }];
 		site.slips = [{ name: "SAL-1", employee: "HR-EMP-00001", employee_name: "Anand Raghavan", docstatus: 1, gross_pay: 13000, total_deduction: 2500, net_pay: 10500, payment_days: 30 }];
+		/* The 5-tab carries only people with a salary assigned (14 Oct 2026). */
+		site.ssa = ["HR-EMP-00001", "HR-EMP-00002"].map((employee, i) => ({
+			name: `SSA-${i + 1}`, employee, salary_structure: "Staff", from_date: "2026-01-01", base: 13000, company: "Manna Rubber", docstatus: 1,
+		}));
 		site.details = [
 			{ parent: "SAL-1", parentfield: "earnings", salary_component: "Basic", amount: 12000, idx: 1 },
 			{ parent: "SAL-1", parentfield: "earnings", salary_component: "Leave Encashment", amount: 1000, idx: 2 },
@@ -270,6 +296,171 @@ describe("step 4 — the sheet", () => {
 	it("has an Excel button that is off until there is something to put in it", async () => {
 		const v = await draw();
 		expect(button(v, "Download Excel").disabled).toBe(true);
+	});
+
+	/* Waits for the register to be built and the page to say so. */
+	const made1 = () => act(async () => {
+		await vi.waitFor(() => { if (!made.length) throw new Error("not made yet"); });
+	});
+	const people = () => {
+		site.employees = [
+			{ name: "HR-EMP-00002", employee_name: "Bindu Thomas", employee_number: "MR002", status: "Active", date_of_joining: "2020-01-01" },
+			{ name: "HR-EMP-00001", employee_name: "Anand Raghavan", employee_number: "MR001", status: "Active", date_of_joining: "2019-04-01",
+				custom_uan: "100000000001", custom_esic_number: "3100000001", default_shift: "General" },
+		];
+		site.attendance = [{ employee: "HR-EMP-00001", attendance_date: `${YM}-01`, status: "Present" }];
+		site.shifts = [{ name: "General", start_time: "09:00:00", end_time: "17:30:00" }];
+	};
+
+	it("turns the salary sheet off without slips and says why on the button, but keeps the wages register on as a preview", async () => {
+		const v = await draw();
+		expect(button(v, "Download Excel").disabled).toBe(true);
+		expect(button(v, "Wages register (Excel)").disabled).toBe(false);
+		expect(button(v, "Download Excel").getAttribute("title")).toBe(`The salary sheet needs salary slips, and there are none for ${periodLabel(YM)} yet.`);
+		expect(v.container.textContent).not.toContain("The wages register beside it works now");
+		expect(button(v, "Wages register (Excel)").getAttribute("title")).toMatch(/preview/i);
+	});
+
+	it("makes the preview from the site's records when there are no slips, and says it is Excel's working and not to be paid from", async () => {
+		people();
+		const v = await draw();
+		await click(button(v, "Wages register (Excel)"));
+		await made1();
+		await act(async () => {});
+		const [{ rows, opts, wb }] = made;
+		expect(opts.preview).toBe(true);
+		expect(rows.map((r) => [r.code, r.kind, r.pfMember, r.esiMember, r.otPerDay])).toEqual([
+			["MR001", "Salary", true, true, 8], ["MR002", "Salary", false, false, 8],
+		]);
+		const ws = wb.getWorksheet("Wages Register");
+		expect(ws.getCell("B1").value).toMatch(/ - PREVIEW, NOT FROM SALARY SLIPS$/);
+		expect(ws.getCell("BL6").value).toEqual({ formula: 'IF(BC6="Wages",(BE6/26)*AT6,BE6-BK6)' });
+		const text = v.container.textContent;
+		expect(text).toContain(`A preview of the wages register for ${periodLabel(YM)} was made, with 2 people.`);
+		expect(text).toContain("worked out by Excel from the sheet's own formulas and the attendance, not by the salary slips, so do not pay from it");
+		expect(text).toMatch(/Left empty for you to fill in the file: monthly pay, daily wage, food allowance, bata, Labour Welfare Fund/);
+		expect(text).toContain("change Type of Remuneration to Wages");
+		expect(text).toContain("taken from the UAN, PF and ESIC numbers on each person's record");
+		/* Reading only: nothing is written to make a preview. */
+		expect(calls).toEqual([]);
+	});
+
+	it("takes a day Frappe has not marked from the person's punches, and says how many it took", async () => {
+		people();
+		/* Bindu has no Attendance at all, only an In and an Out on the 2nd. */
+		site.punches = [
+			{ name: "P1", employee: "HR-EMP-00002", time: `${YM}-02 08:58:00`, log_type: "IN" },
+			{ name: "P2", employee: "HR-EMP-00002", time: `${YM}-02 17:31:00`, log_type: "OUT" },
+			{ name: "P3", employee: "SOMEBODY-ELSE", time: `${YM}-03 09:00:00`, log_type: "IN" },
+		];
+		const v = await draw();
+		await click(button(v, "Wages register (Excel)"));
+		await made1();
+		await act(async () => {});
+		const [{ rows }] = made;
+		const bindu = rows.find((r) => r.code === "MR002");
+		expect(bindu.days[1]).toBe(1);
+		expect(bindu.days.filter((d) => d === 1).length).toBe(1);
+		expect(v.container.textContent).toContain("1 day had no Attendance in Frappe and was taken from the punches.");
+		expect(calls).toEqual([]);
+	});
+
+	it("leaves somebody with no salary structure assigned out of the 5-tab Excel, and says so", async () => {
+		slips();
+		site.ssa = site.ssa.filter((a) => a.employee !== "HR-EMP-00001");
+		site.employees = [{ name: "HR-EMP-00001", employee_name: "Anand Raghavan", employee_number: "MR001", status: "Active" }];
+		const v = await draw();
+		await click(button(v, "Download 5-tab Excel"));
+		await act(async () => { fireEvent.click(v.container.querySelector("input[name='pr-epf']")); });
+		await click(button(v, "Download"));
+		await made1();
+		await act(async () => {});
+		expect(made[0].parts.flatMap((p) => p.rows.map((r) => r.code))).not.toContain("MR001");
+		expect(v.container.textContent).toContain("1 person has no salary structure assigned and is not in the file.");
+	});
+
+	it("puts only Active people in the 5-tab Excel, and names whoever it left out", async () => {
+		slips();
+		site.slips.push({ name: "SAL-2", employee: "HR-EMP-00002", employee_name: "Bindu Thomas", docstatus: 1, gross_pay: 9000, total_deduction: 0, net_pay: 9000, payment_days: 12 });
+		site.employees = [
+			{ name: "HR-EMP-00001", employee_name: "Anand Raghavan", employee_number: "MR001", status: "Active" },
+			{ name: "HR-EMP-00002", employee_name: "Bindu Thomas", employee_number: "MR002", status: "Left", relieving_date: `${YM}-12` },
+		];
+		const v = await draw();
+		await click(button(v, "Download 5-tab Excel"));
+		await act(async () => { fireEvent.click(v.container.querySelector("input[name='pr-epf']")); });
+		await click(button(v, "Download"));
+		await made1();
+		await act(async () => {});
+		const codes = made[0].parts.flatMap((p) => p.rows.map((r) => r.code));
+		expect(codes).toContain("MR001");
+		expect(codes).not.toContain("MR002");
+		expect(v.container.textContent).toContain("Left out because they are not Active: Bindu Thomas (Left). Pay anybody who has left through Full & Final.");
+	});
+
+	it("asks for the EPF calculation before the 5-tab Excel, and makes nothing until one is chosen", async () => {
+		slips();
+		const v = await draw();
+		await click(button(v, "Download 5-tab Excel"));
+		expect(v.container.textContent).toContain("EPF calculation for this file");
+		expect(button(v, "Download").disabled).toBe(true);
+		expect(made).toEqual([]);
+		await click(button(v, "Cancel"));
+		expect(v.container.textContent).not.toContain("EPF calculation for this file");
+		expect(made).toEqual([]);
+	});
+
+	it("makes the 5-tab Excel with EPF wages by the calculation chosen, and says which", async () => {
+		slips();
+		const v = await draw();
+		await click(button(v, "Download 5-tab Excel"));
+		const half = [...v.container.querySelectorAll("input[name='pr-epf']")][1];
+		await act(async () => { fireEvent.click(half); });
+		await click(button(v, "Download"));
+		await made1();
+		await act(async () => {});
+		const [{ design, parts }] = made;
+		expect(design).toBe(true);
+		const rows = parts.flatMap((p) => p.rows);
+		expect(rows.length).toBeGreaterThan(0);
+		expect(rows.every((r) => r.pfShare === 50)).toBe(true);
+		expect(v.container.textContent).toContain("with EPF wages by Calculation 2");
+		/* Manna Rubber is picked in the top bar, so the file is that company alone,
+		   on tabs under its own abbreviation. */
+		expect(parts.map((p) => p.sheet)).toEqual(["MR Salary-1", "MR Cash-1", "MR Diff Cash", "MR Labour supply"]);
+		expect(v.container.textContent).toContain("— Manna Rubber —");
+	});
+
+	it("makes the register from the slips, not a preview, when the month has slips", async () => {
+		slips();
+		const v = await draw();
+		expect(v.container.textContent).not.toContain("The salary sheet needs salary slips");
+		await click(button(v, "Wages register (Excel)"));
+		await made1();
+		const [{ rows, opts, wb }] = made;
+		expect(opts.preview).toBeUndefined();
+		expect(rows[0]).not.toHaveProperty("kind");
+		expect(wb.getWorksheet("Wages Register").getCell("B1").value).toBe(`Employee Salary / Wages Register-${periodLabel(YM).toUpperCase()}`);
+	});
+
+	it("makes one file with a sheet per company when all companies are chosen — the slips' register where there are slips, the preview where not", async () => {
+		slips();
+		site.slips[0].company = "Manna Rubber";
+		people();
+		act(() => set({ company: "" }));
+		const v = await draw();
+		const btn = button(v, "Wages register (Excel)");
+		expect(btn.disabled).toBe(false);
+		await click(btn);
+		await made1();
+		await act(async () => {});
+		const [{ parts, wb }] = made;
+		expect(parts.map((p) => [p.company, Boolean(p.preview)])).toEqual([["Manna Rubber", false], ["Manna Tyre UAE", true]]);
+		expect(wb.worksheets.map((w) => w.name)).toEqual(["Manna Rubber", "Manna Tyre UAE"]);
+		expect(wb.getWorksheet("Manna Rubber").getCell("B1").value).not.toMatch(/PREVIEW/);
+		expect(wb.getWorksheet("Manna Tyre UAE").getCell("B1").value).toMatch(/ - PREVIEW, NOT FROM SALARY SLIPS$/);
+		expect(v.container.textContent).toContain(`The wages register for ${periodLabel(YM)} was made with 2 sheets, one per company.`);
+		expect(calls).toEqual([]);
 	});
 
 	it("tiles the month from the slips", async () => {

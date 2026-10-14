@@ -93,15 +93,6 @@ export default function FieldAccess() {
 				</span>
 			</div>
 
-			{/* One span: the box is a flex row, and each <b> would be a column of its own. */}
-			<div className="onbmsg">
-				<span>
-					<b>Write</b> is a box to type in. <b>Read</b> shows the value with no box. <b>Hidden</b> takes
-					the field off the form. The site refuses a change to a Read or Hidden field from anywhere, once
-					the Manna HR app is installed — but anybody who can open an Employee can still read every field
-					of it through the site, so Hidden keeps a field off these two forms and nothing more.
-				</span>
-			</div>
 			{state === "loading" ? <div className="onbmsg">Reading Manna HR Settings…</div> : null}
 			{state === "nofield" ? <div className="onbmsg">{NO_ACCESS_FIELD}</div> : null}
 			{state === "unread" ? (

@@ -12,6 +12,13 @@
 
 const n = (v) => Number(v) || 0;
 
+/** The days a slip did not pay: leave without pay **and** absences. Payroll
+    Settings here are based on Attendance (manna_hr/payrollsetup.py), so hrms
+    cuts an Absent day through `absent_days` and an LWP application through
+    `leave_without_pay` — two fields for one thing. Reading only the second
+    shows a month whose pay was cut for an absence as a month with no LWP. */
+export const lossOfPay = (slip) => n(slip?.leave_without_pay) + n(slip?.absent_days);
+
 /** First day, last day and the calendar-day count of a `YYYY-MM`. */
 export function periodOf(ym) {
 	const [y, m] = String(ym).split("-").map(Number);
@@ -83,11 +90,12 @@ export function slipsByEmployee(slips) {
 	for (const s of slips || []) {
 		if (Number(s.docstatus) >= 2) continue;
 		const r = out[s.employee] ||= {
-			slips: [], payment_days: 0, leave_without_pay: 0, gross: 0, deduction: 0, net: 0, draft: 0,
+			slips: [], payment_days: 0, leave_without_pay: 0, loss_of_pay: 0, gross: 0, deduction: 0, net: 0, draft: 0,
 		};
 		r.slips.push(s);
 		r.payment_days += n(s.payment_days);
 		r.leave_without_pay += n(s.leave_without_pay);
+		r.loss_of_pay += lossOfPay(s);
 		r.gross += n(s.gross_pay);
 		r.deduction += n(s.total_deduction);
 		r.net += n(s.net_pay);

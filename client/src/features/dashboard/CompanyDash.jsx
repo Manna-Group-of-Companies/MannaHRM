@@ -117,9 +117,7 @@ export function HrDash() {
 					to={<Link section="dashboard" subtab="approvals">Approvals →</Link>} />
 			</Stats>
 			{!emps.length ? (
-				<Empty title={`No employees read for ${co}`}>
-					Either the company has nobody loaded yet, or this login may not read it.
-				</Empty>
+				<Empty title={`No employees read for ${co}`} />
 			) : null}
 			<Cols>
 				<Panel title="Headcount by department" ico="🏭" cov="live">
@@ -233,7 +231,7 @@ export function PayrollDash() {
 	const slips = useRead(
 		() => listAll("Salary Slip",
 			["name", "employee", "employee_name", "department", "start_date", "gross_pay",
-				"total_deduction", "net_pay", "leave_without_pay", "docstatus"],
+				"total_deduction", "net_pay", "leave_without_pay", "absent_days", "docstatus"],
 			[["company", "=", co], ["start_date", ">=", from], ["start_date", "<=", to]], 500),
 		[co, month],
 	);
@@ -272,7 +270,7 @@ export function PayrollDash() {
 							{ key: "d", label: "Draft", n: p.draft, c: 2 },
 						]} />
 					) : null}
-					{p.lwp ? <Note>{fmt(p.lwp)} days of leave without pay in this month's slips.</Note> : null}
+					{p.lwp ? <Note>{fmt(p.lwp)} days unpaid — absent or leave without pay — in this month's slips.</Note> : null}
 				</Panel>
 				<Panel title="Net pay by department" ico="🏭" cov="live">
 					{netByDept(slips.rows).length

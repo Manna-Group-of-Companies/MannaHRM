@@ -13,6 +13,25 @@ export const active = (s) => scoped(s).filter((e) => e.status === "Active");
 
 export const isOn = (e) => e.status === "Active";
 
+/** The date of birth the bridge gives a record it made for somebody who
+    punched and was on no record — `PLACEHOLDER_BIRTH` in
+    bridge/mannabridge/autoenrol.py. Kept in step by hand. */
+export const PLACEHOLDER_BIRTH = "2000-01-01";
+
+/**
+ * A record HR still has to complete: made by the bridge from a fingerprint
+ * punch, with a placeholder gender and date of birth (3 October 2026).
+ *
+ * The `custom_needs_details` tick decides wherever the site has the field.
+ * Only on a site without it does the placeholder birth date stand in — so a
+ * real person born on 1 January 2000 is never flagged where the tick exists.
+ */
+export function needsDetails(e) {
+	if (!e) return false;
+	if ("custom_needs_details" in e) return Number(e.custom_needs_details) === 1;
+	return String(e.date_of_birth || "").slice(0, 10) === PLACEHOLDER_BIRTH;
+}
+
 /** Distinct values of one field across a list, sorted. */
 export const uniq = (rows, k) => [...new Set(rows.map((e) => e[k]).filter(Boolean))].sort();
 

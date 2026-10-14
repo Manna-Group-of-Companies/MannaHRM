@@ -161,7 +161,7 @@ const stale = (part) => patch("bt", { ...part, run: false, msg: "" });
     differently. */
 function BtField({ s, fld }) {
 	const f = s.bt;
-	const [k, lab, hint] = fld;
+	const [k, lab] = fld;
 	const year = btYear(f);
 	const known = btKnown(s);
 
@@ -231,7 +231,6 @@ function BtField({ s, fld }) {
 		<div className="btf">
 			<span className="lab">{lab}</span>
 			{ctl ? ctl() : null}
-			<span className="hint"><Html html={hint} /></span>
 		</div>
 	);
 }
@@ -283,8 +282,7 @@ function BtRail({ s }) {
 
 			{groups.length ? null : (
 				<div className="btmiss">
-					No filter is called <b>{f.find}</b>. Their three groups hold nine fields between them and
-					all nine are ours — see the note under the table.
+					No filter is called <b>{f.find}</b>.
 				</div>
 			)}
 
@@ -391,12 +389,7 @@ function BtOut({ s }) {
 /** The second tab. Nothing is held, and the reason is the finding. */
 const BtHeld = () => (
 	<>
-		<Empty title="No salary is held, because nothing here can hold one">
-			Factor HR holds pay as a state on the payroll and keeps a register of it. Frappe HR ships no
-			such state: no flag on <code>Employee</code>, none on <code>Salary Slip</code>, and no
-			doctype that means &ldquo;this person&rsquo;s money is being withheld and will be released
-			later&rdquo;. So this tab is empty here for a reason that no amount of reading would change.
-		</Empty>
+		<Empty title="No salary is held, because nothing here can hold one" />
 
 	</>
 );

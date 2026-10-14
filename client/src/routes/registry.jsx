@@ -55,6 +55,11 @@ import LeaveMonthly from "@/features/leave/LeaveMonthly";
 import LeaveBalances from "@/features/leave/LeaveBalances";
 import PayrollRun from "@/features/payroll/PayrollRun";
 import SalarySetup from "@/features/payroll/SalarySetup";
+import ActualSalary from "@/features/payroll/ActualSalary";
+import EmployeeImport from "@/features/employees/EmployeeImport";
+import HierarchyChart from "@/features/employees/HierarchyChart";
+import CompanyChart from "@/features/employees/CompanyChart";
+import Increments from "@/features/payroll/Increments";
 import AdvancesLoans from "@/features/payroll/AdvancesLoans";
 import Payslips from "@/features/payroll/Payslips";
 import BankSheet from "@/features/payroll/BankSheet";
@@ -152,7 +157,10 @@ const TABS = {
 		   already holds. Their menu titles, so the tab reads as theirs. */
 		["joining", "New Joining"],
 		["directory", "Employees Directory"], ["weekoff", "Weekoff Holiday Report"],
-		["orgchart", "Organization Chart"], ...managedTabs("employees"), ["all", "All"]],
+		["orgchart", "Organization Chart"],
+		/* The seven-level ladder, asked for 10 October 2026. Not theirs: Factor
+		   HR's Organization Chart is the reports_to tree above. */
+		["hierarchy", "Hierarchy Chart"], ...managedTabs("employees"), ["all", "All"]],
 	/* Factor HR's own Attendance menu, captured 28 Aug 2026, item for item and
 	   in its order. `overview` is Attendance Regularization because that is the
 	   first item on their menu and the one page here with a live queue behind
@@ -192,8 +200,9 @@ const TABS = {
 	   HIDDEN_PAGES in data/sections.js). 2 Oct 2026: `overview` is now the Payroll
 	   page — one guided page that runs the month (features/payroll/PayrollRun.jsx)
 	   — beside four more of ours: Salary Setup, Advances & Loans, Payslips and
-	   Bank Transfer. The older tabs are hidden, not deleted. */
-	payroll: [["overview", "Payroll"], ["setup", "Salary Setup"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
+	   Bank Transfer. The older tabs are hidden, not deleted. 5 Oct 2026:
+	   Increments, January's raises from HR's Excel sheet. */
+	payroll: [["overview", "Payroll"], ["setup", "Salary Setup"], ...managedTabs("payroll"), ["increments", "Increments"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
 		["transfer", "Bank Transfer"], ["adhoc", "Adhoc Payments/Deductions"], ["process", "Salary Process"],
 		["sheet", "Salary Sheet"], ["payslip", "Salary Payslip"], ["register", "Salary Register"],
 		["bank", "Bank Transfer"], ["frappe", "Frappe Payroll"], ["fnf", "Final Settlement"],
@@ -236,10 +245,12 @@ const PAGES = {
 		...managedPages("onboard"), ...blueprintPages("onboard") },
 	employees: { overview: EmployeeMaster, salary: SalaryMaster, detail: EmployeeDetail, ctc: Ctc,
 		categories: Categories, calendar: Calendar,
-		profile: EmployeeProfile, new: CreateEmployee, import: ImportOnboarding,
+		profile: EmployeeProfile, new: CreateEmployee, import: ImportOnboarding, upload: EmployeeImport,
 		joining: report("employees", "joining"),
 		directory: report("employees", "directory"), weekoff: report("employees", "weekoff"),
 		orgchart: report("employees", "orgchart"),
+		hierarchy: HierarchyChart,
+		chart: CompanyChart,
 		all: moduleAll("employees", "Employees"),
 		...managedPages("employees"), ...blueprintPages("employees") },
 	attendance: { overview: Regularization, submit: SubmitAttendance, inout: InOut,
@@ -259,10 +270,12 @@ const PAGES = {
 		availed: report("leave", "availed"), monthly: LeaveMonthly,
 		all: moduleAll("leave", "Leave"),
 		...blueprintPages("leave") },
-	payroll: { overview: PayrollRun, setup: SalarySetup, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
+	payroll: { overview: PayrollRun, setup: SalarySetup, increments: Increments, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
 		itdec: ITDeclarations, bank: BankTransfer, bonus: BonusReport, payslip: Payslip,
 		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
-		...blueprintPages("payroll") },
+		...managedPages("payroll"), ...blueprintPages("payroll"),
+		/* The list, with HR's sheet uploaded above it (14 Oct 2026). */
+		actualsalary: ActualSalary },
 	loans: { overview: LoanApplication, register: LoanRegister,
 		projection: LoanProjection, all: moduleAll("loans", "Loans"),
 		...managedPages("loans"), ...blueprintPages("loans") },
@@ -317,8 +330,23 @@ export function fullPage(s) {
    lose, so the argument above for hiding the strip is weaker here — it is
    listed anyway because it is reached the same way Create Employee is, from a
    control on Employee Master, and two pages that arrive by the same route
-   should not differ in whether they look like they belong to the menu. */
-const OFF_MENU = { employees: ["new", "import"] };
+   should not differ in whether they look like they belong to the menu.
+
+   **`upload` is the third**, 5 Oct 2026: Add New Employee's ▾ → File Import,
+   new people and corrections from an Excel sheet, at `/employees/upload`. */
+/* `chart` is the fourth (10 Oct 2026): one company's flow chart, opened by
+   clicking its box on Hierarchy Chart. */
+const OFF_MENU = { employees: ["new", "import", "upload", "chart"] };
+
+/** What the breadcrumb calls an off-menu page. These have no tab to be named
+    by, and before 10 Oct 2026 every one of them read "Overview" up there. */
+const OFF_MENU_TITLE = {
+	"employees/new": "Create Employee",
+	"employees/import": "Import From Onboarding",
+	"employees/upload": "File Import",
+	"employees/chart": "Company Chart",
+};
+export const offMenuTitle = (section, subtab) => OFF_MENU_TITLE[`${section}/${subtab}`] || "";
 
 /** Whether this page is reached from a control rather than from the strip —
  *  which is to say, whether the strip should be there at all. Read by SubNav. */

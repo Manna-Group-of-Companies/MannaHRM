@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render } from "@testing-library/react";
 import { Provider } from "react-redux";
 
-import ApplyLeave, { pickDay } from "@/features/leave/ApplyLeave";
+import ApplyLeave, { firstAbsence, pickDay } from "@/features/leave/ApplyLeave";
 import { approverFor, leaveDoc, raiseLeave } from "@/features/leave/raise";
 import { store, set, patch, resetStore, getState } from "@/store";
 import { loadedState } from "./fixture";
@@ -293,7 +293,136 @@ describe("the calendar", () => {
 		const c = page();
 		const tally = c.container.querySelector(".lvtally").textContent;
 		expect(tally).toContain("Present 2");
-		expect(tally).toContain("Absent 1");
+		expect(tally).toContain("A — salary cut 1");
+	});
+});
+
+describe("the first absence is Casual Leave, the rest are a salary cut (6 October 2026)", () => {
+	const page = () => render(<Provider store={store}><ApplyLeave /></Provider>);
+	const cell = (c, day) => [...c.container.querySelectorAll(".lvgrid .cell:not(.out)")]
+		.find((el) => el.querySelector("i").textContent === String(day));
+	const tag = (c, day) => cell(c, day).querySelector(".lvtag").textContent;
+	const AUTO = { name: "HR-LAP-2026-00009", leave_type: "Casual Leave", from_date: "2026-10-05", to_date: "2026-10-05",
+		status: "Approved", description: "[Office absence rule] The first absence this month, taken as Casual Leave." };
+
+	it("the_leave_the_absence_rule_gave_shows_as_CL_and_every_other_absence_as_A", () => {
+		patch("apply", { emp: PRIYA, month: "2026-10" });
+		set({ applyHist: [AUTO], applyAtt: { "2026-10-05": "On Leave", "2026-10-07": "Absent", "2026-10-09": "Absent" } });
+		const c = page();
+		expect(tag(c, 5)).toBe("CL");
+		expect(tag(c, 7)).toBe("A");
+		expect(tag(c, 9)).toBe("A");
+		const tally = c.container.querySelector(".lvtally").textContent;
+		expect(tally).toContain("CL — 1st absence 1");
+		expect(tally).toContain("A — salary cut 2");
+	});
+
+	it("a_first_absence_the_site_holds_no_leave_for_yet_is_drawn_A_never_CL_but_is_the_day_the_rule_is_run_for", () => {
+		patch("apply", { emp: PRIYA, month: "2026-10" });
+		set({ applyHist: [], applyAtt: { "2026-10-07": "Absent", "2026-10-09": "Absent" } });
+		const c = page();
+		expect(tag(c, 7)).toBe("A");
+		expect(tag(c, 9)).toBe("A");
+		expect(firstAbsence(getState(), emp(), "2026-10")).toBe("2026-10-07");
+	});
+
+	it("a_month_that_already_has_its_casual_leave_has_no_first_absence_left_to_turn", () => {
+		set({ applyHist: [AUTO], applyAtt: { "2026-10-05": "On Leave", "2026-10-07": "Absent" } });
+		expect(firstAbsence(getState(), emp(), "2026-10")).toBe("");
+	});
+
+	it("an_absence_under_leave_somebody_applied_for_is_not_the_one_the_rule_will_take", () => {
+		patch("apply", { emp: PRIYA, month: "2026-10" });
+		set({ applyHist: [{ name: "HR-LAP-2026-00010", leave_type: "Sick Leave", from_date: "2026-10-07",
+			to_date: "2026-10-07", status: "Open", description: "fever" }],
+			applyAtt: { "2026-10-07": "Absent", "2026-10-09": "Absent" } });
+		const c = page();
+		expect(tag(c, 7)).toBe("L?");
+		expect(firstAbsence(getState(), emp(), "2026-10")).toBe("2026-10-09");
+	});
+
+	it("a_supervisors_first_absence_is_turned_into_casual_leave_too_and_factory_staffs_never_is", () => {
+		set({ applyHist: [], applyAtt: { "2026-10-03": "Absent", "2026-10-09": "Absent" } });
+		expect(firstAbsence(getState(), emp("HR-EMP-00004"), "2026-10")).toBe("2026-10-03");
+		expect(firstAbsence(getState(), emp("HR-EMP-00001"), "2026-10")).toBe("");
+	});
+
+	it("factory_staff_get_no_casual_leave_so_every_absence_is_a_salary_cut", () => {
+		patch("apply", { emp: "HR-EMP-00001", month: "2026-10" });
+		set({ applyHist: [], applyAtt: { "2026-10-07": "Absent", "2026-10-09": "Absent" } });
+		const c = page();
+		expect(tag(c, 7)).toBe("A");
+		expect(tag(c, 9)).toBe("A");
+	});
+
+	it("an_approved_leave_without_pay_is_a_salary_cut_too", () => {
+		patch("apply", { emp: PRIYA, month: "2026-10" });
+		set({ applyHist: [{ name: "HR-LAP-2026-00011", leave_type: "Leave Without Pay", from_date: "2026-10-12",
+			to_date: "2026-10-12", status: "Approved", description: "" }], applyAtt: {} });
+		const c = page();
+		expect(tag(c, 12)).toBe("A");
+	});
+
+	it("september_is_covered_but_an_august_absence_is_before_the_rule_and_never_turned", () => {
+		set({ applyHist: [], applyAtt: { "2026-08-11": "Absent" } });
+		expect(firstAbsence(getState(), emp(), "2026-08")).toBe("");
+		set({ applyHist: [], applyAtt: { "2026-09-14": "Absent" } });
+		expect(firstAbsence(getState(), emp(), "2026-09")).toBe("2026-09-14");
+	});
+});
+
+describe("a day off somebody came in on (3 October 2026)", () => {
+	const page = () => render(<Provider store={store}><ApplyLeave /></Provider>);
+	const cell = (c, day) => [...c.container.querySelectorAll(".lvgrid .cell:not(.out)")]
+		.find((el) => el.querySelector("i").textContent === String(day));
+	/* 20 and 27 September 2026 are Sundays, weekly off on Priya's list. */
+	const SUNDAYS = {
+		"Manna 2026": [
+			{ holiday_date: "2026-09-20", weekly_off: 1, description: "Sunday" },
+			{ holiday_date: "2026-09-27", weekly_off: 1, description: "Sunday" },
+		],
+	};
+	const OPERATOR = "HR-EMP-00001";
+
+	it("a_sunday_marked_present_reads_present_and_still_says_it_was_a_weekly_off", () => {
+		patch("apply", { emp: PRIYA, month: "2026-09" });
+		set({ holidays: SUNDAYS, applyHist: [], applyAtt: { "2026-09-20": "Present" } });
+		const c = page();
+		expect(cell(c, 20).querySelector(".lvtag").textContent).toBe("P · WO");
+		expect(cell(c, 27).querySelector(".lvtag").textContent).toBe("WO");
+	});
+
+	it("punches_with_no_attendance_yet_stay_a_weekly_off_and_say_they_were_punched", () => {
+		patch("apply", { emp: PRIYA, month: "2026-09" });
+		set({
+			holidays: SUNDAYS, applyHist: [], applyAtt: {},
+			applyPunch: { "2026-09-20": { first: "08:01", last: "13:14", n: 2 } },
+		});
+		const c = page();
+		expect(cell(c, 20).querySelector(".lvtag").textContent).toBe("WO · punched");
+	});
+
+	it("a_sunday_that_earned_sunday_leave_says_plus_one_cl_instead_of_punched", () => {
+		patch("apply", { emp: PRIYA, month: "2026-09" });
+		set({
+			holidays: SUNDAYS, applyHist: [], applyAtt: {},
+			applyPunch: {
+				"2026-09-20": { first: "08:01", last: "13:14", n: 2 },
+				"2026-09-27": { first: "09:22", last: "17:15", n: 2 },
+			},
+			applyBal: { rows: [], ledger: [], sundays: { "2026-09-20": 1 } },
+		});
+		const c = page();
+		expect(cell(c, 20).querySelector(".lvtag").textContent).toBe("WO · +1 CL");
+		// Not on the site's adjustment yet, so not claimed.
+		expect(cell(c, 27).querySelector(".lvtag").textContent).toBe("WO · punched");
+	});
+
+	it("a_half_day_on_a_weekly_off_reads_half_and_still_says_weekly_off", () => {
+		patch("apply", { emp: OPERATOR, month: "2026-09" });
+		set({ holidays: SUNDAYS, applyHist: [], applyAtt: { "2026-09-27": "Half Day" } });
+		const c = page();
+		expect(cell(c, 27).querySelector(".lvtag").textContent).toBe("½ · WO");
 	});
 });
 
@@ -383,6 +512,17 @@ describe("choosing the employee", () => {
 describe("the leave balance", () => {
 	const page = () => render(<Provider store={store}><ApplyLeave /></Provider>);
 	const CASUAL = { type: "Casual Leave", total: 4, taken: 1, pending: 0, expired: 0, remaining: 3 };
+
+	it("says_when_the_absence_rule_left_a_day_absent_for_want_of_casual_leave", () => {
+		patch("apply", { emp: PRIYA });
+		set({
+			applyBal: { rows: [CASUAL] },
+			leaveRules: { absence: { waiting: [{ employee: PRIYA, day: "2026-10-09", error: "no Casual Leave to give on that day" }] } },
+		});
+		const text = page().container.querySelector(".lvrules").textContent;
+		expect(text).toContain("09-Oct-2026 stays Absent");
+		set({ leaveRules: null });
+	});
 
 	it("shows_what_the_person_has_left_of_each_leave_type", () => {
 		patch("apply", { emp: PRIYA });

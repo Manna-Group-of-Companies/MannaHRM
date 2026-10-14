@@ -197,19 +197,14 @@ function Table({ s, rows }) {
 		return (
 			<Empty title="The leave could not be read">
 				<span className="block">{s.lvbErr || "The site refused the request"}.</span>
-				No figure is shown at all rather than one that might be wrong.
 			</Empty>
 		);
 	}
 	if (s.lvbState !== "done") {
-		return <Empty title="Reading leave from the site…">Allocations and approved applications, read once.</Empty>;
+		return <Empty title="Reading leave from the site…" />;
 	}
 	if (!picked(s).length) {
-		return (
-			<Empty title="Pick an employee">
-				Add one or more employees above to see their leave for {monthText(ym)}. Only the people picked are listed.
-			</Empty>
-		);
+		return <Empty title="Pick an employee" />;
 	}
 	if (!rows.length) {
 		return (

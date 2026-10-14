@@ -16,6 +16,7 @@
    --------------------------------------------------------------------------- */
 
 import { MONTHS, lastOfMonth } from "@/lib/format";
+import { lossOfPay } from "@/lib/payroll";
 
 const n = (v) => Number(v) || 0;
 const cents = (v) => Math.round(n(v) * 100) / 100;
@@ -88,7 +89,7 @@ export function buildSheet({ slips = [], details = [], loanComponents = [] } = {
 			designation: s.designation || "",
 			workingDays: n(s.total_working_days),
 			paymentDays: n(s.payment_days),
-			lwp: n(s.leave_without_pay),
+			lwp: lossOfPay(s),
 			earn,
 			ded,
 			gross: n(s.gross_pay),
@@ -162,6 +163,10 @@ export function loanInstalmentsDue({ loans = [], lines = [], types = [] } = {}) 
 			loan_type: loan.loan_type || "",
 			period: ln.period,
 			amount,
+			/* What is still owed, for the wages register's Outstanding Loan column —
+			   null rather than 0 when the site never worked it out, for the reason
+			   above. */
+			outstanding: n(loan.outstanding_amount) > 0 ? cents(loan.outstanding_amount) : null,
 			component,
 			problem: component ? "" : "No salary component on the loan or on its scheme, so there is nothing to deduct it through.",
 		});

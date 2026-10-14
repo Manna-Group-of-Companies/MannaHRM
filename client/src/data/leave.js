@@ -49,7 +49,7 @@ export const MONTHLY_LEAVE = { type: LEAVE_TYPE_NAME, annual: ANNUAL_ALLOCATION,
 /** The letter each state carries in a calendar cell, beside its dot — so a
     month can be read without matching seven colours against the key. */
 export const LV_CODE = {
-  present: "P", absent: "A", weekoff: "WO", unappr: "L?", partial: "½",
+  present: "P", absent: "A", autocl: "CL", weekoff: "WO", unappr: "L?", partial: "½",
   holiday: "H", appr: "L", opthol: "OH",
 };
 
@@ -58,7 +58,12 @@ export const LV_LEGEND = [
      should show *their* month, and a month where only the bad days carry a
      mark reads as a month nobody came in. First, because it is most days. */
   ["present",  "Present",          "#3BB273", "Attendance rows marked Present or Work From Home"],
-  ["absent",   "Absent",           "#EF6C6C", "Attendance rows marked Absent"],
+  /* The office absence rule, as HR gave it on 3 October 2026 and asked to see
+     it on 6 October: the month's first absence is Casual Leave, every other is
+     a salary cut. Payroll is based on Attendance, so an Absent day is not paid
+     whoever it belongs to — see manna_hr/payrollsetup.py. */
+  ["autocl",   "CL — 1st absence", "#4FA3E0", "the Casual Leave the absence rule gave for somebody's first absence this month — paid"],
+  ["absent",   "A — salary cut", "#EF6C6C", "Attendance rows marked Absent, and approved Leave Without Pay — days payroll does not pay"],
   ["weekoff",  "WeekOff",          "#26252A", "the employee's holiday list, rows flagged weekly off"],
   ["unappr",   "UnApprovedLeave",  "#F2D24B", "a Leave Application still Open"],
   ["partial",  "Partial",          "#F0932B", "a half day — <code>half_day_date</code> on the application, or an Attendance row marked Half Day"],

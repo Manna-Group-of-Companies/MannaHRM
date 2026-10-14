@@ -5,7 +5,7 @@ import { loadEmployeeFiles } from "@/api/load";
 import { deskUrl } from "@/lib/desk";
 import { download, saveFrom, toCsv } from "@/lib/csv";
 import { fmt, todayIso } from "@/lib/format";
-import { DL_ADVICE, DL_BG_DEAD, DL_CAP, DL_KINDS, DL_OVER } from "@/data/employees";
+import { DL_BG_DEAD, DL_CAP, DL_KINDS, DL_OVER } from "@/data/employees";
 
 /* ---------------------------------------------------------------------------
    **Download Document** — Factor HR's dialog, behind Employee Detail's
@@ -149,22 +149,15 @@ export default function DownloadDocs({ onClose }) {
 			title="Download Document"
 			extra={
 				<div className="dlform">
-					{/* Their sentence, in their words. It is also the finding: the path
-					    they recommend for everybody is the one this page cannot offer,
-					    and the button that would have been it says why. */}
-					<p className="dladvice">{DL_ADVICE}</p>
-
 					{failed ? (
 						<div className="gap">
-							The attachments could not be read: {s.empFilesErr}. Nothing here can say what there is
-							to download until that answers.
+							The attachments could not be read: {s.empFilesErr}.
 						</div>
 					) : null}
 
 					{who ? (
 						<p className="hint">
-							Narrowed to <b>{who}</b> by Particular Employee on the form behind this. Clear it there
-							to cover everybody.
+							Narrowed to <b>{who}</b>.
 						</p>
 					) : null}
 
@@ -225,7 +218,6 @@ export default function DownloadDocs({ onClose }) {
 					    where these files are maintained rather than another way to do
 					    the same job. */}
 					<p className="hint">
-						{opt.why}{" "}
 						<Desk className="dllink" href={s.site && deskUrl(s.site, "File")}
 							title="Opens the File list on the ERPNext site, under whoever is logged in there.">
 							Open the File list on the site

@@ -73,7 +73,7 @@ export default function Related({ doctype, doc }) {
 
 			{err ? <Gap>{err}</Gap> : null}
 
-			{rows && rows.length === 0 && !err ? <Empty title="Nobody yet">{rel.empty}</Empty> : null}
+			{rows && rows.length === 0 && !err ? <Empty title="Nobody yet" /> : null}
 
 			{shown.length ? (
 				<Scroll>

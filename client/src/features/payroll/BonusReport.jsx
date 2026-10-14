@@ -310,7 +310,6 @@ const RESET = {
 function BonForm({ s }) {
 	const f = s.bon;
 	const [from, till] = bonRange(f);
-	const years = fyOf(till) - fyOf(from) + 1;
 
 	/* Generate is the only control that changes what is listed; everything else
 	   changes what Generate *would* list, which is why touching one clears the
@@ -356,19 +355,11 @@ function BonForm({ s }) {
 				<label htmlFor="bonfrom">From:</label>
 				<span className="ctl">
 					<input id="bonfrom" type="month" value={from} onChange={(e) => stale({ from: e.target.value })} />
-					<span className="hint">their capture read Apr-23</span>
 				</span>
 
 				<label htmlFor="bontill">Till:</label>
 				<span className="ctl">
 					<input id="bontill" type="month" value={till} onChange={(e) => stale({ till: e.target.value })} />
-					{/* The one control on this form that changes the *shape* of the
-					    output rather than filtering it. */}
-					<span className="hint">
-						{years === 1
-							? "one accounting year, April to March"
-							: `${years} accounting years — ${years} separate workings, sectioned and never added together`}
-					</span>
 				</span>
 
 				<label>Employee Status:</label>
@@ -390,9 +381,6 @@ function BonForm({ s }) {
 								))}
 							</select>
 						)}
-					</span>
-					<span className="hint">
-						{f.status.length ? "as their capture had it" : "empty is every status"}
 					</span>
 				</span>
 
@@ -428,7 +416,6 @@ function BonForm({ s }) {
 					<select id="bonby" className="wide" value={f.by} onChange={(e) => stale({ by: e.target.value })}>
 						{CTC_BY.map((b) => <option key={b[0]} value={b[0]}>{b[1]}</option>)}
 					</select>
-					<span className="hint">sections the working, on screen and in the export alike</span>
 				</span>
 
 				<label htmlFor="boncur">Output Currency:</label>
@@ -439,9 +426,6 @@ function BonForm({ s }) {
 					{/* Their list has never been opened, so it offers the one value seen
 					    in it. The control is worth keeping anyway: the group has a company
 					    in the UAE, and the Payment of Bonus Act does not reach it. */}
-					<span className="hint">
-						their list has never been opened — Default is the company's own currency
-					</span>
 				</span>
 
 				<label htmlFor="bonout">Report Output:</label>
@@ -449,7 +433,6 @@ function BonForm({ s }) {
 					<select id="bonout" value={f.output} onChange={(e) => patch("bon", { output: e.target.value })}>
 						{BONUS_OUTPUTS.map((v) => <option key={v}>{v}</option>)}
 					</select>
-					<span className="hint">Generate draws it on screen, then hands it to this</span>
 				</span>
 
 				<span />
@@ -565,7 +548,6 @@ export default function BonusReport() {
 				<BonOut s={s} />
 			) : (
 				<People people={bonPool(s)}
-					note="Everybody this working would cover, at the criteria above. Generate splits them by accounting year, applies the Act's three tests and computes the band."
 					extra={["CTC ÷ 12", (e) => (e.ctc
 						? "₹" + fmt(Math.round(Number(e.ctc) / 12))
 						: <span className="muted">not recorded</span>)]} />
@@ -587,12 +569,6 @@ export default function BonusReport() {
 							<button className="embtn" onClick={() => bonDeliver(s, "Excel")}>
 								<i className="fico" aria-hidden="true">📊</i> Excel
 							</button>
-						</>
-					}
-					why={
-						<>
-							This is the document itself, not a drawing of it — the same HTML that Print, PDF and Word
-							are handed, rendered here so it can be read before it goes anywhere.
 						</>
 					}
 					extra={<iframe className="iopaper" title="Report preview" srcDoc={s.bonDoc} />}

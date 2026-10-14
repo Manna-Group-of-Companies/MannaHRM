@@ -66,15 +66,13 @@ function WorkPattern({ s }) {
 	const neither = people.filter((e) => !assigned.has(e.name) && !e.default_shift);
 
 	if (s.shAssignState === "loading" || !s.shAssignState) {
-		return <Empty title="reading the roster…">Shift Assignment, once — not on every page load.</Empty>;
+		return <Empty title="reading the roster…" />;
 	}
 	if (s.shAssignState !== "ok") {
 		return (
 			<div className="p-[.9rem]">
 				<Gap>
-					<b>The roster could not be read.</b> {s.shAssignState}. Which is not the same as nobody
-					being rostered — the two look identical on a screen and mean opposite things, so this page
-					will not claim either until the read answers.
+					<b>The roster could not be read.</b> {s.shAssignState}.
 				</Gap>
 			</div>
 		);
@@ -84,12 +82,9 @@ function WorkPattern({ s }) {
 		<>
 			<div className="p-[.9rem]">
 				<Tiles>
-					<Tile k="Rostered" n={fmt(assigned.size)} cls={assigned.size ? "good" : "bad"}
-						s="have a dated Shift Assignment" />
-					<Tile k="Default shift only" n={fmt(onDefault.length)} cls={onDefault.length ? "warn" : ""}
-						s="a fallback on the record" />
-					<Tile k="Neither" n={fmt(neither.length)} cls={neither.length ? "bad" : "good"}
-						s="nothing to measure a punch against" />
+					<Tile k="Rostered" n={fmt(assigned.size)} cls={assigned.size ? "good" : "bad"} />
+					<Tile k="Default shift only" n={fmt(onDefault.length)} cls={onDefault.length ? "warn" : ""} />
+					<Tile k="Neither" n={fmt(neither.length)} cls={neither.length ? "bad" : "good"} />
 				</Tiles>
 
 				<div className="mt-[.7rem]">
@@ -145,8 +140,7 @@ function WorkPattern({ s }) {
 				</Scroll>
 			) : (
 				<Empty title="Nobody is rostered">
-					<code>Shift Assignment</code> is empty for everybody in scope. Nothing here is broken — it
-					is the state of the site, and it is the work the Shift half of this screen is counting.
+					<code>Shift Assignment</code> is empty for everybody in scope.
 				</Empty>
 			)}
 
@@ -155,7 +149,6 @@ function WorkPattern({ s }) {
 					{rows.length
 						? `Showing ${fmt(shown.length)} of ${fmt(rows.length)} assignments`
 						: q ? `Nothing matches “${s.shq}”, out of ${fmt(all.length)}.` : ""}
-					{" "}Ours, not theirs: their Work Pattern has never been opened.
 				</span>
 			</div>
 		</>
@@ -195,7 +188,6 @@ function ShiftPattern({ s }) {
 		<div className="fhcat">
 			<header>
 				<h3 className="caps">SHIFT &amp; WORK PATTERN</h3>
-				<span className="cov part">Their screen, our data</span>
 				<span className="right">
 					{/* Add makes whichever master is being shown — the two halves of this
 					    screen are two doctypes, and one + that always made a Shift Type
@@ -249,11 +241,7 @@ function ShiftPattern({ s }) {
 			    not read the doctype is another, and the two are not distinguishable
 			    from here. */}
 			{pattern ? <WorkPattern s={s} /> : !s.shiftTypes.length ? (
-				<Empty title="This site holds no shifts">
-					<code>Shift Type</code> came back empty. Until a shift exists there is nothing for a punch
-					to be measured against, so nothing generates attendance and every day reads as absence —
-					which makes this the first thing that has to change. The + above makes one.
-				</Empty>
+				<Empty title="This site holds no shifts" />
 			) : (
 			<>
 			<Scroll>

@@ -4,7 +4,7 @@ import { useApp } from "@/store";
 import { Gap, Html, Modal, Note } from "@/components/ui";
 import { create, remove, update } from "@/api/crud";
 import {
-	blankDoc, canDelete, canEdit, fieldWarning, formFields, missingRequired, namingField, patchOf,
+	blankDoc, canDelete, canEdit, fieldWarning, formFields, missingRequired, patchOf,
 } from "@/lib/write";
 import { SCHEMA } from "@/data/schema";
 import { RELATED } from "@/data/manage";
@@ -190,17 +190,6 @@ export default function RecordForm({ doctype, doc, onDone, onCancel }) {
 		<>
 			{!editable.ok ? <Gap>{editable.why}</Gap> : null}
 
-			{/* Said before the first box rather than after the refusal. On a master
-			    the id is a field on this form, so what somebody types in one box
-			    decides what every other record has to name it. */}
-			{making && namingField(doctype) ? (
-				<Note>
-					The <b>{labelOf(spec, namingField(doctype))}</b> is this record's id — other records
-					will name it by exactly what is typed there, so it is worth getting right now
-					rather than renaming later.
-				</Note>
-			) : null}
-
 			<div className="recform">
 				{formFields(doctype).map((f) => (
 					<Field key={f.name} f={f} doctype={doctype} store={s}
@@ -213,15 +202,6 @@ export default function RecordForm({ doctype, doc, onDone, onCancel }) {
 				<Note>
 					The site will refuse this until <b>{missing.join(", ")}</b>{" "}
 					{missing.length === 1 ? "has" : "have"} a value.
-				</Note>
-			) : null}
-
-			{!deletable.ok && !making && deletable.why ? (
-				<Note>
-					{/* A reason, not a greyed-out button. A disabled Delete reads as a
-					    permission this reader has not got, and every one of these is a
-					    decision about the record instead. */}
-					<b>This record is not deleted from here.</b> {deletable.why}
 				</Note>
 			) : null}
 
@@ -254,8 +234,6 @@ export default function RecordForm({ doctype, doc, onDone, onCancel }) {
 		</>
 	);
 }
-
-const labelOf = (spec, name) => (spec.fields.find((f) => f.name === name) || {}).label || name;
 
 /** One control, chosen by what the doctype says the field is. */
 function Field({ f, doctype, store, value, onChange, disabled }) {
@@ -323,7 +301,6 @@ function Field({ f, doctype, store, value, onChange, disabled }) {
 				{f.label}{f.reqd ? <b className="req" aria-hidden="true"> *</b> : null}
 			</span>
 			{control}
-			{f.hint ? <span className="hint">{f.hint}</span> : null}
 			{warn ? <span className="hint warn" id={`${id}-w`}><Html html={warn} /></span> : null}
 		</label>
 	);

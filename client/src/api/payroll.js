@@ -41,7 +41,7 @@ const ENTRY_WIDE = ["name", "company", "start_date", "end_date", "posting_date",
 const ENTRY_NARROW = ["name", "company", "start_date", "end_date", "posting_date", "docstatus", "owner", "creation"];
 const SLIP_WIDE = ["name", "employee", "employee_name", "company", "department", "designation", "start_date",
 	"end_date", "posting_date", "docstatus", "status", "payroll_entry", "salary_structure", "payment_days",
-	"total_working_days", "leave_without_pay", "gross_pay", "total_deduction", "net_pay"];
+	"total_working_days", "leave_without_pay", "absent_days", "gross_pay", "total_deduction", "net_pay"];
 const SLIP_NARROW = ["name", "employee", "employee_name", "company", "start_date", "end_date", "docstatus",
 	"payroll_entry", "gross_pay", "total_deduction", "net_pay"];
 const SSA = ["name", "employee", "salary_structure", "from_date", "base", "company", "docstatus"];
@@ -81,7 +81,7 @@ export async function loadPayroll(company, start, end, { fresh = false, details 
 				[["start_date", "=", start], ["end_date", "=", end], ["docstatus", "<", 2], ...co]),
 			listSome("Salary Slip", SLIP_WIDE, SLIP_NARROW,
 				[["start_date", ">=", start], ["end_date", "<=", end], ["docstatus", "<", 2], ...co]),
-			listAll("Salary Structure Assignment", SSA, [["docstatus", "=", 1], ["from_date", "<=", end], ...co], 500),
+			listSome("Salary Structure Assignment", [...SSA, "custom_cash_amount"], SSA, [["docstatus", "=", 1], ["from_date", "<=", end], ...co]),
 		]);
 		const lines = details && slips.length ? await detailsFor(slips) : details ? [] : null;
 		return put({ state: "ok", entries, slips, assignments, details: lines, err: "" });

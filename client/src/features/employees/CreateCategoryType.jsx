@@ -4,7 +4,7 @@ import { patch, set, useApp } from "@/store";
 import { Desk, Modal } from "@/components/ui";
 import { deskNewWith } from "@/lib/desk";
 import {
-	CT_BLANK, CT_CUSTOM_WHY, CT_FORM, CT_PARENTS, CT_VISIBLE, ctDoc, fieldnameFor,
+	CT_BLANK, CT_FORM, CT_PARENTS, CT_VISIBLE, ctDoc, fieldnameFor,
 } from "@/data/categorytype";
 import { createCategoryType } from "@/api/categorytype";
 import { RcdPicker } from "@/features/employees/CategoryTypeDialog";
@@ -256,7 +256,6 @@ export default function CreateCategoryType({ onClose }) {
 							<span aria-hidden="true">⊕</span> Add New
 						</button>
 					</div>
-					<p className="hint">{CT_CUSTOM_WHY}</p>
 
 					{/* A refusal is not a note. `bad` is what the site said no to and it
 					    is the one thing on this dialog somebody has to read, so it is
@@ -281,12 +280,6 @@ export default function CreateCategoryType({ onClose }) {
 							{Object.entries(doc).map(([k, v]) =>
 								`${k} = ${String(v).replace(/\n/g, " | ")}`).join("\n")}
 						</pre>
-						<p>
-							Adding a field changes the shape of every Employee record on the site, which is why the
-							whole document is printed here before anything is sent. It goes as you, on your own
-							session, and the site decides: Frappe refuses a Custom Field to anybody without System
-							Manager, and whatever it says comes back onto this dialog.
-						</p>
 					</details>
 
 				</div>

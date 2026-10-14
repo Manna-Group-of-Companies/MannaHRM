@@ -34,6 +34,41 @@ this page exists.
 
 ---
 
+## When the bridge makes the record itself
+
+Since 3 October 2026, a machine with a `company` line in `bridge/config.toml`
+does step 2 on its own for somebody it has never heard of. On the first punch
+from a number no Employee carries, the bridge creates the Employee and sends
+their punches on the same pass:
+
+| Field | What it gets |
+|---|---|
+| Name | as typed into the machine — `Device user 851` if nothing was |
+| Company | the machine's `company` |
+| Date of joining | the day of their first punch the bridge holds |
+| Attendance Device ID | the number |
+| Gender | **placeholder** — `Prefer not to say`, or `Other` |
+| Date of birth | **placeholder** — 1 January 2000 |
+| Needs details | ticked |
+
+**The two placeholders are wrong until somebody corrects them**, and anything
+that reads a date of birth — age, PF and ESI eligibility, retirement — reads 1
+January 2000 meanwhile. Employee Master says how many there are and shows them
+on **Show them**; each profile says what is made up. Correct the gender and date
+of birth, add the employee code, department and shift, and press **Details are
+correct**.
+
+It never makes a record for a number an Employee already carries. Somebody HR
+marked Inactive or Left who punches again still waits, as before — that is a
+decision about a person, not missing data. A machine with no `company` line
+behaves as it always has.
+
+**One number, one person, group-wide** — the assumption the whole bridge already
+makes. Two machines at different companies that both enrol somebody as `851`
+put both people's punches on one record. Number machines so they cannot clash.
+
+---
+
 ## The three steps
 
 ### 1 · Enrol them on the machine, and write the number down

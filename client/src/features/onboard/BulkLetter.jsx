@@ -200,9 +200,7 @@ export default function BulkLetter({ onClose }) {
 					{up.sheet && !noCode ? (
 						<div className="rows bulkrows">
 							<div className="row">
-								<span>
-									Matched <span className="muted">Rows whose code is an employee on this site.</span>
-								</span>
+								<span>Matched</span>
 								<span className="val">
 									<span className={"cov " + (matched.length ? "live" : "none")}>
 										{matched.length} of {up.sheet.rows.length}
@@ -211,13 +209,7 @@ export default function BulkLetter({ onClose }) {
 							</div>
 							{missed.length ? (
 								<div className="row">
-									<span>
-										Not found{" "}
-										<span className="muted">
-											No employee carries these codes, so no letter is issued for them. They are
-											skipped rather than failing the batch.
-										</span>
-									</span>
+									<span>Not found</span>
 									<span className="val bulkmiss">{missed.slice(0, 8).join(", ")}
 										{missed.length > 8 ? ` and ${missed.length - 8} more` : ""}</span>
 								</div>
@@ -242,10 +234,6 @@ export default function BulkLetter({ onClose }) {
 							{busy ? `Generating ${done} of ${matched.length}…` : "Generate"}
 						</button>
 						<button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
-						<span className="bulkwhy">
-							Writes one <span className="mono">Employee Letter</span> per matched row. It runs in
-							this tab, so leaving the page stops it part-way — the letters already issued stay.
-						</span>
 					</div>
 				</div>
 			}

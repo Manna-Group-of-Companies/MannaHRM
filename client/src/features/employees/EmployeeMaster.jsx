@@ -1,7 +1,7 @@
 import { set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { load } from "@/api/load";
-import { scoped, uniq } from "@/lib/scope";
+import { isOn, needsDetails, scoped, uniq } from "@/lib/scope";
 import { fmt, tally, tidyDept } from "@/lib/format";
 import EmployeeCard from "@/components/EmployeeCard";
 import { Empty, NO_SITE, Scroll } from "@/components/ui";
@@ -112,6 +112,7 @@ export function masterRows(s) {
 	if (s.empdesig) rows = rows.filter((e) => e.designation === s.empdesig);
 	if (s.empdev === "yes") rows = rows.filter((e) => e.attendance_device_id);
 	if (s.empdev === "no") rows = rows.filter((e) => !e.attendance_device_id);
+	if (s.empneeds) rows = rows.filter(needsDetails);
 	return { all, rows };
 }
 
@@ -122,7 +123,7 @@ export function masterRows(s) {
     menu rather than as a control of its own. The reason is on the item either
     way, because "Picture Import is greyed out" is a question somebody will ask
     once and should be able to answer by hovering. */
-function ImportItem({ row, site, onPick }) {
+function ImportItem({ row, site, onPick, onGo }) {
 	const [label, ico, target, why] = row;
 	const href = !target ? "" : target === "import" ? deskImport(site) : deskUrl(site, "Holiday List");
 	/* Three states, not two. No target at all is a thing this site cannot do; a
@@ -136,6 +137,21 @@ function ImportItem({ row, site, onPick }) {
 			<path d={IMPORT_ICON[ico]} />
 		</svg>
 	);
+
+	/* A page here: navigated to, like the ⋯ menu's pages, not opened in a tab. */
+	if (String(target).startsWith("page:")) {
+		return (
+			<button role="menuitem" title={why}
+				onClick={(e) => {
+					e.stopPropagation();
+					onGo(target.slice(5));
+					onPick();
+				}}>
+				{glyph}
+				{label}
+			</button>
+		);
+	}
 
 	if (dead) {
 		return (
@@ -243,6 +259,8 @@ export default function EmployeeMaster() {
 	   the cap is only about the first paint — anything held back is counted in
 	   the footer and is one click away. */
 	const shown = s.empall ? rows : rows.slice(0, EMP_SHOWN);
+	/* Records the bridge made from a fingerprint punch, still to be completed. */
+	const needing = all.filter((e) => isOn(e) && needsDetails(e)).length;
 
 	return (
 		<>
@@ -281,7 +299,8 @@ export default function EmployeeMaster() {
 						<div className="emmenu end" role="menu" aria-label="Import employees" hidden={!s.empnew}>
 							{EMP_IMPORTS.map((row) => (
 								<ImportItem key={row[0]} row={row} site={s.site}
-									onPick={() => set({ empnew: false })} />
+									onPick={() => set({ empnew: false })}
+									onGo={(page) => go({ section: "employees", subtab: page })} />
 							))}
 						</div>
 					</span>
@@ -409,10 +428,19 @@ export default function EmployeeMaster() {
 							<option value="no">phone or nothing</option>
 						</select>
 					</label>
-					<span className="n text-fine text-ink-3">
-						Factor HR’s own Filter panel has not been screenshotted open. These two are what this
-						site can answer.
+				</div>
+			)}
+
+			{(needing > 0 || s.empneeds) && (
+				<div className={"empneeds" + (s.empneeds ? " on" : "")} role="status">
+					<span>
+						<b>{fmt(needing)}</b> {needing === 1 ? "person was" : "people were"} added automatically from
+						fingerprint punches. Their gender and date of birth are placeholders until somebody corrects them.
 					</span>
+					<button type="button" className="embtn" aria-pressed={Boolean(s.empneeds)}
+						onClick={() => set({ empneeds: !s.empneeds })}>
+						{s.empneeds ? "Show everybody" : "Show them"}
+					</button>
 				</div>
 			)}
 
@@ -430,7 +458,15 @@ export default function EmployeeMaster() {
 							</tr>
 						</thead>
 						<tbody>
-							{shown.map((e) => (
+							{shown.map((e) => (!isOn(e) ? (
+								/* Not Active: the name and the status, the same as its card. */
+								<tr key={e.name} data-emp={e.name} title="Open this record" className="emp-off"
+									onClick={() => openEmployee(e.name)}>
+									<td className="mono">—</td>
+									<td>{e.employee_name}</td>
+									<td colSpan={6} className="muted">{e.status || "Not active"} · details are hidden while this person is not active</td>
+								</tr>
+							) : (
 								<tr key={e.name} data-emp={e.name} title="Open this record"
 									onClick={() => openEmployee(e.name)}>
 									<td className="mono">{e.employee_number || "—"}</td>
@@ -444,7 +480,7 @@ export default function EmployeeMaster() {
 									<td className="muted">{s.byName[e.reports_to || ""]?.employee_name || "—"}</td>
 									<td className="mono muted">{String(e.date_of_joining || "").slice(0, 10)}</td>
 								</tr>
-							))}
+							)))}
 						</tbody>
 					</table>
 				</Scroll>

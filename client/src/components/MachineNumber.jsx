@@ -45,13 +45,6 @@ export default function MachineNumber({ value, employees, onPick }) {
 			{!problem && value ? (
 				<p><b>Machine Code {value}</b> is held by nobody, here or on {machines.size} user(s) read off the machines.</p>
 			) : null}
-			{!value ? (
-				<p>
-					The Machine Code is the number the machine knows this person by — the Enroll No in eSSL, or
-					the User ID the gate showed when the finger was added. Without it every punch they make is
-					refused.
-				</p>
-			) : null}
 			{free ? (
 				<button type="button" className="btn ghost" onClick={() => onPick(free)}>
 					Use {free} — free on both lists

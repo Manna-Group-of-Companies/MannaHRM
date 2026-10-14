@@ -1,6 +1,6 @@
 import { Legend, Panel, Scroll } from "@/components/ui";
 import Link from "@/routes/Link";
-import { FACTOHR_MENU, NOTES } from "@/data/factohr";
+import { FACTOHR_MENU } from "@/data/factohr";
 import { slugOf } from "@/data/blueprints";
 import { SUBTABS } from "@/routes/registry";
 
@@ -34,9 +34,9 @@ import { SUBTABS } from "@/routes/registry";
    --------------------------------------------------------------------------- */
 
 const KINDS = [
-	["Transaction", "🖊", "things you do"],
-	["Reports", "📊", "things you read"],
-	["Setup", "⚙", "things you configure"],
+	["Transaction", "🖊"],
+	["Reports", "📊"],
+	["Setup", "⚙"],
 ];
 
 /** The label a `[section, subtab]` pair reads as on the bar it lives on, so a
@@ -60,7 +60,7 @@ export default function ModuleMenu({ section, title }) {
 				]}
 			/>
 
-			{KINDS.map(([kind, ico, what]) => {
+			{KINDS.map(([kind, ico]) => {
 				const mine = rows.filter((r) => r[1] === kind);
 				if (mine.length === 0) return null;
 
@@ -72,7 +72,6 @@ export default function ModuleMenu({ section, title }) {
 
 				return (
 					<Panel title={`${kind} · ${mine.length}`} cov="live" ico={ico} key={kind}>
-						<p className="text-mini text-ink-3 mb-[.6rem]">{what}</p>
 						<Scroll>
 							<table className="menutable">
 								<thead>
@@ -104,12 +103,10 @@ function GroupRows({ section, group, rows }) {
 			<tr className="grouprow">
 				<td colSpan={2}>{group}</td>
 			</tr>
-			{rows.map(([, , , title, desc, to]) => (
+			{rows.map(([, , , title, , to]) => (
 				<tr key={title}>
 					<td>
 						<b>{title}</b>
-						<span className="block text-fine text-ink-3">{desc}</span>
-						{NOTES[title] ? <span className="block text-fine mt-[.2rem] ournote">{NOTES[title]}</span> : null}
 					</td>
 					{/* **Every row is a link now.** An item with a page here opens it;
 					    one without opens the page that says what it would take. It used

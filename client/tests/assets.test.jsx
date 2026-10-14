@@ -156,11 +156,10 @@ describe("the form says why it is not taking typing", () => {
 			.toMatch(/press Edit to type/i);
 	});
 
-	it("with a submitted asset, says it is history and where to amend it", async () => {
+	it("with a submitted asset, says it is submitted and read only", async () => {
 		const view = await draw({ pick: "ACC-ASS-00001" });
 		const note = view.container.querySelector(".afnote").textContent;
-		expect(note).toMatch(/Submitted/i);
-		expect(note).toMatch(/site/i);
+		expect(note).toBe("Submitted — read only.");
 	});
 
 	it("says nothing once the form is actually open", async () => {

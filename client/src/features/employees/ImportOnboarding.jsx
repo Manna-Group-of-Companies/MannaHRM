@@ -366,22 +366,14 @@ export default function ImportOnboarding() {
 				    because the search excluded everybody, a doctype this site has not
 				    got, and a read still in flight are not the same answer. */}
 				{s.candState === "loading" ? (
-					<Empty title="Reading the onboarding queue…">
-						Employee Onboarding is read when this page opens rather than with the dashboard —
-						a screen nobody has opened must not be able to hold up the one everybody does.
-					</Empty>
+					<Empty title="Reading the onboarding queue…" />
 				) : s.candState === "error" ? (
 					<Empty title="The onboarding queue could not be read">
-						A site running an older copy of this schema has no <b>Employee Onboarding</b> at all
-						and answers 417 — the same code a missing field answers, deliberately, so a caller
-						cannot tell the two apart by probing. The server said:
 						<span className="onberr">{s.candErr}</span>
 					</Empty>
 				) : !s.cands.length ? (
 					<Empty title="Nobody is waiting">
-						The site holds no <b>Employee Onboarding</b> record. A candidate is entered where the
-						hire was agreed, so an empty queue here means nobody has been taken on since the last
-						person was pulled — not that anything failed.
+						The site holds no <b>Employee Onboarding</b> record.
 					</Empty>
 				) : !rows.length ? (
 					<Empty title="Nothing matches">
@@ -464,8 +456,6 @@ export default function ImportOnboarding() {
 			{asking ? (
 				<Modal
 					title={`Pull ${asking.employee_name || asking.name}`}
-					msg="Creating an Employee on the site, under the site's own validation, and marking this candidate as taken."
-					why="Their EMPLOYEE CODE SERIES column reads Manual Entry, and on this site that is the only honest value: nothing here allocates an employee code. So it is typed, and a code somebody already holds is refused here rather than discovered later — the site accepts a duplicate machine code without a word, and this is the field every screen joins people on."
 					extra={
 						<>
 							<CodeBox s={s} cand={asking} value={s.onb.code[asking.name]}
@@ -495,8 +485,6 @@ export default function ImportOnboarding() {
 				<Modal
 					title={`Bulk Import — ${fmt(ticked.length)} candidate(s)`}
 					wide
-					msg={BULK_WHY}
-					why="One employee code each, and they have to differ: two rows sharing a code would write the first and be refused on the second, which is the worst shape a bulk run can fail in. The run is sequential, so the list below it reads in the order the rows were ticked."
 					extra={
 						<>
 							<div className="onbcodes">

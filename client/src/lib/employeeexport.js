@@ -28,19 +28,14 @@ import { getDoc, listAll } from "@/api/client";
 import { sheetNames, sheetsPdf } from "@/lib/export";
 import { save } from "@/lib/csv";
 import { tidyDept } from "@/lib/format";
+/* Every spelling of each statutory number, shared with the wages register. */
+import { AADHAAR, ESIC, PAN, PF, UAN, first } from "@/lib/statutory";
 
 /** `YYYY-MM-DD` → `DD-MM-YYYY`, and blank for blank: an em dash in a
     spreadsheet cell is a value somebody's filter has to learn to skip. */
 const date = (v) => {
 	const s = String(v || "").slice(0, 10);
 	return /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s.slice(8, 10)}-${s.slice(5, 7)}-${s.slice(0, 4)}` : s;
-};
-
-/** The first of several fields that holds anything — PAN lives in either of
-    two, depending on which import wrote it. */
-const first = (...fields) => (e) => {
-	for (const f of fields) if (e[f] != null && e[f] !== "") return e[f];
-	return "";
 };
 
 const num = (v) => (v == null || v === "" || Number.isNaN(Number(v)) ? "" : Number(v));
@@ -51,20 +46,6 @@ const yes = (v) => (v == null || v === "" ? "" : Number(v) ? "Yes" : "No");
    Aadhaar, UAN and account numbers, which Excel would otherwise turn into
    1.23457E+11 and lose the last digits of. */
 const col = (label, get, kind = "") => ({ label, get: typeof get === "function" ? get : (e) => e[get] ?? "", kind });
-
-/* Every spelling of a statutory field this group's systems have written. The
-   dashboard and install.py say `custom_aadhaar_number`; the bridge's Create
-   Employee says `custom_aadhaar_no`; a Factor HR backfill or a hand-made Custom
-   Field could say anything else. A column that read only one of them came out
-   blank on 24 Sep 2026 for a site that holds the number under another. */
-const AADHAAR = first("custom_aadhaar_number", "custom_aadhaar_no", "custom_aadhar_number", "custom_aadhar_no",
-	"aadhaar_number", "aadhaar_no", "custom_aadhaar", "custom_aadhar");
-const PAN = first("custom_pan_no", "pan_number", "custom_pan_number", "custom_pan");
-const UAN = first("custom_uan", "custom_uan_no", "custom_uan_number", "uan_number", "uan_no", "uan");
-const ESIC = first("custom_esic_number", "custom_esic_no", "custom_esi_no", "custom_esi_number",
-	"esic_number", "esic_no", "esi_number", "esi_no");
-const PF = first("provident_fund_account", "custom_pf_no", "custom_pf_number", "custom_pf_account",
-	"pf_number", "pf_no");
 
 /** Code and name lead every sheet, so each one can be read on its own. */
 const WHO = [

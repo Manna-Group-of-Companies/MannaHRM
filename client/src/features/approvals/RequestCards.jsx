@@ -128,7 +128,7 @@ function AttRow({ r, kind }) {
 				<div className="hrs">
 					Working: <b>{worked || "—"}</b>
 					<br />
-					Overtime: <b className="muted">needs the shift window</b>
+					Overtime: <b className="muted">—</b>
 					<br />
 					<span className="link" title="The day's Employee Checkin rows, raw. Loaded for today only.">
 						Time Log

@@ -24,7 +24,14 @@ vi.mock("@/api/client", async (importOriginal) => {
 		apiCreate: (dt, doc) => { calls.push(["create", dt, doc]); return Promise.resolve({ name: "NEW-" + calls.length, ...doc }); },
 		apiCreateSubmitted: (dt, doc) => {
 			calls.push(["created+submitted", dt, doc]);
-			return site.refuse && site.refuse(doc) ? Promise.reject(new Error("refused")) : Promise.resolve({ name: dt === "Salary Structure" ? doc.name : "NEW-" + calls.length });
+			if (site.refuse && site.refuse(doc)) return Promise.reject(new Error("refused"));
+			if (site.keep && dt === "Salary Structure Assignment") site[dt].push({ ...doc, docstatus: 1, name: "SSA-" + calls.length });
+			return Promise.resolve({ name: dt === "Salary Structure" ? doc.name : "NEW-" + calls.length });
+		},
+		apiWrite: (dt, name, patch) => {
+			calls.push(["write", dt, name, patch]);
+			if (site.keep) site[dt] = site[dt].map((d) => (d.name === name ? { ...d, ...patch } : d));
+			return Promise.resolve({ ok: true });
 		},
 		apiSubmitDraft: (dt, name) => { calls.push(["submit", dt, name]); return Promise.resolve({}); },
 	};
@@ -110,6 +117,75 @@ describe("Salary Setup", () => {
 		await click(button(v, "Make the structure"));
 		expect(v.container.textContent).toContain("Type the percentage for Basic");
 		expect(calls.length).toBe(0);
+	});
+
+	it("saves an uploaded sheet only after a confirm: a structure for each PF and ESI pair, the salary, and the bank and cash split", async () => {
+		site.keep = true;
+		site.Employee = loadedState().employees.map((e) => ({ ...e }));
+		const v = await draw(SalarySetup);
+		const csv = "Emp Code,Name,Actual Salary,Bank ₹,Cash ₹,PF %,ESI %\n"
+			+ "MR001,Anand,20000,15000,5000,12,0.75\nMR002,Priya,30000,30000,,12,\nNOPE,Nobody,5000,,,,\nMTU001,Rahul,9000,,,,\n";
+		await act(async () => { fireEvent.change(v.container.querySelector("#su-up-file"), { target: { files: [new File([csv], "salaries.csv", { type: "text/csv" })] } }); });
+		await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+		const text = v.container.textContent;
+		expect(text).toContain("2 to save, 2 left out");
+		expect(text).toContain("nobody on this site has that code");
+		expect(text).toContain("is on Manna Tyre UAE's payroll");
+		expect(text).toContain("Salary PF 12 ESI 0.75 - Manna Rubber (1), Salary PF 12 no ESI - Manna Rubber (1)");
+		expect(text).toContain("The site has no Employee State Insurance salary component, so it will be made too.");
+		expect(text).toContain("₹15,000 bank, ₹5,000 cash");
+		expect(calls.length).toBe(0);
+
+		await click(button(v, "Save 2"));
+		expect(calls.length).toBe(0);
+		await click(button(v, "Yes, save 2"));
+		await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+
+		expect(calls.map((c) => [c[0], c[1]])).toEqual([
+			["create", "Salary Component"],
+			["created+submitted", "Salary Structure"], ["created+submitted", "Salary Structure"],
+			["created+submitted", "Salary Structure Assignment"], ["write", "Employee"],
+			["created+submitted", "Salary Structure Assignment"], ["write", "Employee"],
+		]);
+		expect(calls[0][2]).toMatchObject({ salary_component: "Employee State Insurance", type: "Deduction", depends_on_payment_days: 1 });
+		expect(calls[1][2].deductions.map((d) => d.formula)).toEqual(["(base if base < 25000 else 25000) * 0.12", "(base * 0.0075 if base <= 21000 else 0)"]);
+		expect(calls[3][2]).toMatchObject({ employee: "HR-EMP-00001", salary_structure: "Salary PF 12 ESI 0.75 - Manna Rubber", base: 20000 });
+		expect(calls[4].slice(2)).toEqual(["HR-EMP-00001", { salary_mode: "Bank", custom_bank_amount: 15000 }]);
+		expect(calls[6].slice(2)).toEqual(["HR-EMP-00002", { salary_mode: "Bank", custom_bank_percent: 100 }]);
+		expect(calls.some((c) => c[1] === "Salary Slip")).toBe(false);
+		expect(v.container.textContent).toContain("2 people are saved.");
+		expect(v.container.textContent).not.toContain("Read back from the site and different");
+	});
+
+	it("does not ask for the EPF calculation on upload — the 5-tab Excel asks — and follows the company's own structures", async () => {
+		site.Employee = loadedState().employees.map((e) => ({ ...e }));
+		const first = await draw(SalarySetup);
+		expect(first.container.textContent).not.toContain("EPF calculation");
+		const csv = "Emp Code,Actual Salary,PF %,ESI %\nMR001,20000,12,0\n";
+		await act(async () => { fireEvent.change(first.container.querySelector("#su-up-file"), { target: { files: [new File([csv], "s.csv", { type: "text/csv" })] } }); });
+		await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+		expect(first.container.textContent).toContain("Salary PF 12 no ESI - Manna Rubber");
+		first.unmount();
+
+		site["Salary Structure"] = [{ name: "Salary Basic 50 PF 12 no ESI - Manna Rubber", company: "Manna Rubber", docstatus: 1 }];
+		const v = await draw(SalarySetup);
+		expect(v.container.querySelector("input[type='radio']")).toBe(null);
+		await act(async () => { fireEvent.change(v.container.querySelector("#su-up-file"), { target: { files: [new File([csv], "s.csv", { type: "text/csv" })] } }); });
+		await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+		expect(v.container.textContent).toContain("Salary Basic 50 PF 12 no ESI - Manna Rubber");
+		expect(calls.length).toBe(0);
+	});
+
+	it("says which saved salary did not read back the way the sheet had it", async () => {
+		site.Employee = loadedState().employees.map((e) => ({ ...e }));
+		const v = await draw(SalarySetup);
+		const csv = "Emp Code,Actual Salary,PF %,ESI %\nMR001,20000,12,0\n";
+		await act(async () => { fireEvent.change(v.container.querySelector("#su-up-file"), { target: { files: [new File([csv], "s.csv", { type: "text/csv" })] } }); });
+		await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+		await click(button(v, "Save 1"));
+		await click(button(v, "Yes, save 1"));
+		await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+		expect(v.container.textContent).toContain("Read back from the site and different: Anand Raghavan has no Salary PF 12 no ESI - Manna Rubber on the site");
 	});
 
 	it("gives ticked people a structure and a base pay, one document each", async () => {

@@ -3,9 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/store";
 import { loadPayroll, payKey } from "@/api/payroll";
 import { addLoanDeductions, loadCompanyInfo, loadLoansDue } from "@/api/salarysheet";
-import { RUN_STATES, entryFor, periodOf, runState } from "@/lib/payroll";
+import { loadRegisterReads } from "@/api/register";
+import { RUN_STATES, entryFor, periodOf, runState, structureFor } from "@/lib/payroll";
 import { buildSheet, periodLabel, postingState } from "@/lib/salarysheet";
 import { salarySheetXlsx } from "@/lib/salarysheetxlsx";
+import { registerChecks, registerRows } from "@/lib/register";
+import { registerXlsx } from "@/lib/registerxlsx";
 import { MONTHS, thisMonth } from "@/lib/format";
 import { deskUrl } from "@/lib/desk";
 import { Desk, Empty, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
@@ -134,6 +137,29 @@ export default function SalarySheet() {
 		setBusy("");
 	};
 
+	/* The wages register (Form 25) is the same month's slips, laid out the way the
+	   company's own register is, with the days from Attendance. It is read when
+	   asked for, not with the page. */
+	const downloadRegister = async () => {
+		setBusy("register");
+		setMsg(null);
+		try {
+			const reads = await loadRegisterReads(company, ym, start, end);
+			const rows = registerRows({
+				sheet, ym, company, people: reads.people, attendance: reads.attendance, calendar: reads.calendar,
+				assignments: pay && pay.state === "ok" ? pay.assignments : [], structureFor,
+			});
+			await registerXlsx(rows, { ym, company: (info && info.name) || company, address });
+			const issues = [...reads.warnings, ...registerChecks(rows, sheet.rows, { peopleRead: reads.people.size > 0 })];
+			setMsg(issues.length
+				? { kind: "warn", text: "The register was made. Check before paying from it: " + issues.join(" ") }
+				: { kind: "ok", text: "The register was made. The checks found nothing wrong: every slip is submitted, each slip's lines add up and attendance was found for everyone. Still compare the first month with your old sheet before paying." });
+		} catch (e) {
+			setMsg({ kind: "warn", text: "The register could not be made: " + (e.message || e) });
+		}
+		setBusy("");
+	};
+
 	const missing = groups.filter((g) => g.state === "missing");
 	const label = periodLabel(ym);
 	const hasRows = sheet.rows.length > 0;
@@ -151,6 +177,10 @@ export default function SalarySheet() {
 					<button type="button" className="embtn" disabled={reading} onClick={() => void refresh()}>Refresh</button>
 					<button type="button" className="embtn pri" disabled={!hasRows || busy === "xlsx"} onClick={() => void download()}>
 						{busy === "xlsx" ? "Making the file…" : "Download Excel"}
+					</button>
+					<button type="button" className="embtn" disabled={!hasRows || !company || busy === "register"} onClick={() => void downloadRegister()}
+						title={company ? "The month as the company's Form 25 wages register" : "Pick one company — a register is one company's"}>
+						{busy === "register" ? "Making the register…" : "Wages register (Excel)"}
 					</button>
 				</span>
 			</div>
@@ -171,11 +201,11 @@ export default function SalarySheet() {
 						)}
 					</li>
 					<li>
-						<b>Submit them, then run the salary.</b> Frappe only deducts what has been submitted.{" "}
+						<b>Submit them, then run the salary.</b>{" "}
 						<Desk className="embtn" href={site && deskUrl(site, "Additional Salary")} label="Open Additional Salary in Frappe">
 							Open Additional Salary
 						</Desk>{" "}
-						<Link section="payroll" subtab="process">Salary Process</Link> makes the slips.
+						<Link section="payroll" subtab="process">Salary Process</Link>
 					</li>
 					<li><b>Check the sheet below</b> and download it as Excel.</li>
 				</ol>
@@ -202,10 +232,6 @@ export default function SalarySheet() {
 				<input id="ssaddress" type="text" className="wide" value={address}
 					placeholder="e.g. Industrial Estate, Perumbavoor, Kerala"
 					onChange={(e) => setAddress(e.target.value)} />
-				<span className="hint">
-					{" "}The heading also carries the company's name, tax ID, registration details, phone and email from its
-					Company record in Frappe.
-				</span>
 			</div>
 
 			{reading ? <p className="muted">Reading {label}…</p>

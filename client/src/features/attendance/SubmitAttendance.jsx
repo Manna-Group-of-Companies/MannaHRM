@@ -180,38 +180,30 @@ export default function SubmitAttendance() {
 	const staff = s.employees.filter((e) => e.company === company && e.status === "Active");
 	const shifted = staff.filter((e) => e.default_shift).length;
 
-	/** label · what it reads · ok | no | unread · why it matters */
+	/** label · what it reads · ok | no | unread */
 	const enforced = [
 		["The month has ended",
 			!bounds ? "not a month" : problem ? `ends ${dmy(bounds[1])}` : `ended ${dmy(bounds[1])}`,
-			problem ? "no" : "ok",
-			"a day not yet worked would be frozen as a day nobody attended"],
+			problem ? "no" : "ok"],
 		["Attendance generated",
 			rows == null ? "Preview Data reads it" : `${fmt(rows)} rows`,
-			rows == null ? "unread" : rows > 0 ? "ok" : "no",
-			"written by the shift job from punches, never by hand"],
+			rows == null ? "unread" : rows > 0 ? "ok" : "no"],
 		["Corrections settled",
 			`${corrections ? `${fmt(corrections)} open` : "none open"}${got ? "" : " in the queue"}`,
-			corrections ? "no" : "ok",
-			"an open correction changes a day after it was counted"],
+			corrections ? "no" : "ok"],
 		["Leave decided",
 			`${leave ? `${fmt(leave)} Open` : "none Open"}${got ? "" : " in the queue"}`,
-			leave ? "no" : "ok",
-			"leave in a frozen month can no longer be approved"],
+			leave ? "no" : "ok"],
 		["Not already submitted",
 			list.absent ? "the site has not got the doctype" : live ? `${live.name}, ${stateOf(live)}` : "nothing yet",
-			list.absent || list.state !== "ok" ? "unread" : live ? "no" : "ok",
-			"one live submission per company per month"],
+			list.absent || list.state !== "ok" ? "unread" : live ? "no" : "ok"],
 	];
 	const advice = [
-		["Shift Types defined", `${fmt(s.counts.shift || 0)} of 23`, (s.counts.shift || 0) >= 23 ? "ok" : "no",
-			"a shift is what a punch is measured against"],
+		["Shift Types defined", `${fmt(s.counts.shift || 0)} of 23`, (s.counts.shift || 0) >= 23 ? "ok" : "no"],
 		["Active people with a shift", `${fmt(shifted)} of ${fmt(staff.length)}`,
-			staff.length > 0 && shifted === staff.length ? "ok" : "no",
-			"somebody with no shift generates nothing, and says nothing about it"],
+			staff.length > 0 && shifted === staff.length ? "ok" : "no"],
 		["Punches arriving", s.checkins.length ? `${fmt(s.checkins.length)} today` : "none today",
-			s.checkins.length > 0 ? "ok" : "no",
-			"the fingerprint bridge and the phone app both feed Employee Checkin"],
+			s.checkins.length > 0 ? "ok" : "no"],
 	];
 
 	const pickers = (
@@ -235,8 +227,7 @@ export default function SubmitAttendance() {
 			<div className="legend">
 				<b className="font-display">Submit Attendance</b>
 				<span>
-					Closing <b>{label}</b>{company ? <> for <b>{company}</b></> : null}. Submitting freezes the month
-					on the site, and payroll runs from what was frozen.
+					Closing <b>{label}</b>{company ? <> for <b>{company}</b></> : null}.
 				</span>
 			</div>
 
@@ -331,7 +322,7 @@ export default function SubmitAttendance() {
 							{list.state !== "ok" ? "Reading the submissions…"
 								: list.rows.length ? "Nothing in the list matches the filter and the search."
 									: list.absent ? "There is nowhere on the site to keep one yet."
-										: "No month has been submitted yet. Add closes one."}
+										: "No month has been submitted yet."}
 						</Empty>
 					</div>
 				)}
@@ -368,8 +359,7 @@ export default function SubmitAttendance() {
 								<ul className="atsubwhy">{wont.map((w) => <li key={w}>{w}</li>)}</ul>
 							</Gap>
 						) : rows == null ? (
-							<Note>Nothing the page can see is open. Preview Data reads the month itself — the site counts it
-								again at the moment of submitting, either way.</Note>
+							<Note>Nothing the page can see is open.</Note>
 						) : (
 							<Note>Nothing the site checks is open. Add would submit {label} for {company}.</Note>
 						)}
@@ -385,12 +375,6 @@ export default function SubmitAttendance() {
 					onClose={() => setAdding(false)}
 					extra={
 						<>
-							<Note>
-								Submitting freezes the month on the site. From then on it refuses any attendance, approved
-								leave or approved correction that would change a day in it; a punch is still recorded, and
-								the day it would have made waits until the month is reopened. Reopening is refused once
-								salary has been processed from the month.
-							</Note>
 							{list.absent ? (
 								<Gap>The site has not got <b>Attendance Submission</b> yet, so it will refuse this until the
 									app is installed.</Gap>
@@ -465,13 +449,12 @@ function Checks({ title, rows }) {
 		<>
 			<div className="text-fine text-ink-3 mb-[.3rem]">{title}</div>
 			<div className="rows">
-				{rows.map(([name, value, state, why]) => (
+				{rows.map(([name, value, state]) => (
 					<div className="row" key={name}>
 						<span>
 							{name} <span className={"cov " + CHIP[state][0]}>{CHIP[state][1]}</span>
 						</span>
 						<span className="val">{value}</span>
-						<span className="col-[1/-1] text-fine text-ink-3">{why}</span>
 					</div>
 				))}
 			</div>
@@ -485,7 +468,7 @@ function Figures({ total }) {
 			<Tile k="Attendance rows" n={fmt(total.rows)} />
 			<Tile k="Employees" n={fmt(total.employees)} />
 			{COUNTED.map(([name, k]) => <Tile key={k} k={name} n={fmt(total[k])} />)}
-			{total.other ? <Tile k="Other" n={fmt(total.other)} s="a status none of these name" /> : null}
+			{total.other ? <Tile k="Other" n={fmt(total.other)} /> : null}
 		</Tiles>
 	);
 }

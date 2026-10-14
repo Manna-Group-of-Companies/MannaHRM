@@ -108,11 +108,6 @@ export const PROFILE_LONG = new Set([
 	"reason_for_leaving", "new_workplace",
 ]);
 
-/* Only ever drawn when a pane's own Factor HR screenshot does not exist, so
-   that a guess is never presented as a comparison. */
-const GUESSED = "Factor HR's own version of this pane has not been screenshotted open. "
-	+ "These are the fields this site holds under that heading — the list to argue with, not a copy of theirs.";
-
 export const PROFILE_PANES = {
 	about: {
 		groups: [
@@ -132,7 +127,6 @@ export const PROFILE_PANES = {
 				["Current Address", "current_address"],
 			]],
 		],
-		note: GUESSED,
 	},
 
 	/* Transcribed off the screenshot, label for label and in its order. Four
@@ -180,10 +174,6 @@ export const PROFILE_PANES = {
 			["company_name", "Company"], ["designation", "Designation"], ["salary", "Salary"],
 			["total_experience", "Experience"], ["address", "Address"], ["contact", "Contact"],
 		]]],
-		note: "Factor HR's Employee Detail report lists <b>Past History</b> as one of its fourteen sections, so "
-			+ "the tenant holds this for people. It is a child table on the ERPNext record, which is why it "
-			+ "can be drawn here and not on any of the report screens — those read lists, and a list call "
-			+ "cannot reach a child table.",
 	},
 
 	org: {
@@ -207,7 +197,6 @@ export const PROFILE_PANES = {
 			["branch", "Branch"], ["department", "Department"], ["designation", "Designation"],
 			["from_date", "From"], ["to_date", "To"],
 		]]],
-		note: GUESSED,
 	},
 
 	attendance: {
@@ -221,10 +210,6 @@ export const PROFILE_PANES = {
 				["Punch From Anywhere", "custom_allow_remote_punch"],
 			]],
 		],
-		note: "<b>None of these decides anything on this page.</b> They are read here; the rules that use them "
-			+ "run on the site, on the site's clock — see CLAUDE.md §1. A device id that does not start with "
-			+ "the trusted prefix is treated as a mobile punch and geofenced, so renaming a machine in "
-			+ "<code>bridge/config.toml</code> breaks this person's punches.",
 	},
 
 	identity: {
@@ -243,8 +228,6 @@ export const PROFILE_PANES = {
 					+ "section — only the section name has been seen, not its contents."],
 			]],
 		],
-		note: "Expiry is the half ERPNext has no answer for — see On Board → Document Entry. A passport with "
-			+ "a <code>valid_upto</code> in the past is a finding nothing here is watching for.",
 	},
 
 	pf: {
@@ -263,11 +246,6 @@ export const PROFILE_PANES = {
 				["Insurance Expiry Date", "custom_insurance_expiry_date"],
 			]],
 		],
-		note: "UAN and ESIC Number were added as Custom Fields on 19 September 2026 — Payroll can now file a "
-			+ "return for the people who need one. PF/ESIC Applicable are still not a flag on the person; hrms "
-			+ "decides both from the salary structure's components. Insurance is a new group rather than a row "
-			+ "in Statutory, because ERPNext otherwise models it as a payroll component and this is the number "
-			+ "printed on the card somebody actually carries.",
 	},
 
 	/* Personal Details' six sub-items, screenshotted expanded on 29 Aug 2026.
@@ -300,9 +278,6 @@ export const PROFILE_PANES = {
 				["Permanent Accommodation", "permanent_accommodation_type"],
 			]],
 		],
-		note: "One address each, as free text. Factor HR gives this a pane of its own, which usually means the "
-			+ "parts are separate fields there — district, PIN, state. Nothing here can be reported on by area, "
-			+ "and a factory group that buses people in may well want to.",
 	},
 
 	family: {
@@ -314,10 +289,6 @@ export const PROFILE_PANES = {
 				["Family Background", "family_background"],
 			]],
 		],
-		note: "The three names were added on 25 Aug and are empty for everybody — Factor HR holds them and the "
-			+ "export did not carry them. <b>ERPNext's Employee has no family member table at all</b>, so "
-			+ "dependants, their dates of birth and the <b>nominee</b> have nowhere to go. The nominee is the "
-			+ "one that matters when somebody dies in service.",
 	},
 
 	misc: {
@@ -328,7 +299,6 @@ export const PROFILE_PANES = {
 				["Preferred Contact Email", "prefered_contact_email"],
 			]],
 		],
-		note: GUESSED,
 	},
 
 	emergency: {
@@ -342,9 +312,6 @@ export const PROFILE_PANES = {
 					+ "Factor HR names this pane after the address, so theirs has one."],
 			]],
 		],
-		note: "<b>This is the pane somebody reads at two in the morning</b>, and on this site it is empty for "
-			+ "everybody. A group running night shifts in factories should treat that as a gap to close before "
-			+ "go-live rather than after it.",
 	},
 
 	qualification: {
@@ -352,9 +319,6 @@ export const PROFILE_PANES = {
 			["school_univ", "Institute"], ["qualification", "Qualification"], ["level", "Level"],
 			["year_of_passing", "Year"], ["class_per", "Score"], ["maj_opt_subj", "Subjects"],
 		]]],
-		note: "Factor HR's Employee Detail report lists <b>Qualification</b> as one of its fourteen sections, so "
-			+ "the tenant holds this for people. It is a child table here, which is why it can be drawn on this "
-			+ "screen and on none of the report screens — see §15.",
 	},
 
 	other: {
@@ -365,10 +329,6 @@ export const PROFILE_PANES = {
 				["Unsubscribed", "unsubscribed"],
 			]],
 		],
-		note: "<b>Factor HR draws a caret on this one too, and nobody has opened it</b> — so it keeps the three "
-			+ "leftovers rather than six invented sub-items. Their report screen names <b>Skill Set</b> and "
-			+ "<b>Nominee</b> as sections of their own, and neither has an ERPNext equivalent — skill sets "
-			+ "probably do not matter, nominees do.",
 	},
 
 	separation: {
@@ -386,18 +346,10 @@ export const PROFILE_PANES = {
 				["Encashment Date", "encashment_date"],
 			]],
 		],
-		note: "<b>344 people have left and none of them came across.</b> The count is in the site survey; the "
-			+ "records are not on the site. So this pane is empty for everybody by construction, and will "
-			+ "stay that way until somebody decides whether leavers are migrated at all.",
 	},
 
 	document: {
 		groups: [],
-		note: "Every <code>File</code> filed against this record, and a place to add one — see "
-			+ "<code>DocumentsPane</code> in EmployeeProfile.jsx. What ERPNext holds <i>about</i> a document — a "
-			+ "passport number, a PAN, an expiry date — is on Employee Identity instead; this pane is the scan "
-			+ "itself. Employees &rarr; Download Documents reads the same file register for a report over "
-			+ "everybody, and On Board &rarr; Document Entry is where a scan gets tied to one of those fields.",
 	},
 
 	assets: { groups: [] },
@@ -406,25 +358,20 @@ export const PROFILE_PANES = {
 	   Leave Policy Assignment and hrms's own balance — neither is on Employee. */
 	leave: {
 		groups: [],
-		note: "Read from the site, never written here. <b>Leave given</b> is each Leave Policy Assignment on "
-			+ "this person; <b>Balance today</b> is hrms's own figure, the one an application is measured "
-			+ "against. To change what somebody is given, assign a different policy on the site.",
 	},
 
 	/* Drawn from the document rather than from a list here — that is the point
 	   of it. See `AllFields` in features/employees/EmployeeProfile.jsx. */
 	all: {
 		groups: [],
-		note: "<b>Ours, not theirs.</b> Every other pane on this page is a list of fields somebody chose, so a "
-			+ "field nobody mapped is read on every open of this page and drawn nowhere. This one is the "
-			+ "record itself — every column the site returned, whether or not a pane above claims it, and "
-			+ "every child table on it. It is the answer to “the site has this and your screen does not”.",
 	},
 
 	bank: {
 		groups: [
 			["How this person is paid", [
 				["Salary Mode", "salary_mode"],
+				["Bank share (%)", "custom_bank_percent"],
+				["Bank amount (₹)", "custom_bank_amount"],
 				["Bank Name", "bank_name"],
 				["Bank Account", "bank_ac_no"],
 				["IBAN", "iban"],
@@ -436,9 +383,6 @@ export const PROFILE_PANES = {
 					+ "cannot be written without it."],
 			]],
 		],
-		note: "IBAN is ERPNext's field and belongs to the UAE company; the Kerala companies need IFSC, which "
-			+ "is ours. Bank details came across from Factor HR's Employee Detail Report "
-			+ "(tools/load_employee_detail.py) for the 86 people it held them for.",
 	},
 };
 

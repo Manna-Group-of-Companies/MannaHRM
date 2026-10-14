@@ -130,7 +130,6 @@ export default function AdvancesLoans() {
 							Make the deductions
 						</button>
 					)}
-					<span className="hint">Each month's deduction is saved and submitted, so the salary slip for that month takes it.</span>
 				</div>
 			</Panel>
 

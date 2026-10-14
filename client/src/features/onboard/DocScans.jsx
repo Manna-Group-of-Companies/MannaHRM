@@ -156,7 +156,7 @@ export default function DocScans({ onClose }) {
 
 	const Count = ({ label, n, why, bad }) => (
 		<div className="row">
-			<span>{label} <span className="muted">{why}</span></span>
+			<span>{label}{why ? <> <span className="muted">{why}</span></> : null}</span>
 			<span className="val">
 				<span className={"cov " + (n ? (bad ? "none" : "live") : "live")}>{n}</span>
 			</span>
@@ -177,9 +177,7 @@ export default function DocScans({ onClose }) {
 							<span className="bulksay">
 								{files.length
 									? <><b>{files.length} file{files.length === 1 ? "" : "s"}</b> ready</>
-									: <>Drag a folder of scans here, or click &ldquo;Browse Files&rdquo;. Each one
-										named <span className="mono">CODE Type.jpg</span> — Download Structure
-										writes the list.</>}
+									: <>Drag a folder of scans here, or click &ldquo;Browse Files&rdquo;.</>}
 							</span>
 							<label className="bulkbrowse">
 								Browse Files
@@ -214,22 +212,17 @@ export default function DocScans({ onClose }) {
 						<div className="rows bulkrows">
 							<Count label="Will be filed" n={ok.length}
 								why={`Of ${files.length} file${files.length === 1 ? "" : "s"} picked.`} />
-							<Count label="Already filed" n={dupe.length}
-								why={dupe.length
-									? "The same name is already against the same document, so these are skipped — running the same folder twice does not duplicate it."
-									: "Nothing here is already on file."} />
+							<Count label="Already filed" n={dupe.length} />
 							<Count label="No such employee" n={badName.length} bad={!!badName.length}
 								why={badName.length
 									? `The part before the first space is not an employee code on this site: ${badName.slice(0, 3).join(", ")}${badName.length > 3 ? " and others" : ""}.`
-									: "Every filename starts with a code that is somebody here."} />
+									: null} />
 							<Count label="No such type" n={badType.length} bad={!!badType.length}
 								why={badType.length
 									? `This side can file ${DOC_KINDS.filter((k) => k.num).map((k) => k.label).join(" and ")}. The rest of the name has to be one of those.`
-									: "Every filename names a type this side has a field for."} />
+									: null} />
 							<Count label="Wrong kind of file" n={badExt.length} bad={!!badExt.length}
-								why={badExt.length
-									? "A scan is a JPEG, PNG, GIF, WebP, PDF or SVG. Anything else is refused before it is read."
-									: "Every file is a kind this can store."} />
+								why={badExt.length ? "A scan is a JPEG, PNG, GIF, WebP, PDF or SVG." : null} />
 						</div>
 					) : null}
 
@@ -247,11 +240,6 @@ export default function DocScans({ onClose }) {
 							{busy ? `Uploading ${done} of ${ok.length}…` : "Upload"}
 						</button>
 						<button className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
-						<span className="bulkwhy">
-							Each scan is filed against the employee <em>and</em> the field its type names, which
-							is what puts it on the right row of the register. Five megabytes each. It runs in
-							this tab, so leaving the page stops it part-way; what is filed stays.
-						</span>
 					</div>
 				</div>
 			}

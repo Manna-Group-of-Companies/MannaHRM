@@ -7,12 +7,14 @@
    whole reason a restyle is one file and not four hundred edits: the stylesheet
    names roles.
 
-   One palette ships — Manna, the logo's orange on a near-black navy rail — in
-   two modes, light and dark. Five others shipped alongside it until 5 September
-   2026 on a second `data-theme` axis; the note at the top of `themes.css`
-   records what they were and how to bring the axis back.
+   One palette ships — Manna, a deep indigo on cool slate since 6 October 2026,
+   the logo's orange before that — in two modes, light and dark. Five others
+   shipped alongside it until 5 September 2026 on a second `data-theme` axis;
+   the note at the top of `themes.css` records what they were and how to bring
+   the axis back.
 
-   What the change actually forced, beyond the hues:
+   What a change of brand hue actually forces, beyond the hues (learned on the
+   earlier move to blue, and true again for indigo):
 
    1. **`brand.lift` is new, and the rail needs it.** The old orange sat on a
       plum charcoal at 4.3:1 — a warm accent against its own complement. A blue
@@ -57,9 +59,14 @@ export default {
          hand-written CSS. Use `rgb(var(--x))` there instead. */
       colors: {
         /* `deep` is for text on `soft`; `tint` is for a border on it. `dark` is
-           the one that works both ways — text on white and white on it are the
-           same ratio — so it is the fill of every primary button and the colour
-           of every selected-tab label. `lift` is the only one for dark chrome. */
+           the fill of every primary button. `lift` is the only one for dark
+           chrome.
+
+           **`dark` is a fill, never text.** On white it reads either way, and
+           nineteen rules used it as a label colour on that strength — then dark
+           mode put it on a near-black card at 2.3:1. Brand-coloured *text* is
+           `accent`, which is the same value as `dark` in light mode and the
+           lit indigo in dark mode. Replaced 6 October 2026. */
         brand: {
           DEFAULT: "rgb(var(--brand) / <alpha-value>)",
           dark: "rgb(var(--brand-dark) / <alpha-value>)",
@@ -274,10 +281,15 @@ export default {
         hero: "1.75rem",
         mega: "2rem",
       },
-      /* **One face, Inter, since 29 September 2026.** Three faces — Archivo
-         for headings, Plex Sans for text, Plex Mono for every label, count and
-         time — read as a technical tool rather than as a friendly one, and a
-         monospace capital is the hardest thing on the page to scan.
+      /* **Inter for text, Plus Jakarta Sans for headings, since 6 October
+         2026.** It was one face, Inter, from 29 September — three faces before
+         that (Archivo, Plex Sans, Plex Mono) read as a technical tool, and a
+         monospace capital is the hardest thing on the page to scan. One face
+         fixed that and left every heading looking like a bolder row of the
+         table under it. Jakarta is a geometric cousin of Inter — same x-height,
+         same open counters — so a heading in it is unmistakably a heading and
+         still the same family of shapes; only the two weights headings use are
+         loaded.
 
          `mono` is kept as a name and pointed at Inter, because it is on a
          hundred rules that mean "a figure that lines up with the one above
@@ -285,7 +297,7 @@ export default {
          the one place a real monospace is still wanted: a field name in a
          sentence has to look like something typed. */
       fontFamily: {
-        display: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        display: ['"Plus Jakarta Sans"', '"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
         body: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
         mono: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
         code: ['"JetBrains Mono"', "ui-monospace", "Menlo", "Consolas", "monospace"],

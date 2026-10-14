@@ -378,7 +378,13 @@ class AdmsHandler(BaseHTTPRequestHandler):
 
 		stamp = self.server.queue.last_seen(_stamp_key(serial)) or self.server.options["first_stamp"]
 		self.server.seen[serial] = time.time()
-		return self._reply(option_block(serial, stamp, **self.server.options["block"]))
+		block = dict(self.server.options["block"])
+		# The device sets its clock from this line and the Date header, on every
+		# handshake — so a value its firmware misreads is a clock that is put
+		# back wrong each time somebody corrects it at the machine.
+		if known and known.get("timezone"):
+			block["timezone"] = known["timezone"]
+		return self._reply(option_block(serial, stamp, **block))
 
 	def _getrequest(self, serial):
 		"""Always `OK`. This server issues no commands, and that is deliberate.
@@ -478,7 +484,11 @@ def serve(config, queue, wake=None):
 	delivered in seconds rather than at the next poll.
 	"""
 	devices = {
-		d["serial"]: {"name": d["name"], "report_direction": d["report_direction"]}
+		d["serial"]: {
+			"name": d["name"],
+			"report_direction": d["report_direction"],
+			"timezone": d.get("timezone", ""),
+		}
 		for d in config.devices
 		if d.get("serial")
 	}

@@ -1,7 +1,7 @@
 """Payroll on the live site — what it needs, what is there, and what to make.
 
     python tools/setup_payroll.py            # report only, writes nothing
-    python tools/setup_payroll.py --apply    # also make the missing Salary Components
+    python tools/setup_payroll.py --apply    # also set Payroll Settings and make the missing Salary Components
 
     ERP_URL / ERP_KEY / ERP_SECRET in the environment, as the other tools here.
 
@@ -23,11 +23,15 @@ site, because the app is not installed there yet and `install.py` does not run
     5. Our loan doctypes (Employee Loan Type / Application / Repayment) — said
        to need the app install, and never made by hand as custom doctypes.
 
+    6. Payroll Settings — based on Attendance, so an Absent day is not paid.
+
 ## What --apply writes
 
-Only the Salary Components that are missing: Leave Encashment (an earning),
-Salary Advance and Loan EMI (deductions). Safe to run twice: one that exists is
-left exactly as it is, and one that is switched off is reported, not switched on.
+Payroll Settings' values from `payrollsetup.PAYROLL_SETTINGS`, where the site
+holds something else; and the Salary Components that are missing: Leave
+Encashment (an earning), Salary Advance and Loan EMI (deductions). Safe to run
+twice: one that exists is left exactly as it is, and one that is switched off is
+reported, not switched on.
 """
 
 import argparse
@@ -158,7 +162,17 @@ def main():
 		print("    {0}  {1}".format("ok     " if n is not None else "not on the site", dt))
 	print()
 
-	# ---- 6. the three Salary Components ----
+	# ---- 6. payroll settings ----
+	settings = call("GET", "/api/resource/Payroll%20Settings/Payroll%20Settings")["data"]
+	gaps = ps.settings_gaps(settings)
+	print("Payroll Settings")
+	for field, want in ps.PAYROLL_SETTINGS:
+		has = settings.get(field)
+		print("    {0}  {1} = {2}{3}".format("ok     " if has == want else "WRONG  ", field, has,
+			"" if has == want else "  (wants {0})".format(want)))
+	print()
+
+	# ---- 7. the three Salary Components ----
 	rows = listing("Salary Component", ["name", "type", "disabled"],
 		[["name", "in", [c["name"] for c in ps.REQUIRED_COMPONENTS]]])
 	missing = ps.missing_components(rows)
@@ -170,9 +184,17 @@ def main():
 	problems += len(off)
 
 	if not args.apply:
-		print("\nDry run. Nothing was written. {0} thing(s) need a person; --apply makes {1} Salary Component(s).".format(
-			problems, len(missing)))
+		print("\nDry run. Nothing was written. {0} thing(s) need a person; --apply sets {1} Payroll Setting(s) "
+			"and makes {2} Salary Component(s).".format(problems, len(gaps), len(missing)))
 		return 0
+
+	if gaps:
+		try:
+			call("PUT", "/api/resource/Payroll%20Settings/Payroll%20Settings", {f: want for f, _, want in gaps})
+			for f, has, want in gaps:
+				print("  set Payroll Settings {0}: {1} -> {2}".format(f, has, want))
+		except urllib.error.HTTPError as exc:
+			print("  REFUSED Payroll Settings: {0}".format(refused(exc)))
 
 	made = 0
 	for c in missing:

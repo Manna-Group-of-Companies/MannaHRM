@@ -50,6 +50,10 @@ class Api {
       if (!ok) return null;
     } else {
       Session.I.user = who;
+      // The token belongs to the session, not the sign-in, and a restored
+      // session has none until it is asked for: every write — every punch —
+      // would come back "Invalid Request".
+      await _fetchCsrf();
     }
     return _resolveQuietly();
   }

@@ -233,6 +233,15 @@ describe("Day or Night, and supervisors have three shifts", () => {
 		expect(shiftChoices({ company: "Manna Tyre UAE" }, types, cos, [])).toHaveLength(7);
 	});
 
+	it("after HR's sheet, a company's shifts are the ones named for it, whatever the Company record calls it", () => {
+		const sheet = ["Manna Rubber Products Pvt.Ltd-Office Shift", "Manna Rubber Products Pvt.Ltd-HK shift",
+			"Hi-Tech Pretreads-Office shift (08:30-17:30)", "MANNA TREADS PVT.LTD-SHIFT"].map((name) => ({ name }));
+		const mrp = [{ name: "Manna Rubber Products Private Limited", abbr: "MRPPL" }, { name: "Manna Treads", abbr: "MT" }];
+		expect(shiftChoices({ company: "Manna Rubber Products Private Limited" }, sheet, mrp, []))
+			.toEqual(["Manna Rubber Products Pvt.Ltd-HK shift", "Manna Rubber Products Pvt.Ltd-Office Shift"]);
+		expect(shiftChoices({ company: "Manna Treads" }, sheet, mrp, [])).toEqual(["MANNA TREADS PVT.LTD-SHIFT"]);
+	});
+
 	it("the picker lists every shift on the site, the person's own first", () => {
 		const { suggested, others } = shiftOptions({ company: "Hi-Tech Rubber Industries", designation: "Operator" }, types, cos, []);
 		expect(suggested).toEqual(["HRI-Day Shift", "HRI-Night Shift"]);

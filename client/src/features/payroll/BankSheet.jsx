@@ -65,7 +65,7 @@ export default function BankSheet() {
 	}
 
 	return (
-		<>
+		<div className="paypage bkpage">
 			<div className="emhead">
 				<h2>Bank Transfer</h2>
 				<span className="n">{label} · {company || "all companies"}</span>
@@ -100,12 +100,16 @@ export default function BankSheet() {
 				<Note>Slips marked Draft are listed so the month can be checked. Nothing is paid until the salary run is submitted in Frappe.</Note>
 			)}
 
-			<div className="ctl" style={{ margin: ".4rem 0" }}>
-				<label className="lab" htmlFor="bk-find">Find</label>
-				<input id="bk-find" type="search" placeholder="name or code" value={find} onChange={(e) => setFind(e.target.value)} />
-				<label className="lab" htmlFor="bk-address">Address line for the Excel heading</label>
-				<input id="bk-address" type="text" className="wide" value={address} placeholder="e.g. Industrial Estate, Perumbavoor, Kerala"
-					onChange={(e) => setAddress(e.target.value)} />
+			<div className="flds">
+				<div className="fld">
+					<label className="lab" htmlFor="bk-find">Find</label>
+					<input id="bk-find" type="search" placeholder="name or code" value={find} onChange={(e) => setFind(e.target.value)} />
+				</div>
+				<div className="fld wide">
+					<label className="lab" htmlFor="bk-address">Address line for the Excel heading</label>
+					<input id="bk-address" type="text" value={address} placeholder="e.g. Industrial Estate, Perumbavoor, Kerala"
+						onChange={(e) => setAddress(e.target.value)} />
+				</div>
 			</div>
 
 			{!ok ? <p className="muted">Reading {label}…</p> : !sheet.rows.length ? (
@@ -130,6 +134,6 @@ export default function BankSheet() {
 					</table>
 				</Scroll>
 			)}
-		</>
+		</div>
 	);
 }

@@ -182,9 +182,7 @@ export default function EmailLetters({ onClose }) {
 						</div>
 
 						{pick === "file" ? (
-							<SheetDrop file={up.file} sheet={up.sheet} onTake={up.take}
-								hint={<>A CSV of <span className="mono">employee_number</span> — the people to
-									mail. Drag it here or click &ldquo;Browse Files&rdquo;.</>} />
+							<SheetDrop file={up.file} sheet={up.sheet} onTake={up.take} />
 						) : null}
 
 						<RunInBackground />
@@ -205,13 +203,7 @@ export default function EmailLetters({ onClose }) {
 
 					<div className="rows bulkrows">
 						<div className="row">
-							<span>
-								Would go out{" "}
-								<span className="muted">
-									One mail per letter — two letters to the same person are two documents and
-									two sends.
-								</span>
-							</span>
+							<span>Would go out</span>
 							<span className="val">
 								<span className={"cov " + (rows.length ? "live" : "none")}>
 									{rows.length} to {seen.size} {seen.size === 1 ? "person" : "people"}
@@ -233,19 +225,6 @@ export default function EmailLetters({ onClose }) {
 						</div>
 					</div>
 
-					{/* Said on the dialog rather than only on the button. Send is the one
-					    control on these four screens that cannot be made to work, and
-					    somebody who opened this dialog to send mail should learn that
-					    here rather than by hovering a greyed button. */}
-					<div className="afnote">
-						<b>Send cannot work here.</b> Nothing on this dashboard sends mail — there is no mail path
-						here, and a <span className="mono">mailto:</span> cannot carry
-						letters as attachments. Putting an SMTP credential behind that button is a decision
-						about where the company&rsquo;s mail comes from, not something to add quietly.{" "}
-						<b>Download the send list</b> writes exactly what would have gone out — every letter,
-						every resolved To, CC and BCC — for something that can post it.
-					</div>
-
 					<div className="defoot">
 						<button className="btn tpl" disabled title={SEND_DEAD}>Send</button>
 						<button className="btn ghost" onClick={onClose}>Cancel</button>
@@ -259,10 +238,6 @@ export default function EmailLetters({ onClose }) {
 							onClick={list}>
 							Download the send list
 						</button>
-						<span className="bulkwhy">
-							Nothing here is sent and nothing is written to the site. The list is a file on this
-							machine.
-						</span>
 					</div>
 				</div>
 			}

@@ -5,6 +5,7 @@ import { loadCategoryTypes } from "@/api/categorytype";
 import { readShiftTypes } from "@/api/shifttype";
 import { lastOfMonth, todayIso } from "@/lib/format";
 import { LEAVE_TYPE_NAME } from "@/lib/monthlyleave";
+import { credited } from "@/lib/sundayleave";
 import { byMachine } from "@/lib/direction";
 
 export const EMP_FIELDS_MIN = [
@@ -28,6 +29,12 @@ export const EMP_FIELDS = EMP_FIELDS_MIN.concat([
 	   there, not an Employee. Stock on Employee. */
 	"user_id",
 ]);
+
+/* Tried before EMP_FIELDS: `custom_needs_details` is ours (3 October 2026) and
+   a site without it refuses the read, which then falls to the list above. The
+   date of birth is what marks a bridge-made record on such a site — see
+   lib/scope.js `needsDetails`. */
+export const EMP_FIELDS_WIDE = EMP_FIELDS.concat(["date_of_birth", "custom_needs_details"]);
 
 /* The Create Letters register — see features/onboard/CreateLetters.jsx, which
    draws Factor HR's own list of issued letters column for column.
@@ -146,7 +153,9 @@ export async function load() {
 			   needed. Asking for a field a site does not have is a 417 on the whole
 			   call, and the whole call is the dashboard — so the richer list is tried
 			   and the original one is what it falls back to. */
-			listAll("Employee", EMP_FIELDS).catch(() => listAll("Employee", EMP_FIELDS_MIN)),
+			listAll("Employee", EMP_FIELDS_WIDE)
+				.catch(() => listAll("Employee", EMP_FIELDS))
+				.catch(() => listAll("Employee", EMP_FIELDS_MIN)),
 			/* `default_holiday_list` is what the Calendar screen's "Default Calendar"
 			   tick reads. Asked for with the same fallback as the employee list. */
 			listAll("Company", ["name", "abbr", "default_holiday_list"])
@@ -304,7 +313,7 @@ export async function loadLeaveFor(emp, ym) {
 		   must not also blank the calendar that reads it. */
 		const fewer = await listAll("Leave Application",
 			["name", "leave_type", "from_date", "to_date", "half_day", "half_day_date",
-				"total_leave_days", "posting_date", "status"],
+				"total_leave_days", "posting_date", "status", "description"],
 			[["employee", "=", emp]]).catch(() => null);
 		if (fewer) {
 			set({ applyHist: fewer });
@@ -415,7 +424,13 @@ export async function loadLeaveBalance(emp) {
 		const ledger = await listAll("Leave Ledger Entry",
 			["leaves", "from_date", "to_date", "transaction_type", "is_expired"],
 			[["employee", "=", emp], ["leave_type", "=", LEAVE_TYPE_NAME], ["docstatus", "=", 1]]).catch(() => []);
-		if (getState().apply.emp === emp) set({ applyBal: { rows, ledger: ledger || [] } });
+		/* Which Sundays earned leave (Sunday leave, 3 October 2026), read off
+		   the adjustments themselves so a Sunday is marked only once the site
+		   holds the day — never predicted here. */
+		const adjustments = await listAll("Leave Adjustment", ["reason_for_adjustment"],
+			[["employee", "=", emp], ["docstatus", "=", 1]]).catch(() => []);
+		const sundays = Object.assign({}, ...(adjustments || []).map((a) => credited(a.reason_for_adjustment)));
+		if (getState().apply.emp === emp) set({ applyBal: { rows, ledger: ledger || [], sundays } });
 	} catch (err) {
 		if (getState().apply.emp === emp) {
 			set({ applyBal: { rows: [], err: String(err.message || err).slice(0, 220) } });

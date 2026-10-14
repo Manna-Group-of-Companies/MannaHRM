@@ -442,12 +442,6 @@ export default function DailyDetail() {
 							</button>
 						</>
 					}
-					why={
-						<>
-							This is the document itself, not a drawing of it — the same HTML that Print, PDF and Word
-							are handed, rendered here so it can be read before it goes anywhere.
-						</>
-					}
 					extra={<iframe className="iopaper" title="Report preview" srcDoc={s.ddaDoc} />}
 				/>
 			)}

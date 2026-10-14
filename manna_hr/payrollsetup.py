@@ -10,7 +10,7 @@ drift.
 
 ## What is made, and what is only checked
 
-**Made:** three Salary Components — Leave Encashment, Salary Advance and Loan EMI.
+**Made:** Payroll Settings' `payroll_based_on`, and three Salary Components — Leave Encashment, Salary Advance and Loan EMI.
 They are the three the Salary Sheet has to tell apart: encashment reaches a slip
 as an earning, an advance and a loan instalment leave it as deductions.
 
@@ -19,6 +19,32 @@ Company's payroll accounts, and who has a salary structure. A Company's payable
 account is the accountant's, and a salary structure is somebody's wages — a
 tool that invented either would be the one that put a wrong number on a payslip.
 """
+
+#: Payroll Settings fields and the value each must hold.
+#:
+#: **`payroll_based_on` is what makes an absence cost a day's pay.** hrms's
+#: default is `Leave`, which pays every day except those under a Leave Without
+#: Pay application and reads Attendance not at all — so an Absent day is paid.
+#: `Attendance` takes Absent days off the slip as `absent_days` and LWP days as
+#: `leave_without_pay`. HR's rule (3 October 2026, `absencerule.py`) is that the
+#: month's first absence is Casual Leave and the second is a salary deduction;
+#: the second half of that is this one value. Found set to `Leave` on 6 October
+#: 2026, before any slip had been made, and changed with HR's word that day.
+#:
+#: `consider_unmarked_attendance_as` stays `Present`: a day nobody's Attendance
+#: covers is a gap in our data, not a person absent, and cutting pay for it would
+#: round the wrong way (CLAUDE.md §4).
+PAYROLL_SETTINGS = (
+	("payroll_based_on", "Attendance"),
+	("consider_unmarked_attendance_as", "Present"),
+)
+
+
+def settings_gaps(row):
+	"""`(field, has, wants)` for each PAYROLL_SETTINGS value `row` — the
+	site's Payroll Settings as a dict — holds differently."""
+	return [(f, row.get(f), want) for f, want in PAYROLL_SETTINGS if row.get(f) != want]
+
 
 #: Stock hrms doctypes a payroll run touches. A site without one has no
 #: Payroll module, and no tool here can fix that.

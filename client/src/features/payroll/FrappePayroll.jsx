@@ -33,7 +33,7 @@ export function periodText(start, end) {
 /** A card that opens its doctype's list on the desk — the whole card, so the
     target is the size of the thing being pointed at. Without a site to point
     at it is the same card, not a link. */
-function DocCard({ site, dt, what, n, groupWide }) {
+function DocCard({ site, dt, n, groupWide }) {
 	const body = (
 		<>
 			<span className="fptop">
@@ -42,7 +42,6 @@ function DocCard({ site, dt, what, n, groupWide }) {
 					{n === undefined ? "…" : n == null ? "—" : fmt(n)}
 				</span>
 			</span>
-			<span className="fpwhat">{what}</span>
 			{n === null ? <span className="fpnote">The site would not count these for this login.</span>
 				: groupWide ? <span className="fpnote">Every company — this one has no company field.</span> : null}
 		</>
@@ -83,7 +82,7 @@ export default function FrappePayroll() {
 			<div className="emhead">
 				<h2>Frappe Payroll</h2>
 				<span className="n">
-					The payroll Frappe HR runs on this site · {company || "all companies"}
+					{company || "all companies"}
 				</span>
 				<span className="right">
 					<button type="button" className="embtn" disabled={busy || !data} onClick={() => void refresh()}>
@@ -98,10 +97,10 @@ export default function FrappePayroll() {
 
 			{FRAPPE_PAYROLL.map((g) => (
 				<section className="fpgroup" key={g.title} aria-label={g.title}>
-					<h3>{g.title} <span>{g.what}</span></h3>
+					<h3>{g.title}</h3>
 					<div className="fpgrid">
-						{g.rows.map(([dt, what, byCo]) => (
-							<DocCard key={dt} site={site} dt={dt} what={what}
+						{g.rows.map(([dt, , byCo]) => (
+							<DocCard key={dt} site={site} dt={dt}
 								n={data ? data.counts[dt] : undefined} groupWide={Boolean(company) && !byCo} />
 						))}
 					</div>
@@ -168,12 +167,11 @@ export default function FrappePayroll() {
 
 			<Panel title="Payroll reports in Frappe" ico="📊">
 				<ul className="fpreports">
-					{FRAPPE_PAYROLL_REPORTS.map(([name, what]) => (
+					{FRAPPE_PAYROLL_REPORTS.map(([name]) => (
 						<li key={name}>
 							{site
 								? <a href={`${site}/app/query-report/${encodeURIComponent(name)}`} target="_blank" rel="noreferrer">{name}</a>
 								: <b>{name}</b>}
-							<span>{what}</span>
 						</li>
 					))}
 				</ul>

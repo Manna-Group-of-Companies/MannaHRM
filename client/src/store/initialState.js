@@ -144,11 +144,17 @@ const initial = {
 	tbnotif: false,
 	tbme: false,
 
+	/** Go to a page — the Ctrl+K search, layout/GoTo.jsx. A moment, not a
+	    preference, so it is never stored and always starts shut. */
+	palette: false,
+
 	/* Employee Detail reads one whole record at a time and keeps what it read:
 	   the same person is re-rendered on every keystroke elsewhere, and
 	   re-fetching them each time would be a request per keypress. */
 	empDoc: {},
 	empSel: "",
+	/* The company whose flow chart Employees → Hierarchy Chart opened; "" is the head office. */
+	hcCompany: "",
 	/* Which of the profile's thirteen panes is open. Kept here rather than in
 	   the page so that stepping between two people compares the same pane —
 	   which is the whole reason somebody opens two records in a row. */
@@ -602,7 +608,12 @@ const initial = {
 	   All of this went with the page on 4 September 2026 and came back with it
 	   the same day; `empSel` never left, because four other screens read it. */
 	empview: "grid",
-	empstatus: "",
+	/* Active, not All (3 October 2026): a deactivated person is off the cards
+	   until somebody asks for InActive on the status filter. */
+	empstatus: "Active",
+	/* Only the records the bridge made from a fingerprint punch and HR has
+	   not completed yet — lib/scope.js needsDetails. */
+	empneeds: false,
 	empmenu: false,
 	empnew: false,
 	empmore: false,
@@ -844,6 +855,9 @@ const initial = {
 	applyPunch: {},
 	/* The person's leave balance per type, off hrms — see loadLeaveBalance. */
 	applyBal: null,
+	/** The last automatic run of HR's leave rules — api/leaverules.js — as
+	    {at, sunday, absence}; null until one has run in this tab. */
+	leaveRules: null,
 	/* The month's approved leave, group-wide, for the three cards over Apply
 	   Leave — see loadLeaveMonth. */
 	lvMonth: { key: "", state: "", rows: [] },

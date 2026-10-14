@@ -81,6 +81,15 @@ laptop that exists twice and is depreciated once. What ERPNext has no answer for
 is *a handover to a person, in units, that may come partly back* — that is
 `Asset Assignment`.
 
+Recruitment is hrms's own, with nothing added but text. A position is a
+`Job Opening`, a resume is a `Job Applicant` on it with the file in
+`resume_attachment`, LinkedIn and Indeed are `Job Applicant Source` records, and
+the score out of ten is `applicant_rating` (a Rating holds a fraction, so 7.4 is
+stored as 0.74 and the desk shows it as stars). hrms has nowhere to say what a
+position needs, so that is five text fields on `Job Opening`, and why somebody
+scored what they did is one on `Job Applicant` — §13. The rule is
+`client/src/lib/resumescore.js`; which seats are open is `client/src/lib/vacancy.js`.
+
 ## 4. Employees
 
 | Page | Doctype | |
@@ -92,6 +101,7 @@ is *a handover to a person, in units, that may come partly back* — that is
 | CTC / Earnings | `Salary Component`, `Salary Detail` | stock |
 | Categories | `Employee Category Type`, `Employee Category Value` | ours |
 | Calendar | `Holiday List` | stock |
+| Hierarchy Chart → an open seat's Resumes | `Job Opening`, `Job Applicant`, `Job Applicant Source` + custom fields | stock |
 
 **Categories is the one that needed a doctype and did not have one.** A category
 type becomes a `Custom Field` on `Employee` — that half ERPNext can do. The
@@ -347,6 +357,8 @@ adding a doctype for it would mean a person existing twice. These ship as
 | `Employee Onboarding` | the candidate's own details, so a candidate is not a doctype shadowing `Employee` |
 | `Employee Checkin` | source, geofence result, distance in metres |
 | `Asset` | the one detail box Assets Details draws |
+| `Job Opening` | what a position's resumes are scored against: must have, good to have, minimum years, qualification, location |
+| `Job Applicant` | the score's breakdown, one line per criterion |
 
 ---
 

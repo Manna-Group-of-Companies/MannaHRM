@@ -138,7 +138,7 @@ export function OtReport() {
 			</div>
 			{err ? <div className="deerr" role="alert"><b>{err}</b></div> : null}
 			{!ready ? <div className="regload">Reading {dmy(from)} – {dmy(to)}…</div>
-				: !ot.length ? <Empty title="No overtime entered in this range">HR adds OT by clicking a day on Attendance Regularization.</Empty>
+				: !ot.length ? <Empty title="No overtime entered in this range" />
 					: (
 						<>
 							<h4 className="ddasection">By employee</h4>
@@ -283,7 +283,7 @@ export function AbsentReport() {
 			</div>
 			{err ? <div className="deerr" role="alert"><b>{err}</b></div> : null}
 			{!ready ? <div className="regload">Reading {dmy(day)}…</div>
-				: !list.length ? <Empty title="Nobody absent">Everybody active punched, is on leave, is off, or the day is not over yet.</Empty>
+				: !list.length ? <Empty title="Nobody absent" />
 					: <Table cols={ABSENT_COLS} rows={list} keyOf={(r) => r.emp.name} />}
 		</>
 	);

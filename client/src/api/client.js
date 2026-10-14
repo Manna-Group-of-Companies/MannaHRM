@@ -268,8 +268,12 @@ export async function api(path, params) {
 
    `size` is for the few reads that are big by nature — a month of everybody's
    punches is thousands of rows, and at 100 a page that is dozens of requests
-   against a site with a daily compute limit. */
-export async function listAll(label, fields, filters, size = 100) {
+   against a site with a daily compute limit.
+
+   `orFilters` is Frappe's own `or_filters`, ANDed with `filters` as a group —
+   for a read like "these thirteen Sundays", which is one request this way and
+   thirteen otherwise. */
+export async function listAll(label, fields, filters, size = 100, orFilters = null) {
 	let out = [];
 	let start = 0;
 	for (;;) {
@@ -279,6 +283,7 @@ export async function listAll(label, fields, filters, size = 100) {
 			limit_start: start,
 		};
 		if (filters) p.filters = JSON.stringify(filters);
+		if (orFilters) p.or_filters = JSON.stringify(orFilters);
 		const page = (await api("/api/resource/" + dt(label), p)).data || [];
 		out = out.concat(page);
 		if (page.length < size) return out;
@@ -342,7 +347,7 @@ export async function apiCreate(label, doc) {
 
 /** Remove one document. The site's link validation refuses a master that
     anything still points at, with the count in the message. */
-/** Create a document **submitted** — for five doctypes only.
+/** Create a document **submitted** — for seven doctypes only.
 
     Shift Assignment (16 Sep 2026): a draft assignment rosters nobody, so
     creating one and leaving it would read as done and change nothing, which is
@@ -360,8 +365,21 @@ export async function apiCreate(label, doc) {
     why the amount is not in the document sent: it is the policy's twelve a
     year, turned into one a month by hrms on the site, and the allocation
     submit creates is hrms's own arithmetic. The site validates roles (HR User
-    and HR Manager) and overlaps. Throws what the site said. */
-const SUBMITTED_FROM_HERE = new Set(["Shift Assignment", "Leave Policy", "Leave Policy Assignment", "Salary Structure", "Salary Structure Assignment"]);
+    and HR Manager) and overlaps. Throws what the site said.
+
+    Leave Application (3 Oct 2026, the office absence rule — api/absencerule.js):
+    one approved day of Casual Leave for an office employee's first absence in
+    a month. Created and submitted in one request, because a draft that
+    reached the site and then failed to submit would be an application nobody
+    raised sitting in somebody's queue. hrms checks the balance and overlapping
+    leave on the site, and marks the day On Leave itself.
+
+    Leave Adjustment (3 Oct 2026, Sunday leave — api/sundayleave.js): the days
+    an office employee's worked Sundays add to their Casual Leave. A draft
+    adjustment adds nothing, and hrms allows one submitted adjustment per
+    allocation, so it is created submitted, and replaced by cancel-and-amend
+    when the total changes. */
+const SUBMITTED_FROM_HERE = new Set(["Shift Assignment", "Leave Policy", "Leave Policy Assignment", "Salary Structure", "Salary Structure Assignment", "Leave Application", "Leave Adjustment"]);
 
 export async function apiCreateSubmitted(label, doc) {
 	if (!SUBMITTED_FROM_HERE.has(label)) throw new Error(`${label} is not created submitted from here.`);

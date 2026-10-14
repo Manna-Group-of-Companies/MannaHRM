@@ -107,8 +107,6 @@ function Row({ row, children }) {
 			</label>
 			<span className="ctl">
 				{children}
-				{off ? <span className="hint" title={row.why}>no field on the site</span> : null}
-				{row.blurb ? <span className="blurb">{row.blurb}</span> : null}
 			</span>
 		</>
 	);
@@ -174,8 +172,7 @@ export default function ShiftWizard({ onClose }) {
 		   the problem. */
 		<div className="note">
 			This shift ends at or before it starts, which the site reads as running <b>overnight</b> —
-			{" "}{f.start} to {f.end} the next day. Allowed here because it is allowed there; said
-			because a typo and a night shift look identical in two boxes.
+			{" "}{f.start} to {f.end} the next day.
 		</div>
 	) : null;
 
@@ -241,7 +238,6 @@ export default function ShiftWizard({ onClose }) {
 					onChange={(e) => setF({ hasbreak: e.target.checked })} />
 				This shift contains break
 			</label>
-			<p className="blurb">{SHW_TIMING[0].blurb}</p>
 
 			<div className="shwgrid">
 				{/* Start and end are on the first step, beside the name. */}
@@ -258,7 +254,7 @@ export default function ShiftWizard({ onClose }) {
 			</div>
 
 			<div className="note">
-				Runs {f.start} to {f.end}{f.end <= f.start ? " the next day" : ""} — set on the first step.
+				Runs {f.start} to {f.end}{f.end <= f.start ? " the next day" : ""}.
 			</div>
 		</>
 	);
@@ -307,18 +303,8 @@ export default function ShiftWizard({ onClose }) {
 				<div className="shwform">
 					{/* What Save is about to do. Before the form rather than after it:
 					    it changes what the button at the bottom means. */}
-					{fresh ? (
-						<div className="note">
-							A new Shift Type. Save <b>creates it on the ERPNext site</b>, as you, and the site's
-							own validation decides whether it is accepted.
-						</div>
-					) : w.state === "loading" ? (
+					{fresh ? null : w.state === "loading" ? (
 						<div className="note">Asking the site whether it holds a Shift Type called “{w.row}”…</div>
-					) : w.ours === true ? (
-						<div className="note">
-							The site holds <b>{w.row}</b>, and the boxes it has a field for are filled from it.
-							Save <b>changes it on the site</b> — only the boxes that were changed are sent.
-						</div>
 					) : w.ours === false ? (
 						<div className="note">
 							No Shift Type called <b>{w.row}</b> could be read from this site, so the boxes open

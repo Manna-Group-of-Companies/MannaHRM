@@ -770,9 +770,7 @@ export default function AssignEntry() {
 										<span className="mono">{picked.name}</span></>
 								) : (
 									<span className="muted">
-										{emp
-											? "No handover picked — the eye in the Action column fills these boxes."
-											: "Nobody is picked, so there is nothing to fill these from."}
+										{emp ? "No handover picked." : "Nobody is picked."}
 									</span>
 								)}
 							</span>
@@ -783,19 +781,13 @@ export default function AssignEntry() {
 				{s.assignErr ? (
 					<div className="asgbad mt-[.6rem]">
 						<b>Asset Assignment could not be read.</b> {s.assignErr} Handovers cannot be written
-						until the <span className="mono">manna_hr</span> app is installed on the site — which
-						is a different thing from this person having been given nothing.
+						until the <span className="mono">manna_hr</span> app is installed on the site.
 					</div>
 				) : null}
 			</div>
 
 			{emp && !held.length ? (
-				<Empty title={`Nothing is out with ${emp.employee_name}`}>
-					No asset on the register names them as custodian. Where handovers are recorded that is the
-					same sentence as &ldquo;they have been given nothing&rdquo;; where they are not, it says
-					only that nobody wrote it down. {fmt(all.filter((a) => a.custodian).length)} of{" "}
-					{fmt(all.length)} assets name anybody at all.
-				</Empty>
+				<Empty title={`Nothing is out with ${emp.employee_name}`} />
 			) : null}
 		</div>
 	);

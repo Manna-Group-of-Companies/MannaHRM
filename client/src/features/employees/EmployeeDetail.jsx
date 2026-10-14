@@ -250,7 +250,6 @@ export default function EmployeeDetail() {
 
 					<Row label="Separated Date From" htmlFor="edSepA">
 						{span(s.edSepA, (v) => set({ edSepA: v }), s.edSepB, (v) => set({ edSepB: v }), "edSepA")}
-						<span className="hint">relieving date</span>
 					</Row>
 
 					<Row label="Birthday Date From" htmlFor="edDobA">
@@ -308,7 +307,6 @@ export default function EmployeeDetail() {
 						</span>
 						<Row label="Age As On Date" htmlFor="edAgeOn">
 							{dateIn(s.edAgeOn, (v) => set({ edAgeOn: v }), "edAgeOn")}
-							<span className="hint">whole years on that day</span>
 						</Row>
 					</div>
 				</fieldset>
@@ -463,9 +461,7 @@ export default function EmployeeDetail() {
 							</table>
 						</Scroll>
 					) : (
-						<Empty title="Nobody matched">
-							The criteria are stricter than the data. Reset the fields and narrow one at a time.
-						</Empty>
+						<Empty title="Nobody matched" />
 					)}
 				</>
 			) : null}

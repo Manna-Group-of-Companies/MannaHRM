@@ -299,8 +299,7 @@ export default function CreateEmployee() {
 					) : null}
 					<p>
 						Created as <b>{done.status || "Active"}</b>
-						{done.company ? <> in <b>{done.company}</b></> : null}. The directory is being
-						re-read, so they appear in Employee Master in a moment.
+						{done.company ? <> in <b>{done.company}</b></> : null}.
 					</p>
 					{gave ? (
 						<p>
@@ -329,19 +328,6 @@ export default function CreateEmployee() {
 					{done.custom_punch_method !== "Mobile App" && done.attendance_device_id
 						? <OnMachine number={done.attendance_device_id} employee={id}
 							employeeName={done.employee_name} /> : null}
-					{/* A photograph and any document scans could not be part of the form
-					    above — Frappe cannot attach a file to a record that does not
-					    exist yet, so there was nowhere to send one from until this
-					    moment. Named rather than left for somebody to notice missing
-					    later, the same reason the punch-method paragraph above exists. */}
-					{id ? (
-						<p>
-							This form could not ask for a photograph or a document scan — there was no record
-							yet to attach one to. <b>Add photo & documents</b> below opens their profile,
-							where the pencil on the photo and the Document Entry page under On Board both
-							take one now.
-						</p>
-					) : null}
 
 					{/* What this form did not ask for and hrms needs before the record
 					    does anything. Named rather than implied — a new Employee with

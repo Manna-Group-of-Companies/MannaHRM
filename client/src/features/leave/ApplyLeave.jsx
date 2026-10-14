@@ -13,6 +13,8 @@ import { giveMonthlyLeave } from "@/api/monthlyleave";
 import { casualLeaveGroup, casualLeaveRefusal, monthCarry } from "@/lib/monthlyleave";
 import { loadLeaveBalance, loadLeaveMonth } from "@/api/load";
 import { leaveCards } from "@/lib/leavecards";
+import { leaveRulesFor, settleFirstAbsence } from "@/api/leaverules";
+import { EFFECTIVE_FROM, appliesTo, isAuto, plan } from "@/lib/absencerule";
 import { Stat, Stats } from "@/components/charts";
 
 /* Apply Leave, as HR asked for it on 24 September 2026: one column, in the
@@ -79,11 +81,50 @@ function dayState(s, iso, hol) {
 	);
 	if (app) {
 		if (app.half_day && String(app.half_day_date || "").slice(0, 10) === iso) return "partial";
+		if (app.status === "Approved" && isAuto(app.description)) return "autocl";
+		if (app.status === "Approved" && /without pay/i.test(app.leave_type || "")) return "absent";
 		return app.status === "Approved" ? "appr" : "unappr";
 	}
 	const h = hol[iso];
+	const att = ATT_STATE[(s.applyAtt || {})[iso]] || "";
+	/* Worked on a weekly off or a holiday (3 October 2026): the attendance is
+	   what was paid, so it is what the day shows. The tile still says it was a
+	   weekly off — see workedOff. */
+	if (h && (att === "present" || att === "partial")) return att;
 	if (h) return h.weekly_off ? "weekoff" : "holiday";
-	return ATT_STATE[(s.applyAtt || {})[iso]] || "";
+	return att;
+}
+
+/** The Absent day the absence rule will give this month's Casual Leave to,
+    while it still stands Absent — "" when the month already has its leave, or
+    the person earns no Casual Leave. The rule's own `plan` over the month on
+    screen, so the page and the rule cannot pick different days.
+
+    Only ever a reason to run the rule (settleFirstAbsence), never drawn as
+    leave: until the site holds the application the day is unpaid, and the rule
+    can still be refused it for want of a balance — the note under the calendar
+    then says so. */
+export function firstAbsence(s, emp, ym) {
+	if (!emp || !appliesTo(emp.designation)) return "";
+	const live = (s.applyHist || []).filter((r) => r.status === "Open" || r.status === "Approved");
+	const auto = live
+		.filter((r) => r.status === "Approved" && isAuto(r.description) && String(r.from_date).slice(0, 7) === ym)
+		.map((r) => ({ name: r.name, day: r.from_date }));
+	const absent = Object.entries(s.applyAtt || {})
+		.filter(([d, st]) => st === "Absent" && d.slice(0, 7) === ym && d >= EFFECTIVE_FROM)
+		.map(([d]) => d);
+	const covered = absent.filter((d) => live.some((r) => !isAuto(r.description) && r.from_date <= d && d <= r.to_date));
+	return plan(absent, auto, [], covered).give || "";
+}
+
+/** A day off the person came in on: `"marked"` when Attendance says they
+    worked it, `"punched"` when the machine saw them and no Attendance says so
+    yet, which counts for nothing until the shift job marks the day. */
+function workedOff(s, iso, hol, p) {
+	if (!hol[iso]) return "";
+	const att = ATT_STATE[(s.applyAtt || {})[iso]] || "";
+	if (att === "present" || att === "partial") return "marked";
+	return p ? "punched" : "";
 }
 
 /** The holiday calendar the page draws: the person's own list, else their
@@ -361,6 +402,10 @@ function LvCalendar({ s, hol, list, emp, onPick }) {
 					const name = st ? LV_LEGEND.find((l) => l[0] === st)[1] + (hname ? ` — ${hname}` : "") : "";
 					const picked = from <= iso && iso <= till;
 					const p = emp ? (s.applyPunch || {})[iso] : null;
+					const off = !out && emp ? workedOff(s, iso, hol, p) : "";
+					/* Sunday leave: the day this Sunday added to Casual Leave, as
+					   the site's adjustment records it. */
+					const sun = off ? (s.applyBal?.sundays || {})[iso] || 0 : 0;
 					const cls = "cell" + (out ? " out" : "") + (iso === today ? " now" : "")
 						+ (picked ? " lvsel" : "") + (picked && (iso === from || iso === till) ? " end" : "");
 					const body = (
@@ -380,7 +425,16 @@ function LvCalendar({ s, hol, list, emp, onPick }) {
 								<span className="lvtag">
 									<em className={"lvdot " + st} />
 									{/* A holiday says which one — "Onam" rather than "H". */}
-									<small className={hname ? "lvholname" : undefined}>{hname || LV_CODE[st]}</small>
+									<small className={hname ? "lvholname" : undefined}
+										title={sun
+											? `Sunday leave: working this Sunday added ${sun === 1 ? "a day" : "half a day"} to Casual Leave.`
+											: off === "punched"
+												? "Punched on a day off, but no Attendance says so yet — it counts once the shift job marks the day."
+												: undefined}>
+										{hname || LV_CODE[st]}
+										{sun ? ` · +${sun === 1 ? "1" : "½"} CL`
+											: off === "marked" ? " · WO" : off === "punched" ? " · punched" : ""}
+									</small>
 								</span>
 							) : null}
 						</>
@@ -402,7 +456,7 @@ function LvCalendar({ s, hol, list, emp, onPick }) {
 			<span className="lvhint" role="status">
 				{f.picking
 					? <>From <b>{dmy(from)}</b> — now click the last day of the leave, or the same day again for one day.</>
-					: <>Click a day to start the leave, then the day it ends. <b>{dmy(from)}{from !== till ? ` – ${dmy(till)}` : ""}</b> is selected.</>}
+					: null}
 			</span>
 
 			<LvHolidays list={list} hol={hol} ym={ym} />
@@ -448,8 +502,7 @@ function LvMonthLeave({ s, emp, ym }) {
 			<div className="lvmonth">
 				<b>{MONTHLY_LEAVE.type}</b>
 				<span>
-					<b>+{fmt(earnsOn(emp, ym + "-01") ? MONTHLY_LEAVE.annual / 12 : 0)}</b> a month, and what is not
-					used carries to the next month
+					<b>+{fmt(earnsOn(emp, ym + "-01") ? MONTHLY_LEAVE.annual / 12 : 0)}</b> a month
 				</span>
 				<span className="muted">not given on the site yet</span>
 			</div>
@@ -580,6 +633,29 @@ function outsideWhy(s, type, from, till, who) {
 /** The dates an allocation covers, as a sentence fragment. */
 const periodText = (r) => (r.periods || []).map(([a, b]) => `${dmy(a)} – ${dmy(b)}`).join(", ");
 
+/** What HR's automatic leave rules could not do for this person on their last
+    run — an absence left Absent for want of a balance, a refusal, a Sunday
+    allocation another adjustment holds. Said here because nothing else would:
+    the rules run by themselves, and a refusal nobody reads is a salary cut
+    nobody chose. */
+function LvRuleNotes({ s, emp }) {
+	const notes = leaveRulesFor(s, emp.name);
+	if (!notes.length) return null;
+	return (
+		<span className="muted lvrules">
+			{notes.map((n, i) => (
+				<span key={i}>
+					{n.rule === "sunday"
+						? <>Sundays worked are not being added to {MONTHLY_LEAVE.type}: {n.error}</>
+						: n.error && /^no /.test(n.error)
+							? <><b>{dmy(n.day)}</b> stays Absent — no {MONTHLY_LEAVE.type} to give on that day.</>
+							: <><b>{dmy(n.day)}</b> was not taken as {MONTHLY_LEAVE.type}: {n.error}</>}
+				</span>
+			))}
+		</span>
+	);
+}
+
 /** The person's balance, one line per leave type, as hrms counts it — and the
     Give monthly leave buttons whenever Casual Leave is not among them, not only
     when nothing is: somebody holding a Sick Leave allocation and no Casual Leave
@@ -603,6 +679,7 @@ function LvBalance({ s, emp }) {
 					</span>
 				</span>
 			))}
+			<LvRuleNotes s={s} emp={emp} />
 			{monthly ? null : (
 				<>
 					<span className="muted">
@@ -635,9 +712,15 @@ export default function ApplyLeave() {
 	const ym = f.month || from.slice(0, 7);
 
 	/* One read per person and per month on screen: the calendar and the history
-	   fill the moment somebody is picked. */
+	   fill the moment somebody is picked. Then, if the month still holds a first
+	   absence the absence rule has not turned into Casual Leave, it is turned now
+	   — the calendar shows the leave the site holds, never one it might. */
 	useEffect(() => {
-		void loadLeaveFor(f.emp, ym);
+		void loadLeaveFor(f.emp, ym).then(() => {
+			const st = getState();
+			if (!f.emp || st.apply.emp !== f.emp) return;
+			if (firstAbsence(st, st.byName[f.emp], ym)) void settleFirstAbsence(f.emp, ym);
+		});
 	}, [f.emp, ym]);
 
 	/* The three cards' leave, once per month on screen — not per person. */
@@ -815,7 +898,6 @@ export default function ApplyLeave() {
 							{dmy(from)}{single ? "" : ` – ${dmy(till)}`}
 							{spanDays(from, till) ? ` · ${total} day${total === 1 ? "" : "s"}` : ""}
 						</b>
-						<span className="hint">Click the days on the calendar.</span>
 					</div>
 
 					<div className="lvpair">
@@ -891,7 +973,7 @@ export default function ApplyLeave() {
 
 			<Panel title="Leave History" cov={f.emp ? "part" : "none"} ico="🗓">
 				{!f.emp ? (
-					<Empty title="Nobody chosen">The history fills from the person picked above.</Empty>
+					<Empty title="Nobody chosen" />
 				) : (s.applyHist || []).length ? (
 					<Scroll>
 						<table style={{ minWidth: 900 }}>

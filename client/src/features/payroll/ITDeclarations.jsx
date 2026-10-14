@@ -4,7 +4,6 @@ import { scoped } from "@/lib/scope";
 import { fmt, tidyDept } from "@/lib/format";
 import { deskImport, deskNew, deskUrl } from "@/lib/desk";
 import { Cols, Desk, Empty, Gap, Panel, Scroll } from "@/components/ui";
-import { fyOf } from "@/data/payroll";
 
 
 /* IT DECLARATIONS, photographed 29 August 2026 and drawn here control for
@@ -141,13 +140,13 @@ function PanPanel({ s }) {
 				</div>
 			) : (
 				<>
-					<p className="muted">
-						{st === "loading" ? "Reading…" : st === "absent"
-							? "The read was refused, or `custom_pan_no` is not a field on this site. Either way "
-								+ "nothing here holds a PAN, which is the same answer for this page."
-							: "Not read yet. It is one request against Employee, and this screen has no Generate "
-								+ "to hang it on — so it is asked for rather than taken."}
-					</p>
+					{st === "loading" || st === "absent" ? (
+						<p className="muted">
+							{st === "loading" ? "Reading…"
+								: "The read was refused, or `custom_pan_no` is not a field on this site. Either way "
+									+ "nothing here holds a PAN, which is the same answer for this page."}
+						</p>
+					) : null}
 					{st !== "ok" && st !== "loading" && (
 						<button className="btn imp mt-[.6rem]" onClick={() => void panProbe()}>
 							▤ Check PAN coverage
@@ -269,19 +268,9 @@ export default function ITDeclarations() {
 							<tr>
 								<td colSpan={3} className="none">
 									{emp ? (
-										<>
-											No declaration for {emp.employee_name}, and none for anybody else either:{" "}
-											<code>Employee Tax Exemption Declaration</code> holds no rows on this site,
-											payroll is deferred, and no payroll doctype is read by this dashboard.
-											The financial year this would sit under is <b>{fyOf()}</b>.
-										</>
+										<>No declaration for {emp.employee_name}.</>
 									) : (
-										<>
-											Nobody is picked — and their table is empty in the capture for the same
-											reason. This screen is one person at a time. The picker above is live
-											because <code>Employee</code> is: {fmt(pool.length)} people are in scope
-											for it.
-										</>
+										<>Nobody is picked.</>
 									)}
 								</td>
 							</tr>
@@ -296,27 +285,6 @@ export default function ITDeclarations() {
 
 				<Cols>
 					<PanPanel s={s} />
-
-					<Panel title="What would stand behind this screen" cov="skip" ico="🧾">
-						<div className="rows">
-							<div className="row">
-								<span><code>Employee Tax Exemption Declaration</code></span>
-								<span className="val muted">what is claimed — stock</span>
-							</div>
-							<div className="row">
-								<span><code>Employee Tax Exemption Proof Submission</code></span>
-								<span className="val muted">what is produced for it — stock</span>
-							</div>
-							<div className="row">
-								<span><code>Employee Tax Exemption Sub Category</code></span>
-								<span className="val muted">the master, and it is empty</span>
-							</div>
-							<div className="row">
-								<span><code>Income Tax Slab</code></span>
-								<span className="val muted">old regime or new — undecided</span>
-							</div>
-						</div>
-					</Panel>
 				</Cols>
 
 				<div className="mt-[.7rem] flex flex-wrap gap-[.6rem] justify-end">
@@ -337,11 +305,7 @@ export default function ITDeclarations() {
 				</div>
 
 				<div className="mt-[.7rem]">
-					<Empty title="No declaration exists, for anybody">
-						Not a filter that found nothing. Payroll is deferred, the sub-category master is empty,
-						and the regime is undecided — so there is nothing to list under any person or any
-						financial year, and this page states no total.
-					</Empty>
+					<Empty title="No declaration exists, for anybody" />
 				</div>
 			</div>
 		</>

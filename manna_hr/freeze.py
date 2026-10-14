@@ -129,8 +129,16 @@ def guard_leave(doc, method=None):
 
 	Only an approved leave writes days. A rejected one is submitted too, and
 	changes nothing in the month, so it is let through.
+
+	**On cancel, the status as stored, not as the document now says.** hrms's
+	own `before_cancel` sets `status = "Cancelled"` before this hook runs, so
+	reading `doc.status` let every cancel of an approved leave through a
+	submitted month — and cancelling it withdraws the day's On Leave row.
 	"""
-	if doc.status != "Approved":
+	status = doc.status
+	if method == "before_cancel":
+		status = frappe.db.get_value(doc.doctype, doc.name, "status") or status
+	if status != "Approved":
 		return
 	company = _company_of(doc)
 	for period in rules.months_touched(doc.from_date, doc.to_date):

@@ -90,6 +90,22 @@ password = 0
 # confident lie.
 report_direction = false
 
+# The company somebody belongs to when they punch here and are on no Employee
+# record. With it, the bridge creates the Employee — named as on the machine,
+# joined on the day of their first punch, with a placeholder gender and date of
+# birth and "Needs details" ticked — and sends their punches on the same pass.
+# Without it, their punches wait in the queue until HR links them, as before.
+# Spelt exactly as the Company on the site.
+# company = "Manna Treads"
+
+# What this machine is told its time zone is when it pushes, in place of
+# [adms] timezone. Leave it out unless the machine's clock is wrong by exactly
+# the half hour: some firmware reads "5.5" as 5 and runs 30 minutes behind IST,
+# which stamps every arrival half an hour early and makes nobody late. "330" is
+# the same zone in minutes. The machine takes it at its next hello, so look at
+# its screen a minute after restarting the bridge.
+# timezone = "330"
+
 # Push only: no address, so the bridge never reads it. Right for a machine on a
 # network this box cannot reach — and a complete setup on its own. Nothing
 # polls, and `pyzk` is never imported.

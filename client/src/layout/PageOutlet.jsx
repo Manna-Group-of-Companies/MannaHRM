@@ -1,6 +1,6 @@
 /** Whichever page the URL names, and the reads a module makes on first sight. */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useApp } from "@/store";
 import { loadOnBoard, loadShiftAssignments } from "@/api/load";
 import { pageFor, fullPage } from "@/routes/registry";
@@ -47,10 +47,33 @@ export default function PageOutlet() {
 		}
 	}, [home, section, subtab, shown]);
 
+	/* **The page arriving, rather than appearing.** A short fade and rise on
+	   every change of page, so a click visibly *went* somewhere — on a screen
+	   where two report pages share a layout, an instant swap reads as nothing
+	   having happened.
+
+	   The Web Animations API rather than a `key` on <main> and a CSS animation:
+	   a key remounts the page, which throws away its state — a half-filled
+	   filter, a scroll position, an open row — and refetches whatever it reads
+	   on mount. Animating the element that is already there costs nothing.
+
+	   Skipped entirely for somebody who asked their system for less motion,
+	   and wherever `animate` does not exist (jsdom, an old browser). */
+	const main = useRef(null);
+	useEffect(() => {
+		const el = main.current;
+		if (!el || typeof el.animate !== "function") return;
+		if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+		el.animate(
+			[{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }],
+			{ duration: 260, easing: "cubic-bezier(.2, .8, .2, 1)" },
+		);
+	}, [home, shown]);
+
 	const full = fullPage(s);
 	const Page = pageFor(home, shown);
 	return (
-		<main className="content" id="page" tabIndex={-1}>
+		<main className="content" id="page" tabIndex={-1} ref={main}>
 			{full || <Page />}
 		</main>
 	);

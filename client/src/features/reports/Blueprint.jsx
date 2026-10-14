@@ -1,10 +1,9 @@
 import { useApp } from "@/store";
 import { active, scoped } from "@/lib/scope";
 import { fmt } from "@/lib/format";
-import { Cols, Empty, Gap, Html, Panel, Tile, Tiles } from "@/components/ui";
+import { Cols, Empty, Panel, Tile, Tiles } from "@/components/ui";
 import Link from "@/routes/Link";
 import { FACTOHR_MENU } from "@/data/factohr";
-import { needFor } from "@/data/needs";
 
 /* ---------------------------------------------------------------------------
    A page for one of Factor HR's menu items that this app does not do yet.
@@ -88,8 +87,7 @@ export default function Blueprint({ section, title }) {
 		return <Empty title="No such item">Nothing on Factor HR's menu is registered here.</Empty>;
 	}
 
-	const [, kind, group, , desc] = row;
-	const plan = needFor(section, kind, title);
+	const [, kind, group] = row;
 	const held = holdings(section, s);
 
 	return (
@@ -102,29 +100,6 @@ export default function Blueprint({ section, title }) {
 			</div>
 
 			<Cols>
-				{/* Their words, marked as theirs. This is the best short statement of
-				    what the screen is for that exists, and rewriting it would put
-				    this app's guess where their product's own description belongs. */}
-				<Panel title="What it is, in Factor HR's words" cov="none" ico="📖">
-					<p className="text-read text-ink">{desc}</p>
-				</Panel>
-
-				<Panel title={plan.refuse ? "Why this one is not coming" : "What it would take here"}
-					cov={plan.refuse ? "skip" : "none"} ico={plan.refuse ? "🚫" : "🧱"}>
-					{plan.refuse ? (
-						<Gap><Html html={plan.need} /></Gap>
-					) : (
-						<p className="text-read text-ink"><Html html={plan.need} /></p>
-					)}
-					<div className="rows mt-[.8rem]">
-						<div className="row">
-							<span>Read from</span>
-							<span className="val">{plan.doctype}</span>
-						</div>
-					</div>
-					{plan.warn ? <Gap><Html html={plan.warn} /></Gap> : null}
-				</Panel>
-
 				{held ? (
 					<Panel title="What the site holds today" cov="live" ico="📦">
 						<Tiles>

@@ -53,3 +53,17 @@ def test_a_person_with_no_structure_is_listed_because_hrms_skips_them_without_a_
 def test_the_roles_are_stock_and_the_loan_doctypes_are_ours():
 	assert ps.PAYROLL_ROLES == ("HR Manager", "HR User")
 	assert all(dt.startswith("Employee Loan") for dt in ps.LOAN_DOCTYPES)
+
+
+def test_payroll_is_based_on_attendance_because_on_leave_an_absent_day_is_paid():
+	assert dict(ps.PAYROLL_SETTINGS)["payroll_based_on"] == "Attendance"
+
+
+def test_a_day_no_attendance_covers_is_paid_because_a_gap_in_our_data_is_not_an_absence():
+	assert dict(ps.PAYROLL_SETTINGS)["consider_unmarked_attendance_as"] == "Present"
+
+
+def test_a_site_left_on_hrms_default_is_reported_with_what_it_has_and_what_it_wants():
+	row = {"payroll_based_on": "Leave", "consider_unmarked_attendance_as": "Present"}
+	assert ps.settings_gaps(row) == [("payroll_based_on", "Leave", "Attendance")]
+	assert ps.settings_gaps(dict(ps.PAYROLL_SETTINGS)) == []

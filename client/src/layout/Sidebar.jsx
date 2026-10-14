@@ -1,16 +1,17 @@
 /** The module rail — Factor HR's nine, in its order, as a list you read down.
  *
  *  Three parts, and only the middle one is navigation: the wordmark with the
- *  collapse control, the nine links under four headings, and a foot saying who
- *  is signed in and whether the site is answering.
+ *  collapse control, the links under their headings with the open module's
+ *  pages beneath it, and a foot saying whether the site is answering.
  *
  *  The collapsed state is `data-rail` on `.shell` rather than a class here,
  *  because the width it changes belongs to the grid the rail sits in — see
  *  AppShell. All this component does is press the button.
  */
 
-import { visibleSections, COV_LABEL, groupOf } from "@/data/sections";
-import { sectionFor } from "@/data/menus";
+import { visibleSections, COV_LABEL, groupOf, isHidden } from "@/data/sections";
+import { sectionFor, tabsFor } from "@/data/menus";
+import { MODULES } from "@/routes/registry";
 import { useApp, set } from "@/store";
 import Link from "@/routes/Link";
 import { saveRail } from "@/lib/rail";
@@ -29,8 +30,22 @@ const RAIL_GLYPH = {
    the rest are one tap further, in the drawer More opens. */
 const BAR = ["dashboard", "employees", "attendance", "leave"];
 
+/** The pages of the open module, as the rail draws them under its link.
+
+    **The same list the page strip draws, read the same way** — `tabsFor` for
+    who may see what, `isHidden` for what Settings → Security took off — so the
+    two can never disagree about which pages a module has. Since 6 October 2026
+    this list *is* the navigation on a desktop with the rail open: one column
+    to read down, instead of a rail and then a strip of pills that ran off the
+    right-hand edge on Attendance. The strip is still drawn wherever this list
+    cannot be — a slim rail, a tablet, a phone — see `.navsub` in index.css. */
+export function pagesOf(section, user, admin) {
+	return tabsFor(section, MODULES[section]?.tabs || [], user, admin)
+		.filter((t) => !isHidden(section, t[0]));
+}
+
 export default function Sidebar() {
-	const { section, rail, drawer, user, conn, connState, admin } = useApp();
+	const { section, subtab, rail, drawer, user, conn, connState, admin } = useApp();
 	const slim = rail === "slim";
 
 	const shown = visibleSections().filter((m) => sectionFor(m.key, admin, user));
@@ -41,7 +56,7 @@ export default function Sidebar() {
 	const more = shown.length > bar.size;
 
 	/* The whole rail in one pass, so a heading is drawn by the first item under
-	   it rather than by a nested loop. Nine items and four headings read in one
+	   it rather than by a nested loop. Nine items and their headings read in one
 	   list is also what the bottom bar on a phone needs — there the headings are
 	   `display: none` and the links are already in the right order. */
 	const rows = [];
@@ -83,6 +98,29 @@ export default function Sidebar() {
 					<span className="cdot" data-cov={s.cov} aria-hidden="true" />
 			</Link>,
 		);
+		/* The open module's pages, under its link. Only the open one: nine
+		   modules each spilling a dozen pages is a hundred-row menu, and the
+		   point of this change was a shorter one. A module with a single page
+		   needs no list — its link already goes there. */
+		const pages = section === s.key ? pagesOf(s.key, user, admin) : [];
+		if (pages.length > 1) {
+			rows.push(
+				<div className="navsub" role="group" aria-label={`${s.label} pages`} key={s.key + ":pages"}>
+					{pages.map((t) => (
+						<Link
+							key={t[0]}
+							section={s.key}
+							subtab={t[0]}
+							className="navpage"
+							onClick={() => set({ drawer: false })}
+							aria-current={subtab === t[0] ? "page" : undefined}
+						>
+							{t[1]}
+						</Link>
+					))}
+				</div>,
+			);
+		}
 	}
 
 	return (

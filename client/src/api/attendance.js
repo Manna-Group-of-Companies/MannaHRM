@@ -246,12 +246,17 @@ export const hhmm = (t) => {
 };
 
 /** How a shift reads on a roster row: the name, and the window where it is
-    known. Their row prints both. */
+    known. Their row prints both.
+
+    Some names carry a window of their own — HR's sheet of 8 October 2026 named
+    them that way — and it is not always the one the site runs: `Cook shift
+    (08:00-04:00)` is 08:00–16:00. So a bracket at the end of a name gives way to
+    the window the site holds, rather than printing two that disagree. */
 export function shiftLabel(name, windows) {
 	if (!name) return "";
 	const w = windows && windows[name];
 	return w && w.start_time && w.end_time
-		? `${name} (${hhmm(w.start_time)}-${hhmm(w.end_time)})`
+		? `${name.replace(/\s*\([^()]*\)$/, "")} (${hhmm(w.start_time)}-${hhmm(w.end_time)})`
 		: name;
 }
 

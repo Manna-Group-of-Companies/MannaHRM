@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { clockOf, dailyRows, minutesOf, monthRollup } from "@/lib/dailydetail";
-import { hhmm } from "@/api/attendance";
+import { hhmm, shiftLabel } from "@/api/attendance";
 import { periodOf } from "@/lib/format";
 import { shiftPeriod } from "@/lib/monthlysummary";
 import { DDA_COLS } from "@/data/attendance";
@@ -118,5 +118,14 @@ describe("Daily Detail Attendance Report reads the whole range, not today's punc
 			{ employee: "E1", attendance_date: "2026-09-02", docstatus: 1, status: "Half Day", working_hours: 4 }] });
 		const [g] = monthRollup(rows);
 		expect(g).toMatchObject({ present: 1, half: 1, absent: 1, work: "12:00" });
+	});
+});
+
+describe("a shift's label on a roster row", () => {
+	it("a window in the name gives way to the one the site runs, so a row never shows two", () => {
+		const w = { "Hi-Tech Pretreads-Cook shift (08:00-04:00)": { start_time: "8:00:00", end_time: "16:00:00" } };
+		expect(shiftLabel("Hi-Tech Pretreads-Cook shift (08:00-04:00)", w)).toBe("Hi-Tech Pretreads-Cook shift (08:00-16:00)");
+		expect(shiftLabel("Office", W)).toBe("Office (08:30-17:30)");
+		expect(shiftLabel("Hi-Tech Pretreads-Cook shift (08:00-04:00)", {})).toBe("Hi-Tech Pretreads-Cook shift (08:00-04:00)");
 	});
 });

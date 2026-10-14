@@ -413,14 +413,18 @@ export const NEW_EMP_COPIED = new Set(["basic"]);
    one that says what is missing.
 
    Row shape: [label, icon, target, why]
-     target  "import"  ERPNext's Data Import wizard
+     target  "page:x"  a page of this module, /employees/x
+             "import"  ERPNext's Data Import wizard
              "holiday" the Holiday List master
-             ""        nothing here does this; the item is dead and says so */
+             ""        nothing here does this; the item is dead and says so
+
+   File Import opened ERPNext's Data Import until 5 October 2026, when HR asked
+   for it here: the import page takes the same columns as Create Employee and
+   says what each row will do before anything is written. */
 export const EMP_IMPORTS = [
-	["File Import", "up", "import",
-		"ERPNext's Data Import, which is what File Import is here: a spreadsheet in, Employee records "
-		+ "out, with a preview and an error report of its own. It writes on the site, under the site's "
-		+ "validation."],
+	["File Import", "up", "page:upload",
+		"New people, and corrections to people on file, from an Excel sheet with the same columns as "
+		+ "Create Employee. Matched on Emp Code; nothing is written until you press Apply."],
 	/* Their week-off is a column on a person. Here it is not — a week-off comes
 	   off the Holiday List somebody is pointed at, so what there is to import is
 	   lists, and the per-person half is one column on the File Import above. */
@@ -611,12 +615,6 @@ export const DL_KINDS = [
 			+ "behind them, and ERPNext's Employee has no attachment field for either.",
 	},
 ];
-
-/** Their instruction line, verbatim. Kept as their words rather than reworded,
-    because the sentence is also the finding: the path they recommend for the
-    whole company is the one this page cannot offer, and saying so under their
-    own sentence is sharper than replacing it. */
-export const DL_ADVICE = "Please use Generate in Background when downloading for all employees.";
 
 /** How many files this page will ask a browser to save in one go.
 

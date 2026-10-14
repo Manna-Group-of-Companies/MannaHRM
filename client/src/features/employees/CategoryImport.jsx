@@ -127,12 +127,7 @@ export default function CategoryImport({ only, onClose }) {
 			extra={
 				<div className="bulk">
 					<div className="bulkcard">
-						{only ? (
-							<span className="bulkhint">
-								Every row in the file is read as a <b>{only.name}</b> — this screen is that one
-								master, so a Category Type column in the file is ignored rather than obeyed.
-							</span>
-						) : (
+						{only ? null : (
 							<>
 								<label className="bulklab" htmlFor="ci-type">Category Type</label>
 								<select id="ci-type" className="dectl" value={pick} disabled={busy}
@@ -171,11 +166,7 @@ export default function CategoryImport({ only, onClose }) {
 							<div className="rows bulkrows">
 								<div className="row">
 									<span>
-										To create{" "}
-										<span className="muted">
-											Values in the file that this site does not hold yet. These are the only
-											rows anything is sent for.
-										</span>
+										To create
 									</span>
 									<span className="val">
 										<span className={"cov " + (plan.counts.make ? "live" : "none")}>
@@ -185,22 +176,14 @@ export default function CategoryImport({ only, onClose }) {
 								</div>
 								<div className="row">
 									<span>
-										Already there{" "}
-										<span className="muted">
-											Matched on the ID or on the name. Skipped rather than updated —
-											renaming a master renames it for everybody carrying it.
-										</span>
+										Already there
 									</span>
 									<span className="val">{plan.counts.have}</span>
 								</div>
 								{plan.counts.skip ? (
 									<div className="row">
 										<span>
-											Not written from here{" "}
-											<span className="muted">
-												A master this dialog will not create, or a category type that is a pay
-												rule with nothing to load into. The reason is on the row.
-											</span>
+											Not written from here
 										</span>
 										<span className="val">{plan.counts.skip}</span>
 									</div>
@@ -208,11 +191,7 @@ export default function CategoryImport({ only, onClose }) {
 								{plan.counts.bad ? (
 									<div className="row">
 										<span>
-											Cannot be read{" "}
-											<span className="muted">
-												No value on the row, or a category type this screen does not know.
-												Skipped; the rest of the file still imports.
-											</span>
+											Cannot be read
 										</span>
 										<span className="val">{plan.counts.bad}</span>
 									</div>
@@ -284,12 +263,7 @@ export default function CategoryImport({ only, onClose }) {
 								title="ERPNext's own Data Import — a preview, an error report, and Update Existing Records, which this dialog deliberately does not do.">
 								Or open ERPNext&rsquo;s Data Import ↗
 							</a>
-						) : (
-							<span className="bulkwhy">
-								Writes one record per new row, as you, under your own roles. It runs in this tab,
-								so leaving the page stops it part-way — what was created stays.
-							</span>
-						)}
+						) : null}
 					</div>
 				</div>
 			}

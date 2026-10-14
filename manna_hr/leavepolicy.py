@@ -251,3 +251,43 @@ def differs(site_row):
 		if not same:
 			out[key] = want
 	return out
+
+
+def month_allocation(employee, ym, days=1):
+	"""A Casual Leave allocation for one month only: what lets an absence in a
+	month before the policy reached somebody be taken as leave.
+
+	HR moved the absence rule back to 1 September on 6 October 2026, and most
+	people's Casual Leave starts 1 October — hrms will not take a September day
+	from an allocation that begins in October. One day, the month's own, and no
+	carry forward: it is there to pay that month's first absence, and an
+	allocation that outlived the month would overlap the policy's own.
+
+	No `leave_policy_assignment`, on purpose: that is what tells Sunday leave
+	(`sundayleave.counts`) this is not anybody's first allocation.
+	"""
+	y, m = (int(x) for x in str(ym).split("-")[:2])
+	first = date(y, m, 1)
+	last = (first.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+	return {
+		"doctype": "Leave Allocation",
+		"employee": employee,
+		"leave_type": LEAVE_TYPE_NAME,
+		"from_date": first.isoformat(),
+		"to_date": last.isoformat(),
+		"new_leaves_allocated": days,
+		"carry_forward": 0,
+	}
+
+
+def needs_month_allocation(absent, allocations, ym):
+	"""Who needs `month_allocation` for `ym`: everybody in `absent` (employee →
+	their Absent days) with an Absent day in that month and no Casual Leave
+	allocation among `allocations` (dicts with employee, from_date, to_date)
+	covering it. Sorted, so a dry run and the run after it list the same."""
+	first = month_allocation("", ym)
+	start, end = first["from_date"], first["to_date"]
+	held = {a["employee"] for a in allocations
+		if str(a["from_date"])[:10] <= end and str(a["to_date"])[:10] >= start}
+	return sorted(e for e, days in absent.items()
+		if e not in held and any(start <= str(d)[:10] <= end for d in days))

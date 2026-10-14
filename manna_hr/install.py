@@ -13,6 +13,18 @@ from manna_hr.workflow import ensure_workflow
 CUSTOM_FIELDS = {
 	"Employee": [
 		{
+			# Ticked on a record the bridge made for somebody who punched and was
+			# on no record (bridge/mannabridge/autoenrol.py, 3 Oct 2026): gender
+			# and date of birth are placeholders until HR corrects them and
+			# clears this. Shown on the record's first page, where it is read.
+			"fieldname": "custom_needs_details",
+			"label": "Needs details",
+			"fieldtype": "Check",
+			"insert_after": "status",
+			"in_standard_filter": 1,
+			"description": "Created automatically from a fingerprint punch. Gender and date of birth are placeholders — correct them, then clear this.",
+		},
+		{
 			"fieldname": "custom_hr_section",
 			"label": "Attendance Rules",
 			"fieldtype": "Section Break",
@@ -231,6 +243,27 @@ CUSTOM_FIELDS = {
 			"insert_after": "bank_ac_no",
 			"description": "The bank account and name were already fields; the branch code payroll needs "
 				"to pay by NEFT was not.",
+		},
+		# How much of somebody's net pay goes to the bank and how much is handed
+		# over in cash — asked for 9 October 2026 and filled by Salary Setup's
+		# salary upload. It is how the net is paid and nothing else: PF, ESI and
+		# PT are worked out on the full salary whatever these say. salary_mode
+		# (stock) still says Bank or Cash; these only matter when it is a mix.
+		{
+			"fieldname": "custom_bank_percent",
+			"label": "Bank share (%)",
+			"fieldtype": "Percent",
+			"insert_after": "custom_ifsc",
+			"description": "The part of the net pay sent to the bank, as a percentage; the rest is cash. "
+				"Leave empty when Bank amount is used instead.",
+		},
+		{
+			"fieldname": "custom_bank_amount",
+			"label": "Bank amount (₹ a month)",
+			"fieldtype": "Currency",
+			"insert_after": "custom_bank_percent",
+			"description": "A fixed sum of the net pay sent to the bank each month; what is left of the net "
+				"is cash. Used only when Bank share (%) is empty.",
 		},
 		{
 			"fieldname": "custom_driving_licence",
@@ -516,6 +549,100 @@ CUSTOM_FIELDS = {
 			"description": "The company this shift is for. Blank means any company in the group may use it.",
 		},
 	],
+	# What a position's resumes are scored against, out of ten — On Board ->
+	# Recruitment (client/src/lib/resumescore.js, 12 Oct 2026). hrms has the
+	# position and the applicant and nothing to say what the position needs.
+	# Text rather than a child table, so HR can type it on the desk as well:
+	# a comma between items, a slash between spellings of one.
+	"Job Opening": [
+		{
+			"fieldname": "custom_scoring_section",
+			"label": "Resume Scoring",
+			"fieldtype": "Section Break",
+			"insert_after": "description",
+			"collapsible": 1,
+		},
+		{
+			"fieldname": "custom_must_have",
+			"label": "Must Have",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_scoring_section",
+			"description": "Skills a resume must show, separated by commas. Use / between spellings of one skill: Tally / Tally Prime.",
+		},
+		{
+			"fieldname": "custom_good_to_have",
+			"label": "Good To Have",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_must_have",
+		},
+		{
+			"fieldname": "custom_scoring_column",
+			"fieldtype": "Column Break",
+			"insert_after": "custom_good_to_have",
+		},
+		{
+			"fieldname": "custom_min_experience",
+			"label": "Minimum Experience (Years)",
+			"fieldtype": "Float",
+			"precision": "1",
+			"insert_after": "custom_scoring_column",
+		},
+		{
+			"fieldname": "custom_qualification",
+			"label": "Qualification",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_min_experience",
+			"description": "Any one of these is enough: B.Tech / Diploma / ITI.",
+		},
+		{
+			"fieldname": "custom_preferred_location",
+			"label": "Preferred Location",
+			"fieldtype": "Small Text",
+			"insert_after": "custom_qualification",
+		},
+	],
+	# Why an applicant scored what they did, one line per criterion. The score
+	# itself is hrms's own applicant_rating, which needs no field of ours.
+	"Job Applicant": [
+		{
+			"fieldname": "custom_score_detail",
+			"label": "Score Breakdown",
+			"fieldtype": "Small Text",
+			"insert_after": "applicant_rating",
+		},
+	],
+	# The company's chart as HR drew it — card positions and who reports to
+	# whom, as JSON (client/src/lib/orgchart.js, 14 Oct 2026). Hidden: it is
+	# drawn on Employees → Hierarchy Chart, not typed. Until this is on the
+	# site the chart is kept as a comment on the Company instead.
+	"Company": [
+		{
+			"fieldname": "custom_org_chart",
+			"label": "Org Chart",
+			"fieldtype": "Long Text",
+			"insert_after": "abbr",
+			"hidden": 1,
+		},
+	],
+	# Cash handed over each month beside the salary — expense money, HR said on
+	# 13 October 2026, kept in the shop's cash sheet and not wages. It sits
+	# beside Base so it is read together with it, and no salary component
+	# formula reads it: PF and ESI stay on Base alone. Putting this sum into
+	# Base instead would raise the slip, PF and ESI on money that is not salary.
+	"Salary Structure Assignment": [
+		{
+			"fieldname": "custom_cash_amount",
+			"label": "Cash (₹ a month)",
+			"fieldtype": "Currency",
+			"insert_after": "base",
+			# Every assignment is submitted, and none would take a figure
+			# otherwise. Safe to change after submit because nothing is
+			# worked out from it.
+			"allow_on_submit": 1,
+			"description": "Paid in cash each month beside the salary (expenses). Not part of Base: "
+				"not on the salary slip, and no PF or ESI is worked out on it.",
+		},
+	],
 }
 
 ROLES = [
@@ -548,6 +675,7 @@ def after_install():
 	_seed_settings()
 	_seed_asset_categories()
 	_seed_casual_leave()
+	_set_payroll_settings()
 	frappe.db.commit()
 
 
@@ -585,6 +713,20 @@ def _seed_asset_categories():
 				"asset_category_name": name,
 			}
 		).insert(ignore_permissions=True)
+
+
+def _set_payroll_settings():
+	"""Payroll based on Attendance, so an Absent day is not paid.
+
+	Always, not only on a fresh Single as `_seed_settings` does: the office
+	absence rule's salary cut is this value, and a site holding hrms's default
+	pays every absence while the rule reports it as cut. See
+	`payrollsetup.PAYROLL_SETTINGS`.
+	"""
+	from manna_hr.payrollsetup import PAYROLL_SETTINGS
+
+	for field, value in PAYROLL_SETTINGS:
+		frappe.db.set_single_value("Payroll Settings", field, value)
 
 
 def _seed_settings():
