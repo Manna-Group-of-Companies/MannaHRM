@@ -14,11 +14,11 @@ const MRP = "mannarubber.products@mannarubber.com";
 describe("the Manna Rubber Products login's Attendance menu", () => {
 	beforeEach(() => resetStore());
 
-	it("is exactly the register, In Out, Monthly, OT, Daily, Absent and Weekly, in that order", () => {
+	it("is exactly the register, In Out, Monthly, OT, Daily, Absent, Weekly and Manage Shift, in that order", () => {
 		const tabs = tabsFor("attendance", MODULES.attendance.tabs, MRP);
 		expect(tabs.map((t) => t[1])).toEqual([
 			"Employee Attendance Regularization", "In Out Activities Report", "Monthly Basic Attendance", "OT Report",
-			"Daily Detail Attendance Report", "Absent Report", "Weekly Report",
+			"Daily Detail Attendance Report", "Absent Report", "Weekly Report", "Manage Shift",
 		]);
 	});
 
@@ -28,8 +28,9 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 
 	it("opening Attendance lands on the register, and a page off the menu lands there too", () => {
 		expect(landingFor("attendance", "overview", MRP)).toBe("overview");
-		expect(landingFor("attendance", "shifts", MRP)).toBe("overview");
+		expect(landingFor("attendance", "summary", MRP)).toBe("overview");
 		expect(landingFor("attendance", "daily", MRP)).toBe("daily");
+		expect(landingFor("attendance", "shifts", MRP)).toBe("shifts");
 	});
 
 	it("leaves everybody else's menu and the modules it does not name whole", () => {
@@ -37,10 +38,10 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 		expect(allowedFor("leave", MRP)).toBeNull();
 	});
 
-	it("the strip draws seven tabs for that login", async () => {
+	it("the strip draws eight tabs for that login", async () => {
 		set({ ...loadedState(), user: MRP, section: "attendance", subtab: "inout" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link").map((a) => a.textContent)).toHaveLength(7);
+		expect(screen.getAllByRole("link").map((a) => a.textContent)).toHaveLength(8);
 	});
 
 	it.each([["OT", OtReport], ["Weekly", WeeklyReport], ["Absent", AbsentReport]])("%s report draws", async (_, C) => {
@@ -94,11 +95,12 @@ describe("the Dashboard module", () => {
 });
 
 describe("Add New Employee", () => {
-	it("opens Create Employee for every login, narrowed menu or not", () => {
+	it("opens Create Employee for every login, narrowed menu or not — but the four that only read employees", () => {
 		expect(landingFor("employees", "new", "someone@mannarubber.com", false)).toBe("new");
-		expect(landingFor("employees", "new", MRP, true)).toBe("new");
-		expect(landingFor("employees", "new", "hitechrubber@mannarubber.com", false)).toBe("new");
 		expect(landingFor("employees", "new", "it@mannarubber.com", true)).toBe("new");
+		/* The company logins read employees and change none (16 October 2026). */
+		expect(landingFor("employees", "new", MRP, true)).toBe("overview");
+		expect(landingFor("employees", "new", "hitechrubber@mannarubber.com", false)).toBe("overview");
 	});
 
 	it("adds no tab to the strip", () => {

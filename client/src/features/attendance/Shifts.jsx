@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { set, useApp } from "@/store";
+import AssignShift from "@/features/attendance/AssignShift";
 import { dmy, fmt, tidyDept } from "@/lib/format";
 import { Desk, Empty, Gap, Scroll, Tile, Tiles } from "@/components/ui";
 import { deskNew, deskUrl } from "@/lib/desk";
@@ -161,6 +163,8 @@ function WorkPattern({ s }) {
    site. */
 function ShiftPattern({ s }) {
 	const pattern = s.shMaster === "pattern";
+	/* Assign shift (16 October 2026): several people at once. */
+	const [assigning, setAssigning] = useState(false);
 	const q = (s.shq || "").trim().toLowerCase();
 	const per = s.shper || 20;
 	/* Under a company in the top bar, that company's shifts and the ones left
@@ -189,6 +193,11 @@ function ShiftPattern({ s }) {
 			<header>
 				<h3 className="caps">SHIFT &amp; WORK PATTERN</h3>
 				<span className="right">
+					{s.shiftTypes.length ? (
+						<button type="button" className="embtn pri" onClick={() => setAssigning(true)}>
+							Assign shift
+						</button>
+					) : null}
 					{/* Add makes whichever master is being shown — the two halves of this
 					    screen are two doctypes, and one + that always made a Shift Type
 					    would be wrong half the time. A Shift Type is made here, in their
@@ -313,6 +322,7 @@ function ShiftPattern({ s }) {
 			{s.shw.open ? (
 				<ShiftWizard onClose={() => set({ shw: { ...s.shw, open: false } })} />
 			) : null}
+			{assigning ? <AssignShift onClose={() => setAssigning(false)} /> : null}
 		</div>
 	);
 }

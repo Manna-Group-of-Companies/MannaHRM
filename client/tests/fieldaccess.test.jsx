@@ -34,7 +34,9 @@ vi.mock("@/api/client", async (importOriginal) => {
 });
 
 const ADMIN = "hr@mannarubber.com";
-const CLERK = "mannarubber.products@mannarubber.com";
+/* Any login but the page admin that may still edit a record — not one of the
+   four company logins, which edit no employee at all (data/menus.js). */
+const CLERK = "clerk@mannarubber.com";
 const RULES = { new: { middle_name: "hidden", last_name: "read" }, edit: { cell_number: "read", personal_email: "hidden" } };
 
 beforeEach(() => {

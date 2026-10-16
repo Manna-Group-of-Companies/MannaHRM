@@ -1,5 +1,6 @@
 import { apiCreateSubmitted, apiWrite, listAll } from "@/api/client";
-import { load } from "@/api/load";
+import { load, loadShiftAssignments } from "@/api/load";
+import { set } from "@/store";
 import { ASG_FIELDS, loadRegMonth } from "@/api/attendance";
 import { dmy, todayIso } from "@/lib/format";
 import { dayBefore } from "@/lib/roster";
@@ -31,6 +32,37 @@ export async function setWorkingTime(emp, shift, ym) {
 	await load();
 	if (ym) await loadRegMonth(emp.name, ym, true);
 	return { ok: true, msg: `${emp.employee_name}'s working time is now ${shift || "none"}.` };
+}
+
+/**
+ * The same shift for several people (16 October 2026, Manage Shift → Assign
+ * shift). Each person goes through exactly what one person's month does —
+ * `addShiftForDates`, which makes room in their roster and puts it back if the
+ * site refuses, or their working time — one at a time, and one refused does
+ * not stop the next. The employee list and the roster are read again once, at
+ * the end, rather than after every person.
+ *
+ * @returns {Promise<{ok: number, results: {emp: object, ok: boolean, msg: string}[]}>}
+ */
+export async function assignShiftMany(emps, { shift, mode, from, to }, onStep = () => {}) {
+	const results = [];
+	for (let i = 0; i < emps.length; i++) {
+		const emp = emps[i];
+		onStep(i + 1);
+		if (mode === "working") {
+			const r = await apiWrite("Employee", emp.name, { default_shift: shift || null });
+			results.push({ emp, ok: r.ok, msg: r.ok ? `working time is now ${shift}.` : `the site refused: ${r.error}` });
+		} else {
+			const r = await addShiftForDates(emp, { shift, from, to }).catch((e) => ({ ok: false, msg: e.message || String(e) }));
+			results.push({ emp, ok: r.ok, msg: r.msg });
+		}
+	}
+	await load().catch(() => null);
+	if (mode !== "working") {
+		set({ shAssignState: "" });
+		await loadShiftAssignments().catch(() => null);
+	}
+	return { ok: results.filter((r) => r.ok).length, results };
 }
 
 /** Take a dated shift away: set Inactive, which hrms reads as not there and

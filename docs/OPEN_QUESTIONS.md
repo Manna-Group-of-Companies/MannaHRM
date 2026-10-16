@@ -129,6 +129,34 @@ a week *for this location*; the questions below are now about the others.
   not free and 160 of them is a different plan.
 - Whether payroll moves to ERPNext too, or stays in Factor HR for now.
 
+### The company logins can still change pay on the site — 16 Oct 2026
+
+HR asked that `mannarubber.products@`, `hitechrubber@`, `mannatreads@` and
+`mannatyreretreads@mannarubber.com` never edit a salary — the administrator's
+alone — but run payroll, download it (the 5-tab Excel included), make slips,
+and give or upload the loans and advances people take. The dashboard now
+shows them nothing that changes a salary (`SALARY_VIEW_ONLY` in
+`client/src/data/menus.js`) — but that is a menu.
+On the site they hold **HR Manager and HR User**, and in hrms 16 both may
+write `Salary Structure Assignment`, while **only HR Manager may create a
+`Payroll Entry`**, which is how slips are made. So no stock role lets somebody
+make slips without also letting them change salaries, and a login with HR
+Manager can open `/app/salary-structure-assignment` and edit one directly.
+
+Making it real needs a decision and a site change, not a commit:
+
+- **A role of our own** — say `Manna Payroll Runner`: Payroll Entry, Salary
+  Slip and Additional Salary (read, create, write, submit — a loan or advance
+  instalment is an Additional Salary), read-only on Salary Structure, Salary
+  Structure Assignment and Employee Actual Salary — given to these four in
+  place of HR Manager. Their attendance and employee pages need
+  HR User's reads too, and HR User writes Salary Structure Assignment, so that
+  means a Custom DocPerm on it as well — and **Frappe replaces rather than
+  merges permissions** (CLAUDE.md §5), so every standard row has to be copied
+  in the same change.
+- Or **keep slips with HR**, and give these four read-only roles and the
+  downloads alone.
+
 ### About the rules
 
 These are currently set from the sales system's numbers, which were right for

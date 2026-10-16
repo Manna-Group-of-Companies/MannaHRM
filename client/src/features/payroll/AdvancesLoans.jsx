@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useApp } from "@/store";
-import { givePlan, loadInstalments } from "@/api/advances";
+import { downloadOldLoanList, giveOldLoans, givePlan, loadInstalments } from "@/api/advances";
+import { readUploadTable } from "@/api/salaryupload";
 import { KINDS, checkPlan, ledger, ledgerTotals, planSaid } from "@/lib/advances";
+import { planOldLoans } from "@/lib/oldloans";
 import { lastMonth } from "@/lib/payrollrun";
 import { todayIso } from "@/lib/format";
 import { deskUrl } from "@/lib/desk";
@@ -18,7 +20,12 @@ import { Desk, Empty, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
    what has fallen due and what is still to come — is read back.
 
    The only arithmetic is splitting the amount HR typed into the instalments HR
-   typed. What a slip takes in a month is hrms's own, off the instalment. */
+   typed. What a slip takes in a month is hrms's own, off the instalment.
+
+   Old loans come in by sheet (16 October 2026): the total each person took
+   and the advance already received back; what is left is taken in
+   instalments, the same Additional Salary as one given above. The four company
+   logins may use this page — it changes no salary (data/menus.js). */
 
 const rs = (v) => "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 const nextMonth = () => {
@@ -55,6 +62,40 @@ export default function AdvancesLoans() {
 	const problem = checkPlan(form);
 	const said = planSaid(form);
 	const who = (id) => (people.find((p) => p.name === id) || {}).employee_name || id;
+
+	/* Old loans from a sheet: read, previewed, confirmed, then made. */
+	const [up, setUp] = useState(null);
+	const [upFrom, setUpFrom] = useState(nextMonth());
+	const [upConfirm, setUpConfirm] = useState(false);
+	const [upStep, setUpStep] = useState(0);
+	const upPlan = up && up.plan;
+
+	async function onUpFile(e) {
+		const file = e.target.files && e.target.files[0];
+		e.target.value = "";
+		if (!file) return;
+		setUpConfirm(false); setMsg(null);
+		setUp({ busy: true, name: file.name });
+		try {
+			const [table, existing] = await Promise.all([readUploadTable(file), loadInstalments(company)]);
+			setUp({ name: file.name, plan: planOldLoans(table, { people: s.employees || [], existing, company, defaultFrom: upFrom }) });
+		} catch (err) {
+			setUp({ name: file.name, plan: { ok: false, error: "That file could not be read — " + (err.message || err) } });
+		}
+	}
+
+	async function onUpSave() {
+		setUpConfirm(false); setUpStep(0);
+		const r = await giveOldLoans(upPlan.lines, company, setUpStep);
+		setUpStep(0); setUp(null);
+		await read();
+		const parts = [];
+		if (r.done.length) parts.push(`${r.done.length} old ${r.done.length === 1 ? "loan or advance" : "loans and advances"} set up, each taken from salary in instalments.`);
+		if (r.failed.length) {
+			parts.push(`Stopped for: ${r.failed.map((f) => `${f.line.name} — ${f.made} of ${f.line.instalments} made, ${f.error}`).join("; ")}.`);
+		}
+		setMsg({ kind: r.failed.length ? "warn" : "ok", text: parts.join(" ") || "Nothing needed making." });
+	}
 
 	async function onGive() {
 		setBusy(true); setMsg(null);
@@ -131,6 +172,89 @@ export default function AdvancesLoans() {
 						</button>
 					)}
 				</div>
+			</Panel>
+
+			<Panel title="Upload old loans and advances" ico="⇪">
+				{/* Not drawn until a company is picked: a sheet is matched against one
+				    company's people, and a dead file box reads as a broken page. */}
+				{!company ? <Note className="warn">Pick a company in the top bar first.</Note> : (
+					<div className="flds">
+						<div className="fld">
+							<label className="lab" htmlFor="ol-from">First instalment month for rows without one</label>
+							<input id="ol-from" type="month" value={upFrom} onChange={(e) => setUpFrom(e.target.value)} />
+						</div>
+						<div className="fld wide">
+							<label className="lab" htmlFor="ol-file">The sheet (Excel or CSV)</label>
+							<span className="fldrow">
+								<input id="ol-file" type="file" accept=".xlsx,.csv" disabled={Boolean(upStep)} onChange={(e) => void onUpFile(e)} />
+								<button type="button" className="embtn" onClick={() => void downloadOldLoanList(people, company)}>
+									Download the list to fill in
+								</button>
+							</span>
+						</div>
+					</div>
+				)}
+
+				{up && up.busy && <p className="muted">Reading {up.name}…</p>}
+				{upStep > 0 && <p className="muted">Making {upStep} of {upPlan ? upPlan.lines.length : "…"}…</p>}
+				{upPlan && !upPlan.ok && <Note className="warn">{upPlan.error}</Note>}
+				{upPlan && upPlan.ok && (
+					<>
+						<Note className={upPlan.problems.length ? "warn" : undefined}>
+							<b>{up.name}</b>: {upPlan.lines.length} to set up
+							{upPlan.settled.length ? `, ${upPlan.settled.length} already paid back in full` : ""}
+							{upPlan.problems.length ? `, ${upPlan.problems.length} left out` : ""}
+							{upPlan.blank ? `, ${upPlan.blank} with no loan` : ""}.
+							{upPlan.problems.length > 0 && (
+								<ul className="sulist">
+									{upPlan.problems.slice(0, 12).map((x) => <li key={x.row + x.text}>{x.text}</li>)}
+									{upPlan.problems.length > 12 && <li>…and {upPlan.problems.length - 12} more.</li>}
+								</ul>
+							)}
+						</Note>
+						{upPlan.lines.length > 0 && (
+							<Scroll>
+								<table className="fptable stacktbl" aria-label="Old loans in the sheet">
+									<thead>
+										<tr><th>Person</th><th>Kind</th><th>Total taken</th><th>Received</th><th>Still owed</th><th>Taken from salary</th></tr>
+									</thead>
+									<tbody>
+										{upPlan.lines.map((l) => (
+											<tr key={`${l.employee}|${l.kind}`}>
+												<td className="stackhead" data-label="">{l.name}<small className="block muted">{l.code}</small></td>
+												<td data-label="Kind">{l.kind === "loan" ? "Loan" : "Advance"}</td>
+												<td className="num" data-label="Total taken">{rs(l.total)}</td>
+												<td className="num" data-label="Received">{rs(l.received)}</td>
+												<td className="num" data-label="Still owed"><b>{rs(l.owed)}</b></td>
+												<td data-label="Taken from salary">
+													{l.instalments === 1 ? `${rs(l.owed)} in ${l.from}`
+														: `${l.instalments} × ${rs(l.each)}${l.last !== l.each ? ` (last ${rs(l.last)})` : ""}, ${l.from} to ${l.to}`}
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</Scroll>
+						)}
+						<div className="ctl prrow paygo">
+							{upPlan.lines.length === 0 ? (
+								<button type="button" className="embtn" onClick={() => setUp(null)}>Close</button>
+							) : upConfirm ? (
+								<>
+									<button type="button" className="embtn pri" disabled={Boolean(upStep)} onClick={() => void onUpSave()}>
+										Yes, set up {upPlan.lines.length}
+									</button>
+									<button type="button" className="embtn" onClick={() => setUpConfirm(false)}>Cancel</button>
+								</>
+							) : (
+								<>
+									<button type="button" className="embtn pri" onClick={() => setUpConfirm(true)}>Set up {upPlan.lines.length}</button>
+									<button type="button" className="embtn" onClick={() => setUp(null)}>Cancel</button>
+								</>
+							)}
+						</div>
+					</>
+				)}
 			</Panel>
 
 			<Panel title={`Who owes what — ${lines.length}`} ico="📒">

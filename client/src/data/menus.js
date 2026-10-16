@@ -22,14 +22,27 @@
    left to the rules below. */
 const COMPANY_EMPLOYEES = ["overview", "calendar", "profile", "joining"];
 
+/* Asked for on 16 October 2026: the four company logins never change a
+   salary — that is the administrator's alone. Of Payroll they keep the Payroll
+   page (start the run, create the slips, download the Excel files, the 5-tab
+   among them), Payslips, and Advances & Loans, where they give and upload
+   loans and advances people take. Salary Setup, Increments and Actual Salary
+   are off their strip, and the Payroll page drops its steps that change pay
+   for them (`salaryLocked`). Still a menu: the site's roles are what can
+   refuse them — see docs/OPEN_QUESTIONS.md. */
+const COMPANY_PAYROLL = ["overview", "advances", "slips"];
+
 export const USER_MENUS = {
 	"mannarubber.products@mannarubber.com": {
-		attendance: ["overview", "inout", "monthly", "ot", "daily", "absent", "weekly"],
+		/* Manage Shift added 16 October 2026, asked for: Assign shift is there,
+		   and the four company logins give their own people shifts. */
+		attendance: ["overview", "inout", "monthly", "ot", "daily", "absent", "weekly", "shifts"],
 		employees: COMPANY_EMPLOYEES,
+		payroll: COMPANY_PAYROLL,
 	},
-	"hitechrubber@mannarubber.com": { employees: COMPANY_EMPLOYEES },
-	"mannatreads@mannarubber.com": { employees: COMPANY_EMPLOYEES },
-	"mannatyreretreads@mannarubber.com": { employees: COMPANY_EMPLOYEES },
+	"hitechrubber@mannarubber.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
+	"mannatreads@mannarubber.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
+	"mannatyreretreads@mannarubber.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
 	/* Asked for on 24 September 2026: On Board is this login's alone (ONLY_FOR
 	   below), and of it, Onboarding alone — Letters, Documents and Assets are
 	   still built and still at their addresses, just not on its strip. Its
@@ -74,6 +87,22 @@ export const ONLY_FOR = {
 };
 
 const login = (user) => String(user || "").trim().toLowerCase();
+
+/** The logins that run payroll and download it but do not change pay. */
+export const SALARY_VIEW_ONLY = [
+	"mannarubber.products@mannarubber.com",
+	"hitechrubber@mannarubber.com",
+	"mannatreads@mannarubber.com",
+	"mannatyreretreads@mannarubber.com",
+];
+
+/** Whether this login is kept from every control that changes pay. */
+export const salaryLocked = (user) => SALARY_VIEW_ONLY.includes(login(user));
+
+/** Whether this login may only read employees (16 October 2026, asked for):
+    the same four — no Add New Employee, no import, no edit, no deactivate,
+    no photograph. Still a menu; see SALARY_VIEW_ONLY. */
+export const employeesLocked = salaryLocked;
 const loginMenu = (user) => USER_MENUS[login(user)] || null;
 
 /** Whether this login may be shown this page at all. */
@@ -119,7 +148,8 @@ export const EVERYONE = {
 /** The subtab to actually draw: the one asked for when this login has it,
     otherwise the first it has. */
 export function landingFor(section, subtab, user, admin = null) {
-	if ((EVERYONE[section] || []).includes(subtab)) return subtab;
+	/* Create Employee is everybody's — except a login that only reads employees. */
+	if ((EVERYONE[section] || []).includes(subtab) && !employeesLocked(user)) return subtab;
 	const only = allowedFor(section, user, admin);
 	const want = !only || only.includes(subtab) ? subtab : only[0];
 	return pageAllowed(section, want, user) ? want : "overview";

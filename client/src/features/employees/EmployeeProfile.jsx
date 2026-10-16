@@ -20,6 +20,7 @@ import Avatar from "@/components/Avatar";
 import { LocCell } from "@/components/PunchMap";
 import { DATE_FIELD } from "@/data/employees";
 import { accessFor } from "@/lib/fieldaccess";
+import { employeesLocked } from "@/data/menus";
 import { fieldLabel, PROFILE_CHECKS, PROFILE_CHIPS, PROFILE_FIRST_CHILD, PROFILE_HEAD, PROFILE_LONG, PROFILE_MAPPED, PROFILE_PANES, PROFILE_PLUMBING, PROFILE_TABS } from "@/data/profile";
 
 /* Factor HR's **Employee Profile** — the record page, screenshotted 29 Aug 2026.
@@ -246,7 +247,7 @@ function Card({ title, children, onRefresh, editing, onEdit, deskHref }) {
 			<header>
 				<h3>{title}</h3>
 				<span className="proico">
-					{!editing && (
+					{!editing && onEdit && (
 						<button title="Edit this record" aria-label="Edit this record" onClick={onEdit}>
 							✎
 						</button>
@@ -924,6 +925,9 @@ function DocumentsPane({ s, emp }) {
 function Photo({ doc, pic, onPick }) {
 	const verb = doc.image ? "Change the photograph" : "Add a photograph";
 
+	/* No way to change it for a login that only reads employees. */
+	if (!onPick) return <Avatar className="proava" name={doc.employee_name} image={doc.image} />;
+
 	return (
 		<Avatar className="proava" name={doc.employee_name} image={doc.image}>
 			<label className={"pen" + (pic.busy ? " busy" : "")}
@@ -969,12 +973,12 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto,
 						{/* The same edit mode the pencils open, reachable from the top —
 						    somebody who came here to change a phone number should not
 						    have to find the card it is on first. */}
-						{!editing && (
+						{!editing && onEdit && (
 							<button className="embtn" title="Edit this record" onClick={onEdit}>✎ Edit</button>
 						)}
 						{/* Asked twice, because the next thing that happens is the
 						    person's details going off every screen here. */}
-						{!editing && on && (deact.ask ? (
+						{!editing && on && deact && (deact.ask ? (
 							<span className="prodeact" role="group" aria-label="Confirm deactivation">
 								<button className="embtn bad" disabled={deact.busy} onClick={deact.onYes}>
 									{deact.busy ? "Deactivating…" : "Yes, deactivate"}
@@ -1083,7 +1087,7 @@ function NotActive({ doc, deskHref, deact }) {
 				<div className="proname">
 					<b>{doc.employee_name || doc.name}</b>
 					<span className="proacts">
-						{inactive && (
+						{inactive && deact && (
 							<button className="embtn pri" disabled={deact.busy} onClick={deact.onActivate}
 								title="Set this person's status back to Active, and show their details again.">
 								{deact.busy ? "Activating…" : "Activate"}
@@ -1110,6 +1114,10 @@ function NotActive({ doc, deskHref, deact }) {
 
 export default function EmployeeProfile() {
 	const s = useApp();
+	/* The four company logins read a record and change nothing on it
+	   (16 October 2026): no Edit, no pencils, no Deactivate or Activate, no
+	   photograph. data/menus.js employeesLocked. */
+	const readOnly = employeesLocked(s.user);
 
 	const people = scoped(s)
 		.slice()
@@ -1317,7 +1325,7 @@ export default function EmployeeProfile() {
 					<b className="font-display">Employee Profile</b>
 					<span className="right">{chooser}</span>
 				</div>
-				<NotActive doc={doc} deskHref={deskLink} deact={deact} />
+				<NotActive doc={doc} deskHref={deskLink} deact={readOnly ? null : deact} />
 				{statusMsg}
 			</>
 		);
@@ -1350,7 +1358,7 @@ export default function EmployeeProfile() {
 		}
 		: null;
 	const changed = editing ? changedCount(doc, s.profdraft) : 0;
-	const card = { onRefresh: refresh, editing, onEdit: startEdit, deskHref };
+	const card = { onRefresh: refresh, editing, onEdit: readOnly ? null : startEdit, deskHref };
 
 	return (
 		<>
@@ -1362,14 +1370,14 @@ export default function EmployeeProfile() {
 				<span className="right">{chooser}</span>
 			</div>
 
-			{needsDetails(doc) && !editing && (
+			{needsDetails(doc) && !editing && !readOnly && (
 				<NeedsDetails doc={doc} busy={deactBusy}
 					onDone={() => void writeOne({ custom_needs_details: 0 }, "Marked as complete. The Needs details flag is cleared.")} />
 			)}
 
 			<Header doc={doc} onRefresh={refresh} deskHref={deskHref}
-				editing={editing} edit={edit} onEdit={startEdit}
-				pic={s.profpic} onPhoto={savePhoto} deact={deact} />
+				editing={editing} edit={edit} onEdit={readOnly ? null : startEdit}
+				pic={s.profpic} onPhoto={readOnly ? null : savePhoto} deact={readOnly ? null : deact} />
 
 			{/* Outside the pane rather than inside it, because the draft is the
 			    whole record: switching panes while editing must not look like the

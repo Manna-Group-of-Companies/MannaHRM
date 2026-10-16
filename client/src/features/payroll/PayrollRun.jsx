@@ -25,6 +25,7 @@ import { deskUrl } from "@/lib/desk";
 import { payRows } from "@/features/payroll/shared";
 import SheetTable, { money } from "@/features/payroll/SheetTable";
 import { Desk, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
+import { salaryLocked } from "@/data/menus";
 
 /* PAYROLL → PAYROLL. Ours, 2 October 2026 — the one page payroll is run from.
 
@@ -420,9 +421,32 @@ export default function PayrollRun() {
 		setBusy("");
 	}
 
+	/* The four company logins run the month and download it, and change no
+	   pay (16 October 2026): for them Setup and Extras say where the month
+	   stands and offer nothing to make, add or submit. See data/menus.js. */
+	const locked = salaryLocked(s.user);
+
+	const extrasTable = extras.length > 0 && (
+		<Scroll>
+			<table className="fptable prtable" aria-label={`Added to ${label}`}>
+				<thead><tr><th>Person</th><th>What</th><th>Amount</th><th>State</th></tr></thead>
+				<tbody>
+					{extras.map((x) => (
+						<tr key={x.name}>
+							<td>{x.employee_name || who(x.employee)}</td>
+							<td>{x.salary_component}</td>
+							<td className="num">{money(x.amount)}</td>
+							<td><span className={"fpstate " + extraState(x).toLowerCase()}>{extraState(x)}</span></td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</Scroll>
+	);
+
 	/** Each step's body. */
 	const bodies = {
-		setup: (st) => (
+		setup: (st) => (locked ? <p>{st.text}</p> : (
 			<>
 				<p>{st.text}</p>
 				{toMake.length > 0 && (
@@ -446,8 +470,8 @@ export default function PayrollRun() {
 					</>
 				)}
 			</>
-		),
-		extras: (st) => (
+		)),
+		extras: (st) => (locked ? <><p>{st.text}</p>{extrasTable}</> : (
 			<>
 				<p>{st.text}</p>
 				<div className="ctl prform">
@@ -478,23 +502,7 @@ export default function PayrollRun() {
 						{busy === "add" ? "Adding…" : `Add to ${label}`}
 					</button>
 				</div>
-				{extras.length > 0 && (
-					<Scroll>
-						<table className="fptable prtable" aria-label={`Added to ${label}`}>
-							<thead><tr><th>Person</th><th>What</th><th>Amount</th><th>State</th></tr></thead>
-							<tbody>
-								{extras.map((x) => (
-									<tr key={x.name}>
-										<td>{x.employee_name || who(x.employee)}</td>
-										<td>{x.salary_component}</td>
-										<td className="num">{money(x.amount)}</td>
-										<td><span className={"fpstate " + extraState(x).toLowerCase()}>{extraState(x)}</span></td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</Scroll>
-				)}
+				{extrasTable}
 				{drafts.length > 0 && (
 					<div className="ctl prrow">
 						{confirm === "drafts" ? (
@@ -526,7 +534,7 @@ export default function PayrollRun() {
 					<small className="muted block">Loans are not on this site, so add each instalment above as a Loan instalment.</small>
 				)}
 			</>
-		),
+		)),
 		run: (st) => (
 			<>
 				<p>{st.text}</p>

@@ -6764,6 +6764,30 @@ tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
 .hcfx:hover { color: rgb(var(--bad)); border-color: rgb(var(--bad)); }
 .hcflabel .hcfctl { top: -1.6rem; left: auto; right: 0; }
 
+/* ---- Assign shift to several people (features/attendance/AssignShift.jsx) -- */
+.bshift { display: flex; flex-direction: column; gap: .7rem; }
+.bshbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+.bshbar input, .bshbar select { padding: .3rem .5rem; border: 1px solid rgb(var(--line-ctl)); border-radius: .4rem;
+  background: rgb(var(--card)); color: rgb(var(--ink)); font-size: theme(fontSize.sm); }
+.bshn { margin-left: auto; font-size: theme(fontSize.sm); font-weight: 600; color: rgb(var(--accent)); }
+.bshift .scroll { max-height: 18rem; overflow-y: auto; border: 1px solid rgb(var(--line)); border-radius: .5rem; }
+table.bshtable { min-width: 0; }
+.bshtable th { position: sticky; top: 0; background: rgb(var(--card)); z-index: 1; }
+.bshtable .bshtick { width: 2.2rem; text-align: center; }
+.bshtable tr.on td { background: rgb(var(--accent-wash)); }
+.bshform { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .7rem 1.4rem; }
+.bshform .fld { display: flex; flex-direction: column; gap: .3rem; min-width: 11rem; }
+.bshform .lab { font-size: theme(fontSize.fine); font-weight: 600; color: rgb(var(--ink-2)); }
+.bshform select, .bshform input[type="date"] { padding: .35rem .55rem; border: 1px solid rgb(var(--line-ctl)); border-radius: .4rem;
+  background: rgb(var(--card)); color: rgb(var(--ink)); font-size: theme(fontSize.sm); min-height: 2.1rem; }
+.bshform [role="radiogroup"] label { display: flex; align-items: center; gap: .4rem; font-size: theme(fontSize.sm); color: rgb(var(--ink)); }
+.bsherr { color: rgb(var(--bad)); font-size: theme(fontSize.sm); }
+.bshhours { font-family: theme(fontFamily.mono); font-size: theme(fontSize.sm); font-weight: 600; color: rgb(var(--accent)); }
+.bshdone ul { margin: .4rem 0 0; display: flex; flex-direction: column; gap: .2rem; }
+.bshdone li { font-size: theme(fontSize.sm); padding-left: .6rem; border-left: 2px solid rgb(var(--line)); }
+.bshdone li.ok { border-color: rgb(var(--live)); }
+.bshdone li.bad { border-color: rgb(var(--bad)); color: rgb(var(--bad)); }
+
 /* ---- A table that becomes cards on a phone (`stacktbl`, 14 Oct 2026) -------
    Each row a card, each cell a line with its column's name beside it (the
    cell's `data-label`). A table scrolling sideways inside its box hid the one

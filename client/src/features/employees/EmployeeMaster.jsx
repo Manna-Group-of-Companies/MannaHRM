@@ -10,6 +10,7 @@ import { ONB_BLANK } from "@/data/candidates";
 import { openEmployee } from "@/features/employees/openEmployee";
 import ExportEmployees from "@/features/employees/ExportEmployees";
 import { EMP_IMPORTS, EMP_MORE, EMP_SHOWN, EXP_BLANK, IMPORT_ICON, MORE_ICON, STATUS_ROWS } from "@/data/employees";
+import { employeesLocked } from "@/data/menus";
 
 /* Factor HR's status filter, dot for dot: green Active, red InActive, blue All.
    A native <select> cannot colour an option, and on this control the colour is
@@ -253,6 +254,7 @@ function MoreItem({ row, site, empty, onPick, onExport, onGo }) {
 
 export default function EmployeeMaster() {
 	const s = useApp();
+	const readOnly = employeesLocked(s.user);
 	const { all, rows } = masterRows(s);
 	const status = tally(all, "status");
 	/* One list for both views. Drawing every person is what the page is for, so
@@ -274,8 +276,9 @@ export default function EmployeeMaster() {
 				<span className="right">
 					{/* Their split button: the whole control adds one person, the caret
 					    on the end of it adds many. Drawn as one button and one caret
-					    inside a single `.empdrop`. */}
-					<span className="empdrop joined">
+					    inside a single `.empdrop`. Not drawn for a login that only
+					    reads employees (data/menus.js employeesLocked). */}
+					{!readOnly && <span className="empdrop joined">
 						<button
 							className="embtn pri"
 							title="Factor HR's Create Employee — Basic Details, Job Details, Job Organization."
@@ -303,7 +306,7 @@ export default function EmployeeMaster() {
 									onGo={(page) => go({ section: "employees", subtab: page })} />
 							))}
 						</div>
-					</span>
+					</span>}
 					{/* Their overflow: the two ways somebody arrives here from another
 					    module, and the way this list leaves as a file. Drawn as ⋯ rather
 					    than as a fourth worded button because none of the three is the
@@ -324,7 +327,8 @@ export default function EmployeeMaster() {
 						</button>
 						<div className="emmenu end" role="menu" aria-label="More employee actions"
 							hidden={!s.empmore}>
-							{EMP_MORE.map((row) => (
+							{/* Both imports make people; the export only reads them. */}
+							{EMP_MORE.filter((row) => !readOnly || !row[2]).map((row) => (
 								<MoreItem key={row[0]} row={row} site={s.site} empty={!all.length}
 									onPick={() => set({ empmore: false })}
 									/* Their dialog, seeded with what this page is already
