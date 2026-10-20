@@ -15,7 +15,6 @@ import { MODULES } from "@/routes/registry";
 import { useApp, set } from "@/store";
 import Link from "@/routes/Link";
 import { saveRail } from "@/lib/rail";
-import { paletteFor, saveMode } from "@/lib/mode";
 import mannaLogo from "@/assets/manna-logo.png";
 import mannaMark from "@/assets/manna-mark.png";
 
@@ -33,14 +32,6 @@ const RAIL_GLYPH = {
    the rest are one tap further, in the drawer More opens. */
 const BAR = ["dashboard", "employees", "attendance", "leave"];
 
-/* The rail foot's Light / Dark switch (20 October 2026, the HRDashboard kit).
-   Same strokes as the header's appearance button, which it stands in for
-   while the rail is open on a desktop — see `.railmode` in index.css. */
-const MODES = [
-	["light", "Light", "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"],
-	["dark", "Dark", "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"],
-];
-
 /** The pages of the open module, as the rail draws them under its link.
 
     **The same list the page strip draws, read the same way** — `tabsFor` for
@@ -56,8 +47,7 @@ export function pagesOf(section, user, admin) {
 }
 
 export default function Sidebar() {
-	const { section, subtab, rail, drawer, user, conn, connState, admin, mode } = useApp();
-	const palette = paletteFor(mode);
+	const { section, subtab, rail, drawer, user, conn, connState, admin } = useApp();
 	const slim = rail === "slim";
 
 	const shown = visibleSections().filter((m) => sectionFor(m.key, admin, user));
@@ -197,25 +187,6 @@ export default function Sidebar() {
 			    avatar already says whose account this is, with sign-out under it,
 			    and the same address twice on one screen is one too many. */}
 			<div className="railfoot">
-				{/* Picking one here is a choice for good, like the header's button;
-				    "Match my device" stays on that button, which cycles through it.
-				    While the choice is still `system`, the palette the device chose
-				    is the one shown as pressed. */}
-				<div className="railmode" role="group" aria-label="Appearance">
-					{MODES.map(([m, label, d]) => (
-						<button
-							key={m}
-							type="button"
-							aria-pressed={palette === m}
-							onClick={() => set({ mode: saveMode(m) })}
-						>
-							<svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-								<path d={d} />
-							</svg>
-							<span>{label}</span>
-						</button>
-					))}
-				</div>
 				{/* The same two words the status line always said, kept beside the
 				    thing they describe. `aria-live` because this one changes on its
 				    own: a read that fails turns it red without anybody pressing

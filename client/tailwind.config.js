@@ -7,9 +7,8 @@
    whole reason a restyle is one file and not four hundred edits: the stylesheet
    names roles.
 
-   One palette ships — Manna, in the HRDashboard kit's green and navy on cool
-   neutrals since 20 October 2026, a deep indigo before that and the logo's
-   orange before that — in two modes, light and dark. Five others
+   One palette ships — Manna, a deep indigo on cool slate since 6 October 2026,
+   the logo's orange before that — in two modes, light and dark. Five others
    shipped alongside it until 5 September 2026 on a second `data-theme` axis;
    the note at the top of `themes.css` records what they were and how to bring
    the axis back.
@@ -209,10 +208,10 @@ export default {
       /* Rounder since 29 September 2026: a control at 8px and a card at 14px
          read as soft and approachable, where 6 and 12 read as a spreadsheet. */
       borderRadius: {
-        DEFAULT: "10px",
-        sm: "8px",
-        md: "12px",
-        lg: "18px",
+        DEFAULT: "8px",
+        sm: "6px",
+        md: "10px",
+        lg: "14px",
       },
       boxShadow: {
         /* Four steps and no more. A screen that needs a fifth is a screen with
@@ -299,8 +298,8 @@ export default {
          sentence has to look like something typed. */
       fontFamily: {
         display: ['"Plus Jakarta Sans"', '"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
-        body: ['"Plus Jakarta Sans"', '"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
-        mono: ['"Plus Jakarta Sans"', '"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        body: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        mono: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
         code: ['"JetBrains Mono"', "ui-monospace", "Menlo", "Consolas", "monospace"],
       },
     },
