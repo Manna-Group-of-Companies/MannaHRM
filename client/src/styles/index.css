@@ -5491,6 +5491,101 @@
   }
 }
 /* ===========================================================================
+   The HRDashboard skin (20 October 2026).
+
+   Asked for: the look of the HRDashboard UI kit, on every page. Nearly all of
+   it is `themes.css` — green and navy on cool neutrals, both modes re-run
+   through `npm run contrast` — plus the radii and the one typeface in
+   tailwind.config.js. What is here is the handful of shapes a palette cannot
+   change, and nothing in it names a colour: every value is a role.
+
+   Outside `@layer` for the same reason as the block below it, and before the
+   media queries so the tablet and phone rules still win where they disagree.
+   =========================================================================== */
+
+/* **The current module is a filled pill, not a tinted one with a stripe.**
+   That is the kit's green "Dashboard" button, and the glow under it is what
+   makes it read as the one place you are rather than one row of nine. The
+   stripe goes because a solid fill already says it; two markers on one row
+   is one too many. Its icon follows the label, white on the fill. */
+.nav { border-radius: 12px; font-weight: 600; }
+.nav[aria-current="page"] {
+  background: rgb(var(--rail-on));
+  color: rgb(var(--rail-on-ink));
+  box-shadow: 0 10px 22px -12px rgb(var(--rail-on) / .9);
+}
+.nav[aria-current="page"]::before { display: none; }
+.nav[aria-current="page"] svg { color: rgb(var(--rail-on-ink)); }
+/* A ring outside the pill: the inset one the rest of the rail uses would be
+   the same white as the label, on the same green. */
+.nav[aria-current="page"]:focus-visible {
+  box-shadow: 0 0 0 2px rgb(var(--rail)), 0 0 0 4px rgb(var(--rail-mark));
+}
+
+/* **The open page under it is grey, not green.** With the module filled, a
+   second green row beneath it reads as two places at once; the kit draws the
+   page as a quiet pill on the rail's own step, which `rail-fg` reads on at
+   well over AA in both modes.
+
+   Scoped under `.navsub` on purpose: the 6 October block below sets the
+   same selector green, and at equal specificity the later block wins. The
+   extra class is what lets this one hold without moving either block. */
+.navpage { border-radius: 10px; }
+.navsub .navpage[aria-current="page"] { color: rgb(var(--rail-fg)); background: rgb(var(--rail-3)); }
+
+/* **The kit's Light / Dark switch, in the rail foot.** It stands in for the
+   header's appearance button only where the rail is open on a desktop, so the
+   same control is never on screen twice; a slim rail, a tablet and a phone
+   keep the header's button, which also reaches "Match my device". */
+.railmode { display: none; }
+@media (min-width: 901px) {
+  .shell:not([data-rail="slim"]) .railmode { display: grid; }
+  .shell:not([data-rail="slim"]) .tbmode { display: none; }
+}
+.railmode {
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgb(var(--rail-3));
+}
+.railmode button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: 2.25rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgb(var(--rail-ink));
+  font-family: theme(fontFamily.body);
+  font-size: theme(fontSize.mini);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease),
+              box-shadow var(--ui-fast) var(--ui-ease);
+}
+.railmode button svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.railmode button:hover { color: rgb(var(--rail-fg)); }
+.railmode button[aria-pressed="true"] {
+  background: rgb(var(--card));
+  color: rgb(var(--rail-fg));
+  box-shadow: var(--sh-raise);
+}
+.railmode button:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
+
+/* **Softer controls.** The kit's buttons, search box and header icons are
+   12px-round and a little taller; panels pick up 18px from `rounded-lg` in
+   tailwind.config.js. Heights only grow, so no target gets smaller. */
+.btn { border-radius: 12px; min-height: 2.5rem; }
+.tbfind, .tbicon { border-radius: 12px; }
+
+/* The number on a figure tile, at the kit's weight: it is the thing the tile
+   is for. */
+.tile .n { font-weight: 700; letter-spacing: -.02em; }
+
+/* ===========================================================================
    The interface of 6 October 2026: navigation, fields, the dashboard, motion.
 
    **Outside `@layer` on purpose, and before the media queries below.**

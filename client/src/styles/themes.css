@@ -18,6 +18,36 @@
    instead.
 
    ---------------------------------------------------------------------------
+   Green and navy, since 20 October 2026 (the HRDashboard kit)
+
+   Asked for: the HRDashboard UI kit's look across the whole app. The kit is
+   green on near-white with navy buttons, and it maps onto these roles without
+   a new one:
+
+     `rail-on`, the current module, is the kit's green "Dashboard" pill — a
+     green deep enough for white on it to clear AA (`live-dark`'s value), which
+     the kit's own #1AAE5F does not.
+
+     `brand-dark`, every primary button, is the kit's navy on light. On dark it
+     is the green: white text has to sit on it, and a navy button on a navy
+     page is not a button.
+
+     `brand` and `accent`, the green that is *read* — links, rings, selected
+     labels — are a step deeper on light than the pill, because text needs
+     4.5:1 where a fill with white on it needs only the white to clear.
+
+   **The trade this makes, on purpose.** The 6 October note below chose indigo
+   partly because green means "present". The kit's green is the brand, so the
+   two are now one hue family again. What keeps them apart is form rather than
+   hue: the brand is a solid fill or a link, and `live` is only ever a status
+   word on its own pale wash. If that turns out to be read wrongly on the
+   Muster screens, `live` can move to teal (`rest`'s hue) without touching any
+   other role.
+
+   The neutrals are the kit's: #F6F7F9 under white cards, #15192B ink, and
+   hairline #ECEEF1 rules. Dark mode is the kit's dark: #0E1117 under #161A22.
+
+   ---------------------------------------------------------------------------
    Indigo on slate, since 6 October 2026
 
    The brand was the logo's orange until this date. Orange is a warm accent and
@@ -114,23 +144,23 @@
      same value in both modes so a button looks like itself everywhere. `soft`
      is the surface and `deep` is the text on it; `tint` is a border on that
      surface. `lift` is for the dark chrome — the rail's marker. */
-  --brand:        129 140 248;
-  --brand-dark:   67 56 202;
-  --brand-deep:   165 180 252;
-  --brand-soft:   30 27 75;
-  --brand-tint:   67 56 202;
-  --brand-lift:   129 140 248;
+  --brand:        74 214 138;
+  --brand-dark:   21 128 61;
+  --brand-deep:   134 239 172;
+  --brand-soft:   16 46 31;
+  --brand-tint:   21 128 61;
+  --brand-lift:   74 214 138;
 
   /* ---- the chrome ----
      `nav` is the dark material — the rail in this mode, and the fill behind a
      white section row in the muster and the salary tables in both. A touch of
      blue in it, so the rail and the page read as one navy rather than as a
      black bar beside a grey one. */
-  --char:         6 9 16;
-  --nav:          13 17 26;
-  --nav-2:        9 12 20;
-  --nav-3:        26 32 48;
-  --nav-ink:      154 165 184;
+  --char:         6 8 12;
+  --nav:          22 26 34;
+  --nav-2:        16 19 26;
+  --nav-3:        36 42 53;
+  --nav-ink:      154 163 178;
 
   /* ---- the rail ----
      `ink` is a link at rest and `fg` is one under the pointer; `on` is the
@@ -139,41 +169,41 @@
      the pill, which `npm run contrast` checks. The pill is an indigo-tinted
      navy rather than a lighter grey, so the current module reads as chosen
      and not merely as hovered. */
-  --rail:         13 17 26;
-  --rail-2:       9 12 20;
-  --rail-3:       26 32 48;
-  --rail-ink:     154 165 184;
+  --rail:         22 26 34;
+  --rail-2:       16 19 26;
+  --rail-3:       36 42 53;
+  --rail-ink:     160 169 184;
   --rail-fg:      255 255 255;
-  --rail-on:      36 36 78;
+  --rail-on:      21 128 61;
   --rail-on-ink:  255 255 255;
-  --rail-mark:    129 140 248;
+  --rail-mark:    255 255 255;
 
   /* ---- the surfaces ----
      Four of them, and the gaps between them are what makes a card read as
      raised — there is no white page to lift off. */
-  --page:         11 14 22;
-  --card:         19 24 36;
-  --wash:         25 31 45;
-  --rule:         32 39 55;
+  --page:         14 17 23;
+  --card:         22 26 34;
+  --wash:         30 35 45;
+  --rule:         36 42 53;
 
   /* `line` and `2` divide things; `ctl` is the edge of a control somebody has
      to find before they can use it, and that is a different job with a
      different bar — 3:1, per WCAG 1.4.11. Dividers stay quiet; controls get the
      contrast. */
-  --line:         42 50 68;
-  --line-2:       58 68 88;
-  --line-ctl:     122 134 154;
+  --line:         40 46 58;
+  --line-2:       56 63 77;
+  --line-ctl:     122 131 148;
 
   /* Not pure white. #FFF on a near-black surface haloes at small sizes, and
      every label in this app is small. `ink-3` names every micro-label, column
      head and count in the app, so it is the neutral most at risk of being
      chosen for looks — every step clears 4.5:1 on all four surfaces. */
-  --ink:          232 236 243;
-  --ink-2:        180 190 205;
-  --ink-3:        141 152 170;
+  --ink:          236 238 243;
+  --ink-2:        180 188 200;
+  --ink-3:        150 158 172;
 
-  --accent:       129 140 248;
-  --accent-wash:  30 27 75;
+  --accent:       74 214 138;
+  --accent-wash:  16 46 31;
 
   --live:         74 222 128;
   --live-dark:    21 128 61;
@@ -263,58 +293,58 @@
      selected label as well as a ring. `deep` is the step that has to be *read*
      on `soft`, so it is the dark end here where it was the light end above —
      the roles are identical and the direction is reversed. */
-  --brand:        79 70 229;
-  --brand-dark:   67 56 202;
-  --brand-deep:   55 48 163;
-  --brand-soft:   238 242 255;
-  --brand-tint:   199 210 254;
-  --brand-lift:   129 140 248;
+  --brand:        19 117 57;
+  --brand-dark:   20 26 43;
+  --brand-deep:   20 83 45;
+  --brand-soft:   230 246 236;
+  --brand-tint:   187 230 204;
+  --brand-lift:   26 174 95;
 
   /* ---- the chrome ----
      The dark fills behind a section row in the muster and the salary tables
      stay dark on light; `nav` is that material. */
-  --char:         15 23 42;
-  --nav:          24 32 50;
-  --nav-2:        17 24 40;
-  --nav-3:        44 55 80;
-  --nav-ink:      165 176 194;
+  --char:         20 26 43;
+  --nav:          20 26 43;
+  --nav-2:        14 19 32;
+  --nav-3:        40 48 66;
+  --nav-ink:      165 172 186;
 
   /* ---- the rail, on light ----
      A whisper off white rather than white, so the rail is its own surface
      beside white cards and not a card that happens to be tall. The edge
      survives as a hairline and the current module as an indigo pill, which is
      how the rail still reads as the rail. */
-  --rail:         250 251 254;
-  --rail-2:       250 251 254;
-  --rail-3:       255 255 255;
-  --rail-ink:     71 85 105;
-  --rail-fg:      23 32 47;
-  --rail-on:      238 242 255;
-  --rail-on-ink:  55 48 163;
-  --rail-mark:    79 70 229;
+  --rail:         255 255 255;
+  --rail-2:       255 255 255;
+  --rail-3:       246 247 249;
+  --rail-ink:     75 85 99;
+  --rail-fg:      21 25 43;
+  --rail-on:      21 128 61;
+  --rail-on-ink:  255 255 255;
+  --rail-mark:    20 26 43;
 
   /* ---- the surfaces ----
      `page` is not white and `card` is. That way a card lifts off the page with
      no border needed, which is the same job the four dark steps do in reverse.
      A pure-white page with white cards is a screen with no structure at all. */
-  --page:         245 247 251;
+  --page:         246 247 249;
   --card:         255 255 255;
-  --wash:         248 250 253;
-  --rule:         237 240 246;
+  --wash:         247 248 250;
+  --rule:         236 238 241;
 
-  --line:         226 230 239;
-  --line-2:       205 212 224;
+  --line:         236 238 241;
+  --line-2:       220 224 230;
   --line-ctl:     124 135 153;
 
   /* Not pure black, for the mirror of the reason above: #000 on white is harsh
      at small sizes and every label here is small. Each step clears 4.5:1 on all
      four surfaces. */
-  --ink:          15 23 42;
-  --ink-2:        71 85 105;
-  --ink-3:        92 108 131;
+  --ink:          21 25 43;
+  --ink-2:        75 85 99;
+  --ink-3:        100 108 122;
 
-  --accent:       67 56 202;
-  --accent-wash:  238 242 255;
+  --accent:       19 117 57;
+  --accent-wash:  230 246 236;
 
   --live:         16 123 56;
   --live-dark:    21 128 61;
