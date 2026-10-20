@@ -324,7 +324,7 @@ const SIZES = [
     Read off themes.css by hand, deliberately: a checker that computed the
     expected value the same way the page does would agree with the page about
     anything. */
-const BRAND = { dark: "74 214 138", light: "19 117 57" };
+const BRAND = { dark: "74 214 138", light: "9 136 73" };
 
 /** Which palette each device pass is photographed in.
 

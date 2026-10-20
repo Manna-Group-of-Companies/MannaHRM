@@ -24,9 +24,7 @@
    green on near-white with navy buttons, and it maps onto these roles without
    a new one:
 
-     `rail-on`, the current module, is the kit's green "Dashboard" pill — a
-     green deep enough for white on it to clear AA (`live-dark`'s value), which
-     the kit's own #1AAE5F does not.
+     `rail-on`, the current module, is the kit's green "Dashboard" pill.
 
      `brand-dark`, every primary button, is the kit's navy on light. On dark it
      is the green: white text has to sit on it, and a navy button on a navy
@@ -44,8 +42,31 @@
    Muster screens, `live` can move to teal (`rest`'s hue) without touching any
    other role.
 
-   The neutrals are the kit's: #F6F7F9 under white cards, #15192B ink, and
-   hairline #ECEEF1 rules. Dark mode is the kit's dark: #0E1117 under #161A22.
+   **Measured, not guessed.** The kit's frames are flat pictures with no
+   variables in them, so every light value here was read off their pixels at
+   1440px: page #FAFAFA under white cards, rail and header; ink #11141D, second
+   ink #586168; hairlines #EAEAEA (`line`) and the paler row divider #F5F5F5
+   (`rule`); grey washes #F8F8F8; navy #121828; status washes #E8F7F2,
+   #FFF9CB, #FFECEE; chart green #28A174 and blue #3B82F6.
+
+   **Where the kit's own colour fails AA, the nearest shade that passes** —
+   same hue and saturation, lightness stepped until `npm run contrast` clears:
+
+     green #0CAD5D  -> #098849  the pill and buttons, white on them (2.9 -> 4.5)
+                    -> #087A42  green text on every surface (`accent`)
+                    -> #098045  green on its wash (`live`, `brand-deep`)
+                    -> #0CAB5C  the live dot on the white rail (3:1)
+     edge #E9E9E9   -> #868686  `line-ctl`, a control's edge must be 3:1
+     red #E41A2A    -> #D81928  red text on its wash; the fill keeps #E41A2A
+     amber #D4A20A  -> #8C6B07  "partial" text on its wash and the divider
+     yellow #FFCF25 -> #B88F00  `chart-3`, a chart mark must be 3:1 on white
+     grey #6F787F   -> #636B72  `ink-3`, the lightest text, on the divider
+
+   **The kit has no dark page.** This community file holds only "Visual
+   Design - Light" and a cover; the cover's dark screens sit under an overlay,
+   so they give the hue and not the steps. Dark mode takes that navy slate
+   (page #1A2330) and steps the surfaces up from it; its text and status
+   colours are this palette's own.
 
    ---------------------------------------------------------------------------
    Indigo on slate, since 6 October 2026
@@ -145,10 +166,10 @@
      is the surface and `deep` is the text on it; `tint` is a border on that
      surface. `lift` is for the dark chrome — the rail's marker. */
   --brand:        74 214 138;
-  --brand-dark:   21 128 61;
+  --brand-dark:   9 136 73;
   --brand-deep:   134 239 172;
   --brand-soft:   16 46 31;
-  --brand-tint:   21 128 61;
+  --brand-tint:   9 136 73;
   --brand-lift:   74 214 138;
 
   /* ---- the chrome ----
@@ -157,9 +178,9 @@
      blue in it, so the rail and the page read as one navy rather than as a
      black bar beside a grey one. */
   --char:         6 8 12;
-  --nav:          22 26 34;
-  --nav-2:        16 19 26;
-  --nav-3:        36 42 53;
+  --nav:          33 44 59;
+  --nav-2:        26 35 48;
+  --nav-3:        46 58 75;
   --nav-ink:      154 163 178;
 
   /* ---- the rail ----
@@ -169,29 +190,29 @@
      the pill, which `npm run contrast` checks. The pill is an indigo-tinted
      navy rather than a lighter grey, so the current module reads as chosen
      and not merely as hovered. */
-  --rail:         22 26 34;
-  --rail-2:       16 19 26;
-  --rail-3:       36 42 53;
+  --rail:         33 44 59;
+  --rail-2:       26 35 48;
+  --rail-3:       46 58 75;
   --rail-ink:     160 169 184;
   --rail-fg:      255 255 255;
-  --rail-on:      21 128 61;
+  --rail-on:      9 136 73;
   --rail-on-ink:  255 255 255;
   --rail-mark:    255 255 255;
 
   /* ---- the surfaces ----
      Four of them, and the gaps between them are what makes a card read as
      raised — there is no white page to lift off. */
-  --page:         14 17 23;
-  --card:         22 26 34;
-  --wash:         30 35 45;
-  --rule:         36 42 53;
+  --page:         26 35 48;
+  --card:         33 44 59;
+  --wash:         40 52 68;
+  --rule:         39 51 67;
 
   /* `line` and `2` divide things; `ctl` is the edge of a control somebody has
      to find before they can use it, and that is a different job with a
      different bar — 3:1, per WCAG 1.4.11. Dividers stay quiet; controls get the
      contrast. */
-  --line:         40 46 58;
-  --line-2:       56 63 77;
+  --line:         46 58 75;
+  --line-2:       62 75 94;
   --line-ctl:     122 131 148;
 
   /* Not pure white. #FFF on a near-black surface haloes at small sizes, and
@@ -206,7 +227,7 @@
   --accent-wash:  16 46 31;
 
   --live:         74 222 128;
-  --live-dark:    21 128 61;
+  --live-dark:    9 136 73;
   --live-wash:    18 42 30;
 
   /* Amber, and no longer the brand — see the note at the top. */
@@ -238,7 +259,7 @@
 
   /* The empty half of a coverage bar. A fill, not a border, so it is allowed to
      be quiet — the filled half carries the reading. */
-  --track:        44 53 70;
+  --track:        52 65 84;
 
   /* The fill Factor HR puts behind a box whose form wants an answer in it. A
      *fill*, not a border: it has to read as "this one is waiting" across a form
@@ -283,7 +304,7 @@
   /* Ink at low alpha, which is what a shadow on white actually is — and the ink
      is the slate of the palette, so a shadow is never warmer than the page it
      falls on. */
-  --sh-raise:     0 1px 2px rgba(15, 23, 42, .04), 0 2px 8px rgba(15, 23, 42, .045);
+  --sh-raise:     0 0 #0000;
   --sh-lift:      0 4px 10px rgba(15, 23, 42, .06), 0 14px 32px rgba(15, 23, 42, .08);
   --sh-pop:       0 8px 26px rgba(15, 23, 42, .14), 0 2px 6px rgba(15, 23, 42, .08);
   --sh-modal:     0 28px 64px rgba(15, 23, 42, .22);
@@ -293,18 +314,18 @@
      selected label as well as a ring. `deep` is the step that has to be *read*
      on `soft`, so it is the dark end here where it was the light end above —
      the roles are identical and the direction is reversed. */
-  --brand:        19 117 57;
-  --brand-dark:   20 26 43;
-  --brand-deep:   20 83 45;
-  --brand-soft:   230 246 236;
-  --brand-tint:   187 230 204;
-  --brand-lift:   26 174 95;
+  --brand:        9 136 73;
+  --brand-dark:   18 24 40;
+  --brand-deep:   9 128 69;
+  --brand-soft:   234 246 242;
+  --brand-tint:   190 228 208;
+  --brand-lift:   12 173 93;
 
   /* ---- the chrome ----
      The dark fills behind a section row in the muster and the salary tables
      stay dark on light; `nav` is that material. */
-  --char:         20 26 43;
-  --nav:          20 26 43;
+  --char:         18 24 40;
+  --nav:          18 24 40;
   --nav-2:        14 19 32;
   --nav-3:        40 48 66;
   --nav-ink:      165 172 186;
@@ -316,57 +337,57 @@
      how the rail still reads as the rail. */
   --rail:         255 255 255;
   --rail-2:       255 255 255;
-  --rail-3:       246 247 249;
-  --rail-ink:     75 85 99;
-  --rail-fg:      21 25 43;
-  --rail-on:      21 128 61;
+  --rail-3:       248 248 248;
+  --rail-ink:     17 20 29;
+  --rail-fg:      17 20 29;
+  --rail-on:      9 136 73;
   --rail-on-ink:  255 255 255;
-  --rail-mark:    20 26 43;
+  --rail-mark:    18 24 40;
 
   /* ---- the surfaces ----
      `page` is not white and `card` is. That way a card lifts off the page with
      no border needed, which is the same job the four dark steps do in reverse.
      A pure-white page with white cards is a screen with no structure at all. */
-  --page:         246 247 249;
+  --page:         250 250 250;
   --card:         255 255 255;
-  --wash:         247 248 250;
-  --rule:         236 238 241;
+  --wash:         248 248 248;
+  --rule:         245 245 245;
 
-  --line:         236 238 241;
-  --line-2:       220 224 230;
-  --line-ctl:     124 135 153;
+  --line:         234 234 234;
+  --line-2:       233 233 233;
+  --line-ctl:     134 134 134;
 
   /* Not pure black, for the mirror of the reason above: #000 on white is harsh
      at small sizes and every label here is small. Each step clears 4.5:1 on all
      four surfaces. */
-  --ink:          21 25 43;
-  --ink-2:        75 85 99;
-  --ink-3:        100 108 122;
+  --ink:          17 20 29;
+  --ink-2:        88 97 104;
+  --ink-3:        99 107 114;
 
-  --accent:       19 117 57;
-  --accent-wash:  230 246 236;
+  --accent:       8 122 66;
+  --accent-wash:  234 246 242;
 
-  --live:         16 123 56;
-  --live-dark:    21 128 61;
-  --live-wash:    236 253 243;
+  --live:         9 128 69;
+  --live-dark:    9 136 73;
+  --live-wash:    232 247 242;
 
-  --part:         175 78 4;
-  --part-wash:    255 247 237;
+  --part:         140 107 7;
+  --part-wash:    255 249 203;
 
-  --bad:          185 28 28;
-  --bad-fill:     185 28 28;
-  --bad-wash:     254 242 242;
-  --bad-tint:     252 205 205;
-  --bad-deep:     153 27 27;
+  --bad:          216 25 40;
+  --bad-fill:     228 26 42;
+  --bad-wash:     255 236 238;
+  --bad-tint:     252 205 210;
+  --bad-deep:     180 21 33;
   --bad-faint:    254 249 249;
 
   --skip:         92 108 131;
   --skip-wash:    241 245 249;
 
   --rest:         15 118 110;
-  --info:         2 132 199;
+  --info:         59 130 246;
 
-  --track:        228 232 240;
+  --track:        242 242 242;
 
   /* Their "answer this" fill. Ink sits on it, so it stays a surface — pale
      enough for `ink-3` to clear AA, warm enough not to read as an error. */
@@ -375,13 +396,13 @@
   /* On a white rail as well as on the dark fills, so the resting dot is dark
      enough to be found on both. */
   --beacon:       100 116 139;
-  --beacon-live:  22 163 74;
-  --beacon-bad:   220 38 38;
+  --beacon-live:  12 171 92;
+  --beacon-bad:   228 26 42;
 
   /* Validated against `#FFFFFF` rather than `#131824`: the lightness band moves
      with the surface, so these are the darker ends of the same three hues.
      Same order, same rule, never cycled. */
-  --chart-1:      15 118 110;
-  --chart-2:      2 132 199;
-  --chart-3:      180 83 9;
+  --chart-1:      40 161 116;
+  --chart-2:      59 130 246;
+  --chart-3:      184 143 0;
 }

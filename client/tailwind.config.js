@@ -206,13 +206,15 @@ export default {
          palette here owns. Pointing the default at `line` means the handful of
          such places follow the theme like everything else. */
       borderColor: { DEFAULT: "rgb(var(--line))" },
-      /* Rounder since 29 September 2026: a control at 8px and a card at 14px
-         read as soft and approachable, where 6 and 12 read as a spreadsheet. */
+      /* The HRDashboard kit's, measured off its frames (20 October 2026):
+         10px on a control — buttons, fields, the rail's pill — and 16px on a
+         panel. `sm` and `md` are the steps either side for the few places
+         that are neither. */
       borderRadius: {
         DEFAULT: "10px",
         sm: "8px",
         md: "12px",
-        lg: "18px",
+        lg: "16px",
       },
       boxShadow: {
         /* Four steps and no more. A screen that needs a fifth is a screen with

@@ -5493,26 +5493,61 @@
 /* ===========================================================================
    The HRDashboard skin (20 October 2026).
 
-   Asked for: the look of the HRDashboard UI kit, on every page. Nearly all of
-   it is `themes.css` — green and navy on cool neutrals, both modes re-run
-   through `npm run contrast` — plus the radii and the one typeface in
-   tailwind.config.js. What is here is the handful of shapes a palette cannot
-   change, and nothing in it names a colour: every value is a role.
+   Asked for: the look of the HRDashboard UI kit, on every page, with the kit
+   as the benchmark. The colours are `themes.css` (measured off the kit's
+   frames, both modes re-run through `npm run contrast`), the radii and the
+   one typeface are tailwind.config.js. What is here is the shapes and sizes
+   a palette cannot change, and nothing in it names a colour: every value is
+   a role.
 
    Outside `@layer` for the same reason as the block below it, and before the
    media queries so the tablet and phone rules still win where they disagree.
    =========================================================================== */
+
+/* Sizes are the kit's at 1440px, measured off its frames and written in rem
+   on the 16px root: a 280px rail, a 96px header, 56px rows in the rail, 24px
+   gutters, 54-56px controls. */
+
+/* ---- the shell ----
+   Restated for the slim rail too: this block is outside `@layer`, so the
+   width here would otherwise beat the layered slim rule at any specificity. */
+.shell { --rail-w: 17.5rem; }
+.shell[data-rail="slim"] { --rail-w: 4.5rem; }
+.main { --topbar-h: 6rem; }
+.topbar { padding-left: 2rem; padding-right: 2rem; }
+.content { padding: 2rem 1.5rem 2.5rem; gap: 1.5rem; }
+
+/* The logo row is the header's height, so the rail's first link starts on
+   the line the page's first card does. */
+.side .brand { min-height: 6rem; padding-left: 2rem; padding-right: 1.5rem; }
+
+/* ---- the rail ----
+   Rows touch: the kit spaces its links by their own 56px height, not by a
+   gap. The label is the ink and the icon the quiet grey beside it. */
+.railnav { gap: 0; }
+.nav {
+  min-height: 3.5rem;
+  margin-left: 2rem;
+  margin-right: 2rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  gap: .75rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.nav svg { color: rgb(var(--ink-3)); }
+.nav:hover svg { color: rgb(var(--rail-fg)); }
 
 /* **The current module is a filled pill, not a tinted one with a stripe.**
    That is the kit's green "Dashboard" button, and the glow under it is what
    makes it read as the one place you are rather than one row of nine. The
    stripe goes because a solid fill already says it; two markers on one row
    is one too many. Its icon follows the label, white on the fill. */
-.nav { border-radius: 12px; font-weight: 600; }
 .nav[aria-current="page"] {
   background: rgb(var(--rail-on));
   color: rgb(var(--rail-on-ink));
-  box-shadow: 0 10px 22px -12px rgb(var(--rail-on) / .9);
+  box-shadow: 0 8px 24px -8px rgb(var(--rail-on) / .55);
 }
 .nav[aria-current="page"]::before { display: none; }
 .nav[aria-current="page"] svg { color: rgb(var(--rail-on-ink)); }
@@ -5524,14 +5559,35 @@
 
 /* **The open page under it is grey, not green.** With the module filled, a
    second green row beneath it reads as two places at once; the kit draws the
-   page as a quiet pill on the rail's own step, which `rail-fg` reads on at
-   well over AA in both modes.
+   page as a quiet pill on the rail's own step, hung off a 2px tree line.
 
-   Scoped under `.navsub` on purpose: the 6 October block below sets the
-   same selector green, and at equal specificity the later block wins. The
-   extra class is what lets this one hold without moving either block. */
-.navpage { border-radius: 10px; }
-.navsub .navpage[aria-current="page"] { color: rgb(var(--rail-fg)); background: rgb(var(--rail-3)); }
+   Scoped under `.side` on purpose: the 6 October block below sets the same
+   selectors, and at equal specificity the later block wins. The extra class
+   is what lets these hold without moving either block. */
+.side .navsub {
+  gap: 0;
+  margin: 0 2rem 0 2.45rem;
+  padding-left: .7rem;
+  border-left: 2px solid rgb(var(--track));
+}
+.side .navpage {
+  min-height: 3.125rem;
+  display: flex;
+  align-items: center;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgb(var(--rail-ink));
+}
+.side .navpage:hover { padding-left: 1rem; }
+.side .navpage[aria-current="page"] {
+  color: rgb(var(--rail-fg));
+  background: rgb(var(--rail-3));
+  font-weight: 600;
+}
+.side .navpage[aria-current="page"]::before { display: none; }
 
 /* **The kit's Light / Dark switch, in the rail foot.** It stands in for the
    header's appearance button only where the rail is open on a desktop, so the
@@ -5545,7 +5601,7 @@
 .railmode {
   grid-template-columns: 1fr 1fr;
   gap: 2px;
-  padding: 3px;
+  padding: 4px;
   border-radius: 12px;
   background: rgb(var(--rail-3));
 }
@@ -5556,12 +5612,12 @@
   gap: .4rem;
   min-height: 2.25rem;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
-  color: rgb(var(--rail-ink));
+  color: rgb(var(--ink-3));
   font-family: theme(fontFamily.body);
-  font-size: theme(fontSize.mini);
-  font-weight: 600;
+  font-size: .875rem;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease),
               box-shadow var(--ui-fast) var(--ui-ease);
@@ -5571,19 +5627,87 @@
 .railmode button[aria-pressed="true"] {
   background: rgb(var(--card));
   color: rgb(var(--rail-fg));
-  box-shadow: var(--sh-raise);
+  box-shadow: 0 2px 6px rgb(var(--char) / .08);
 }
 .railmode button:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
 
-/* **Softer controls.** The kit's buttons, search box and header icons are
-   12px-round and a little taller; panels pick up 18px from `rounded-lg` in
-   tailwind.config.js. Heights only grow, so no target gets smaller. */
-.btn { border-radius: 12px; min-height: 2.5rem; }
-.tbfind, .tbicon { border-radius: 12px; }
+/* ---- the header ----
+   The kit's search is a grey well with no edge; the edge comes back with the
+   focus ring, which is where somebody needs it. */
+.tbfind {
+  min-height: 3rem;
+  max-width: 19.625rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-color: transparent;
+  border-radius: 12px;
+  background: rgb(var(--wash));
+}
+.tbicon { border-radius: 10px; }
 
-/* The number on a figure tile, at the kit's weight: it is the thing the tile
-   is for. */
-.tile .n { font-weight: 700; letter-spacing: -.02em; }
+/* ---- panels ----
+   White on the #FAFAFA page with no edge: on light the step between the two
+   surfaces is the card's whole outline, as in the kit. Dark keeps its
+   hairline, because its two navies are closer than white and #FAFAFA. */
+.panel, .emhead, .embar, .tile { border-radius: 16px; }
+[data-mode="light"] :is(.panel, .emhead, .embar, .tile) { border-color: transparent; }
+.panel > header { padding: 1.25rem 1.5rem; }
+.panel > header h3 { font-size: 1.125rem; font-weight: 600; }
+.panel .body { padding: 1.5rem; }
+
+/* The page's own heading, inside its card: 24px semibold over a 14px grey
+   line, as the kit heads Employees and Payroll. */
+.emhead { padding: 1.5rem; }
+.emhead h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.01em; }
+.emhead .n { font-size: .875rem; color: rgb(var(--ink-2)); }
+.embar { padding: 1rem 1.5rem; }
+
+/* The number on a figure tile, at the kit's 32px semibold over a 14px label:
+   it is the thing the tile is for. */
+.tile { padding: 1.5rem; }
+.tile .n { font-size: 2rem; font-weight: 600; letter-spacing: -.02em; }
+.tile .k { font-size: .875rem; font-weight: 500; color: rgb(var(--ink-2)); }
+
+/* ---- controls ----
+   The kit's 56px filled button and 54px outlined box, 10px round, flat: no
+   highlight along the top and no glow under it. */
+.btn {
+  min-height: 3.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+.btn.tpl, .btn.tpl:hover:not([disabled]) { box-shadow: none; }
+.btn.split { padding-left: .75rem; padding-right: .75rem; }
+.embtn { min-height: 3.375rem; padding-left: 1.25rem; padding-right: 1.25rem; border-radius: 10px; box-shadow: none; }
+.embar :is(select, input:not([type="checkbox"], [type="radio"])) { min-height: 3.375rem; border-radius: 10px; }
+.embtn.pri.split { padding-left: .6rem; padding-right: .6rem; }
+
+/* ---- tables ----
+   Inside the components layer, not out here: a screen that sizes its own
+   cells keeps them, because its rule is more specific than these and the
+   layer lets specificity decide.
+
+   The kit's list: a 56px grey heading band with rounded ends and no rule
+   under it, then 64px rows over a pale divider.
+
+   **Not the muster grids.** They size their day cells and nothing else, so
+   the name and total cells would take 64px and stretch a month of thirty
+   people to twice its height. The kit has no grid like it to follow. The
+   `:where()` keeps the exclusion from adding weight, so this still loses to
+   any screen's own cell rule. */
+@layer components {
+  :where(table:not(.muster)) :is(th, td) { padding: 1.375rem 1rem; }
+  :where(table:not(.muster)) thead th {
+    padding-top: 1.125rem;
+    padding-bottom: 1.125rem;
+    border-bottom: 0;
+    font-weight: 500;
+  }
+  :where(table:not(.muster)) thead th:first-child { border-radius: 10px 0 0 10px; }
+  :where(table:not(.muster)) thead th:last-child  { border-radius: 0 10px 10px 0; }
+}
 
 /* ===========================================================================
    The interface of 6 October 2026: navigation, fields, the dashboard, motion.
