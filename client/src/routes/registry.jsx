@@ -41,6 +41,9 @@ import EmployeeMaster from "@/features/employees/EmployeeMaster";
 import CreateEmployee from "@/features/employees/CreateEmployee";
 import ImportOnboarding from "@/features/employees/ImportOnboarding";
 import Regularization from "@/features/attendance/Regularization";
+import TeamAttendance from "@/features/attendance/TeamAttendance";
+import EmployeeAttendance from "@/features/attendance/EmployeeAttendance";
+import AttendanceSettings from "@/features/attendance/AttendanceSettings";
 import { AbsentReport, OtReport, WeeklyReport } from "@/features/attendance/RangeReports";
 import SubmitAttendance from "@/features/attendance/SubmitAttendance";
 import InOut from "@/features/attendance/InOut";
@@ -172,7 +175,11 @@ const TABS = {
 	   in its order. `overview` is Attendance Regularization because that is the
 	   first item on their menu and the one page here with a live queue behind
 	   it — so clicking Attendance in the nav lands on it. */
-	attendance: [["overview", "Employee Attendance Regularization"], ["submit", "Submit Attendance"],
+	/* The HRDashboard reference's Attendance first (21 October 2026): Team,
+	   Employee and Settings, then ours. The eleven report pages after them are
+	   off the menu (data/sections.js) and come as files from Download report. */
+	attendance: [["team", "Team Attendance"], ["employee", "Employee Attendance"],
+		["overview", "Employee Attendance Regularization"], ["settings", "Attendance Settings"], ["submit", "Submit Attendance"],
 		["inout", "In Out Activities Report"], ["daily", "Daily Detail Attendance Report"],
 		["monthly", "Monthly Basic Attendance"], ["summary", "Monthly Summary Attendance"],
 		["statutory", "Statutory Reports"],
@@ -264,7 +271,10 @@ const PAGES = {
 		chart: CompanyChart,
 		all: moduleAll("employees", "Employees"),
 		...managedPages("employees"), ...blueprintPages("employees") },
-	attendance: { overview: Regularization, submit: SubmitAttendance, inout: InOut,
+	attendance: { team: TeamAttendance, employee: EmployeeAttendance, settings: AttendanceSettings,
+		/* My Attendance (D3): the same page, fixed to the signed-in person. */
+		mine: () => <EmployeeAttendance mine />,
+		overview: Regularization, submit: SubmitAttendance, inout: InOut,
 		daily: DailyDetail, monthly: MonthlyBasic, summary: MonthlySummary, statutory: Statutory,
 		shifts: Shifts,
 		/* Absent reads the day it is asked about; the spec version read today's
@@ -351,7 +361,10 @@ export function fullPage(s) {
    clicking its box on Hierarchy Chart. */
 /* Documents' one folder and News' post, new post and edit (21 Oct 2026) are
    pages of the reference's that it opens from a card, with a back arrow. */
-const OFF_MENU = { employees: ["new", "import", "upload", "chart"], documents: ["folder"], news: ["item", "new", "edit"] };
+/* `attendance/mine` (21 Oct 2026): My Attendance, for a login an Employee is
+   linked to (D3) — none of today's are — so it is opened from Team Attendance's
+   own button rather than offered on every login's menu. */
+const OFF_MENU = { employees: ["new", "import", "upload", "chart"], documents: ["folder"], news: ["item", "new", "edit"], attendance: ["mine"] };
 
 /** What the breadcrumb calls an off-menu page. These have no tab to be named
     by, and before 10 Oct 2026 every one of them read "Overview" up there. */
@@ -360,6 +373,7 @@ const OFF_MENU_TITLE = {
 	"employees/import": "Import From Onboarding",
 	"employees/upload": "File Import",
 	"employees/chart": "Company Chart",
+	"attendance/mine": "My Attendance",
 	"documents/folder": "Folder",
 	"news/item": "News detail",
 	"news/new": "Create news",

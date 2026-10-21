@@ -342,10 +342,9 @@ function ioRun(s, kind) {
 			}),
 		};
 		const name = ioStamp(s) + (kind === "PDF" ? ".pdf" : ".xlsx");
-		(kind === "PDF" ? sheetsPdf : sheetsXlsx)([sheet], name)
+		return (kind === "PDF" ? sheetsPdf : sheetsXlsx)([sheet], name)
 			.then(() => set({ ioMsg: `Exported ${fmt(rows.length)} row${rows.length === 1 ? "" : "s"} to ${name}.` }))
 			.catch((e) => set({ ioMsg: `Could not build ${name}: ${e.message || e}` }));
-		return undefined;
 	}
 	const html = ioPaper(s, rows);
 
@@ -395,7 +394,15 @@ async function ioDownload() {
 		await ioGenerate();
 		if (getState().ioState !== "done") return;
 	}
-	ioRun(getState(), f.fmt === "PDF" ? "PDF" : "Excel");
+	return ioRun(getState(), f.fmt === "PDF" ? "PDF" : "Excel");
+}
+
+/** In Out as a file for a range, from the Download report dialog: the page's
+    criteria set to it, then the page's own download. */
+export async function ioDownloadFor(from, till, kind) {
+	patch("io", { from, till, fmt: kind });
+	await ioDownload();
+	return String(getState().ioMsg || "Done.").replace(/<[^>]+>/g, "");
 }
 
 function IoForm({ s }) {

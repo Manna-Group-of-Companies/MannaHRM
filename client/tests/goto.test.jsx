@@ -48,7 +48,7 @@ afterEach(() => localStorage.clear());
 
 describe("the menu's list of pages", () => {
 	it("lists each module's pages in its group, the same ones the strip over the page would", () => {
-		set({ user: HR, section: "attendance", subtab: "daily" });
+		set({ user: HR, section: "attendance", subtab: "monthly" });
 		const { container } = draw(<Sidebar />);
 		expect(listed(container, "attendance", "attendance")).toEqual(stripOf("attendance", HR).map((t) => t[1]));
 		expect(listed(container, "timeoff", "leave")).toEqual(stripOf("leave", HR).map((t) => t[1]));
@@ -67,11 +67,11 @@ describe("the menu's list of pages", () => {
 	});
 
 	it("marks the open page as current, and no other page", () => {
-		set({ user: HR, section: "attendance", subtab: "daily" });
+		set({ user: HR, section: "attendance", subtab: "monthly" });
 		const { container } = draw(<Sidebar />);
 		const on = [...container.querySelectorAll('.sub-in a[aria-current="page"]')];
 		expect(on).toHaveLength(1);
-		expect(on[0].textContent).toBe(stripOf("attendance", HR).find((t) => t[0] === "daily")[1]);
+		expect(on[0].textContent).toBe(stripOf("attendance", HR).find((t) => t[0] === "monthly")[1]);
 	});
 
 	it("does not count a page as a group, so the menu still has one button per group", () => {
@@ -84,12 +84,12 @@ describe("the menu's list of pages", () => {
 	it("moves to the page in the store when one is clicked, without reloading", () => {
 		set({ user: HR, section: "attendance", subtab: "overview" });
 		const { container } = draw(<Sidebar />);
-		const daily = [...container.querySelectorAll(".sub-in a")]
-			.find((a) => a.textContent === stripOf("attendance", HR).find((t) => t[0] === "daily")[1]);
+		const monthly = [...container.querySelectorAll(".sub-in a")]
+			.find((a) => a.textContent === stripOf("attendance", HR).find((t) => t[0] === "monthly")[1]);
 		const click = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
-		act(() => { daily.dispatchEvent(click); });
+		act(() => { monthly.dispatchEvent(click); });
 		expect(click.defaultPrevented).toBe(true);
-		expect(getState().subtab).toBe("daily");
+		expect(getState().subtab).toBe("monthly");
 	});
 
 	it("leaves the strip over the page to the modules the menu does not list", () => {
@@ -135,10 +135,10 @@ describe("go to a page", () => {
 
 	it("finds a page from a word of its module and a word of its name", () => {
 		const rows = destinations(HR, null);
-		const hit = rank(rows, "attendance daily");
+		const hit = rank(rows, "attendance monthly");
 		expect(hit.length).toBeGreaterThan(0);
 		expect(hit.every((r) => r.section === "attendance")).toBe(true);
-		expect(hit[0].label.toLowerCase()).toContain("daily");
+		expect(hit[0].label.toLowerCase()).toContain("monthly");
 	});
 
 	it("puts a page whose name starts with the first word above one that only contains it", () => {
@@ -163,14 +163,14 @@ describe("go to a page", () => {
 		expect(getState().palette).toBe(true);
 
 		const box = container.querySelector(".gotofind input");
-		fireEvent.change(box, { target: { value: "daily detail" } });
+		fireEvent.change(box, { target: { value: "monthly basic" } });
 		const first = container.querySelector('.gotolist [aria-selected="true"]');
-		expect(first.textContent.toLowerCase()).toContain("daily");
+		expect(first.textContent.toLowerCase()).toContain("monthly");
 
 		await act(async () => { fireEvent.keyDown(box, { key: "Enter" }); });
 		expect(getState().palette).toBe(false);
 		expect(getState().section).toBe("attendance");
-		expect(getState().subtab).toBe("daily");
+		expect(getState().subtab).toBe("monthly");
 	});
 
 	it("closes on Escape and goes nowhere", async () => {

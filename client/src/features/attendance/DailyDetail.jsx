@@ -205,6 +205,17 @@ const DDA_FILL = (v, head) => {
 	return null;
 };
 
+/** Daily Detail as a file for a range, from the Download report dialog: the
+    page's own criteria set to that range, its own read, its own export —
+    so the file is the one the page would have written. */
+export async function ddaDownload(from, to, kind) {
+	patch("dda", { from, to, emp: "" });
+	void loadShiftWindows();
+	await loadDda(from, to, "");
+	await ddaRun(getState(), kind);
+	return getState().dda.msg || "Done.";
+}
+
 /** One of the five formats on their export menu. */
 function ddaRun(s, kind) {
 	const f = s.dda;
@@ -228,10 +239,9 @@ function ddaRun(s, kind) {
 			head: cols.map((c) => c[0]),
 			rows: list.map((r) => cols.map((c) => { const v = c[1](r); return v == null ? "" : v; })),
 		};
-		(kind === "PDF" ? sheetsPdf : sheetsXlsx)([sheet], name)
+		return (kind === "PDF" ? sheetsPdf : sheetsXlsx)([sheet], name)
 			.then(() => done(`Exported ${fmt(list.length)} rows to ${name}.`))
 			.catch((e) => done(`Could not build ${name}: ${e.message || e}`));
-		return undefined;
 	}
 
 	const html = ddaPaper(s, list);

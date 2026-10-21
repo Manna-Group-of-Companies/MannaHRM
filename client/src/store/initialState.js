@@ -115,6 +115,8 @@ const initial = {
 	homeLayout: storedLayout(),
 	home: null,
 	homeAtt: null,
+	/** Employee Attendance: whose days it shows. Team Attendance sets it. */
+	attEmp: "",
 	/** Settings → Security's rules as the site holds them — the same object
 	    data/sections.js is obeying, here so a menu redraws when they change.
 	    See api/pagerules.js. The state is "" before a sign-in, then "loading",

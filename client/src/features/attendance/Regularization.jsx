@@ -12,6 +12,7 @@ import { loadRegGrid, loadRegMonth, loadShiftWindows, shiftLabel } from "@/api/a
 import { editPlan } from "@/lib/punchedit";
 import { Desk, Modal, Note, Scroll } from "@/components/ui";
 import { deskUrl } from "@/lib/desk";
+import DownloadReport from "@/features/attendance/DownloadReport";
 
 /* Factor HR's Attendance Regularization screen, photographed 28 Aug 2026:
    the title, then one bar — Attendance Cycle, the status dot, Search Employee,
@@ -838,7 +839,13 @@ export default function Regularization() {
 	return (
 		<>
 			<div className="fhscreen">
-				<div className="fhtitle">Attendance Regularization</div>
+				<div className="fhtitle" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+					Attendance Regularization
+					{/* The eleven reports, as files (21 October 2026) — here as well as on
+					    Team Attendance, because this is the one Attendance page every
+					    login with Attendance has. */}
+					<span style={{ marginLeft: "auto" }}><DownloadReport /></span>
+				</div>
 				<RegBar s={s} cyc={cyc} />
 				{/* No "Waiting for approval" box here since 29 September 2026. A
 				    correction raised from the phone app is decided on Dashboard →

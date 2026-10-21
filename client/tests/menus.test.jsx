@@ -8,6 +8,7 @@ import SubNav from "@/layout/SubNav";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 import { OtReport, WeeklyReport, AbsentReport } from "@/features/attendance/RangeReports";
+import { reportsFor } from "@/features/attendance/DownloadReport";
 
 const MRP = "mannarubber.products@mannarubber.com";
 
@@ -38,10 +39,14 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 		expect(allowedFor("leave", MRP)).toBeNull();
 	});
 
-	it("the strip draws eight tabs for that login", async () => {
-		set({ ...loadedState(), user: MRP, section: "attendance", subtab: "inout" });
+	/* Since 21 October 2026 the five reports on that menu are files from
+	   Download report rather than pages on the strip (data/sections.js). */
+	it("the strip draws the register, Monthly and Manage Shift, and the dialog offers its five reports", async () => {
+		set({ ...loadedState(), user: MRP, section: "attendance", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link").map((a) => a.textContent)).toHaveLength(8);
+		expect(screen.getAllByRole("link").map((a) => a.textContent))
+			.toEqual(["Employee Attendance Regularization", "Monthly Basic Attendance", "Manage Shift"]);
+		expect(reportsFor(MRP, true).map((r) => r[0]).sort()).toEqual(["absent", "daily", "inout", "ot", "weekly"]);
 	});
 
 	it.each([["OT", OtReport], ["Weekly", WeeklyReport], ["Absent", AbsentReport]])("%s report draws", async (_, C) => {

@@ -51,7 +51,12 @@ export const HIDDEN_PAGES = {
 	/* Directory and Organization Chart shown again 21 Oct 2026 (D15), as the
 	   HRDashboard reference's Directory and Org chart. */
 	employees: ["salary", "changes", "detail", "cattypes", "ctc", "weekoff", "letters", "all"],
-	attendance: ["submit", "statutory", "all"],
+	/* The eleven reports, off the menu on 21 Oct 2026: the HRDashboard
+	   reference has no report pages under Attendance, so they are files from the
+	   Download report dialog (features/attendance/reportrun.js). Their pages and
+	   tests stay; Settings → Security can show any of them again. */
+	attendance: ["submit", "statutory", "all", "inout", "daily", "summary", "present", "absent", "msp",
+		"iocount", "shiftrep", "headcount", "ot", "weekly"],
 	leave: ["availed", "pending"],
 	payroll: ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],
 };

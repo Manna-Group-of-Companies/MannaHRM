@@ -250,17 +250,26 @@ export async function monthlyBasicXlsx(g, opts) {
  * @param {object[]} rows - `monthlySummaryRows(...)`'s own return
  * @param {object} opts - { from, till, company, name }
  */
+/** Monthly Summary's columns and one person's cells — the sheet's, and the
+    PDF the Download report dialog writes off the same two. */
+export const MS_COLS = [
+	["Emp Code", 12], ["Name", 24], ["Department", 18], ["Shift In", 9], ["Shift Out", 9],
+	["Days", 6], ["P", 5], ["HD", 5], ["WO", 5], ["HO", 5], ["AB", 5], ["LC", 5], ["EG", 5],
+	["OT", 8], ["CL", 5], ["LWP", 6],
+	["Actual Hrs", 11], ["Standard Hrs", 12], ["Deficit Hrs", 11],
+	["Actual/Day", 10], ["Standard/Day", 12],
+];
+export const msCells = (r) => [
+	r.emp.employee_number || r.emp.name, r.emp.employee_name || "", r.emp.department || "",
+	r.shiftIn, r.shiftOut, r.daysInMonth, r.P, r.HD, r.WO, r.HO, r.AB, r.LC, r.EG,
+	r.OT, r.CL, r.LWP, r.actualHours, r.standardHours, r.deficitHours, r.actualPerDay, r.standardPerDay,
+];
+
 export async function monthlySummaryXlsx(rows, opts) {
 	const ExcelJS = (await import("exceljs")).default;
 	const { from, till, company, name } = opts;
 
-	const cols = [
-		["Emp Code", 12], ["Name", 24], ["Department", 18], ["Shift In", 9], ["Shift Out", 9],
-		["Days", 6], ["P", 5], ["HD", 5], ["WO", 5], ["HO", 5], ["AB", 5], ["LC", 5], ["EG", 5],
-		["OT", 8], ["CL", 5], ["LWP", 6],
-		["Actual Hrs", 11], ["Standard Hrs", 12], ["Deficit Hrs", 11],
-		["Actual/Day", 10], ["Standard/Day", 12],
-	];
+	const cols = MS_COLS;
 
 	const wb = new ExcelJS.Workbook();
 	wb.creator = "Manna HR";
@@ -294,11 +303,7 @@ export async function monthlySummaryXlsx(rows, opts) {
 	ws.views = [{ state: "frozen", xSplit: 2, ySplit: headerRow.number }];
 
 	for (const r of rows) {
-		const cells = [
-			r.emp.employee_number || r.emp.name, r.emp.employee_name || "", r.emp.department || "",
-			r.shiftIn, r.shiftOut, r.daysInMonth, r.P, r.HD, r.WO, r.HO, r.AB, r.LC, r.EG,
-			r.OT, r.CL, r.LWP, r.actualHours, r.standardHours, r.deficitHours, r.actualPerDay, r.standardPerDay,
-		];
+		const cells = msCells(r);
 		const row = ws.addRow(cells);
 		row.eachCell((cell, colNumber) => {
 			cell.border = thinBorder();
