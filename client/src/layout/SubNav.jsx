@@ -6,7 +6,7 @@ import { MODULES, fullPage, offMenu } from "@/routes/registry";
 import Link from "@/routes/Link";
 import { tabsFor } from "@/data/menus";
 import { isHidden } from "@/data/sections";
-import { inRail } from "@/data/nav";
+import { OWN_NAV, inRail } from "@/data/nav";
 
 export default function SubNav() {
 	const s = useApp();
@@ -39,7 +39,7 @@ export default function SubNav() {
 
 	/* One page is no strip: a single tab switches nothing, and the reference
 	   draws none over Documents or News (21 October 2026). */
-	if (full || tabs.length < 2) return <div className="subbar" />;
+	if (full || tabs.length < 2 || OWN_NAV.includes(section)) return <div className="subbar" />;
 	/* Since 21 October 2026 the side menu lists the pages of every module its
 	   groups hold, so on a desktop with the menu open this strip is only
 	   wanted for the modules it does not — Reports and Settings. `data-inrail`

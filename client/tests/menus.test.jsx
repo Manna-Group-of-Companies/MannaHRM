@@ -60,10 +60,10 @@ describe.each([MRP, "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com
 	"the company login %s's Employees module", (login) => {
 	beforeEach(() => resetStore());
 
-	it("is Employee Master, Calendar, Employee Profile and New Joining even when the site calls it an admin", () => {
+	it("is Employee Master, Calendar and New Joining even when the site calls it an admin", () => {
 		for (const admin of [true, null, false]) {
 			expect(tabsFor("employees", MODULES.employees.tabs, login, admin).map((t) => t[0]))
-				.toEqual(["overview", "calendar", "profile", "joining"]);
+				.toEqual(["overview", "calendar", "joining"]);
 		}
 	});
 
@@ -71,10 +71,14 @@ describe.each([MRP, "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com
 		expect(landingFor("employees", "detail", login, true)).toBe("overview");
 	});
 
-	it("draws four tabs on the strip", async () => {
+	it("opens Employee Profile from a person, though it is not on the strip", () => {
+		expect(landingFor("employees", "profile", login, true)).toBe("profile");
+	});
+
+	it("draws three tabs on the strip", async () => {
 		set({ ...loadedState(), user: login, admin: true, section: "employees", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link")).toHaveLength(4);
+		expect(screen.getAllByRole("link")).toHaveLength(3);
 	});
 });
 
@@ -110,16 +114,17 @@ describe("Add New Employee", () => {
 
 	it("adds no tab to the strip", () => {
 		expect(tabsFor("employees", MODULES.employees.tabs, MRP, false).map((t) => t[0]))
-			.toEqual(["overview", "calendar", "profile", "joining"]);
+			.toEqual(["overview", "calendar", "joining"]);
 	});
 });
 
 describe("a login that is not an admin", () => {
 	beforeEach(() => resetStore());
 
-	it("is shown Employee Master, Calendar, Employee Profile and New Joining, and nothing else", () => {
+	it("is shown Employee Master, Calendar and New Joining, and may still open Employee Profile", () => {
 		expect(tabsFor("employees", MODULES.employees.tabs, "someone@mannarubber.com", false).map((t) => t[0]))
-			.toEqual(["overview", "calendar", "profile", "joining"]);
+			.toEqual(["overview", "calendar", "joining"]);
+		expect(landingFor("employees", "profile", "someone@mannarubber.com", false)).toBe("profile");
 		for (const k of allowedFor("employees", "", false)) expect(MODULES.employees.pages[k]).toBeTruthy();
 	});
 
@@ -158,10 +163,10 @@ describe("a login that is not an admin", () => {
 		expect(landingFor("employees", "calendar", "", false)).toBe("calendar");
 	});
 
-	it("draws four tabs on the strip", async () => {
+	it("draws three tabs on the strip", async () => {
 		set({ ...loadedState(), user: "someone@mannarubber.com", admin: false, section: "employees", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link")).toHaveLength(4);
+		expect(screen.getAllByRole("link")).toHaveLength(3);
 	});
 });
 
@@ -282,5 +287,15 @@ describe("who may edit the Calendar", () => {
 	it.each(["mannarubber.products@mannarubber.com", "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com",
 		"mannatyreretreads@mannarubber.com", "it@mannarubber.com", "", null])("is not %s, even when the site would let it write", (u) => {
 		expect(calEditor(u)).toBe(false);
+	});
+});
+
+describe("Employee Profile", () => {
+	it("is on no login's strip, and opens for each of them from Employee Master", () => {
+		expect(MODULES.employees.tabs.some((t) => t[0] === "profile")).toBe(false);
+		expect(MODULES.employees.pages.profile).toBeTruthy();
+		for (const [login, admin] of [["it@mannarubber.com", true], [MRP, true], ["someone@mannarubber.com", false]]) {
+			expect(landingFor("employees", "profile", login, admin)).toBe("profile");
+		}
 	});
 });

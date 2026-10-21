@@ -53,7 +53,7 @@ export const NAV = [
 
 /** Where the menu foot and the header send somebody, outside the groups. */
 export const DASHBOARD = "dashboard";
-export const FOOT = ["settings"];
+export const FOOT = ["help", "settings"];
 export const HEADER_LINKS = [
 	{ label: "Documents", section: "documents", subtab: "overview" },
 	{ label: "News", section: "news", subtab: "overview" },
@@ -113,6 +113,10 @@ export const groupOfSection = (section) => NAV.find((g) => g.sections.includes(s
 /** Whether a module's pages are listed in the side menu — and so need no
     strip over the page on a desktop. The Dashboard's are, under its button. */
 export const inRail = (section) => section === DASHBOARD || Boolean(groupOfSection(section));
+
+/** Modules whose pages list themselves on the page, as the reference's
+    Settings does down its left side — no strip over them, at any width. */
+export const OWN_NAV = ["settings"];
 
 /* ---------------------------------------------------------------------------
    The phone's bottom bar: four destinations and Menu, as the reference has

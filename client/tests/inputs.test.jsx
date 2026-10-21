@@ -48,6 +48,8 @@ const KEYSTROKE = {
 	time: "09:30",
 	email: "someone@example.invalid",
 	tel: "9000000000",
+	/* Settings → Change password (21 October 2026). */
+	password: "secret-word-1",
 	search: "raghav",
 	text: "raghav",
 	"": "raghav",

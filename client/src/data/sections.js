@@ -26,6 +26,11 @@ export const SECTIONS = [
      reference reaches them from the top bar — and with no Factor HR item. */
   {key:"documents", label:"Documents", cov:"live", icon:"M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"},
   {key:"news",      label:"News",      cov:"live", icon:"M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V9h4M12 8h6M12 12h6M12 16h4"},
+  /* The HRDashboard reference's Notifications and Help center (21 Oct 2026):
+     the bell on the top bar and Help Center at the foot of the menu reach
+     them, so neither is a group of its own. */
+  {key:"notifications", label:"Notifications", cov:"live", icon:"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"},
+  {key:"help",      label:"Help Center", cov:"live", icon:"M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"},
   {key:"settings",  label:"Settings",  cov:"part", icon:"M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z"},
 ];
 

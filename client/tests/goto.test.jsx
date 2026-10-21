@@ -8,7 +8,7 @@ import GoTo, { destinations, rank } from "@/layout/GoTo";
 import { MODULES } from "@/routes/registry";
 import { tabsFor } from "@/data/menus";
 import { isHidden, visibleSections } from "@/data/sections";
-import { groupsFor, inRail } from "@/data/nav";
+import { OWN_NAV, groupsFor, inRail } from "@/data/nav";
 import { store, set, getState, resetStore } from "@/store";
 
 /* ---------------------------------------------------------------------------
@@ -95,9 +95,19 @@ describe("the menu's list of pages", () => {
 	it("leaves the strip over the page to the modules the menu does not list", () => {
 		/* Reports and Settings are the header's link and the menu's foot, not
 		   groups, so their pages are switched by the strip; every other module's
-		   strip says it is in the menu, and a desktop with the menu open hides it. */
+		   strip says it is in the menu, and a desktop with the menu open hides it.
+		   Settings lists its own pages down the page since 21 October 2026, as the
+		   reference's does (OWN_NAV), so it draws no strip at all. */
 		for (const m of visibleSections()) {
 			if (stripOf(m.key, HR).length < 2) continue;
+			if (OWN_NAV.includes(m.key)) {
+				resetStore();
+				set({ user: HR, section: m.key, subtab: stripOf(m.key, HR)[0][0] });
+				const { container, unmount } = draw(<SubNav />);
+				expect(container.querySelector("nav.subbar"), m.key).toBeNull();
+				unmount();
+				continue;
+			}
 			resetStore();
 			set({ user: HR, section: m.key, subtab: stripOf(m.key, HR)[0][0] });
 			const { container, unmount } = draw(<SubNav />);

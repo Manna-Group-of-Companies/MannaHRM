@@ -59,12 +59,14 @@ describe("the side menu", () => {
 		expect(labels.length).toBeGreaterThan(3);
 	});
 
-	it("reaches every module a login is shown — from a group, the Dashboard button, the foot or the header", () => {
+	/* Notifications since 21 October 2026: the header's bell, whose See all
+	   opens it (tests/settingshelpkit.test.jsx). */
+	it("reaches every module a login is shown — from a group, the Dashboard button, the foot, the header or the bell", () => {
 		for (const user of [HR, "mannarubber.products@mannarubber.com", "someone@mannarubber.com"]) {
 			const inGroups = new Set(groupsFor(user, null).flatMap((g) => g.items.map((i) => i.section)));
 			for (const m of visibleSections().filter((s) => sectionFor(s.key, null, user))) {
 				const reached = inGroups.has(m.key) || m.key === DASHBOARD || FOOT.includes(m.key)
-					|| HEADER_LINKS.some((l) => l.section === m.key);
+					|| HEADER_LINKS.some((l) => l.section === m.key) || m.key === "notifications";
 				expect(reached, `${user}: ${m.key}`).toBe(true);
 			}
 		}

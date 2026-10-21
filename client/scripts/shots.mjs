@@ -302,7 +302,7 @@ const PAGES = [
 		await page.locator(".tbfind input").fill("daily");
 	}],
 	["shell-waiting", "/dashboard", "what is waiting, under its button", async (page) => {
-		await page.locator('.tbicon[aria-haspopup="menu"]').click();
+		await page.locator('.tbicon[aria-label$="waiting"]').click();
 	}],
 	["shell-account", "/dashboard", "the account menu", async (page) => {
 		await page.locator(".tbme").click();

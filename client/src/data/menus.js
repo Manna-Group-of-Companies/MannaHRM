@@ -47,7 +47,10 @@ export const USER_MENUS = {
 	   below), and of it, Onboarding alone — Letters, Documents and Assets are
 	   still built and still at their addresses, just not on its strip. Its
 	   Employees module is still USER_ONLY's four. */
-	"hr@mannarubber.com": { onboard: ["overview"], settings: ["overview", "coverage", "security"] },
+	/* Settings gained the HRDashboard reference's sections on 21 October 2026,
+	   ahead of this login's own three. */
+	"hr@mannarubber.com": { onboard: ["overview"], settings: ["company", "offices", "departments", "titles", "schedules",
+		"permission", "password", "notifications", "overview", "coverage", "security"] },
 };
 
 /* Who may change which pages everybody is shown — Settings → Security, asked

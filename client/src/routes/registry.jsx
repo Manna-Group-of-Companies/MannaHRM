@@ -93,6 +93,10 @@ import ReportsHub from "@/features/reports/ReportsHub";
 import Settings from "@/features/settings/Settings";
 import Coverage from "@/features/settings/Coverage";
 import Security from "@/features/settings/Security";
+import { CompanyInfo, Departments, NotificationSettings, Offices, Password, Permission, Schedules, Titles, framed } from "@/features/settings/SettingsKit";
+import Reports from "@/features/reports/Reports";
+import { ATT_TILES, REPORT_PAGES, REPORT_TILES } from "@/data/reportpages";
+import { Help, Notifications } from "@/features/help/NotesHelp";
 import CompanyDocuments from "@/features/documents/Documents";
 import News from "@/features/news/News";
 import Recruitment from "@/features/recruitment/Recruitment";
@@ -170,7 +174,9 @@ const TABS = {
 		   the same way On Board's three are above: `PAGES.employees` still
 		   answers `/employees/categories`, so the link on All still opens it. */
 		["ctc", "CTC / Earnings"], ["calendar", "Calendar"],
-		["profile", "Employee Profile"],
+		/* Employee Profile left this bar on 21 Oct 2026, asked for by HR: it is
+		   one person's record, so it opens from that person on Employee Master
+		   (and My profile), with its own way back — see `OFF_MENU`. */
 		/* Five of their Employees reports, built 8 Sep 2026 off data the site
 		   already holds. Their menu titles, so the tab reads as theirs. */
 		["joining", "New Joining"],
@@ -242,14 +248,20 @@ const TABS = {
 	loans: [["overview", "Loan Application"], ["register", "Loan Register"],
 		["projection", "Loan Projection"], ...managedTabs("loans"), ["all", "All"]],
 	survey: [["overview", "Survey"], ...managedTabs("survey")],
-	reports: [["overview", "All Reports"]],
+	/* The reference's eight report tiles, with All Reports under them (D2). */
+	reports: [["overview", "Report"]],
+	notifications: [["overview", "Notifications"]],
+	help: [["overview", "Help center"]],
 	checklist: [["overview", "To-do list"], ["onboarding", "Onboarding"], ["offboarding", "Offboarding"], ["settings", "Checklist Settings"]],
 	recruitment: [["overview", "Jobs"], ["candidates", "Candidates"], ["settings", "Recruitment Settings"]],
 	documents: [["overview", "Documents"]],
 	news: [["overview", "News"]],
 	/* Security is ours, 29 Sep 2026: which pages everybody is shown, for the
 	   one login in data/menus.js PAGE_ADMINS and nobody else's strip. */
-	settings: [["overview", "Setup readiness"], ["coverage", "Module coverage"], ["security", "Security"]],
+	/* The HRDashboard reference's Settings first (21 October 2026), then ours. */
+	settings: [["company", "Company info"], ["offices", "Offices"], ["departments", "Departments"], ["titles", "Job titles"],
+		["schedules", "Work schedules"], ["permission", "Permission"], ["password", "Change password"], ["notifications", "Notifications"],
+		["overview", "Setup readiness"], ["coverage", "Module coverage"], ["security", "Security"]],
 };
 
 /* One entry per page. Nested by module so the dispatch reads in the same shape
@@ -320,12 +332,16 @@ const PAGES = {
 		projection: LoanProjection, all: moduleAll("loans", "Loans"),
 		...managedPages("loans"), ...blueprintPages("loans") },
 	survey: { overview: Survey, ...managedPages("survey"), ...blueprintPages("survey") },
-	reports: { overview: ReportsHub },
+	reports: { overview: Reports, ...Object.fromEntries(REPORT_PAGES.map((k) => [k, Reports])) },
+	notifications: { overview: Notifications },
+	help: { overview: Help, faq: Help, privacy: Help, shortcuts: Help, contact: Help },
 	checklist: { overview: Checklist, todo: Checklist, onboarding: Checklist, offboarding: Checklist, list: Checklist, settings: Checklist, template: Checklist },
 	recruitment: { overview: Recruitment, candidates: Recruitment, settings: Recruitment, job: Recruitment, applicant: Recruitment, new: Recruitment },
 	documents: { overview: CompanyDocuments, folder: CompanyDocuments },
 	news: { overview: News, item: News, new: News, edit: News },
-	settings: { overview: Settings, coverage: Coverage, security: Security },
+	settings: { overview: framed(Settings), coverage: framed(Coverage), security: framed(Security),
+		company: CompanyInfo, offices: Offices, departments: Departments, titles: Titles, schedules: Schedules,
+		permission: Permission, password: Password, notifications: NotificationSettings },
 };
 /* A page opened from another page rather than from a menu.
 
@@ -385,7 +401,7 @@ export function fullPage(s) {
 /* `attendance/mine` (21 Oct 2026): My Attendance, for a login an Employee is
    linked to (D3) — none of today's are — so it is opened from Team Attendance's
    own button rather than offered on every login's menu. */
-const OFF_MENU = { employees: ["new", "import", "upload", "chart"], documents: ["folder"], news: ["item", "new", "edit"], attendance: ["mine"], leave: ["mine"], payroll: ["slip"], recruitment: ["job", "applicant", "new"], checklist: ["todo", "list", "template"] };
+const OFF_MENU = { employees: ["new", "import", "upload", "chart", "profile"], documents: ["folder"], news: ["item", "new", "edit"], attendance: ["mine"], leave: ["mine"], payroll: ["slip"], recruitment: ["job", "applicant", "new"], checklist: ["todo", "list", "template"], reports: REPORT_PAGES, help: ["faq", "privacy", "shortcuts", "contact"] };
 
 /** What the breadcrumb calls an off-menu page. These have no tab to be named
     by, and before 10 Oct 2026 every one of them read "Overview" up there. */
@@ -394,6 +410,7 @@ const OFF_MENU_TITLE = {
 	"employees/import": "Import From Onboarding",
 	"employees/upload": "File Import",
 	"employees/chart": "Company Chart",
+	"employees/profile": "Employee Profile",
 	"attendance/mine": "My Attendance",
 	"leave/mine": "My Time Off",
 	"payroll/slip": "Payroll Detail",
@@ -403,11 +420,17 @@ const OFF_MENU_TITLE = {
 	"checklist/todo": "Task detail",
 	"checklist/list": "Checklist",
 	"checklist/template": "Template details",
+	"help/faq": "FAQ",
+	"help/privacy": "Privacy Policy",
+	"help/shortcuts": "Keyboard Shortcuts",
+	"help/contact": "Contact Support",
 	"documents/folder": "Folder",
 	"news/item": "News detail",
 	"news/new": "Create news",
 	"news/edit": "Edit news",
 };
+/* Each report opened from its box on Reports is named by its box. */
+for (const [k, t] of [...ATT_TILES, ...REPORT_TILES, ["all", "All reports"]]) OFF_MENU_TITLE[`reports/${k}`] = t;
 export const offMenuTitle = (section, subtab) => OFF_MENU_TITLE[`${section}/${subtab}`] || "";
 
 /** Whether this page is reached from a control rather than from the strip —

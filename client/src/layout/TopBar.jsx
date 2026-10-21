@@ -22,6 +22,7 @@ import { paletteFor, saveMode } from "@/lib/mode";
 import { openEmployee } from "@/features/employees/openEmployee";
 import KitIcon from "@/components/kit/KitIcon";
 import KitAvatar from "@/components/kit/KitAvatar";
+import { NoteBell } from "@/features/help/NotesHelp";
 
 /** Everything waiting on somebody, newest first.
  *
@@ -301,6 +302,9 @@ export default function TopBar() {
 						) : null}
 					</div>
 				</span>}
+
+				{/* The reference's bell: the site's own notifications for this login. */}
+				{s.admin !== false ? <NoteBell /> : null}
 
 				<span className="empdrop">
 					<button

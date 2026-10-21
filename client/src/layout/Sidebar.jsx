@@ -29,7 +29,7 @@ import mannaMark from "@/assets/manna-mark.png";
 export { pagesOf };
 
 /** The menu foot's links, with the reference's icon and word for each. */
-const FOOT_LINK = { settings: { label: "Setting", icon: "gear" } };
+const FOOT_LINK = { help: { label: "Help Center", icon: "help" }, settings: { label: "Setting", icon: "gear" } };
 
 export default function Sidebar() {
 	const { section, subtab, rail, drawer, user, admin, conn, connState, mode, company, companies } = useApp();
