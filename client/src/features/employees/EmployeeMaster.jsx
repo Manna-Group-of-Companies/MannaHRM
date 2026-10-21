@@ -1,99 +1,36 @@
-import { set, useApp } from "@/store";
+import { useState } from "react";
+import { getState, set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { load } from "@/api/load";
+import { saveEmployee } from "@/api/employee";
+import { forgetEmployeeDoc } from "@/features/employees/useEmployeeDoc";
 import { isOn, needsDetails, scoped, uniq } from "@/lib/scope";
-import { fmt, tally, tidyDept } from "@/lib/format";
+import { fmt, tidyDept } from "@/lib/format";
 import EmployeeCard from "@/components/EmployeeCard";
-import { Empty, NO_SITE, Scroll } from "@/components/ui";
+import { NO_SITE } from "@/components/ui";
 import { deskImport, deskUrl } from "@/lib/desk";
 import { ONB_BLANK } from "@/data/candidates";
 import { openEmployee } from "@/features/employees/openEmployee";
 import ExportEmployees from "@/features/employees/ExportEmployees";
-import { EMP_IMPORTS, EMP_MORE, EMP_SHOWN, EXP_BLANK, IMPORT_ICON, MORE_ICON, STATUS_ROWS } from "@/data/employees";
+import { EMP_IMPORTS, EMP_MORE, EXP_BLANK, IMPORT_ICON, MORE_ICON, STATUS_ROWS } from "@/data/employees";
 import { employeesLocked } from "@/data/menus";
+import KitIcon from "@/components/kit/KitIcon";
+import { EmptyState, PageHead, Pager, Pill, Seg, Who } from "@/components/kit/ui";
+import { Confirm, DotsMenu, KitDrawer, toast } from "@/components/kit/overlay";
 
-/* Factor HR's status filter, dot for dot: green Active, red InActive, blue All.
-   A native <select> cannot colour an option, and on this control the colour is
-   what gets read — so it is a button and a listbox rather than a dropdown with
-   the words alone. The statuses come off the records, so a site that grows a
-   fourth one grows a fourth row here without anybody editing this.
+/* Employee Master, in the HRDashboard reference's Employees layout
+   (21 October 2026): its heading with Filter and Add new profile, its search
+   and Export, its filter drawer and chips, and its table — sortable, ticked,
+   a menu on each row, ten to a page — with everything this page already did
+   kept: the caret's imports, the ⋯ list, the card view, the reload, the
+   machine-code search, the biometric filter, the people added from punches,
+   and the read-only lock for the company logins. */
 
-   Factor HR draws Active and InActive whether or not anybody is in them, and so
-   does this: a filter that appears only once somebody has that status is a
-   filter nobody knows exists, and *nobody is Inactive* is worth being able to
-   ask for and see. */
-function StatusDrop({ status, cur, menu }) {
-	const n = Object.fromEntries(status);
-	const fixed = STATUS_ROWS.map((r) => [
-		r[0], `${r[0]} (${fmt(n[r[0]] || 0)})`, r[1], !n[r[0]],
-	]);
-	const rest = status
-		.filter((r) => !STATUS_ROWS.some((f) => f[0] === r[0]))
-		.map((r) => [r[0], `${r[0]} (${fmt(r[1])})`, "off", false]);
-	// All last, where Factor HR puts it — this control is a copy of theirs and
-	// the order is part of what is being copied.
-	const opts = [...fixed, ...rest, ["", "All", "all", false]];
-	const sel = opts.find((o) => o[0] === cur) || opts[opts.length - 1];
-
-	return (
-		<span className="empdrop">
-			<button
-				className="embtn"
-				aria-haspopup="listbox"
-				aria-label="Filter by status"
-				aria-expanded={menu}
-				title={"Status: " + sel[1]}
-				/* Kept off the document handler in App, which would otherwise
-				   close the menu in the same click that opened it. */
-				onClick={(e) => {
-					e.stopPropagation();
-					set({ empmenu: !menu });
-				}}
-			>
-				<i className={"sdot " + sel[2]} />
-				<b className="cx">▾</b>
-			</button>
-			<div className="emmenu" role="listbox" aria-label="Status" hidden={!menu}>
-				{opts.map((o) => (
-					<button
-						key={o[0] || "all"}
-						role="option"
-						className={o[3] ? "zero" : undefined}
-						aria-selected={o[0] === cur}
-						onClick={(e) => {
-							e.stopPropagation();
-							set({ empstatus: o[0], empmenu: false });
-						}}
-					>
-						<i className={"sdot " + o[2]} />
-						{o[1]}
-					</button>
-				))}
-			</div>
-		</span>
-	);
-}
-
-/** What the page is not drawing, and the way to draw it.
-
-    Only ever rendered when something is actually being held back, because a
-    control that says "showing all 9 of 9" is noise on every site small enough
-    for this never to matter. The count is the *filtered* count, not the loaded
-    one: what somebody wants to know here is how much of what they just asked
-    for is on the screen. */
-function More({ total, drawn, all }) {
-	if (total <= drawn) return null;
-	return (
-		<div className="empmore-bar text-fine text-ink-2">
-			<span>
-				Showing {fmt(drawn)} of {fmt(total)}.
-			</span>
-			<button className="embtn" onClick={() => set({ empall: !all })}>
-				{all ? "Show the first " + fmt(EMP_SHOWN) : "Show all " + fmt(total)}
-			</button>
-		</div>
-	);
-}
+/* The narrowing, as the reference's Filter drawer sets it: each key holds the
+   values ticked, and an empty list is "any". A string is still read as one
+   value, so a store from before the drawer — or a test that sets one — means
+   what it meant. */
+const picked = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
 /** The filtered master list. */
 export function masterRows(s) {
@@ -106,11 +43,18 @@ export function masterRows(s) {
 			   and until now that meant opening candidates one at a time to find
 			   who is enrolled under it. See ATTENDANCE DEVICE ID on EmployeeList. */
 			e.attendance_device_id,
+			e.prefered_email, e.company_email,
 		].some((v) => (v || "").toLowerCase().includes(q)),
 	);
-	if (s.empstatus) rows = rows.filter((e) => e.status === s.empstatus);
-	if (s.empdept) rows = rows.filter((e) => e.department === s.empdept);
-	if (s.empdesig) rows = rows.filter((e) => e.designation === s.empdesig);
+	const by = (key, field) => {
+		const want = picked(s[key]);
+		if (want.length) rows = rows.filter((e) => want.includes(e[field]));
+	};
+	by("empstatus", "status");
+	by("empco", "company");
+	by("empdept", "department");
+	by("empdesig", "designation");
+	by("emptype", "employment_type");
 	if (s.empdev === "yes") rows = rows.filter((e) => e.attendance_device_id);
 	if (s.empdev === "no") rows = rows.filter((e) => !e.attendance_device_id);
 	if (s.empneeds) rows = rows.filter(needsDetails);
@@ -252,255 +196,398 @@ function MoreItem({ row, site, empty, onPick, onExport, onGo }) {
 	);
 }
 
+/* The drawer's groups, in the reference's order with ours added: what each
+   narrows, the store key it writes and the field it reads. Status always lists
+   Active and Inactive, counted or not (STATUS_ROWS) — a filter that appears only
+   once somebody has that status is one nobody knows exists. */
+const FILTER_GROUPS = [
+	["Company", "empco", "company"],
+	["Department", "empdept", "department"],
+	["Designation", "empdesig", "designation"],
+	["Status", "empstatus", "status"],
+	["Employment type", "emptype", "employment_type"],
+];
+const DEV_OPTS = [["", "Any"], ["yes", "Enrolled on a machine"], ["no", "Phone or nothing"]];
+const PER = { list: 10, grid: 12 };
+
+/** The reference's Filter drawer: a ticked list per field with how many hold
+    each value, Reset, and Apply. Nothing narrows until Apply. */
+function FilterDrawer({ s, all, onClose }) {
+	const [draft, setDraft] = useState(() => Object.fromEntries([
+		...FILTER_GROUPS.map(([, key]) => [key, picked(s[key])]),
+		["empdev", s.empdev || ""],
+	]));
+	const values = (field) => {
+		const seen = uniq(all, field);
+		return field === "status" ? [...new Set([...STATUS_ROWS.map((r) => r[0]), ...seen])] : seen;
+	};
+	const toggle = (key, v) => setDraft((d) => ({
+		...d, [key]: d[key].includes(v) ? d[key].filter((x) => x !== v) : d[key].concat([v]),
+	}));
+	return (
+		<KitDrawer title="Filter" sub="Narrow down the employee list." onClose={onClose}>
+			<form onSubmit={(e) => {
+				e.preventDefault();
+				set({ ...draft, empall: false });
+				const n = activeCount(draft);
+				toast(n ? `${n} filter${n === 1 ? "" : "s"} applied` : "Filters cleared");
+				onClose();
+			}}>
+				{FILTER_GROUPS.filter(([, key]) => key !== "empco" || !s.company).map(([label, key, field]) => {
+					const opts = values(field);
+					if (!opts.length) return null;
+					return (
+						<div className="k-sec" style={{ padding: 16 }} key={key}>
+							<h3 style={{ margin: "0 0 6px", fontSize: 14 }}>{label}</h3>
+							{opts.map((o) => (
+								<label className="k-chk-l" key={o}>
+									<input type="checkbox" className="k-chk" checked={draft[key].includes(o)}
+										onChange={() => toggle(key, o)} />
+									{field === "department" ? tidyDept(o) : o}
+									<span className="k-muted" style={{ marginLeft: "auto", fontSize: 12 }}>
+										{all.filter((e) => e[field] === o).length}
+									</span>
+								</label>
+							))}
+						</div>
+					);
+				})}
+				<div className="k-sec" style={{ padding: 16 }}>
+					<h3 style={{ margin: "0 0 6px", fontSize: 14 }}>Biometric</h3>
+					{DEV_OPTS.map(([v, l]) => (
+						<label className="k-chk-l" key={v || "any"}>
+							<input type="radio" name="empdev" checked={draft.empdev === v}
+								onChange={() => setDraft((d) => ({ ...d, empdev: v }))} />
+							{l}
+						</label>
+					))}
+				</div>
+				<div className="k-modal-f" style={{ position: "sticky", bottom: -26, background: "rgb(var(--card))", padding: "14px 0" }}>
+					<button type="button" className="k-btn k-btn-line"
+						onClick={() => setDraft({ ...Object.fromEntries(FILTER_GROUPS.map(([, k]) => [k, []])), empdev: "" })}>
+						Reset
+					</button>
+					<button type="submit" className="k-btn k-btn-ink">Apply filter</button>
+				</div>
+			</form>
+		</KitDrawer>
+	);
+}
+
+/** How many values the drawer has ticked, for the count on the Filter button. */
+function activeCount(st) {
+	return FILTER_GROUPS.reduce((n, [, key]) => n + picked(st[key]).length, 0) + (st.empdev ? 1 : 0);
+}
+
+/** One person's line manager as the reference writes one: @ and a first name. */
+const atName = (s, e) => {
+	const m = s.byName[e.reports_to || ""];
+	return m ? "@" + String(m.employee_name || m.name).split(" ")[0].toLowerCase() : "—";
+};
+const mailOf = (e) => e.prefered_email || e.company_email || e.personal_email || "";
+
+/* The reference's sortable columns: label and the field each sorts by. */
+const COLS = [
+	["employee_name", "Employee Name"],
+	["employee_number", "Employee ID"],
+	["designation", "Job Title"],
+	["reports_to", "Line Manager", false],
+	["department", "Department"],
+	["company", "Company"],
+	["employment_type", "Type"],
+	["attendance_device_id", "Device ID", false],
+	["status", "Status"],
+];
+
 export default function EmployeeMaster() {
 	const s = useApp();
 	const readOnly = employeesLocked(s.user);
 	const { all, rows } = masterRows(s);
-	const status = tally(all, "status");
-	/* One list for both views. Drawing every person is what the page is for, so
-	   the cap is only about the first paint — anything held back is counted in
-	   the footer and is one click away. */
-	const shown = s.empall ? rows : rows.slice(0, EMP_SHOWN);
+	const view = s.empview === "grid" ? "grid" : "list";
+	const [sort, setSort] = useState({ k: "employee_name", d: 1 });
+	const [page, setPage] = useState(1);
+	const [sel, setSel] = useState(() => new Set());
+	const [drawer, setDrawer] = useState(false);
+	const [ask, setAsk] = useState("");
+	const [busy, setBusy] = useState(false);
+	const [err, setErr] = useState("");
 	/* Records the bridge made from a fingerprint punch, still to be completed. */
 	const needing = all.filter((e) => isOn(e) && needsDetails(e)).length;
 
+	const sorted = rows.slice().sort((a, b) =>
+		String(a[sort.k] || "").localeCompare(String(b[sort.k] || ""), undefined, { numeric: true }) * sort.d);
+	const per = PER[view];
+	const pages = Math.max(1, Math.ceil(sorted.length / per));
+	const at = Math.min(page, pages);
+	const shown = sorted.slice((at - 1) * per, at * per);
+	const nFilters = activeCount(s);
+	const chips = [
+		...FILTER_GROUPS.flatMap(([, key]) => picked(s[key]).map((v) => [key, v])),
+		...(s.empdev ? [["empdev", DEV_OPTS.find((o) => o[0] === s.empdev)?.[1] || s.empdev]] : []),
+	];
+	const dropChip = ([key, v]) => {
+		set(key === "empdev" ? { empdev: "" } : { [key]: picked(s[key]).filter((x) => x !== v) });
+		setPage(1);
+	};
+	const clearAll = () => {
+		set({ ...Object.fromEntries(FILTER_GROUPS.map(([, k]) => [k, []])), empdev: "", q: "", empneeds: false });
+		setPage(1);
+	};
+	const sortBy = (k) => setSort((o) => ({ k, d: o.k === k ? -o.d : 1 }));
+	const pageAllOn = shown.length > 0 && shown.every((e) => sel.has(e.name));
+
+	/* Deactivate or Activate everybody ticked: the profile's own write, one
+	   field, `status`, as the signed-in person — the site decides whether they
+	   may, and a refusal names who it was. Never a delete (D11). */
+	async function setStatusAll(status) {
+		setBusy(true);
+		setErr("");
+		const refused = [];
+		let done = 0;
+		for (const name of sel) {
+			const r = await saveEmployee(name, { status });
+			if (!r.ok) { refused.push(`${s.byName[name]?.employee_name || name}: ${r.error}`); continue; }
+			done++;
+			const { employees, byName } = getState();
+			const row = { ...byName[name], status };
+			set({ employees: employees.map((e) => (e.name === name ? row : e)), byName: { ...byName, [name]: row } });
+			forgetEmployeeDoc(name);
+		}
+		setBusy(false);
+		setAsk("");
+		setSel(new Set());
+		if (done) toast(`${done} ${done === 1 ? "person" : "people"} set to ${status}`);
+		if (refused.length) setErr(`The site refused ${refused.length}: ${refused.join("; ")}`);
+	}
+
+	const exportNow = () => set({
+		exp: {
+			...EXP_BLANK(),
+			open: true,
+			company: s.company || "",
+			status: picked(s.empstatus)[0] || "",
+			filterBy: picked(s.empdept).length ? "department" : picked(s.empdesig).length ? "designation" : "",
+			filterVal: picked(s.empdept)[0] || picked(s.empdesig)[0] || "",
+			carried: picked(s.empdept).length && picked(s.empdesig).length ? picked(s.empdesig)[0] : "",
+		},
+	});
+
 	return (
-		<>
-			<div className="emhead">
-				<h2>Employee Master</h2>
-				<span className="cov live">Live</span>
-				<span className="n">
-					{fmt(rows.length)}
-					{rows.length === all.length ? "" : " of " + fmt(all.length)} people
-				</span>
-				<span className="right">
-					{/* Their split button: the whole control adds one person, the caret
-					    on the end of it adds many. Drawn as one button and one caret
-					    inside a single `.empdrop`. Not drawn for a login that only
-					    reads employees (data/menus.js employeesLocked). */}
-					{!readOnly && <span className="empdrop joined">
-						<button
-							className="embtn pri"
-							title="Factor HR's Create Employee — Basic Details, Job Details, Job Organization."
-							onClick={() => go({ section: "employees", subtab: "new" })}
-						>
-							Add New Employee
-						</button>
-						<button
-							className="embtn pri split"
-							aria-haspopup="menu"
-							aria-expanded={s.empnew}
-							aria-label="Import employees"
-							title="File, week-off and picture imports"
-							onClick={(e) => {
-								e.stopPropagation();
-								set({ empnew: !s.empnew });
-							}}
-						>
-							▾
-						</button>
-						<div className="emmenu end" role="menu" aria-label="Import employees" hidden={!s.empnew}>
-							{EMP_IMPORTS.map((row) => (
-								<ImportItem key={row[0]} row={row} site={s.site}
-									onPick={() => set({ empnew: false })}
-									onGo={(page) => go({ section: "employees", subtab: page })} />
-							))}
-						</div>
-					</span>}
-					{/* Their overflow: the two ways somebody arrives here from another
-					    module, and the way this list leaves as a file. Drawn as ⋯ rather
-					    than as a fourth worded button because none of the three is the
-					    thing this bar is for — Add New Employee is. */}
-					<span className="empdrop">
-						<button
-							className="embtn dots"
-							aria-haspopup="menu"
-							aria-expanded={s.empmore}
-							aria-label="More employee actions"
-							title="Import from Onboarding or Recruitment, or export this list"
-							onClick={(e) => {
-								e.stopPropagation();
-								set({ empmore: !s.empmore });
-							}}
-						>
-							⋯
-						</button>
-						<div className="emmenu end" role="menu" aria-label="More employee actions"
-							hidden={!s.empmore}>
-							{/* Both imports make people; the export only reads them. */}
-							{EMP_MORE.filter((row) => !readOnly || !row[2]).map((row) => (
-								<MoreItem key={row[0]} row={row} site={s.site} empty={!all.length}
-									onPick={() => set({ empmore: false })}
-									/* Their dialog, seeded with what this page is already
-									   narrowed to. Department wins the one Filter By their form
-									   has; a designation filter set at the same time is named on
-									   the dialog rather than dropped without a word. */
-									onExport={() => set({
-										exp: {
-											...EXP_BLANK(),
-											open: true,
-											company: s.company || "",
-											status: s.empstatus,
-											filterBy: s.empdept ? "department" : s.empdesig ? "designation" : "",
-											filterVal: s.empdept || s.empdesig || "",
-											carried: s.empdept && s.empdesig ? s.empdesig : "",
-										},
-									})}
-									/* Cleared on the way in, so a screen opened a second time does
-									   not come back holding the last run's ticks and its log —
-									   those describe candidates that have since been created. */
-									onGo={(page) => go({ section: "employees", subtab: page, onb: ONB_BLANK() })} />
-							))}
-						</div>
-					</span>
-				</span>
-			</div>
-
-			<div className="embar">
-				<StatusDrop status={status} cur={s.empstatus} menu={s.empmenu} />
-
-				<span className="find">
-					<svg className="stroke-ink-3" viewBox="0 0 24 24" width="15" height="15" fill="none"
-						strokeWidth="1.8" strokeLinecap="round">
-						<circle cx="11" cy="11" r="7" />
-						<path d="M20 20l-3.6-3.6" />
-					</svg>
-					{/* One search behind two boxes: this writes through to the top
-					    bar's, so a filter typed in either is the same filter and the
-					    two cannot disagree. */}
-					<input
-						type="search"
-						placeholder="Search employee or machine code…"
-						aria-label="Search employees, by name or machine code"
-						value={s.q}
-						onChange={(e) => set({ q: e.target.value })}
-					/>
-				</span>
-
-				<button
-					className="embtn"
-					aria-pressed={s.empfilters}
-					onClick={() => set({ empfilters: !s.empfilters })}
-				>
-					<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"
-						strokeWidth="1.8" strokeLinecap="round">
-						<path d="M3 5h18l-7 8v6l-4 2v-8Z" />
-					</svg>
-					Filter
+		<div className="kit k-enter">
+			<PageHead title="Employee" sub={`Manage your employees · ${fmt(rows.length)}${rows.length === all.length ? "" : " of " + fmt(all.length)} people`}>
+				<button type="button" className="k-btn k-btn-line" onClick={() => setDrawer(true)}>
+					<KitIcon name="filter" size={18} stroke={2} />Filter
+					{nFilters ? <span className="k-pill k-p-green k-nodot" style={{ padding: "1px 8px" }}>{nFilters}</span> : null}
 				</button>
-
-				<select value={s.empdept} onChange={(e) => set({ empdept: e.target.value })} aria-label="Department">
-					<option value="">All</option>
-					{uniq(all, "department").map((d) => (
-						<option key={d} value={d}>{tidyDept(d)}</option>
-					))}
-				</select>
-
-				<button className="embtn" title="Reload from the site" aria-label="Reload from the site"
-					onClick={() => void load()}>
-					↻
-				</button>
-
-				<span className="emview">
-					<button className="embtn" aria-pressed={s.empview !== "list"} title="Grid view"
-						aria-label="Grid view" onClick={() => set({ empview: "grid" })}>
-						<svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" /></svg>
+				{/* Add one person, and the caret for many: the split button the page
+				    always had, in the reference's ink. Not drawn for a login that only
+				    reads employees (data/menus.js employeesLocked). */}
+				{!readOnly && <span className="empdrop joined">
+					<button type="button" className="k-btn k-btn-ink" style={{ borderRadius: "12px 0 0 12px" }}
+						onClick={() => go({ section: "employees", subtab: "new" })}>
+						<KitIcon name="plus" size={18} stroke={2} />Add new profile
 					</button>
-					<button className="embtn" aria-pressed={s.empview === "list"} title="List view"
-						aria-label="List view" onClick={() => set({ empview: "list" })}>
-						<svg viewBox="0 0 24 24" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+					<button type="button" className="k-btn k-btn-ink" style={{ borderRadius: "0 12px 12px 0", padding: "0 10px", marginLeft: 1 }}
+						aria-haspopup="menu" aria-expanded={s.empnew} aria-label="Import employees"
+						onClick={(e) => { e.stopPropagation(); set({ empnew: !s.empnew, empmore: false }); }}>
+						<KitIcon name="chev" size={16} stroke={2} />
 					</button>
+					<div className="emmenu end" role="menu" aria-label="Import employees" hidden={!s.empnew}>
+						{EMP_IMPORTS.map((row) => (
+							<ImportItem key={row[0]} row={row} site={s.site}
+								onPick={() => set({ empnew: false })}
+								onGo={(pg) => go({ section: "employees", subtab: pg })} />
+						))}
+					</div>
+				</span>}
+				<span className="empdrop">
+					<button type="button" className="k-btn k-btn-line" style={{ padding: "0 12px" }}
+						aria-haspopup="menu" aria-expanded={s.empmore} aria-label="More employee actions"
+						onClick={(e) => { e.stopPropagation(); set({ empmore: !s.empmore, empnew: false }); }}>
+						<KitIcon name="more" size={20} stroke={2} />
+					</button>
+					<div className="emmenu end" role="menu" aria-label="More employee actions" hidden={!s.empmore}>
+						{EMP_MORE.filter((row) => !readOnly || !row[2]).map((row) => (
+							<MoreItem key={row[0]} row={row} site={s.site} empty={!all.length}
+								onPick={() => set({ empmore: false })}
+								onExport={exportNow}
+								onGo={(pg) => go({ section: "employees", subtab: pg, onb: ONB_BLANK() })} />
+						))}
+					</div>
 				</span>
-			</div>
-
-			{s.empfilters && (
-				<div className="embar">
-					<label className="text-fine text-ink-2">
-						Designation{" "}
-						<select value={s.empdesig} onChange={(e) => set({ empdesig: e.target.value })}>
-							<option value="">any</option>
-							{uniq(all, "designation").map((d) => (
-								<option key={d}>{d}</option>
-							))}
-						</select>
-					</label>
-					<label className="text-fine text-ink-2">
-						Biometric{" "}
-						<select value={s.empdev} onChange={(e) => set({ empdev: e.target.value })}>
-							<option value="">any</option>
-							<option value="yes">enrolled</option>
-							<option value="no">phone or nothing</option>
-						</select>
-					</label>
-				</div>
-			)}
+			</PageHead>
 
 			{(needing > 0 || s.empneeds) && (
-				<div className={"empneeds" + (s.empneeds ? " on" : "")} role="status">
-					<span>
+				<div className={"k-alert empneeds" + (s.empneeds ? " on" : "")} role="status">
+					<span className="k-a-ic"><KitIcon name="info" size={18} stroke={2} /></span>
+					<p>
 						<b>{fmt(needing)}</b> {needing === 1 ? "person was" : "people were"} added automatically from
 						fingerprint punches. Their gender and date of birth are placeholders until somebody corrects them.
-					</span>
-					<button type="button" className="embtn" aria-pressed={Boolean(s.empneeds)}
-						onClick={() => set({ empneeds: !s.empneeds })}>
+					</p>
+					<button type="button" className="k-btn k-btn-ink k-btn-sm" aria-pressed={Boolean(s.empneeds)}
+						onClick={() => { set({ empneeds: !s.empneeds }); setPage(1); }}>
 						{s.empneeds ? "Show everybody" : "Show them"}
 					</button>
 				</div>
 			)}
 
-			{!rows.length ? (
-				<Empty title="Nobody matches">
-					{fmt(all.length)} people are loaded. Clear the search or the filters.
-				</Empty>
-			) : s.empview === "list" ? (
-				<Scroll>
-					<table>
-						<thead>
-							<tr>
-								<th>Code</th><th>Name</th><th>Company</th><th>Department</th>
-								<th>Designation</th><th>Device ID</th><th>Reports to</th><th>Joined</th>
-							</tr>
-						</thead>
-						<tbody>
-							{shown.map((e) => (!isOn(e) ? (
-								/* Not Active: the name and the status, the same as its card. */
-								<tr key={e.name} data-emp={e.name} title="Open this record" className="emp-off"
-									onClick={() => openEmployee(e.name)}>
-									<td className="mono">—</td>
-									<td>{e.employee_name}</td>
-									<td colSpan={6} className="muted">{e.status || "Not active"} · details are hidden while this person is not active</td>
-								</tr>
-							) : (
-								<tr key={e.name} data-emp={e.name} title="Open this record"
-									onClick={() => openEmployee(e.name)}>
-									<td className="mono">{e.employee_number || "—"}</td>
-									<td>{e.employee_name}</td>
-									<td className="muted">{e.company}</td>
-									<td className="muted">{tidyDept(e.department)}</td>
-									<td>{e.designation || "—"}</td>
-									<td className="mono">
-										{e.attendance_device_id ? e.attendance_device_id : <span className="tag">phone</span>}
-									</td>
-									<td className="muted">{s.byName[e.reports_to || ""]?.employee_name || "—"}</td>
-									<td className="mono muted">{String(e.date_of_joining || "").slice(0, 10)}</td>
-								</tr>
-							)))}
-						</tbody>
-					</table>
-				</Scroll>
-			) : (
-				<div className="cards">
-					{shown.map((e) => (
-						<EmployeeCard key={e.name} e={e} onOpen={() => openEmployee(e.name)} />
-					))}
+			<div className="k-card">
+				<div className="k-filters" style={{ gridTemplateColumns: "minmax(240px,1fr) auto auto auto" }}>
+					<div className="k-inp-ic">
+						<KitIcon name="search" size={18} stroke={2} />
+						{/* One search behind two boxes: this writes through to the top
+						    bar's, so a filter typed in either is the same filter. */}
+						<input className="k-inp" type="search" placeholder="Search name, email, title, code or machine code"
+							aria-label="Search employees, by name or machine code" value={s.q}
+							onChange={(e) => { set({ q: e.target.value }); setPage(1); }} />
+					</div>
+					<Seg label="View" value={view} options={[["list", "Table"], ["grid", "Cards"]]}
+						onChange={(v) => { set({ empview: v }); setPage(1); }} />
+					<button type="button" className="k-btn k-btn-line" style={{ padding: "0 13px" }}
+						title="Reload from the site" aria-label="Reload from the site" onClick={() => void load()}>
+						<KitIcon name="refresh" size={18} stroke={2} />
+					</button>
+					<button type="button" className="k-btn k-btn-line" disabled={!all.length} onClick={exportNow}>
+						<KitIcon name="upload" size={18} stroke={2} />Export
+					</button>
 				</div>
-			)}
 
-			<More total={rows.length} drawn={shown.length} all={s.empall} />
+				<div className="k-res-bar">
+					<div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+						<span>{fmt(rows.length)} {rows.length === 1 ? "person" : "people"}</span>
+						{chips.map((c) => (
+							<span className="k-tag" key={c.join(":")}>
+								{c[0] === "empdept" ? tidyDept(c[1]) : c[1]}
+								<button type="button" aria-label={`Remove ${c[1]} filter`} onClick={() => dropChip(c)}>
+									<KitIcon name="x" size={12} stroke={2.4} />
+								</button>
+							</span>
+						))}
+						{chips.length || s.q || s.empneeds ? (
+							<button type="button" className="k-btn k-btn-ghost k-btn-sm" onClick={clearAll}>Clear all</button>
+						) : null}
+					</div>
+					{sel.size && !readOnly ? (
+						<div className="k-row-act">
+							<span style={{ alignSelf: "center", fontWeight: 600, color: "rgb(var(--ink))" }}>{sel.size} selected</span>
+							<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => setAsk("Active")}>Activate</button>
+							<button type="button" className="k-btn k-btn-line k-btn-sm" style={{ color: "rgb(var(--bad))" }}
+								onClick={() => setAsk("Inactive")}>Deactivate</button>
+						</div>
+					) : null}
+				</div>
+				{err ? <p className="k-err" role="alert" style={{ marginBottom: 10 }}>{err}</p> : null}
 
+				{!rows.length ? (
+					<EmptyState icon="search" title="No one matches these filters"
+						sub={`${fmt(all.length)} people are loaded. Try a different name, or clear the filters to see everyone.`}>
+						<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={clearAll}>Clear filters</button>
+					</EmptyState>
+				) : view === "grid" ? (
+					<div className="cards">
+						{shown.map((e) => <EmployeeCard key={e.name} e={e} onOpen={() => openEmployee(e.name)} />)}
+					</div>
+				) : (
+					<div className="k-tbl-wrap">
+						<table className="k-rt">
+							<thead>
+								<tr>
+									{!readOnly ? (
+										<th style={{ width: 44 }} className="k-sel-col">
+											<span>
+												<input type="checkbox" className="k-chk" aria-label="Select all on this page" checked={pageAllOn}
+													onChange={(ev) => setSel((o) => {
+														const n = new Set(o);
+														for (const e of shown) ev.target.checked ? n.add(e.name) : n.delete(e.name);
+														return n;
+													})} />
+											</span>
+										</th>
+									) : null}
+									{COLS.map(([k, l, sortable]) => {
+										if (sortable === false) return <th key={k}><span>{l}</span></th>;
+										const on = sort.k === k;
+										return (
+											<th key={k} aria-sort={on ? (sort.d > 0 ? "ascending" : "descending") : "none"}>
+												<button type="button" className={`${on ? "k-on" : ""}${on && sort.d < 0 ? " k-desc" : ""}`.trim() || undefined}
+													onClick={() => sortBy(k)}>
+													{l}<KitIcon name="chev" size={14} stroke={2.2} />
+												</button>
+											</th>
+										);
+									})}
+									<th><span /></th>
+								</tr>
+							</thead>
+							<tbody>
+								{shown.map((e) => {
+									const on = isOn(e);
+									/* Not Active: the name and the status. Their details stay
+									   hidden while they are not active, as they always were. */
+									const hid = <span className="k-muted" title="Details are hidden while this person is not active">—</span>;
+									return (
+										<tr key={e.name} data-emp={e.name} className={"k-click" + (on ? "" : " emp-off")} tabIndex={0}
+											title="Open this record"
+											onClick={() => openEmployee(e.name)}
+											onKeyDown={(ev) => { if (ev.key === "Enter") openEmployee(e.name); }}>
+											{!readOnly ? (
+												<td className="k-sel-col" onClick={(ev) => ev.stopPropagation()}>
+													<input type="checkbox" className="k-chk" aria-label={`Select ${e.employee_name}`}
+														checked={sel.has(e.name)}
+														onChange={(ev) => setSel((o) => {
+															const n = new Set(o);
+															ev.target.checked ? n.add(e.name) : n.delete(e.name);
+															return n;
+														})} />
+												</td>
+											) : null}
+											<td className="k-title-cell"><Who name={e.employee_name || e.name} sub={on ? mailOf(e) : ""} /></td>
+											<td data-label="Employee ID" className="k-num">{on ? e.employee_number || "—" : hid}</td>
+											<td data-label="Job Title">{on ? e.designation || "—" : hid}</td>
+											<td data-label="Line Manager">{on ? atName(s, e) : hid}</td>
+											<td data-label="Department">{on ? tidyDept(e.department) || "—" : hid}</td>
+											<td data-label="Company">{on ? e.company || "—" : hid}</td>
+											<td data-label="Type">{on ? e.employment_type || "—" : hid}</td>
+											<td data-label="Device ID" className="k-num">
+												{!on ? hid : e.attendance_device_id ? e.attendance_device_id : <span className="k-pill k-p-grey k-nodot">phone</span>}
+											</td>
+											<td data-label="Status"><Pill status={e.status || "Inactive"} /></td>
+											<td data-label="" onClick={(ev) => ev.stopPropagation()}>
+												<DotsMenu label={`More for ${e.employee_name}`} items={[
+													{ label: "View profile", icon: "user", onClick: () => openEmployee(e.name) },
+													...(readOnly ? [] : [
+														"-",
+														on
+															? { label: "Deactivate", icon: "door", danger: true, onClick: () => { setSel(new Set([e.name])); setAsk("Inactive"); } }
+															: { label: "Activate", icon: "tick", onClick: () => { setSel(new Set([e.name])); setAsk("Active"); } },
+													]),
+												]} />
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+				)}
+				{rows.length ? <Pager total={sorted.length} page={at} per={per} onPage={setPage} /> : null}
+			</div>
+
+			{drawer ? <FilterDrawer s={s} all={all} onClose={() => { setDrawer(false); setPage(1); }} /> : null}
+			{ask ? (
+				<Confirm
+					title={`${ask === "Inactive" ? "Deactivate" : "Activate"} ${sel.size} ${sel.size === 1 ? "person" : "people"}?`}
+					sub={ask === "Inactive"
+						? "Their status is set to Inactive and their details are hidden until they are activated again. Nothing is deleted."
+						: "Their status is set to Active and their details are shown again."}
+					ok={busy ? "Working…" : ask === "Inactive" ? "Deactivate" : "Activate"}
+					danger={ask === "Inactive"}
+					onClose={() => { if (!busy) { setAsk(""); } }}
+					onOk={() => setStatusAll(ask)} />
+			) : null}
 			{s.exp.open ? (
 				<ExportEmployees onClose={() => set({ exp: { ...s.exp, open: false } })} />
 			) : null}
-		</>
+		</div>
 	);
 }

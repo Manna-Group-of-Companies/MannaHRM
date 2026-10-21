@@ -177,7 +177,9 @@ describe("somebody who is not active", () => {
 
 		let v;
 		await act(async () => { v = render(<Provider store={store}><EmployeeMaster /></Provider>); });
-		const names = () => [...v.container.querySelectorAll("article.ecard")].map((a) => a.textContent);
+		/* A row of the table or a card, whichever view is drawn (21 October 2026:
+		   the reference's table is the default now). */
+		const names = () => [...v.container.querySelectorAll("[data-emp], article.ecard")].map((a) => a.textContent);
 		expect(names().some((t) => t.includes(gone.employee_name))).toBe(false);
 
 		await act(async () => { set({ empstatus: "Inactive" }); });

@@ -6550,6 +6550,76 @@ kbd {
   font-weight: 600;
 }
 
+/* ---- Employee Profile, as the reference's record page (21 October 2026) ----
+   The person as a card on the left — the photograph large and centred, the
+   name, the status, the buttons, then the key facts as a list — and on the
+   right one card holding the sections as a row of tabs over the pane. The
+   markup is the page's own (`.prohead`, `.protabs`, `.propane`); only where
+   it sits and how it is drawn changed. */
+.proview > .prohead {
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+  padding: 1.5rem 1.375rem;
+  border-color: transparent;
+  border-radius: 18px;
+  box-shadow: var(--sh-raise);
+  text-align: center;
+}
+.proview > .prohead .proava { width: 6rem; height: 6rem; font-size: 1.875rem; border: 0; }
+.proview > .prohead .prowho { width: 100%; align-items: center; }
+.proview > .prohead .proname { flex-direction: column; gap: .75rem; }
+.proview > .prohead .proname b { font-family: theme(fontFamily.body); font-size: 1.1875rem; font-weight: 700; }
+.proview > .prohead .proacts { margin-left: 0; justify-content: center; }
+.proview > .prohead .prochips { justify-content: center; }
+.proview > .prohead .prokeys {
+  width: 100%;
+  margin-top: .5rem;
+  padding-top: .875rem;
+  border-top: 1px solid rgb(var(--line));
+  grid-template-columns: 1fr;
+  text-align: left;
+}
+.proview > .prohead.prooff { background: rgb(var(--card)); }
+.procol { padding: 0 0 1.375rem; overflow: hidden; }
+.procol > .probar { margin: 1rem 1.375rem 0; }
+.procol .probody-grid { grid-template-columns: minmax(0, 1fr); gap: 1.125rem; margin-top: 0; }
+.procol .protabs {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0 .25rem;
+  padding: .5rem 1.125rem 0;
+  border: 0;
+  border-bottom: 1px solid rgb(var(--line));
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.procol .protab {
+  min-height: 0;
+  margin-bottom: -1px;
+  padding: .875rem .625rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: rgb(var(--ink-2));
+  font-weight: 600;
+}
+.procol .protab:hover { background: transparent; color: rgb(var(--ink)); }
+.procol .protab[aria-current="page"] {
+  border-bottom-color: rgb(var(--brand));
+  background: transparent;
+  color: rgb(var(--ink));
+}
+.procol .protab[aria-current="page"] .caret, .procol .protab[aria-current="page"] .cnt { color: inherit; }
+.procol .protab .ico { display: none; }
+.procol .protab.pchild { padding-left: .625rem; background: transparent; font-size: .8125rem; }
+.procol .protab.pchild:hover, .procol .protab.pchild[aria-current="page"] { background: transparent; }
+.procol .propane { padding: 0 1.375rem; }
+.procol .procard { border-color: rgb(var(--line)); border-radius: 16px; }
+.procol .procard > header { border-bottom: 0; background: transparent; }
+.procol .procard > header h3 { font-size: 1rem; font-weight: 700; }
+
 /* ---------------------------------------------------------------------------
    Responsive.
 

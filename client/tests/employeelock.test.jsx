@@ -46,7 +46,7 @@ describe("a company login on Employees", () => {
 	it("gets no Add New Employee and no import on Employee Master, and keeps the export", async () => {
 		const view = await draw(EmployeeMaster, COMPANY);
 		const t = texts(view).join(" | ");
-		expect(t).not.toContain("Add New Employee");
+		expect(t).not.toContain("Add new profile");
 		expect(t).not.toContain("Import From Onboarding");
 		expect(t).toContain("Export Employees Data");
 	});
@@ -65,6 +65,6 @@ describe("a company login on Employees", () => {
 		const view = await draw(EmployeeProfile, "hr@mannarubber.com");
 		expect(texts(view).join(" | ")).toContain("✎ Edit");
 		const master = await draw(EmployeeMaster, "hr@mannarubber.com");
-		expect(texts(master).join(" | ")).toContain("Add New Employee");
+		expect(texts(master).join(" | ")).toContain("Add new profile");
 	});
 });

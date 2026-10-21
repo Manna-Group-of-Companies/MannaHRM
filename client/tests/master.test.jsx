@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeEach } from "vitest";
-import { act, render } from "@testing-library/react";
+import { describe, expect, it, beforeEach, vi } from "vitest";
+import { act, fireEvent, render } from "@testing-library/react";
 import { Provider } from "react-redux";
 
-import { store, set, resetStore } from "@/store";
-import { EMP_SHOWN } from "@/data/employees";
+import { store, set, getState, resetStore } from "@/store";
+import { http } from "@/api/client";
 import EmployeeMaster from "@/features/employees/EmployeeMaster";
 import { loadedState } from "./fixture";
 
@@ -57,58 +57,58 @@ async function draw() {
     employee's own name, so neither counts a header or an empty state. */
 const drawn = (r) => r.container.querySelectorAll("[data-emp], article.ecard").length;
 
-describe("Employee Master on a site bigger than the cap", () => {
+describe("Employee Master on a site bigger than a page", () => {
 	beforeEach(() => resetStore());
 
+	/* Since 21 October 2026 the page is the HRDashboard reference's table, ten
+	   to a page with its pager, and the cards twelve to one. The rule is the
+	   one above: what is drawn and what there is are both on the page. */
+	const TOTAL = 120;
+	const pager = (r) => r.container.querySelector(".k-pager");
+
 	it("draws_the_first_page_of_people_rather_than_all_of_them_on_first_paint", async () => {
-		set(crowd(EMP_SHOWN + 120));
+		set(crowd(TOTAL));
 		const r = await draw();
-		expect(drawn(r)).toBe(EMP_SHOWN);
+		expect(drawn(r)).toBe(10);
 	});
 
 	it("says_how_many_it_is_holding_back_rather_than_cutting_the_list_silently", async () => {
-		const total = EMP_SHOWN + 120;
-		set(crowd(total));
+		set(crowd(TOTAL));
 		const r = await draw();
-		/* The two numbers a reader compares: what is on screen, and what there
-		   is. Both have to be on the page for the cut to be visible at all. */
-		expect(r.container.textContent).toContain(`Showing ${EMP_SHOWN}`);
-		expect(r.container.textContent).toContain(String(total));
+		expect(pager(r).textContent).toContain(`Showing 1 to 10 of ${TOTAL} entries`);
 	});
 
-	it("draws_every_person_once_somebody_asks_for_all_of_them", async () => {
-		const total = EMP_SHOWN + 120;
-		set(crowd(total));
-		set({ empall: true });
+	it("reaches_every_person_through_the_pager", async () => {
+		set(crowd(TOTAL));
 		const r = await draw();
-		expect(drawn(r)).toBe(total);
+		const last = [...pager(r).querySelectorAll("button")].find((b) => b.textContent === String(TOTAL / 10));
+		await act(async () => { last.click(); });
+		expect(pager(r).textContent).toContain(`Showing ${TOTAL - 9} to ${TOTAL} of ${TOTAL} entries`);
+		expect(drawn(r)).toBe(10);
 	});
 
-	it("draws_every_person_in_the_list_view_too_not_only_in_the_cards", async () => {
-		const total = EMP_SHOWN + 120;
-		set(crowd(total));
-		set({ empview: "list", empall: true });
+	it("draws_a_page_of_cards_in_the_card_view_too_and_says_so", async () => {
+		set(crowd(TOTAL));
+		set({ empview: "grid" });
 		const r = await draw();
-		expect(drawn(r)).toBe(total);
+		expect(r.container.querySelectorAll("article.ecard").length).toBe(12);
+		expect(pager(r).textContent).toContain(`Showing 1 to 12 of ${TOTAL} entries`);
 	});
 
-	it("offers_nothing_to_expand_on_a_site_that_fits", async () => {
-		/* A control reading "showing 16 of 16" is noise on every site small
-		   enough for none of this to matter, which is most of them. */
+	it("offers_no_next_page_on_a_site_that_fits", async () => {
 		set(loadedState());
 		const r = await draw();
-		expect(r.container.textContent).not.toContain("Showing");
+		expect(pager(r).querySelector('[aria-label="Next page"]').disabled).toBe(true);
 	});
 
 	it("counts_what_is_left_after_the_filters_not_what_is_loaded", async () => {
-		/* The cap applies to the rows somebody just asked for. A search that
-		   leaves 20 people draws 20 and offers nothing, however many are
-		   loaded — otherwise the footer answers a question nobody asked. */
-		set(crowd(EMP_SHOWN + 120));
+		/* The pager counts the rows somebody just asked for: a search that
+		   leaves eleven people says eleven, however many are loaded. */
+		set(crowd(TOTAL));
 		set({ q: "Person 7" });
 		const r = await draw();
-		expect(drawn(r)).toBeLessThan(EMP_SHOWN);
-		expect(r.container.textContent).not.toContain("Showing");
+		const left = crowd(TOTAL).employees.filter((e) => e.employee_name.includes("Person 7")).length;
+		expect(pager(r).textContent).toContain(`of ${left} entries`);
 	});
 });
 
@@ -128,5 +128,60 @@ describe("the biometric id, on every screen that lists people", () => {
 		set(crowd(4));
 		const r = await draw();
 		expect(r.container.textContent).toContain("2000");
+	});
+});
+
+describe("the reference's Employees controls", () => {
+	beforeEach(() => resetStore());
+	const rowsOf = (r) => [...r.container.querySelectorAll("tbody [data-emp]")];
+
+	it("narrows only when the drawer is applied, and a chip takes its filter off", async () => {
+		set(loadedState());
+		const r = await draw();
+		const before = rowsOf(r).length;
+		const dept = loadedState().employees.find((e) => e.status === "Active" && e.department).department;
+		await act(async () => { [...r.container.querySelectorAll("button")].find((b) => b.textContent.startsWith("Filter")).click(); });
+		const box = [...document.querySelectorAll(".k-drawer .k-chk-l")].find((l) => l.closest(".k-sec").querySelector("h3").textContent === "Department" && l.textContent.includes(dept.split(" - ")[0]));
+		await act(async () => { box.querySelector("input").click(); });
+		expect(rowsOf(r).length).toBe(before);
+		await act(async () => { fireEvent.submit(document.querySelector(".k-drawer form")); });
+		expect(getState().empdept).toEqual([dept]);
+		expect(rowsOf(r).every((tr) => getState().byName[tr.dataset.emp].department === dept)).toBe(true);
+		await act(async () => { r.container.querySelector('.k-tag button').click(); });
+		expect(getState().empdept).toEqual([]);
+		expect(rowsOf(r).length).toBe(before);
+	});
+
+	it("sorts by a column, and the other way on a second press", async () => {
+		set(loadedState());
+		const r = await draw();
+		const names = () => rowsOf(r).map((tr) => getState().byName[tr.dataset.emp].employee_name);
+		const sortedAsc = names().slice().sort((a, b) => a.localeCompare(b));
+		expect(names()).toEqual(sortedAsc);
+		const head = [...r.container.querySelectorAll("th button")].find((b) => b.textContent.startsWith("Employee Name"));
+		await act(async () => { head.click(); });
+		expect(names()).toEqual(sortedAsc.slice().reverse());
+		expect(head.closest("th").getAttribute("aria-sort")).toBe("descending");
+	});
+
+	it("deactivates the people ticked by writing their status and nothing else", async () => {
+		set(loadedState());
+		const wrote = [];
+		vi.spyOn(http, "put").mockImplementation((url, body) => { wrote.push([decodeURIComponent(url), body]); return Promise.resolve({ data: {} }); });
+		const r = await draw();
+		const first = rowsOf(r)[0];
+		await act(async () => { first.querySelector('input[type="checkbox"]').click(); });
+		expect(r.container.textContent).toContain("1 selected");
+		await act(async () => { [...r.container.querySelectorAll("button")].find((b) => b.textContent === "Deactivate").click(); });
+		await act(async () => { fireEvent.submit(document.querySelector(".k-modal form")); });
+		expect(wrote).toEqual([[`/api/resource/Employee/${first.dataset.emp}`, { status: "Inactive" }]]);
+		expect(getState().byName[first.dataset.emp].status).toBe("Inactive");
+	});
+
+	it("offers no ticking and no Deactivate to a login that only reads employees", async () => {
+		set({ ...loadedState(), user: "mannarubber.products@mannarubber.com" });
+		const r = await draw();
+		expect(r.container.querySelector('tbody input[type="checkbox"]')).toBeNull();
+		expect(r.container.textContent).not.toContain("Add new profile");
 	});
 });

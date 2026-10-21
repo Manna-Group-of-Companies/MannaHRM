@@ -55,7 +55,7 @@ describe("on Employee Master", () => {
 		let v;
 		await act(async () => { v = render(<Provider store={store}><EmployeeMaster /></Provider>); });
 		expect(v.container.textContent).toContain("added automatically from fingerprint punches");
-		const cards = () => [...v.container.querySelectorAll("article.ecard")];
+		const cards = () => [...v.container.querySelectorAll("[data-emp], article.ecard")];
 		expect(cards().length).toBeGreaterThan(1);
 
 		await act(async () => { [...v.container.querySelectorAll("button")].find((b) => b.textContent === "Show them").click(); });

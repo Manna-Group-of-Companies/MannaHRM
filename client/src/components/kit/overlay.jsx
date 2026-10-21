@@ -12,13 +12,18 @@ import KitIcon from "@/components/kit/KitIcon";
     backdrop close it, and it takes the focus when it opens. */
 export function KitModal({ title, sub, onClose, children, wide = false }) {
 	const box = useRef(null);
+	/* The latest onClose, read when a key is pressed: a parent passes a new
+	   one every render, and re-running this on each would put the focus back
+	   on the first field while somebody is filling in the third. */
+	const close = useRef(onClose);
+	close.current = onClose;
 	useEffect(() => {
-		const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+		const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); close.current(); } };
 		document.addEventListener("keydown", onKey, true);
 		const first = box.current?.querySelector("input, select, textarea, button:not([data-close])");
 		first?.focus();
 		return () => document.removeEventListener("keydown", onKey, true);
-	}, [onClose]);
+	}, []);
 	return (
 		<div className="k-ov k-show" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
 			<div className="k-modal" role="dialog" aria-modal="true" aria-label={title} ref={box}
@@ -30,6 +35,36 @@ export function KitModal({ title, sub, onClose, children, wide = false }) {
 					</div>
 					<button type="button" className="icon-btn" data-close="" aria-label="Close"
 						style={{ margin: "-6px -8px 0 0" }} onClick={onClose}>
+						<KitIcon name="x" size={20} stroke={2} />
+					</button>
+				</div>
+				{children}
+			</div>
+		</div>
+	);
+}
+
+/** The reference's side drawer (its `modal(…, {drawer: true})`): the same
+    head, sliding in from the right edge, full height. */
+export function KitDrawer({ title, sub, onClose, children }) {
+	const box = useRef(null);
+	const close = useRef(onClose);
+	close.current = onClose;
+	useEffect(() => {
+		const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); close.current(); } };
+		document.addEventListener("keydown", onKey, true);
+		box.current?.querySelector("input, select, textarea, button:not([data-close])")?.focus();
+		return () => document.removeEventListener("keydown", onKey, true);
+	}, []);
+	return (
+		<div className="k-ov k-drawer-ov k-show" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+			<div className="k-drawer" role="dialog" aria-modal="true" aria-label={title} ref={box}>
+				<div className="k-m-head">
+					<div>
+						<h2>{title}</h2>
+						{sub ? <p className="k-sub-t">{sub}</p> : null}
+					</div>
+					<button type="button" className="icon-btn" data-close="" aria-label="Close" onClick={onClose}>
 						<KitIcon name="x" size={20} stroke={2} />
 					</button>
 				</div>

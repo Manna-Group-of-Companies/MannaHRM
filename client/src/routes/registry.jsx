@@ -58,6 +58,8 @@ import SalarySetup from "@/features/payroll/SalarySetup";
 import ActualSalary from "@/features/payroll/ActualSalary";
 import EmployeeImport from "@/features/employees/EmployeeImport";
 import HierarchyChart from "@/features/employees/HierarchyChart";
+import Directory from "@/features/employees/Directory";
+import OrgChart from "@/features/employees/OrgChart";
 import CompanyChart from "@/features/employees/CompanyChart";
 import Increments from "@/features/payroll/Increments";
 import AdvancesLoans from "@/features/payroll/AdvancesLoans";
@@ -161,8 +163,8 @@ const TABS = {
 		/* Five of their Employees reports, built 8 Sep 2026 off data the site
 		   already holds. Their menu titles, so the tab reads as theirs. */
 		["joining", "New Joining"],
-		["directory", "Employees Directory"], ["weekoff", "Weekoff Holiday Report"],
-		["orgchart", "Organization Chart"],
+		["directory", "Directory"], ["weekoff", "Weekoff Holiday Report"],
+		["orgchart", "Org Chart"],
 		/* The seven-level ladder, asked for 10 October 2026. Not theirs: Factor
 		   HR's Organization Chart is the reports_to tree above. */
 		["hierarchy", "Hierarchy Chart"], ...managedTabs("employees"), ["all", "All"]],
@@ -254,8 +256,10 @@ const PAGES = {
 		categories: Categories, calendar: Calendar,
 		profile: EmployeeProfile, new: CreateEmployee, import: ImportOnboarding, upload: EmployeeImport,
 		joining: report("employees", "joining"),
-		directory: report("employees", "directory"), weekoff: report("employees", "weekoff"),
-		orgchart: report("employees", "orgchart"),
+		/* The reference's Directory and Org chart (D15); the reports of the same
+		   names are still on Reports, to download. */
+		directory: Directory, weekoff: report("employees", "weekoff"),
+		orgchart: OrgChart,
 		hierarchy: HierarchyChart,
 		chart: CompanyChart,
 		all: moduleAll("employees", "Employees"),

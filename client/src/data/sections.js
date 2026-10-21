@@ -48,7 +48,9 @@ export const VISIBLE_SECTIONS = SECTIONS.filter((s) => !s.hidden);
    screens — modelled on another system's — stay as hidden code. Attendance →
    All 5 Oct 2026, asked for by IT, the same way as Employees → All. */
 export const HIDDEN_PAGES = {
-	employees: ["salary", "changes", "detail", "cattypes", "ctc", "directory", "weekoff", "orgchart", "letters", "all"],
+	/* Directory and Organization Chart shown again 21 Oct 2026 (D15), as the
+	   HRDashboard reference's Directory and Org chart. */
+	employees: ["salary", "changes", "detail", "cattypes", "ctc", "weekoff", "letters", "all"],
 	attendance: ["submit", "statutory", "all"],
 	leave: ["availed", "pending"],
 	payroll: ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],

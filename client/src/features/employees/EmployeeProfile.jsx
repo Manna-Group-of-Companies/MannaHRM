@@ -16,6 +16,8 @@ import {
 } from "@/lib/profedit";
 import { deskUrl } from "@/lib/desk";
 import People from "@/components/People";
+import KitIcon from "@/components/kit/KitIcon";
+import { PageHead } from "@/components/kit/ui";
 import Avatar from "@/components/Avatar";
 import { LocCell } from "@/components/PunchMap";
 import { DATE_FIELD } from "@/data/employees";
@@ -1112,6 +1114,26 @@ function NotActive({ doc, deskHref, deact }) {
 	);
 }
 
+/** The reference's record heading (its `phBack`): a back arrow to the list,
+    the crumbs, and the page's own control on the right — here, the picker. */
+function DetailHead({ name, chooser }) {
+	const back = () => go({ section: "employees", subtab: "overview" });
+	return (
+		<div className="k-ph">
+			<div>
+				<button type="button" className="k-back" onClick={back}>
+					<KitIcon name="left" size={22} stroke={2} />Detail Employee
+				</button>
+				<div className="k-crumbs">
+					<button type="button" onClick={back}>Employees</button>
+					{name ? <><KitIcon name="right" size={14} stroke={2} /><b>{name}</b></> : null}
+				</div>
+			</div>
+			<div className="k-ph-act">{chooser}</div>
+		</div>
+	);
+}
+
 export default function EmployeeProfile() {
 	const s = useApp();
 	/* The four company logins read a record and change nothing on it
@@ -1281,10 +1303,7 @@ export default function EmployeeProfile() {
 	if (!picked) {
 		return (
 			<>
-				<div className="legend">
-					<b className="font-display">Employee Profile</b>
-					<span className="right">{chooser}</span>
-				</div>
+				<PageHead title="Employee Profile" sub="Pick somebody to open their record">{chooser}</PageHead>
 				{/* Their screen opens on whoever was last looked at. Ours cannot know
 				    that on a fresh load, so it lists the people it could open instead of
 				    asking somebody to go back to another page to choose. */}
@@ -1297,10 +1316,7 @@ export default function EmployeeProfile() {
 	if (doc.__err) {
 		return (
 			<>
-				<div className="legend">
-					<b className="font-display">Employee Profile</b>
-					<span className="right">{chooser}</span>
-				</div>
+				<DetailHead name={picked} chooser={chooser} />
 				<div className="gap">
 					<b>Could not read {picked}.</b> {String(doc.__err)}
 				</div>
@@ -1318,13 +1334,7 @@ export default function EmployeeProfile() {
 	if (doc.status !== "Active") {
 		return (
 			<>
-				<div className="legend">
-					<button className="embtn" onClick={() => go({ section: "employees", subtab: "overview" })}>
-						← Employee Master
-					</button>
-					<b className="font-display">Employee Profile</b>
-					<span className="right">{chooser}</span>
-				</div>
+				<DetailHead name={doc.employee_name || doc.name} chooser={chooser} />
 				<NotActive doc={doc} deskHref={deskLink} deact={readOnly ? null : deact} />
 				{statusMsg}
 			</>
@@ -1362,23 +1372,21 @@ export default function EmployeeProfile() {
 
 	return (
 		<>
-			<div className="legend">
-				<button className="embtn" onClick={() => go({ section: "employees", subtab: "overview" })}>
-					← Employee Master
-				</button>
-				<b className="font-display">Employee Profile</b>
-				<span className="right">{chooser}</span>
-			</div>
+			<DetailHead name={doc.employee_name || doc.name} chooser={chooser} />
 
 			{needsDetails(doc) && !editing && !readOnly && (
 				<NeedsDetails doc={doc} busy={deactBusy}
 					onDone={() => void writeOne({ custom_needs_details: 0 }, "Marked as complete. The Needs details flag is cleared.")} />
 			)}
 
+			{/* The reference's record page: the person as a card on the left, their
+			    sections as tabs over the pane on the right (21 October 2026). */}
+			<div className="k-split proview">
 			<Header doc={doc} onRefresh={refresh} deskHref={deskHref}
 				editing={editing} edit={edit} onEdit={readOnly ? null : startEdit}
 				pic={s.profpic} onPhoto={readOnly ? null : savePhoto} deact={readOnly ? null : deact} />
 
+			<div className="k-card procol">
 			{/* Outside the pane rather than inside it, because the draft is the
 			    whole record: switching panes while editing must not look like the
 			    edit ended. */}
@@ -1493,6 +1501,8 @@ export default function EmployeeProfile() {
 						</>
 					)}
 				</div>
+			</div>
+			</div>
 			</div>
 		</>
 	);

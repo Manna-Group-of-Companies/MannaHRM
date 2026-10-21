@@ -627,7 +627,7 @@ const initial = {
 
 	   All of this went with the page on 4 September 2026 and came back with it
 	   the same day; `empSel` never left, because four other screens read it. */
-	empview: "grid",
+	empview: "list",
 	/* Active, not All (3 October 2026): a deactivated person is off the cards
 	   until somebody asks for InActive on the status filter. */
 	empstatus: "Active",
@@ -640,6 +640,9 @@ const initial = {
 	empfilters: false,
 	empdept: "",
 	empdesig: "",
+	/** The reference's Filter drawer adds two more: company and employment type. */
+	empco: [],
+	emptype: [],
 	empdev: "",
 	/* Whether the master is drawing everybody or the first EMP_SHOWN of them.
 	   Here rather than in the component so that opening a person and coming

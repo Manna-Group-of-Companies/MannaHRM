@@ -95,8 +95,10 @@ describe("pages hidden on 25 and 26 Sep and 5 Oct 2026", () => {
 	   an old link lands on the module's first page rather than on a screen with
 	   no tab to say where you are. */
 	const HIDDEN = [
-		["attendance", "statutory"], ["employees", "ctc"], ["employees", "directory"],
-		["employees", "weekoff"], ["employees", "orgchart"], ["employees", "letters"],
+		/* Directory and Organization Chart came back on 21 October 2026 (D15),
+		   as the HRDashboard reference's Directory and Org chart — see below. */
+		["attendance", "statutory"], ["employees", "ctc"],
+		["employees", "weekoff"], ["employees", "letters"],
 		["employees", "all"], ["leave", "availed"], ["leave", "pending"], ["attendance", "all"],
 	];
 
@@ -144,6 +146,17 @@ describe("Payroll, shown again on 2 Oct 2026 as one page", () => {
 		const { isHidden } = await import("@/data/sections");
 		for (const k of ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe"]) {
 			expect(isHidden("payroll", k), k).toBe(true);
+		}
+	});
+});
+
+describe("Directory and Org chart, shown again (D15, 21 October 2026)", () => {
+	it("opens each at its own address and puts it on the Employees strip", async () => {
+		const { routeFromPath, pathFor: mounted } = await import("@/routes/router");
+		const { isHidden } = await import("@/data/sections");
+		for (const subtab of ["directory", "orgchart"]) {
+			expect(routeFromPath(mounted("employees", subtab))).toMatchObject({ section: "employees", subtab });
+			expect(isHidden("employees", subtab)).toBe(false);
 		}
 	});
 });
