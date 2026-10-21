@@ -3,7 +3,7 @@ import { act, fireEvent, render, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 
 import Reports, { ATT_TILES, REPORT_TILES, attTilesFor, headcountAt, last12 } from "@/features/reports/Reports";
-import { Password, Permission, Departments } from "@/features/settings/SettingsKit";
+import { Password, Permission, Departments, Offices, Titles } from "@/features/settings/SettingsKit";
 import { Help, Notifications, NoteBell, SHORTCUTS, SUPPORT_EMAIL } from "@/features/help/NotesHelp";
 import { http } from "@/api/client";
 import { store, set, getState, resetStore } from "@/store";
@@ -100,6 +100,68 @@ describe("Settings", () => {
 		await vi.waitFor(() => expect(view.container.textContent).toContain("X Person"));
 		expect(view.container.querySelector("select, input[type=checkbox]")).toBeNull();
 		expect(put).not.toHaveBeenCalled();
+	});
+
+	/* 21 October 2026, asked for by HR: a department is added here, not on the
+	   desk, and the list is read back from the site. */
+	it("adds a department here with its name and company, and reads the list again", async () => {
+		const sent = [];
+		vi.spyOn(http, "post").mockImplementation((url, body) => { sent.push([decodeURIComponent(url), body]); return Promise.resolve({ data: { data: { name: "Quality - MR" } } }); });
+		vi.spyOn(http, "get").mockImplementation(() => Promise.resolve({ data: { data: [{ name: "Quality - MR", disabled: 0 }] } }));
+		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "settings", subtab: "departments", company: "" }));
+		const view = draw(<Departments />);
+		expect(view.container.textContent).not.toContain("Manage on the site");
+		await act(async () => { view.getByRole("button", { name: "Add department" }).click(); });
+		fireEvent.change(document.querySelector("#dp-name"), { target: { value: "Quality" } });
+		const company = document.querySelector("#dp-co").value;
+		expect(company).not.toBe("");
+		await act(async () => { fireEvent.submit(document.querySelector("#dp-name").closest("form")); });
+		expect(sent).toEqual([["/api/resource/Department", { department_name: "Quality", company, docstatus: 0 }]]);
+		expect(getState().departments).toEqual([{ name: "Quality - MR", disabled: 0 }]);
+		expect(document.querySelector("#dp-name")).toBeNull();
+	});
+
+	it("shows the site's refusal of a department and keeps the form open", async () => {
+		vi.spyOn(http, "post").mockImplementation(() => Promise.reject({ response: { data: { _server_messages: JSON.stringify([JSON.stringify({ message: "Department Quality - MR already exists" })]) } } }));
+		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "settings", subtab: "departments" }));
+		const view = draw(<Departments />);
+		await act(async () => { view.getByRole("button", { name: "Add department" }).click(); });
+		fireEvent.change(document.querySelector("#dp-name"), { target: { value: "Quality" } });
+		await act(async () => { fireEvent.submit(document.querySelector("#dp-name").closest("form")); });
+		expect(document.body.textContent).toContain("already exists");
+		expect(document.querySelector("#dp-name")).not.toBeNull();
+	});
+
+	it("gives a login that only reads employees no Add department", async () => {
+		await act(async () => set({ ...loadedState(), user: "hitechrubber@mannarubber.com", admin: true, section: "settings", subtab: "departments" }));
+		const view = draw(<Departments />);
+		expect(view.queryByRole("button", { name: "Add department" })).toBeNull();
+	});
+
+	it("adds a job title here as a Designation, and reads the list again", async () => {
+		const sent = [];
+		vi.spyOn(http, "post").mockImplementation((url, body) => { sent.push([decodeURIComponent(url), body]); return Promise.resolve({ data: { data: { name: "Quality Inspector" } } }); });
+		vi.spyOn(http, "get").mockImplementation(() => Promise.resolve({ data: { data: [{ name: "Quality Inspector" }] } }));
+		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "settings", subtab: "titles" }));
+		const view = draw(<Titles />);
+		expect(view.container.textContent).not.toContain("Manage on the site");
+		await act(async () => { view.getByRole("button", { name: "Add job title" }).click(); });
+		fireEvent.change(document.querySelector("#jt-name"), { target: { value: "Quality Inspector" } });
+		await act(async () => { fireEvent.submit(document.querySelector("#jt-name").closest("form")); });
+		expect(sent).toEqual([["/api/resource/Designation", { designation_name: "Quality Inspector", docstatus: 0 }]]);
+		expect(getState().designations).toEqual([{ name: "Quality Inspector" }]);
+		expect(document.querySelector("#jt-name")).toBeNull();
+	});
+
+	it("draws Offices as the work locations with their Add, not a button to a page off the menu", async () => {
+		vi.spyOn(http, "get").mockImplementation(() => Promise.resolve({ data: { data: [] } }));
+		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "settings", subtab: "offices",
+			workLocs: [{ name: "Main Gate", location_name: "Main Gate", latitude: 9.59, longitude: 76.52, is_active: 1 }], workLocState: "ok" }));
+		const view = draw(<Offices />);
+		expect(view.container.querySelector(".k-sec-h h3").textContent).toBe("Offices");
+		expect(view.container.textContent).toContain("Main Gate");
+		expect(view.getByRole("button", { name: "Add location" })).toBeTruthy();
+		expect(view.queryByRole("button", { name: /Manage offices/ })).toBeNull();
 	});
 
 	it("will not send a new password shorter than eight or one that does not match", async () => {

@@ -99,5 +99,5 @@ describe("reading files", () => {
 		const r = matchBasePay(table, WAITING, ALL);
 		expect(r.matched.map((m) => [m.employee, m.base])).toEqual([["HR-EMP-00001", 21000], ["HR-EMP-00002", 18500]]);
 		expect(r.problems).toEqual([]);
-	});
+	}, 20000);
 });

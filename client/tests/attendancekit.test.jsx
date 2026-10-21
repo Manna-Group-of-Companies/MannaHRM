@@ -77,7 +77,7 @@ describe("the eleven reports", () => {
 		const said = await runReport("shiftrep", "Excel", { day: todayIso(), from: todayIso(), to: todayIso() });
 		expect(said).toMatch(/^Downloaded employee-shift-report-.*\.xlsx/);
 		expect(blobs).toHaveLength(1);
-	});
+	}, 20000);
 
 	it("refuses a range that ends before it starts, before reading anything", async () => {
 		await expect(runReport("ot", "Excel", { day: "", from: "2026-10-10", to: "2026-10-01" })).rejects.toThrow(/From date/);

@@ -123,7 +123,9 @@ const WORK_LOCATION = "Work Location";
 /** The list again from the site: it names the record and fills what it derives. */
 const reloadLocations = () => { set({ workLocState: "" }); void loadWorkLocations(); };
 
-function Location() {
+/** The work locations, added and changed in place. Settings → Offices draws the
+    same list under its own title. */
+export function WorkLocations({ title = "Check-in locations" }) {
 	const s = useApp();
 	const [open, setOpen] = useState(null); // null | {} for new | the location being edited
 	useEffect(() => { void loadWorkLocations(); }, []);
@@ -137,7 +139,7 @@ function Location() {
 	return (
 		<>
 			<div className="k-sec-h">
-				<h3>Check-in locations</h3>
+				<h3>{title}</h3>
 				{writes ? (
 					<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => setOpen({})}>
 						<KitIcon name="plus" size={16} stroke={2} />Add location
@@ -191,7 +193,7 @@ export default function AttendanceSettings() {
 							onClick={() => setTab(k)}>{l}</button>
 					))}
 				</div>
-				{tab === "general" ? <General /> : <Location />}
+				{tab === "general" ? <General /> : <WorkLocations />}
 			</div>
 		</div>
 	);

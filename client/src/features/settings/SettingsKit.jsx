@@ -11,16 +11,18 @@
  */
 
 import { useEffect, useState } from "react";
-import { useApp } from "@/store";
+import { set, useApp } from "@/store";
 import { navigate } from "@/routes/router";
 import { apiCall, apiWrite, getDoc, listAll } from "@/api/client";
-import { loadWorkLocations } from "@/api/load";
+import { create } from "@/api/crud";
+import { employeesLocked } from "@/data/menus";
+import { WorkLocations } from "@/features/attendance/AttendanceSettings";
 import { pagesOf } from "@/data/nav";
 import { deskUrl } from "@/lib/desk";
 import { tidyDept } from "@/lib/format";
 import KitIcon from "@/components/kit/KitIcon";
 import { EmptyState, PageHead, Pill } from "@/components/kit/ui";
-import { toast } from "@/components/kit/overlay";
+import { KitModal, ModalFoot, toast } from "@/components/kit/overlay";
 
 const ICON = {
 	company: "building", offices: "pin", departments: "layers", titles: "brief", schedules: "clock",
@@ -133,32 +135,14 @@ export function CompanyInfo() {
 
 /* ------------------------------------------------- offices, departments --- */
 
+/* The offices are the work locations: Attendance Settings → Location's own
+   list, with its Add and Edit, since the Work Locations page left the menu
+   (21 October 2026) and the button here pointed at it. */
 export function Offices() {
-	const s = useApp();
-	useEffect(() => { void loadWorkLocations(); }, []);
-	const locs = s.workLocs || [];
-	return (
-		<SettingsFrame>
-			<Card title="Offices" act={<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => navigate("attendance", "locations")}><KitIcon name="plus" size={16} stroke={2} />Manage offices</button>}>
-				{locs.length ? (
-					<div className="k-grid2">
-						{locs.map((o) => (
-							<div className="k-sec" style={{ margin: 0 }} key={o.name}>
-								<div className="k-sec-h" style={{ marginBottom: 8 }}>
-									<span style={{ display: "flex", gap: 10, alignItems: "center" }}><span className="k-icon-sq"><KitIcon name="building" size={18} stroke={2} /></span><b>{o.location_name || o.name}</b></span>
-									{Number(o.is_active) === 0 ? <Pill status="Closed">Not in use</Pill> : null}
-								</div>
-								<div className="k-muted" style={{ fontSize: 13 }}>{o.latitude && o.longitude ? `${Number(o.latitude).toFixed(5)}, ${Number(o.longitude).toFixed(5)}` : "No coordinates yet"}</div>
-							</div>
-						))}
-					</div>
-				) : <EmptyState icon="pin" title="No offices yet" sub="" />}
-			</Card>
-		</SettingsFrame>
-	);
+	return <SettingsFrame><div className="k-card"><WorkLocations title="Offices" /></div></SettingsFrame>;
 }
 
-function CountList({ title, rows, field, label = (x) => x, dt }) {
+function CountList({ title, rows, field, label = (x) => x, dt, act }) {
 	const s = useApp();
 	const active = (s.employees || []).filter((e) => e.status === "Active");
 	const list = rows.map((r) => ({ name: r.name || r, n: active.filter((e) => e[field] === (r.name || r)).length, off: Number(r.disabled) === 1 }))
@@ -166,7 +150,7 @@ function CountList({ title, rows, field, label = (x) => x, dt }) {
 	const href = deskLink(s, dt);
 	return (
 		<SettingsFrame>
-			<Card title={title} act={href ? <a className="k-btn k-btn-line k-btn-sm" href={href} target="_blank" rel="noreferrer"><KitIcon name="edit" size={14} stroke={2} />Manage on the site</a> : null}>
+			<Card title={title} act={act !== undefined ? act : href ? <a className="k-btn k-btn-line k-btn-sm" href={href} target="_blank" rel="noreferrer"><KitIcon name="edit" size={14} stroke={2} />Manage on the site</a> : null}>
 				{list.length ? (
 					<div className="k-tbl-wrap">
 						<table className="k-rt">
@@ -188,13 +172,121 @@ function CountList({ title, rows, field, label = (x) => x, dt }) {
 	);
 }
 
+/* A department is made here rather than on the desk (21 October 2026, asked
+   for by HR). ERPNext names it "<name> - <company abbreviation>" and files it
+   under All Departments; the list is read again from the site afterwards, so
+   the name shown is the one it gave. A duplicate is refused there, in its own
+   words. */
+function DeptForm({ onClose }) {
+	const s = useApp();
+	const cos = (s.companies || []).map((c) => c.name);
+	const [f, setF] = useState({ name: "", company: s.company || cos[0] || "" });
+	const [err, setErr] = useState("");
+	const [busy, setBusy] = useState(false);
+	const save = async (e) => {
+		e.preventDefault();
+		const name = f.name.trim();
+		if (!name) { setErr("Name the department"); return; }
+		if (!f.company) { setErr("Pick a company"); return; }
+		setBusy(true);
+		const r = await create("Department", { department_name: name, company: f.company });
+		if (!r.ok) { setBusy(false); setErr(r.error || "The site refused this."); return; }
+		const rows = await listAll("Department", ["name", "disabled"])
+			.catch(() => listAll("Department", ["name"])).catch(() => null);
+		if (rows) set({ departments: rows });
+		setBusy(false);
+		toast(`${tidyDept(r.name) || name} added`);
+		onClose();
+	};
+	return (
+		<KitModal title="Add department" onClose={onClose}>
+			<form noValidate onSubmit={save}>
+				<div className="k-form-grid">
+					<div className={`k-field k-full${err ? " k-bad" : ""}`}>
+						<label htmlFor="dp-name">Department name</label>
+						<input id="dp-name" className="k-inp" value={f.name} onChange={(e) => { setF({ ...f, name: e.target.value }); setErr(""); }} />
+						{err ? <small className="k-err">{err}</small> : null}
+					</div>
+					<div className="k-field k-full">
+						<label htmlFor="dp-co">Company</label>
+						<select id="dp-co" className="k-sel" value={f.company} onChange={(e) => { setF({ ...f, company: e.target.value }); setErr(""); }}>
+							{cos.length ? null : <option value="">No company</option>}
+							{cos.map((c) => <option key={c}>{c}</option>)}
+						</select>
+					</div>
+				</div>
+				<ModalFoot ok="Add department" busy={busy} onCancel={onClose} />
+			</form>
+		</KitModal>
+	);
+}
+
 export const Departments = () => {
 	const s = useApp();
-	return <CountList title="Departments" rows={s.departments || []} field="department" label={tidyDept} dt="Department" />;
+	const [adding, setAdding] = useState(false);
+	const add = employeesLocked(s.user) ? null : (
+		<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => setAdding(true)}>
+			<KitIcon name="plus" size={16} stroke={2} />Add department
+		</button>
+	);
+	return (
+		<>
+			<CountList title="Departments" rows={s.departments || []} field="department" label={tidyDept} dt="Department" act={add} />
+			{adding ? <DeptForm onClose={() => setAdding(false)} /> : null}
+		</>
+	);
 };
+/* A job title is made here rather than on the desk too (21 October 2026, asked
+   for by HR). On the site it is a Designation, named by what was typed; the
+   list is read again afterwards, and a duplicate is refused there, in its own
+   words. */
+function TitleForm({ onClose }) {
+	const [name, setName] = useState("");
+	const [err, setErr] = useState("");
+	const [busy, setBusy] = useState(false);
+	const save = async (e) => {
+		e.preventDefault();
+		const v = name.trim();
+		if (!v) { setErr("Name the job title"); return; }
+		setBusy(true);
+		const r = await create("Designation", { designation_name: v });
+		if (!r.ok) { setBusy(false); setErr(r.error || "The site refused this."); return; }
+		const rows = await listAll("Designation", ["name"]).catch(() => null);
+		if (rows) set({ designations: rows });
+		setBusy(false);
+		toast(`${r.name || v} added`);
+		onClose();
+	};
+	return (
+		<KitModal title="Add job title" onClose={onClose}>
+			<form noValidate onSubmit={save}>
+				<div className="k-form-grid">
+					<div className={`k-field k-full${err ? " k-bad" : ""}`}>
+						<label htmlFor="jt-name">Job title</label>
+						<input id="jt-name" className="k-inp" value={name} onChange={(e) => { setName(e.target.value); setErr(""); }} />
+						{err ? <small className="k-err">{err}</small> : null}
+					</div>
+				</div>
+				<ModalFoot ok="Add job title" busy={busy} onCancel={onClose} />
+			</form>
+		</KitModal>
+	);
+}
+
 export const Titles = () => {
 	const s = useApp();
-	return <CountList title="Job titles" rows={s.designations || []} field="designation" dt="Designation" />;
+	const [adding, setAdding] = useState(false);
+	const add = employeesLocked(s.user) ? null : (
+		<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => setAdding(true)}>
+			<KitIcon name="plus" size={16} stroke={2} />Add job title
+		</button>
+	);
+	return (
+		<>
+			<CountList title="Job titles" rows={s.designations || []} field="designation" dt="Designation" act={add} />
+			{adding ? <TitleForm onClose={() => setAdding(false)} /> : null}
+		</>
+	);
 };
 
 export function Schedules() {

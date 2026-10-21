@@ -51,7 +51,7 @@ const click = async (el) => { await act(async () => { el.click(); }); };
 
 /** Open +, pick the company, name it, set the window, and walk to the last step. */
 async function fillNew(view, name = "Day 8-5") {
-	await click(view.container.querySelector('button[aria-label="Add"]'));
+	await click(view.container.querySelector('button[aria-label="New shift"]'));
 	type(view, "#shw_company", "Manna Rubber");
 	if (name) type(view, "#shw_name", name);
 	type(view, "#shw_start", "08:00");
@@ -73,7 +73,7 @@ beforeEach(() => {
 describe("+ creates a Shift Type", () => {
 	it("opens the shift form in the dashboard rather than a link to the desk", async () => {
 		const view = draw();
-		const add = view.container.querySelector('button[aria-label="Add"]');
+		const add = view.container.querySelector('button[aria-label="New shift"]');
 		expect(add.tagName).toBe("BUTTON");
 		await click(add);
 		expect(view.container.querySelector("#dlgtitle").textContent).toBe("New Shift");
@@ -126,7 +126,7 @@ describe("+ creates a Shift Type", () => {
 
 	it("will not go past the first step without a name, because the shift is named by it", async () => {
 		const view = draw();
-		await click(view.container.querySelector('button[aria-label="Add"]'));
+		await click(view.container.querySelector('button[aria-label="New shift"]'));
 		await click(button(view, "Next"));
 		expect(getState().shw.step).toBe("kind");
 		expect(calls.created).toHaveLength(0);
@@ -134,7 +134,7 @@ describe("+ creates a Shift Type", () => {
 
 	it("asks for the company, name and times on the first step, and saves from there", async () => {
 		const view = draw();
-		await click(view.container.querySelector('button[aria-label="Add"]'));
+		await click(view.container.querySelector('button[aria-label="New shift"]'));
 		expect(view.container.querySelector("#shw_company")).not.toBeNull();
 		expect(view.container.querySelector("#shw_start")).not.toBeNull();
 		expect(view.container.querySelector("#shw_end")).not.toBeNull();
@@ -153,7 +153,7 @@ describe("+ creates a Shift Type", () => {
 
 	it("will not save a new shift without a company where the site can hold one", async () => {
 		const view = draw();
-		await click(view.container.querySelector('button[aria-label="Add"]'));
+		await click(view.container.querySelector('button[aria-label="New shift"]'));
 		type(view, "#shw_name", "Day");
 		expect(button(view, "Save").disabled).toBe(true);
 		await click(button(view, "Next"));
@@ -163,14 +163,14 @@ describe("+ creates a Shift Type", () => {
 	it("opens on the company the top bar is set to", async () => {
 		act(() => set({ company: "Manna Rubber" }));
 		const view = draw();
-		await click(view.container.querySelector('button[aria-label="Add"]'));
+		await click(view.container.querySelector('button[aria-label="New shift"]'));
 		expect(view.container.querySelector("#shw_company").value).toBe("Manna Rubber");
 	});
 
 	it("does not send a company to a site whose Shift Type has no company field", async () => {
 		act(() => set({ shiftCo: false }));
 		const view = draw();
-		await click(view.container.querySelector('button[aria-label="Add"]'));
+		await click(view.container.querySelector('button[aria-label="New shift"]'));
 		type(view, "#shw_company", "Manna Rubber");
 		type(view, "#shw_name", "Day");
 		expect(view.container.textContent).toContain("no field on the site yet");
@@ -189,7 +189,7 @@ describe("✎ changes an existing Shift Type", () => {
 	it("sends only the boxes that changed, to the row it was opened on", async () => {
 		onSite = SITE;
 		const view = draw();
-		await click(view.container.querySelector('tbody button[aria-label="Edit"]'));
+		await click(view.container.querySelector('.k-list-row button[aria-label^="Edit "]'));
 		/* The site's short time is read as 09:00, not as blank. */
 		expect(getState().shw.f.start).toBe("09:00");
 		type(view, "#shw_end", "18:30");
@@ -204,7 +204,7 @@ describe("✎ changes an existing Shift Type", () => {
 	it("locks the name, which is the shift's id", async () => {
 		onSite = SITE;
 		const view = draw();
-		await click(view.container.querySelector('tbody button[aria-label="Edit"]'));
+		await click(view.container.querySelector('.k-list-row button[aria-label^="Edit "]'));
 		expect(view.container.querySelector("#shw_name").readOnly).toBe(true);
 	});
 });
