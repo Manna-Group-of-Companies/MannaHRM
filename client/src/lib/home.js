@@ -13,6 +13,8 @@
    against there is no trend, rather than a +100%.
    --------------------------------------------------------------------------- */
 
+import { needsDetails } from "@/lib/scope";
+
 export const WINDOW_DAYS = 120;
 const DAY = 864e5;
 
@@ -77,6 +79,24 @@ export function tiles({ employees, seps = [], applicants = null, company = "", n
 		{ key: "new", icon: "plus", value: newNow, label: "New Employees", trend: trend(newNow, newBefore) },
 		{ key: "left", icon: "minus", value: leftNow, label: "Resigned Employees", trend: trend(leftNow, leftBefore), down: true },
 	];
+}
+
+/** Whose birthday it is on `day` (21 October 2026, asked for by HR): active,
+    in the company picked, and with a real birth date — a record still waiting
+    for its details carries the bridge's placeholder, and would have the front
+    page wishing everybody a machine enrolled a happy 1 January. Somebody born
+    on 29 February is wished on the 28th in a year without one. By name. */
+export function birthdaysOn(employees, day, company = "") {
+	const md = String(day).slice(5, 10);
+	const y = Number(String(day).slice(0, 4));
+	const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+	return (employees || [])
+		.filter((e) => {
+			if (e.status !== "Active" || !inScope(e, company) || needsDetails(e)) return false;
+			const b = String(e.date_of_birth || "").slice(5, 10);
+			return Boolean(b) && (b === md || (!leap && md === "02-28" && b === "02-29"));
+		})
+		.sort((a, b) => String(a.employee_name || "").localeCompare(String(b.employee_name || "")));
 }
 
 /** The donut: everybody active, split into the reference's three states. */

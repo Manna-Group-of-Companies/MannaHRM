@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attention, greeting, monthsBack, stateOf, stateSegments, tableRows, tiles, trend, typeBand } from "@/lib/home";
+import { attention, birthdaysOn, greeting, monthsBack, stateOf, stateSegments, tableRows, tiles, trend, typeBand } from "@/lib/home";
 
 /* ---------------------------------------------------------------------------
    The front page's arithmetic (lib/home.js) — the HRDashboard reference's
@@ -19,6 +19,33 @@ const ago = (d) => {
 const emp = (name, joined, extra = {}) => ({
 	name, employee_name: name, company: "Manna Rubber", status: "Active", date_of_joining: joined,
 	department: "Production", designation: "Operator", ...extra,
+});
+
+describe("birthdays today", () => {
+	const P = (name, dob, extra = {}) => ({ name, employee_name: name, status: "Active", company: "Manna Rubber", date_of_birth: dob, ...extra });
+
+	it("finds the active people born on this day, by name, in the company picked", () => {
+		const rows = [P("Zara", "1990-10-21"), P("Anita", "1985-10-21"), P("Bina", "1990-10-22"),
+			P("Left", "1990-10-21", { status: "Left" }), P("Other Co", "1990-10-21", { company: "Manna Polymers" })];
+		expect(birthdaysOn(rows, "2026-10-21").map((e) => e.name)).toEqual(["Anita", "Other Co", "Zara"]);
+		expect(birthdaysOn(rows, "2026-10-21", "Manna Rubber").map((e) => e.name)).toEqual(["Anita", "Zara"]);
+	});
+
+	it("wishes nobody on the placeholder birth date a machine-made record carries", () => {
+		const rows = [P("Device user", "2000-01-01", { custom_needs_details: 1 }), P("Flag lost", "2000-01-01")];
+		expect(birthdaysOn(rows, "2027-01-01")).toEqual([]);
+	});
+
+	it("wishes somebody born on 29 February on the 28th in a year without one", () => {
+		const rows = [P("Leap", "1996-02-29")];
+		expect(birthdaysOn(rows, "2027-02-28").map((e) => e.name)).toEqual(["Leap"]);
+		expect(birthdaysOn(rows, "2028-02-28")).toEqual([]);
+		expect(birthdaysOn(rows, "2028-02-29").map((e) => e.name)).toEqual(["Leap"]);
+	});
+
+	it("skips a record with no birth date rather than guessing one", () => {
+		expect(birthdaysOn([P("Nobody", "")], "2026-10-21")).toEqual([]);
+	});
 });
 
 describe("the four tiles", () => {

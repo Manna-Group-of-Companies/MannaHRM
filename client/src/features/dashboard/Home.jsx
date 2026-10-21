@@ -17,12 +17,15 @@ import Link from "@/routes/Link";
 import { navigate } from "@/routes/router";
 import { loadSeparations } from "@/api/load";
 import { loadHome, loadAttendanceMonths } from "@/api/home";
-import { attention, greeting, stateSegments, tableRows, tiles, typeBand } from "@/lib/home";
+import { attention, birthdaysOn, greeting, stateSegments, tableRows, tiles, typeBand } from "@/lib/home";
+import { tidyDept, todayIso } from "@/lib/format";
 import { saveLayout } from "@/lib/homelayout";
 import { groupsFor, shown } from "@/data/nav";
 import { employeesLocked } from "@/data/menus";
 import { openEmployee } from "@/features/employees/openEmployee";
 import KitIcon from "@/components/kit/KitIcon";
+import KitAvatar from "@/components/kit/KitAvatar";
+import { KitModal } from "@/components/kit/overlay";
 import { CountUp, EmptyState, PageHead, Pager, Pill, Seg, Who, stagger } from "@/components/kit/ui";
 import { DonutBlock, LineChart } from "@/components/kit/charts";
 import Dashboard from "@/features/dashboard/Dashboard";
@@ -232,6 +235,40 @@ function TotalCard({ segments, i }) {
 	);
 }
 
+/* Birthdays (21 October 2026, asked for by HR): on the day, the front page
+   opens with who it is. Once a day in this browser — a pop-up on every visit
+   would be in the way by lunchtime — and the button under the greeting opens
+   it again. Stored per browser and nowhere else; a private window that keeps
+   nothing simply shows it each time. */
+const BDAY_SEEN = "homeBirthdaysSeen";
+function seenOn(day) {
+	try { return localStorage.getItem(BDAY_SEEN) === day; } catch { return false; }
+}
+function markSeen(day) {
+	try { localStorage.setItem(BDAY_SEEN, day); } catch { /* nothing kept; shown again next time */ }
+}
+
+function Birthdays({ people, onClose }) {
+	return (
+		<KitModal title={people.length === 1 ? "Birthday today" : `${people.length} birthdays today`} onClose={onClose}>
+			<div>
+				{people.map((e) => (
+					<button type="button" className="k-list-row" key={e.name} style={{ width: "100%", textAlign: "left" }}
+						onClick={() => { onClose(); openEmployee(e.name); }}>
+						<KitAvatar name={e.employee_name || e.name} src={e.image || ""} />
+						<div className="k-grow">
+							<b>{e.employee_name || e.name}</b>
+							<small>{[e.designation, tidyDept(e.department), e.company].filter(Boolean).join(" · ")}</small>
+						</div>
+						<KitIcon name="cake" size={18} stroke={2} />
+					</button>
+				))}
+			</div>
+			<div className="k-modal-f"><button type="button" className="k-btn k-btn-ink" onClick={onClose}>Close</button></div>
+		</KitModal>
+	);
+}
+
 export default function Home() {
 	const s = useApp();
 	const { company, user, admin, home } = s;
@@ -250,6 +287,13 @@ export default function Home() {
 
 	const sepsByEmp = useMemo(() => Object.fromEntries((s.seps || []).map((x) => [x.name, x])), [s.seps]);
 	const now = new Date();
+	const day = todayIso();
+	const bdays = useMemo(() => birthdaysOn(s.employees, day, company), [s.employees, day, company]);
+	const [bdayOpen, setBdayOpen] = useState(false);
+	/* Opened by itself once the people are in, not while the page is empty. */
+	useEffect(() => {
+		if (bdays.length && !seenOn(day)) { setBdayOpen(true); markSeen(day); }
+	}, [bdays.length, day]);
 
 	if (!s.connState) return <Skeleton />;
 
@@ -262,6 +306,12 @@ export default function Home() {
 			onChange={(v) => set({ homeLayout: saveLayout(v) })} />
 	);
 	const root = `kit k-home${entering ? " k-enter" : ""}`;
+	const bdayBtn = bdays.length ? (
+		<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => setBdayOpen(true)}>
+			<KitIcon name="cake" size={16} stroke={2} />{bdays.length === 1 ? "1 birthday today" : `${bdays.length} birthdays today`}
+		</button>
+	) : null;
+	const bdayPop = bdayOpen ? <Birthdays people={bdays} onClose={() => setBdayOpen(false)} /> : null;
 
 	if (layout === 2) {
 		const band = typeBand(s.employees, s.seps || [], company, now);
@@ -284,7 +334,7 @@ export default function Home() {
 									<button key={g.key} type="button" onClick={() => navigate(g.items[0].section, g.items[0].subtab)}>{g.label}</button>
 								))}
 							</div>
-							{layoutSeg}
+							<div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>{bdayBtn}{layoutSeg}</div>
 						</div>
 					</div>
 				</div>
@@ -321,6 +371,7 @@ export default function Home() {
 				<div style={{ marginTop: 24 }}><EmployeesCard s={s} sepsByEmp={sepsByEmp} /></div>
 				{/* Start Up, as it was: the morning's panels, under the reference's page. */}
 				<div className="k-startup" style={{ marginTop: 24 }}><Dashboard embedded /></div>
+				{bdayPop}
 			</div>
 		);
 	}
@@ -338,6 +389,7 @@ export default function Home() {
 			<PageHead title={`${greeting(now)}, ${first}`} sub="This is your HR report so far" className="k-anim">
 				<div className="k-greet-acts">
 					{layoutSeg}
+					{bdayBtn}
 					{canAdd ? (
 						<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => navigate("employees", "new")}>
 							<KitIcon name="plus" size={16} stroke={2} />Add employee
@@ -375,6 +427,7 @@ export default function Home() {
 				<EmployeesCard s={s} sepsByEmp={sepsByEmp} />
 				<TotalCard segments={segments} i={5} />
 			</div>
+			{bdayPop}
 		</div>
 	);
 }

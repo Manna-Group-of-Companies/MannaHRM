@@ -6,6 +6,7 @@ import Home from "@/features/dashboard/Home";
 import { store, set, getState, resetStore } from "@/store";
 import { storedLayout } from "@/lib/homelayout";
 import { loadedState } from "./fixture";
+import { todayIso } from "@/lib/format";
 
 /* ---------------------------------------------------------------------------
    The front page: the HRDashboard reference's Dashboard, Layouts 1 and 2
@@ -49,6 +50,30 @@ describe("the front page", () => {
 		await act(async () => { fireEvent.click(tile); });
 		expect(getState().section).toBe("reports");
 		expect(getState().subtab).toBe("onboarding");
+	});
+
+	/* 21 October 2026, asked for by HR. */
+	it("opens with today's birthdays once a day, and the button shows them again", async () => {
+		const st = loadedState();
+		const md = todayIso().slice(5, 10);
+		const who = st.employees.find((e) => e.status === "Active");
+		const employees = st.employees.map((e) => (e.name === who.name
+			? { ...e, date_of_birth: `1990-${md}`, custom_needs_details: 0 }
+			: { ...e, date_of_birth: e.date_of_birth && String(e.date_of_birth).slice(5, 10) === md ? "1990-01-15" : e.date_of_birth }));
+		await loaded({ employees });
+		const first = draw();
+		const dialog = document.querySelector('.k-modal[role="dialog"]');
+		expect(dialog.getAttribute("aria-label")).toBe("Birthday today");
+		expect(dialog.textContent).toContain(who.employee_name);
+		await act(async () => { within(dialog).getAllByRole("button", { name: "Close" }).at(-1).click(); });
+		expect(document.querySelector('.k-modal[role="dialog"]')).toBeNull();
+		first.unmount();
+
+		/* The same day again: no pop-up, the button instead. */
+		const again = draw();
+		expect(document.querySelector('.k-modal[role="dialog"]')).toBeNull();
+		await act(async () => { within(again.container).getByRole("button", { name: "1 birthday today" }).click(); });
+		expect(document.querySelector('.k-modal[role="dialog"]').textContent).toContain(who.employee_name);
 	});
 
 	it("says what is waiting, with the button to it", async () => {
