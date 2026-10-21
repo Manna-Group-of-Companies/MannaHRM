@@ -60,6 +60,13 @@ import { periodLabel } from "@/lib/salarysheet";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 
+/* **Thirty seconds a case, and five for the sheet to be built.** These cases
+   build a workbook in the page, which takes a second on its own; with the
+   whole suite running beside them, two timed out on 21 October 2026 with no
+   code changed and passed alone. The cases assert exactly what they did; only
+   the waiting is longer — see mount.test.js for the same call. */
+vi.setConfig({ testTimeout: 30_000 });
+
 const YM = lastMonth();
 const [START, END] = periodOf(YM).iso;
 const CO = { default_payroll_payable_account: "Payroll Payable - MR", cost_center: "Main - MR", default_currency: "INR" };
@@ -300,7 +307,7 @@ describe("step 4 — the sheet", () => {
 
 	/* Waits for the register to be built and the page to say so. */
 	const made1 = () => act(async () => {
-		await vi.waitFor(() => { if (!made.length) throw new Error("not made yet"); });
+		await vi.waitFor(() => { if (!made.length) throw new Error("not made yet"); }, { timeout: 5000 });
 	});
 	const people = () => {
 		site.employees = [

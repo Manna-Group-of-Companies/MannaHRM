@@ -8,6 +8,7 @@ import { CT_BLANK, CT_DLG_BLANK } from "@/data/categorytype";
 import { EXP_BLANK } from "@/data/employees";
 import { CAL_NEW_BLANK } from "@/data/masters";
 import { storedRail } from "@/lib/rail";
+import { storedLayout } from "@/lib/homelayout";
 import { storedMode } from "@/lib/mode";
 
 /* ---------------------------------------------------------------------------
@@ -108,6 +109,12 @@ const initial = {
 	slipFind: "",
 	/** The reference's toast at the foot of the screen (components/kit/overlay). */
 	kitToast: null,
+	/** The front page (features/dashboard/Home.jsx): which of the reference's two
+	    layouts, remembered per browser (lib/homelayout.js); the figures only it
+	    reads, per company (api/home.js); and attendance by month for its chart. */
+	homeLayout: storedLayout(),
+	home: null,
+	homeAtt: null,
 	/** Settings → Security's rules as the site holds them — the same object
 	    data/sections.js is obeying, here so a menu redraws when they change.
 	    See api/pagerules.js. The state is "" before a sign-in, then "loading",

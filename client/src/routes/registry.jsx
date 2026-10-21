@@ -16,7 +16,7 @@ import { SECTIONS } from "@/data/sections";
 import { COMPANY_PAGES } from "@/data/companies";
 import { OVERVIEW, DEFAULT_SECTION } from "@/routes/paths";
 
-import Dashboard from "@/features/dashboard/Dashboard";
+import Home from "@/features/dashboard/Home";
 import Updates from "@/features/dashboard/Updates";
 import { AttendanceDash, HrDash, PayrollDash } from "@/features/dashboard/CompanyDash";
 import companyDashboard from "@/features/dashboard/companyDashboard";
@@ -120,7 +120,10 @@ const TABS = {
 	   have no counterpart there at all, because Factor HR is one tenant per
 	   company and this is one site for the whole group; that difference is the
 	   entire reason these pages exist. `data/companies.js` is the table. */
-	dashboard: [["overview", "Start Up"], ["approvals", "Approvals"],
+	/* `overview` is the HRDashboard reference's Dashboard since 21 October 2026
+	   (D16), at the address Start Up had; Start Up's panels are the foot of its
+	   Layout 2, so nothing on them went. */
+	dashboard: [["overview", "Overview"], ["approvals", "Approvals"],
 		/* The three company dashboards, asked for 16 Sep 2026 — no Factor HR menu
 		   item behind them, so they sit after Approvals rather than among theirs. */
 		["hr", "HR Dashboard"], ["attendance", "Attendance Dashboard"], ["payroll", "Payroll Dashboard"],
@@ -227,7 +230,7 @@ const TABS = {
    as SUBTABS above and the two cannot drift apart unnoticed — a subtab with no
    page here falls back to the module's overview rather than blanking. */
 const PAGES = {
-	dashboard: { overview: Dashboard, approvals: Approvals, updates: Updates,
+	dashboard: { overview: Home, approvals: Approvals, updates: Updates,
 		hr: HrDash, attendance: AttendanceDash, payroll: PayrollDash,
 		...managedPages("dashboard"),
 		/* One page per company, at `/dashboard/<abbr>` — `/dashboard/mt` is Manna
