@@ -31,9 +31,20 @@ export async function readFolders() {
 	const inside = folders.length
 		? await listAll("File", FILE_FIELDS, [["folder", "in", folders.map((f) => f.name)]], 500)
 		: [];
+	/* Who each is shared with, for the card's foot — one read for all of them.
+	   A login that may not read DocShare still gets its folders. */
+	const shares = folders.length
+		? await listAll("DocShare", ["share_name", "user", "everyone"],
+			[["share_doctype", "=", "File"], ["share_name", "in", folders.map((f) => f.name)]], 500).catch(() => [])
+		: [];
 	return folders.map((f) => {
 		const files = inside.filter((x) => x.folder === f.name && !Number(x.is_folder));
-		return { ...f, files: files.length, size: files.reduce((t, x) => t + (Number(x.file_size) || 0), 0) };
+		return {
+			...f,
+			files: files.length,
+			size: files.reduce((t, x) => t + (Number(x.file_size) || 0), 0),
+			shared: shares.filter((x) => x.share_name === f.name),
+		};
 	});
 }
 

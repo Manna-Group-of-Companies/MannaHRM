@@ -45,6 +45,7 @@ function FileType({ name }) {
 }
 
 const date = (iso) => (iso ? new Date(String(iso).replace(" ", "T")).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+const short = (iso) => (iso ? new Date(String(iso).replace(" ", "T")).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 const why = (e) => String(e?.message || e || "The site would not do that.").slice(0, 240);
 
 /** New folder, or a new name for one. */
@@ -230,6 +231,7 @@ function Folders() {
 		readFolders().then((r) => { setRows(r); setErr(""); }).catch((x) => { setRows([]); setErr(why(x)); });
 	}, []);
 	useEffect(() => { reload(); }, [reload]);
+	const personOf = (u) => (s.employees.find((e) => e.user_id === u)?.employee_name) || u || "?";
 	const open = (f) => { set({ docFolder: f.name }); navigate("documents", "folder"); };
 	const close = () => setDlg(null);
 	const done = () => { setDlg(null); reload(); };
@@ -270,6 +272,16 @@ function Folders() {
 								<h3>{f.file_name}</h3>
 								<small>{f.files} file{f.files === 1 ? "" : "s"} · {kb(f.size)}</small>
 							</button>
+							<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+								<div style={{ display: "flex" }}>
+									{(f.shared.some((x) => Number(x.everyone)) ? [{ everyone: 1 }] : f.shared.length ? f.shared : [{ user: f.owner }])
+										.slice(0, 3).map((x, j) => (Number(x.everyone)
+											? <span className="k-pill k-p-green k-nodot" key="all">Everyone</span>
+											: <KitAvatar key={x.user} name={personOf(x.user)} title={personOf(x.user)} size={26}
+												style={{ width: 26, height: 26, fontSize: 10, marginLeft: j ? -8 : 0, border: "2px solid rgb(var(--card))" }} />))}
+								</div>
+								<small>{short(f.creation)}</small>
+							</div>
 						</div>
 					))}
 					<button type="button" className="k-folder" style={{ border: "2px dashed rgb(var(--line-2))", boxShadow: "none", alignItems: "center", justifyContent: "center", color: "rgb(var(--ink-2))", minHeight: 150 }}

@@ -240,7 +240,14 @@ const header = `/* -------------------------------------------------------------
    See the script for why each of those, and change it there.
    --------------------------------------------------------------------------- */
 `;
-const result = header + "\n" + emit(body) + "\n";
+/* What index.css's own element rules set that the reference never does, put
+   back inside `.kit`. Its `table` has a 760px floor for the wide reports, and
+   on a phone that floor outlives the reference's table-as-cards and pushes
+   every value off the right edge. Tailwind's preflight also takes the bold
+   off every heading, which the reference left at the browser's default and
+   drew its titles with. */
+const RESET = `.kit table{min-width:0}\n.kit h1,.kit h2,.kit h3,.kit h4{font-weight:700}\n`;
+const result = header + "\n" + RESET + emit(body) + "\n";
 fs.writeFileSync(OUT, result);
 const left = [...result.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((m) => m[1])
 	.filter((v) => !/^--(page|card|wash|line|line-2|line-ctl|ink|ink-2|ink-3|faint|brand|brand-soft|brand-dark|brand-lift|on-brand|accent|live-dark|bad|bad-fill|bad-wash|part|part-wash|info-ink|info-wash|chart-3|char|sh-raise|sh-pop|overlay|ease-out|i|r)$/.test(v));

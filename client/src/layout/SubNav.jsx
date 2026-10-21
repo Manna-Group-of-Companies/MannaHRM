@@ -37,7 +37,9 @@ export default function SubNav() {
 		});
 	}, [section, subtab]);
 
-	if (full || tabs.length === 0) return <div className="subbar" />;
+	/* One page is no strip: a single tab switches nothing, and the reference
+	   draws none over Documents or News (21 October 2026). */
+	if (full || tabs.length < 2) return <div className="subbar" />;
 	/* Since 21 October 2026 the side menu lists the pages of every module its
 	   groups hold, so on a desktop with the menu open this strip is only
 	   wanted for the modules it does not — Reports and Settings. `data-inrail`
