@@ -82,6 +82,8 @@ import ReportsHub from "@/features/reports/ReportsHub";
 import Settings from "@/features/settings/Settings";
 import Coverage from "@/features/settings/Coverage";
 import Security from "@/features/settings/Security";
+import CompanyDocuments from "@/features/documents/Documents";
+import News from "@/features/news/News";
 
 /* Factor HR's second-level menus, under the module each belongs to, in its
    order. Only pages the tenant has actually been seen to have are listed:
@@ -214,6 +216,8 @@ const TABS = {
 		["projection", "Loan Projection"], ...managedTabs("loans"), ["all", "All"]],
 	survey: [["overview", "Survey"], ...managedTabs("survey")],
 	reports: [["overview", "All Reports"]],
+	documents: [["overview", "Documents"]],
+	news: [["overview", "News"]],
 	/* Security is ours, 29 Sep 2026: which pages everybody is shown, for the
 	   one login in data/menus.js PAGE_ADMINS and nobody else's strip. */
 	settings: [["overview", "Setup readiness"], ["coverage", "Module coverage"], ["security", "Security"]],
@@ -281,6 +285,8 @@ const PAGES = {
 		...managedPages("loans"), ...blueprintPages("loans") },
 	survey: { overview: Survey, ...managedPages("survey"), ...blueprintPages("survey") },
 	reports: { overview: ReportsHub },
+	documents: { overview: CompanyDocuments, folder: CompanyDocuments },
+	news: { overview: News, item: News, new: News, edit: News },
 	settings: { overview: Settings, coverage: Coverage, security: Security },
 };
 /* A page opened from another page rather than from a menu.
@@ -336,7 +342,9 @@ export function fullPage(s) {
    new people and corrections from an Excel sheet, at `/employees/upload`. */
 /* `chart` is the fourth (10 Oct 2026): one company's flow chart, opened by
    clicking its box on Hierarchy Chart. */
-const OFF_MENU = { employees: ["new", "import", "upload", "chart"] };
+/* Documents' one folder and News' post, new post and edit (21 Oct 2026) are
+   pages of the reference's that it opens from a card, with a back arrow. */
+const OFF_MENU = { employees: ["new", "import", "upload", "chart"], documents: ["folder"], news: ["item", "new", "edit"] };
 
 /** What the breadcrumb calls an off-menu page. These have no tab to be named
     by, and before 10 Oct 2026 every one of them read "Overview" up there. */
@@ -345,6 +353,10 @@ const OFF_MENU_TITLE = {
 	"employees/import": "Import From Onboarding",
 	"employees/upload": "File Import",
 	"employees/chart": "Company Chart",
+	"documents/folder": "Folder",
+	"news/item": "News detail",
+	"news/new": "Create news",
+	"news/edit": "Edit news",
 };
 export const offMenuTitle = (section, subtab) => OFF_MENU_TITLE[`${section}/${subtab}`] || "";
 

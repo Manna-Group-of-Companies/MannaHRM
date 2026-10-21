@@ -123,7 +123,6 @@
     :where(button, [role="button"]):active:not([disabled]) { transform: translateY(1px); }
   }
 
-
   button { @apply cursor-pointer; }
   button[disabled], select[disabled], input[disabled] { @apply cursor-not-allowed; }
 
@@ -135,7 +134,6 @@
 }
 
 @layer components {
-
   /* ------------------------------- chrome: rail, header, page strip ------ */
   /* Redrawn 5 September 2026. What changed, and why, because the shape of this
      block is the shape of the whole app:
@@ -159,37 +157,6 @@
      keeps the dark — it is the thing you navigate by — and everything above the
      page is now the page's own material.
      --------------------------------------------------------------------- */
-
-  .shell {
-    @apply grid min-h-screen;
-    /* On `.shell` rather than `:root` so the two states are one attribute, and
-       so the transition has something to animate between. */
-    --rail-w: 16rem;
-    grid-template-columns: var(--rail-w) 1fr;
-    transition: grid-template-columns .18s var(--ui-ease);
-  }
-  /* `--rail-w`, not `--rail`: that is the rail's colour token in themes.css,
-     and a width declared on `.shell` under the same name would shadow it for
-     every element inside the shell — which is all of them. */
-  .shell[data-rail="slim"] { --rail-w: 4.5rem; }
-
-  /* Restyled 29 September 2026: a light rail in light mode, a softer pill for
-     the current module, and no coverage dots. Every colour below is a `rail`
-     token, so the dark rail is the same rules with the dark numbers. */
-  .side  {
-    @apply flex flex-col sticky top-0 h-screen overflow-y-auto overflow-x-hidden z-30;
-    /* Flat since 6 October 2026. The gradient was there to give a dark
-       rail some depth; with the open module's pages listed in it, the rail
-       is now read like a page, and a page reads best on one colour. */
-    background: rgb(var(--rail));
-    /* The seam with the page. On dark the two darks are close enough that it
-       otherwise reads as a rendering gap; on light it is the only edge. */
-    box-shadow: inset -1px 0 0 rgb(var(--rail-fg) / .08);
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--rail-fg) / .16) transparent;
-  }
-  .side::-webkit-scrollbar { width: 6px; }
-  .side::-webkit-scrollbar-thumb { background: rgb(var(--rail-fg) / .16); border-radius: 3px; }
 
   /* ---- the wordmark ---- */
   /* Rebuilt in type rather than shipped as a file: M in the logo's orange, H
@@ -222,295 +189,9 @@
   .mark img { @apply block w-full h-full; }
   .brand .mark { display: none; }
   .brandlogo { @apply block w-auto rounded-md shrink-0; height: 2.7rem; padding: .2rem .4rem; background: #fff; }
-  /* On the rail, HRMS beside the logo rather than under it: under it, two
-     lines in a 4rem bar left the logo touching the top. */
-  .side .brandtext { @apply flex-row items-center gap-[.55rem]; }
-  .side .brandtext small { @apply mt-0 font-display font-bold text-read tracking-[.04em] text-rail-fg; }
   .brandtext small {
     @apply block font-body text-tiny text-rail-ink mt-[.25rem] truncate;
   }
-
-  /* The collapse control. Last in the row so it sits against the rail's own
-     edge, which is the edge it moves. */
-  .railtoggle {
-    @apply ml-auto shrink-0 inline-flex items-center justify-center w-[2rem] h-[2rem]
-           rounded-md bg-transparent border-0 text-rail-ink cursor-pointer;
-    transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
-  }
-  .railtoggle:hover { @apply text-rail-fg; background: rgb(var(--rail-fg) / .07); }
-  .railtoggle svg { @apply w-[1.05rem] h-[1.05rem] stroke-current fill-none; stroke-width: 1.7; }
-  .railtoggle:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
-
-  /* ---- the menu ---- */
-  .railnav { @apply flex flex-col gap-[.12rem] py-[.4rem]; }
-  /* Four headings over the nine items, in Factor HR's order and without moving
-     one of them. A reading aid and nothing else: a nine-item list with no
-     breaks in it is one people re-read from the top every time. */
-  .navgroup {
-    @apply px-[1.3rem] pt-[1.1rem] pb-[.35rem] font-body text-micro font-semibold text-rail-ink
-           tracking-[.06em] uppercase;
-    /* Capitals here and nowhere else. The 29 September note against
-       wide-tracked caps was about *labels a person reads to do their job*;
-       these two are signposts in the margin, and caps are what stops them
-       being read as two more menu items. */
-  }
-  .navgroup:first-child { @apply pt-[.3rem]; }
-
-  .nav {
-    @apply relative flex items-center gap-[.7rem] mx-[.6rem] px-[.7rem] rounded-md
-           bg-transparent border-0 text-rail-ink font-body text-read font-medium leading-tight
-           no-underline cursor-pointer;
-    /* 44px is the smallest thing a thumb hits reliably, and this is the control
-       pressed more than any other in the app. */
-    min-height: 2.5rem;
-    border-radius: 10px;
-    transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
-  }
-  .nav svg {
-    @apply w-[1.2rem] h-[1.2rem] shrink-0 stroke-current fill-none; stroke-width: 1.7;
-    transition: transform var(--ui-med) var(--ease-out);
-  }
-  /* The icon leans toward the pointer. Small enough not to be noticed as an
-     animation, large enough that the rail feels like it answered. */
-  .nav:hover svg { transform: translateX(2px); }
-  .nav .lab { @apply min-w-0 truncate; }
-  /* **The coverage dots are not drawn any more.** They said how much of each
-     module matched Factor HR, which is a question for whoever is building
-     this and not for whoever is using it — to them it was nine coloured
-     spots with no key. The element stays, carrying its state as `data-cov`
-     for the link's tooltip and for chrome.test.jsx; Settings → Module coverage
-     is where the answer lives. */
-  .nav .cdot { @apply hidden; }
-
-  .nav:hover { @apply text-rail-fg; background: rgb(var(--rail-fg) / .06); }
-  .nav[aria-current="page"] {
-    @apply text-rail-on-ink font-semibold bg-rail-on;
-  }
-  /* The marker on the leading edge, inside the pill's radius rather than on the
-     rail's: a stripe on the rail belongs to the bar, a stripe on the item
-     belongs to the item. */
-  .nav[aria-current="page"]::before {
-    content: "";
-    @apply absolute left-0 top-[.5rem] bottom-[.5rem] w-[3px] rounded-full;
-    background: rgb(var(--rail-mark));
-    animation: mark-in var(--ui-med) var(--ease-out) both;
-  }
-  .nav[aria-current="page"]:hover svg { transform: none; }
-  .nav[aria-current="page"] svg { color: rgb(var(--rail-mark)); }
-  .nav:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
-
-  /* The phone bar's way to the rest of the menu — see Sidebar. Nowhere else
-     has a use for it: the rail on a desktop and a tablet lists every module. */
-  .navmore { @apply hidden; }
-
-  /* ---- the rail, collapsed ---- */
-  /* `sr-only` on the label rather than `display: none`: a hidden label is one a
-     screen reader loses too, and the icon on its own says nothing to it. */
-  .shell[data-rail="slim"] .nav { @apply justify-center gap-0 px-0 mx-[.55rem]; }
-  .shell[data-rail="slim"] .nav .lab { @apply sr-only; }
-  .shell[data-rail="slim"] .navgroup { @apply sr-only; }
-  .shell[data-rail="slim"] .brandtext { @apply sr-only; }
-  .shell[data-rail="slim"] .brand .mark { display: inline-flex; }
-  .shell[data-rail="slim"] .brand { @apply flex-col gap-[.3rem] px-[.35rem] py-[.6rem]; }
-  .shell[data-rail="slim"] .railtoggle { @apply ml-0; }
-
-  /* ---- the rail's foot ---- */
-  .railfoot {
-    @apply mt-auto px-[.9rem] pt-[.8rem] pb-[1rem] flex flex-col gap-[.55rem] shrink-0;
-    box-shadow: inset 0 1px 0 rgb(var(--rail-fg) / .07);
-  }
-  .shell[data-rail="slim"] .railfoot { @apply px-[.35rem] items-center; }
-
-  /* Whether the site is answering, on the rail rather than in the header. It
-     belongs with the thing it describes — the connection this whole app is —
-     and the header had four controls on it already. */
-  .railconn {
-    @apply flex items-center gap-[.45rem] text-tiny font-body text-rail-ink;
-  }
-  .railconn > span:last-child::first-letter { text-transform: uppercase; }
-  .shell[data-rail="slim"] .railconn > span:last-child { @apply sr-only; }
-
-  /* ------------------------------------------------------- the header ---- */
-  .main   {
-    @apply flex flex-col min-w-0;
-    /* The header's height, declared once. Anything else that sticks has to
-       clear it, and a second copy of this number is a bar that hides behind
-       the header the first time somebody changes one of them. */
-    --topbar-h: 3.75rem;
-  }
-  .topbar {
-    @apply sticky top-0 z-20 flex items-center gap-[.7rem] px-[1.75rem] py-[.5rem]
-           text-ink border-b border-line;
-    min-height: var(--topbar-h);
-    /* Frosted rather than solid: the page scrolls under the bar and shows
-       through it faintly, which is what tells a reader the bar is above the
-       page and not the top of it. The fallback is the solid card for a
-       browser without backdrop-filter, where 82% would just look grey. */
-    background: rgb(var(--card));
-  }
-  @supports (backdrop-filter: blur(1px)) {
-    .topbar { background: rgb(var(--card) / .82); backdrop-filter: saturate(1.6) blur(12px); }
-  }
-
-  /* Where you are, in two lines: the module over the page. It replaces the
-     company name that used to sit here — that moved into the picker beside it,
-     which is where anyone wanting to change it was already reaching. */
-  /* The page's name is what the reader most needs from the header, so it is
-     the last thing to give way: it keeps up to 24rem and the search box
-     shrinks first. "Daily Detail A…" was the header naming no page at all. */
-  .tbwhere { @apply flex items-baseline gap-[.5rem] min-w-0 leading-tight mr-[.4rem]; flex: 0 1 auto; max-width: 24rem; }
-  .tbwhere b { @apply font-body font-medium text-read text-ink-3 truncate shrink-0; }
-  .tbwhere i { @apply not-italic text-read text-line-2; }
-  .tbwhere span { @apply font-display font-semibold text-norm text-ink truncate; }
-
-  /* The hamburger. Only ever on a narrow window — see the responsive block —
-     and it toggles the same `data-rail` the collapse control does. */
-  .tbrail {
-    @apply hidden shrink-0 items-center justify-center w-[2.2rem] h-[2.2rem] rounded-md
-           border border-line bg-card text-ink-2 cursor-pointer;
-  }
-  .tbrail svg { @apply w-[1.15rem] h-[1.15rem] stroke-current fill-none; stroke-width: 1.7; }
-  .tbrail:hover { @apply border-line-ctl text-ink; }
-
-  /* The search. It is the widest thing on the bar because it is the only one
-     anybody types into, and it takes whatever the icons leave. */
-  .tbfind {
-    @apply flex items-center gap-[.45rem] min-w-0 px-[.65rem] rounded-full border border-line bg-wash;
-    flex: 1 1 12rem;
-    max-width: 30rem;
-    min-height: 2.3rem;
-    transition: border-color var(--ui-fast) var(--ui-ease), box-shadow var(--ui-fast) var(--ui-ease);
-  }
-  .tbfind svg { @apply w-[1rem] h-[1rem] shrink-0 stroke-ink-3 fill-none; stroke-width: 1.8; }
-  .tbfind input { @apply flex-1 min-w-0 bg-transparent border-0 text-read text-ink py-[.35rem]; }
-  .tbfind input:focus { @apply outline-none; }
-  .tbfind:focus-within { @apply border-brand bg-card; box-shadow: 0 0 0 3px rgb(var(--brand) / .16); }
-  /* The clear button only exists once there is something to clear. A permanent
-     one on an empty box is a control that does nothing. */
-  .tbfind .clear {
-    @apply shrink-0 w-[1.25rem] h-[1.25rem] rounded-full bg-transparent border-0 text-ink-3
-           text-norm leading-none cursor-pointer;
-  }
-  .tbfind .clear:hover { @apply bg-line text-ink; }
-
-  .tbco {
-    @apply shrink-0 font-body text-read px-[.65rem] py-[.3rem] rounded-md border border-line
-           bg-card text-ink cursor-pointer;
-    min-height: 2.3rem;
-    max-width: 12rem;
-  }
-  .tbco:hover { @apply border-line-ctl; }
-  .tbco:focus-visible { @apply outline-none border-brand; }
-
-  .tbacts { @apply flex items-center gap-[.25rem] ml-auto shrink-0; }
-  .tbicon {
-    @apply relative inline-flex items-center justify-center w-[2.2rem] h-[2.2rem] rounded-md
-           bg-transparent border border-transparent text-ink-2 cursor-pointer no-underline;
-    transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
-  }
-  .tbicon svg { @apply w-[1.15rem] h-[1.15rem] stroke-current fill-none; stroke-width: 1.7; }
-  .tbicon:hover { @apply bg-wash text-ink border-line; }
-  .tbicon[aria-expanded="true"] { @apply bg-brand-soft text-brand-deep border-brand-tint; }
-  /* The count on the bell, placed absolutely so that a two-digit backlog does
-     not move the icon out from under the pointer. */
-  .tbicon .n {
-    @apply absolute -top-[.15rem] -right-[.15rem] min-w-[1rem] h-[1rem] px-[.2rem] rounded-full
-           bg-bad-fill text-white font-mono text-micro font-bold text-center tabular-nums;
-    line-height: 1rem;
-    box-shadow: 0 0 0 2px rgb(var(--card));
-  }
-
-  /* Who is signed in, as a control rather than as a sentence. */
-  .tbme {
-    @apply flex items-center gap-[.45rem] pl-[.3rem] pr-[.5rem] py-[.25rem] rounded-md
-           bg-transparent border border-transparent cursor-pointer text-left;
-    min-height: 2.2rem;
-  }
-  .tbme:hover, .tbme[aria-expanded="true"] { @apply bg-wash border-line; }
-  .tbava {
-    @apply inline-flex items-center justify-center shrink-0 w-[1.8rem] h-[1.8rem] rounded-full
-           font-display font-bold text-micro text-white;
-    background: linear-gradient(140deg, rgb(var(--brand)), rgb(var(--brand-dark)));
-  }
-  .tbme .who { @apply hidden flex-col min-w-0 leading-tight; }
-  .tbme .who b { @apply text-mini font-semibold text-ink truncate max-w-[9rem]; }
-  .tbme .who span { @apply text-micro text-ink-3 truncate max-w-[9rem]; }
-  .tbme .cx { @apply hidden text-micro text-ink-3 leading-none; }
-
-  /* ---- the two menus that hang off the header ---- */
-  /* Built on `.empdrop` / `.emmenu` in the JSX, so they close with every other
-     menu in the app — see the document handler in App.jsx. These are only the
-     parts that differ: a wider box, and a heading over a list of rows. */
-  /* **Written against `.emmenu`, not beside it.** `.emmenu button` is a class
-     and a type — more specific than a bare `.tbnote` — so a row styled here on
-     its own would lose its layout to the shared rule and come out as one line
-     with the two halves side by side. Every selector below is one step up on
-     purpose. */
-  .emmenu.tbmenu { @apply min-w-[16rem] max-w-[21rem] p-0; }
-  .tbmenu > h4 {
-    @apply flex items-center gap-[.4rem] px-[.7rem] py-[.5rem] m-0 font-display text-fine
-           font-bold text-ink border-b border-line bg-wash;
-  }
-  .tbmenu > h4 .n { @apply ml-auto font-mono text-micro text-ink-3 tabular-nums; }
-  .tbmenu .tbnone { @apply px-[.7rem] py-[.8rem] text-fine text-ink-3; }
-  .tbmenu .foot { @apply border-t border-line; }
-  .tbmenu .tbnote {
-    @apply flex flex-col items-start gap-[.1rem] px-[.7rem] py-[.45rem] text-left w-full
-           rounded-none border-0 bg-transparent cursor-pointer no-underline;
-  }
-  .tbmenu .tbnote:hover { @apply bg-brand-soft; }
-  .tbmenu .tbnote b { @apply text-read text-ink font-semibold; }
-  .tbmenu .tbnote:hover b { @apply text-brand-deep; }
-  .tbmenu .tbnote span { @apply text-fine text-ink-3; }
-  .tbmenu .tbnote + .tbnote { @apply border-t border-rule; }
-
-
-  /* The scrim under the overlay rail. Drawn only inside the tablet media
-     query — on a desktop the rail displaces the page rather than covering it,
-     so there is nothing to dismiss and a full-screen button over the app would
-     be an invisible click-eater. */
-  .railscrim { @apply hidden; }
-
-  /* --------------------------------------------------- the page strip ---- */
-  /* Pills on the page's own surface, not tabs cut into a dark bar. The strip
-     used to be the third dark band in a row; as pills it reads as belonging to
-     the page it switches, which is what it does. */
-  .subbar {
-    @apply flex flex-nowrap gap-[.25rem] mx-[1.75rem] mt-[1.25rem] p-[.3rem] bg-card border border-line
-           rounded-lg shadow-raise overflow-x-auto;
-    scrollbar-width: none;
-  }
-  .subbar::-webkit-scrollbar { display: none; }
-  /* A module with no pages draws an empty strip. `:empty` is what keeps that
-     from being a stray 3rem card above the page. */
-  .subbar:empty { @apply hidden; }
-  .subtab  {
-    @apply shrink-0 bg-transparent border-0 rounded-md text-ink-2 font-body text-fine font-medium
-           px-[.85rem] py-[.45rem] cursor-pointer no-underline whitespace-nowrap;
-    transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease);
-  }
-  .subtab:hover { @apply bg-wash text-ink; }
-  /* A warm pill rather than a solid orange block. The strip is on every page
-     and the solid fill made it the loudest thing on all of them — louder than
-     the one primary button a page actually wants pressed. */
-  .subtab[aria-current="page"] {
-    @apply bg-brand-soft text-brand-deep font-semibold;
-    box-shadow: inset 0 0 0 1px rgb(var(--brand-tint));
-  }
-
-  /* The name beside the avatar, and the caret. Both start hidden and appear on
-     a window with room for them — an avatar on its own is a control people
-     press to find out whose account they are in, which is exactly the question
-     it should have answered without the press. */
-  @media (min-width: 1100px) {
-    .tbme .who { @apply flex; }
-    .tbme .cx  { @apply block; }
-  }
-
-  .content { @apply px-[1.75rem] pt-[1.25rem] pb-[2.5rem] flex flex-col gap-[1rem]; }
-  /* The page is a landmark and takes focus from the skip link, so it can be
-     focused — but it is not a control and must never draw the app's ring. */
-  .content:focus { @apply outline-none; }
 
   /* Off-screen rather than `display: none`: a hidden link is not focusable, and
      being focusable is the entire point of this one. */
@@ -560,12 +241,6 @@
   .loginbox p.muted { @apply text-fine text-center -mt-[.5rem]; }
   .loginbox .lvf input { min-height: 2.35rem; }
   .loginbox .btn { @apply w-full mt-[.2rem]; }
-
-  .topbar .signout {
-    @apply bg-transparent border-0 p-0 text-read underline underline-offset-2 opacity-90 cursor-pointer;
-    color: inherit; font: inherit;
-  }
-  .topbar .signout:hover { @apply opacity-100; }
 
   /* ---------------------------------------------------------- coverage --- */
   .legend {
@@ -639,7 +314,6 @@
   .tile .n.warn { @apply text-part; }
   .tile .n.bad  { @apply text-bad; }
   .tile .s { @apply text-mini text-ink-2; }
-
 
   /* =======================================================================
      The dashboard's own shapes: stat cards, a ring, columns, a meter.
@@ -834,11 +508,6 @@
   .feed .what { @apply text-read text-ink; }
   .feed .what b { @apply font-semibold; }
   .feed .when { @apply font-body text-tiny text-ink-3; }
-
-  /* The appearance switch. Deliberately quiet: it is a control most people
-     press once and then never look for again, so it sits with the other header
-     icons rather than announcing itself. */
-  .tbmode span { @apply text-read leading-none; }
 
   /* ---- the Start Up toolbar ---- */
   /* Their Active / InActive / All, their Search, their Expand and Collapse All,
@@ -4248,7 +3917,6 @@
   table.rgrid td.now { outline: 1px solid rgb(var(--accent)); outline-offset: -1px; }
   table.rgrid .tot { @apply font-semibold text-ink-2 bg-rule; }
 
-
   /* ---------------------------------------------- Frappe Payroll ------ */
   /* The stock hrms payroll as cards, a group to a row — see
      features/payroll/FrappePayroll. Each card is one link to its desk list. */
@@ -4485,7 +4153,6 @@
      box would, rather than riding up under the label. */
   .onoff { @apply inline-flex items-center gap-[.5rem]; height: var(--wctl); }
   .onoff span { @apply text-read text-ink-2; }
-
 
   /* -------- the state of a box --------------------------------------------
      A control has four looks and `.lvf` above only gives it two — resting and
@@ -5502,82 +5169,6 @@
    phone or a tablet still gets the last word on equal specificity.
    =========================================================================== */
 
-/* ------------------------------------------------- the rail's page list ---- */
-/* The open module's pages, under its link, on a guide line that runs down from
-   the module's icon. The current page lights its stretch of the line, so the
-   rail says where you are at both levels without a second strip of pills. */
-.navsub {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin: .15rem .6rem .45rem 1.9rem;
-  padding-left: .7rem;
-  border-left: 1px solid rgb(var(--rail-fg) / .1);
-  animation: navsub-in var(--ui-med) var(--ease-out);
-}
-.navpage {
-  position: relative;
-  display: block;
-  padding: .36rem .6rem;
-  border-radius: 8px;
-  color: rgb(var(--rail-ink));
-  font-size: theme(fontSize.mini);
-  font-weight: 500;
-  line-height: 1.3;
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease),
-              padding-left var(--ui-med) var(--ease-out);
-}
-.navpage:hover { color: rgb(var(--rail-fg)); background: rgb(var(--rail-fg) / .05); padding-left: .75rem; }
-.navpage[aria-current="page"] { color: rgb(var(--rail-on-ink)); background: rgb(var(--rail-on)); font-weight: 600; }
-.navpage[aria-current="page"]::before {
-  content: "";
-  position: absolute;
-  left: calc(-.7rem - 1px);
-  top: .4rem;
-  bottom: .4rem;
-  width: 2px;
-  border-radius: 2px;
-  background: rgb(var(--rail-mark));
-  animation: mark-in var(--ui-med) var(--ease-out) both;
-}
-.navpage:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
-/* A slim rail is icons only, so it has nowhere to put a page name — the strip
-   over the page carries them there, as it always did. */
-.shell[data-rail="slim"] .navsub { display: none; }
-
-/* With the rail open on a desktop, the pages are in the rail and the strip
-   would be the same list twice. Keyed on the width as well as the attribute:
-   below 901px `data-rail` is ignored (see the tablet block), and the strip is
-   the only list of pages there is. */
-@media (min-width: 901px) {
-  .shell:not([data-rail="slim"]) .subbar { display: none; }
-}
-
-/* ------------------------------------------------- the header's go-to ---- */
-.tbgo {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  min-height: 2.2rem;
-  padding: 0 .45rem 0 .6rem;
-  margin-right: .25rem;
-  border: 1px solid rgb(var(--line));
-  border-radius: 9px;
-  background: rgb(var(--wash));
-  color: rgb(var(--ink-3));
-  font-size: theme(fontSize.mini);
-  cursor: pointer;
-  transition: border-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease),
-              background-color var(--ui-fast) var(--ui-ease);
-}
-.tbgo svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 1.8; }
-.tbgo:hover { border-color: rgb(var(--line-ctl)); color: rgb(var(--ink)); background: rgb(var(--card)); }
-.tbgo .lab { white-space: nowrap; }
 kbd {
   display: inline-flex;
   align-items: center;
@@ -5592,15 +5183,6 @@ kbd {
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
-}
-/* The words come off before anything else does: the arrow and the shortcut
-   still say what the button is. */
-@media (max-width: 1600px) { .tbgo .lab { display: none; } }
-/* A tablet or a phone has no Ctrl key to press, so the hint goes and the
-   button is the arrow alone — the same size as the header's other icons. */
-@media (max-width: 900px) {
-  .tbgo { width: 2.2rem; padding: 0; margin-right: 0; justify-content: center; }
-  .tbgo kbd { display: none; }
 }
 
 /* ------------------------------------------------------- go to a page ---- */
@@ -5837,7 +5419,7 @@ kbd {
 }
 /* A box that is part of a bigger control: the wrapper draws the edge and the
    ring (`:focus-within`), so the box inside must draw neither. */
-.tbfind input, .gotofind input, .letfind input, .lvf .find input, .defilepick input {
+ .gotofind input, .letfind input, .lvf .find input, .defilepick input {
   box-shadow: none !important;
 }
 /* Typed into and refused by the browser's own check — after the person has
@@ -5920,7 +5502,6 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 
 /* --------------------------------------------------- rows and the rest ---- */
 tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
-.railconn .dot.live { animation: beacon 2.4s var(--ui-ease) infinite; }
 
 /* Arrival, a beat apart. The headline cards and the dashboard's panels rise
    in reading order rather than all at once, which is what makes a page that
@@ -6009,6 +5590,659 @@ tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
 }
 
 /* ===========================================================================
+   The shell, from the HRDashboard reference (21 October 2026).
+
+   The side menu, the header, the page strip and the phone's bottom bar,
+   copied from the reference's stylesheet (docs/design/hrdashboard-reference.html,
+   "Sidebar", "Main / top bar" and "RESPONSIVE") with its colours written as
+   this app's roles. Its sizes are in rem on the 16px root, so `1rem` is its
+   16px; where it wrote a pixel and a rem would round it, the pixel is kept.
+
+   Two differences from it, both on purpose:
+     - **The document scrolls, not `.main`.** The reference scrolls inside its
+       main column; forty of this app's pages measure the window, stick to the
+       top of it and scroll it back, so the menu is sticky beside the page
+       instead. It looks the same.
+     - **880px, not 900.** The reference's menu becomes a drawer at 880px and
+       under, and so does this one now; the older blocks below still use 900
+       for the pages' own layouts.
+
+   Outside `@layer`, before the reference's shapes and the responsive blocks:
+   every class here is the shell's own, so nothing on a page competes with
+   it. The two that are not — the avatar and the round icon button, which
+   pages will use too — are in the components layer, so a page's own rule
+   for them still wins.
+   =========================================================================== */
+
+@layer components {
+  /* A person's initials on their colour — components/kit/KitAvatar.jsx. */
+  .av {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 1.875rem;
+    height: 1.875rem;
+    border-radius: 50%;
+    font-size: .6875rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .av[data-tone="1"] { background: rgb(var(--av1)); color: rgb(var(--av1-ink)); }
+  .av[data-tone="2"] { background: rgb(var(--av2)); color: rgb(var(--av2-ink)); }
+  .av[data-tone="3"] { background: rgb(var(--av3)); color: rgb(var(--av3-ink)); }
+  .av[data-tone="4"] { background: rgb(var(--av4)); color: rgb(var(--av4-ink)); }
+  .av[data-tone="5"] { background: rgb(var(--av5)); color: rgb(var(--av5-ink)); }
+  .av[data-tone="6"] { background: rgb(var(--av6)); color: rgb(var(--av6-ink)); }
+  .av[data-tone="7"] { background: rgb(var(--av7)); color: rgb(var(--av7-ink)); }
+
+  /* The reference's round icon button: 38px, no edge, grey until pointed at. */
+  .icon-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.375rem;
+    height: 2.375rem;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: rgb(var(--ink-2));
+    cursor: pointer;
+    transition: background-color .15s, color .15s, transform .1s;
+  }
+  .icon-btn:hover, .icon-btn[aria-expanded="true"] { background: rgb(var(--wash)); color: rgb(var(--ink)); }
+  .icon-btn:active { transform: scale(.92); }
+}
+
+/* ---- the frame ---- */
+.shell {
+  --rail-w: 16.25rem;
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  min-height: 100vh;
+  transition: grid-template-columns .32s var(--ease-out);
+}
+.shell[data-rail="slim"] { --rail-w: 5.5rem; }
+.main { --topbar-h: 4.9375rem; display: flex; flex-direction: column; min-width: 0; }
+.content { display: flex; flex-direction: column; gap: 1.5rem; padding: 1.75rem; }
+.content:focus { outline: none; }
+.railscrim, .bnav, .sideco { display: none; }
+
+/* ---- the side menu ---- */
+.side {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 1.5rem 1.25rem 1.25rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  white-space: nowrap;
+  border-right: 1px solid rgb(var(--line));
+  background: rgb(var(--rail));
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line-2)) transparent;
+}
+.side .brand {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  min-height: 0;
+  margin-bottom: 1.625rem;
+  padding: 0 .25rem;
+  background: none;
+}
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  min-width: 0;
+  color: rgb(var(--ink));
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+/* The Manna M, on its own white paper in both palettes — the logo's grey
+   lettering is the logo's and would vanish on the dark surface. Like the
+   `manna` orange, the one thing here that never themes. */
+.brand-mark img { width: 1.5rem; height: 1.5rem; padding: 2px; border-radius: 6px; background: #fff; flex-shrink: 0; }
+.brand-name { overflow: hidden; text-overflow: ellipsis; }
+.railtoggle svg { transition: transform .32s var(--ease-out); }
+
+/* The Dashboard button: grey at rest, the green fill with its glow on the
+   dashboard. */
+.dash-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .625rem;
+  width: 100%;
+  margin-bottom: 1.25rem;
+  padding: .9375rem 1.125rem;
+  border-radius: 12px;
+  background: rgb(var(--wash));
+  color: rgb(var(--ink));
+  font-size: .9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color .25s, color .25s, box-shadow .25s, transform .1s;
+}
+.dash-btn:hover { background: rgb(var(--line)); }
+.dash-btn[aria-current="page"] {
+  background: rgb(var(--rail-on));
+  color: rgb(var(--rail-on-ink));
+  box-shadow: 0 12px 26px -10px rgb(var(--rail-on) / .34);
+}
+.dash-btn:active { transform: scale(.98); }
+
+/* A group: its button, then its pages sliding open under it. */
+.sidenav { display: flex; flex-direction: column; gap: 2px; }
+.nav-g > button {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  padding: .75rem .5rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgb(var(--ink));
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s;
+}
+.nav-g > button:hover { background: rgb(var(--wash)); }
+.nav-g > button .lbl { flex: 1; text-align: left; }
+.nav-g > button .ic { color: rgb(var(--ink-2)); transition: color .2s; }
+.nav-g.has-on > button .ic { color: rgb(var(--brand)); }
+.nav-g .chev { color: rgb(var(--faint)); transition: transform .28s var(--ease-out); }
+.nav-g.open .chev { transform: rotate(180deg); }
+.sub-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s var(--ease-out); }
+.nav-g.open .sub-wrap { grid-template-rows: 1fr; }
+.sub { overflow: hidden; min-height: 0; }
+.sub-in {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 .375rem 1.125rem;
+  padding-left: .875rem;
+  border-left: 1px solid rgb(var(--line-2));
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity .25s, transform .3s var(--ease-out);
+}
+.nav-g.open .sub-in { opacity: 1; transform: none; }
+/* The Dashboard's own pages hang under its button the same way. */
+.dash-sub { margin: -.75rem 0 1rem 1.125rem; opacity: 1; transform: none; }
+.sub-in a {
+  position: relative;
+  display: block;
+  padding: .625rem .75rem;
+  border-radius: 10px;
+  color: rgb(var(--ink-2));
+  font-size: .875rem;
+  font-weight: 500;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color .15s, color .15s;
+}
+.sub-in a:hover { color: rgb(var(--ink)); background: rgb(var(--wash)); }
+.sub-in a.on { color: rgb(var(--ink)); background: rgb(var(--wash)); font-weight: 600; }
+.sub-in a.on::before {
+  content: "";
+  position: absolute;
+  left: -15px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: rgb(var(--brand));
+}
+
+/* The foot: Setting, the Light / Dark switch with its sliding knob, and
+   whether the site is answering. */
+.side-foot { display: flex; flex-direction: column; gap: 2px; margin-top: auto; padding-top: 1.5rem; }
+.side-foot > a {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem .5rem;
+  border-radius: 10px;
+  color: rgb(var(--ink));
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color .15s;
+}
+.side-foot > a:hover, .side-foot > a.on { background: rgb(var(--wash)); }
+.side-foot > a svg { color: rgb(var(--ink-2)); }
+.theme-sw {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: .875rem;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgb(var(--wash));
+}
+.theme-sw .knob {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 9px;
+  background: rgb(var(--card));
+  box-shadow: 0 1px 3px rgb(var(--char) / .1);
+  transition: transform .32s var(--ease-out);
+}
+.theme-sw.dark .knob { transform: translateX(100%); }
+.theme-sw button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .5rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgb(var(--ink-3));
+  font-size: .8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .25s;
+}
+.theme-sw button:hover, .theme-sw button.on { color: rgb(var(--ink)); }
+.railconn { display: flex; align-items: center; gap: .45rem; margin-top: .625rem; padding: 0 .5rem; color: rgb(var(--ink-3)); font-size: .75rem; }
+.railconn .t::first-letter { text-transform: uppercase; }
+
+/* Collapsed on a desktop: the reference's 88px strip, every row an icon.
+   The words go to a screen reader rather than away — a link with its label
+   removed is a link with no name. */
+@media (min-width: 881px) {
+  .shell[data-rail="slim"] .side { padding: 1.5rem 1rem 1.25rem; }
+  .shell[data-rail="slim"] .side .brand { flex-direction: column; gap: .875rem; padding: 0; }
+  .shell[data-rail="slim"] :is(.brand-name, .lbl, .dash-btn .t, .side-foot .t, .railconn .t) {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .shell[data-rail="slim"] :is(.chev, .sub-wrap, .dash-sub) { display: none; }
+  .shell[data-rail="slim"] .railtoggle svg { transform: rotate(180deg); }
+  .shell[data-rail="slim"] .dash-btn { justify-content: center; padding: .9375rem 0; }
+  .shell[data-rail="slim"] :is(.nav-g > button, .side-foot > a) { justify-content: center; padding: .75rem 0; }
+  .shell[data-rail="slim"] .theme-sw button { padding: .5rem 0; }
+  .shell[data-rail="slim"] .railconn { justify-content: center; padding: 0; }
+}
+
+/* ---- the header ----
+   Frosted, 16px by 28px round a 46px search: 79px tall. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  min-height: var(--topbar-h);
+  padding: 1rem 1.75rem;
+  border-bottom: 1px solid rgb(var(--line));
+  background: rgb(var(--card));
+}
+@supports (backdrop-filter: blur(1px)) {
+  .topbar { background: rgb(var(--card) / .88); backdrop-filter: saturate(1.4) blur(12px); }
+}
+.tbrail { display: none; }
+
+/* The search: a grey well with "/" in it, which lights green with the caret
+   in it and drops its answers under it. */
+.tbfind { position: relative; flex: 0 1 21.25rem; min-width: 0; }
+.tbfind > svg { position: absolute; left: .875rem; top: .8125rem; color: rgb(var(--ink-2)); pointer-events: none; }
+.tbfind input {
+  width: 100%;
+  height: 2.875rem;
+  padding: 0 3.375rem 0 2.75rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  outline: none;
+  background: rgb(var(--wash));
+  color: rgb(var(--ink));
+  font-size: .875rem;
+  transition: border-color .2s, background-color .2s, box-shadow .2s;
+}
+.tbfind input::placeholder { color: rgb(var(--ink-3)); }
+.tbfind input::-webkit-search-cancel-button { display: none; }
+.tbfind input:focus { border-color: rgb(var(--brand)); background: rgb(var(--card)); box-shadow: 0 0 0 4px rgb(var(--brand-soft)); }
+.tbfind .kbd {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.875rem;
+  height: 1.875rem;
+  padding: 0 .5625rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 8px;
+  background: rgb(var(--card));
+  color: rgb(var(--ink-2));
+  font-size: .8125rem;
+  font-weight: 700;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.tbfind input:focus ~ .kbd { opacity: 0; }
+.search-res {
+  position: absolute;
+  top: 3.375rem;
+  left: 0;
+  z-index: 30;
+  width: min(26.25rem, calc(100vw - 2rem));
+  max-height: min(28.75rem, 70vh);
+  overflow-y: auto;
+  padding: .5rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 16px;
+  background: rgb(var(--card));
+  box-shadow: var(--sh-pop);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(.98);
+  transform-origin: top left;
+  transition: opacity .18s, transform .22s var(--ease-out), visibility 0s .22s;
+}
+.search-res.show { opacity: 1; visibility: visible; transform: none; transition: opacity .18s, transform .22s var(--ease-out); }
+.sr-g { padding: .5rem .625rem .25rem; color: rgb(var(--ink-3)); font-size: .75rem; font-weight: 600; }
+.search-res button {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  width: 100%;
+  padding: .5rem .625rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgb(var(--ink));
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .12s;
+}
+.search-res button:hover, .search-res button.hi { background: rgb(var(--wash)); }
+.sr-ic { display: grid; place-items: center; flex-shrink: 0; width: 1.875rem; height: 1.875rem; border-radius: 9px; background: rgb(var(--wash)); color: rgb(var(--ink-2)); }
+.search-res button.hi .sr-ic { background: rgb(var(--card)); }
+.sr-t { flex: 1; min-width: 0; }
+.sr-t b, .sr-t small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-t b { font-weight: 600; }
+.sr-t small { color: rgb(var(--ink-2)); font-size: .75rem; }
+.empty-res { padding: .875rem .625rem; color: rgb(var(--ink-2)); }
+
+/* The company picker: a box like the reference's selects (D19). */
+.tbco {
+  flex-shrink: 0;
+  max-width: 13rem;
+  height: 2.875rem;
+  padding: 0 2.25rem 0 .875rem;
+  border: 1px solid rgb(var(--line-ctl));
+  border-radius: 12px;
+  background-color: rgb(var(--card));
+  color: rgb(var(--ink));
+  font-size: .875rem;
+  cursor: pointer;
+}
+
+.toplinks { display: flex; gap: 6px; font-weight: 500; }
+.toplinks a { padding: .5rem .75rem; border-radius: 10px; color: rgb(var(--ink)); text-decoration: none; transition: background-color .15s, color .15s; }
+.toplinks a:hover { background: rgb(var(--wash)); }
+.toplinks a.on { color: rgb(var(--accent)); background: rgb(var(--brand-soft)); }
+
+.tbacts { display: flex; align-items: center; gap: .625rem; margin-left: auto; }
+/* Something is waiting: the reference's red dot, ringing. */
+.dot-n {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid rgb(var(--card));
+  border-radius: 50%;
+  background: rgb(var(--bad-fill));
+}
+.dot-n::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 2px solid rgb(var(--bad-fill));
+  border-radius: 50%;
+  animation: ping 2s ease-out infinite;
+}
+@keyframes ping { 0% { transform: scale(1); opacity: .8; } 80%, 100% { transform: scale(2.2); opacity: 0; } }
+
+.tbme {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 4px .5rem 4px 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(var(--ink));
+  cursor: pointer;
+}
+.tbme:hover, .tbme[aria-expanded="true"] { background: rgb(var(--wash)); }
+.tbme .tbava { width: 2.25rem; height: 2.25rem; font-size: .8125rem; }
+.tbme .nm { font-weight: 600; }
+.tbme .cx { color: rgb(var(--ink-2)); }
+
+/* What is waiting: the reference's notification popover. */
+.emmenu.tbmenu {
+  top: calc(100% + .75rem);
+  right: 0;
+  left: auto;
+  width: 22.5rem;
+  max-width: calc(100vw - 2rem);
+  padding: 1rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 18px;
+  background: rgb(var(--card));
+  box-shadow: var(--sh-pop);
+  transform-origin: top right;
+}
+.tbmenu > h4 { display: flex; align-items: center; gap: .5rem; margin: 0 0 .625rem; font-size: .9375rem; font-weight: 700; }
+.tbmenu > h4 .n { margin-left: auto; color: rgb(var(--ink-3)); font-size: .75rem; font-weight: 600; }
+.tbnone { margin: 0; padding: .625rem 0; color: rgb(var(--ink-2)); font-size: .8125rem; }
+.emmenu.tbmenu .tbnote {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  width: 100%;
+  padding: .625rem 0;
+  border: 0;
+  border-top: 1px solid rgb(var(--line));
+  border-radius: 0;
+  background: transparent;
+  color: rgb(var(--ink));
+  font-size: .8125rem;
+  text-align: left;
+  text-decoration: none;
+}
+.emmenu.tbmenu .tbnote:first-of-type { border-top: 0; }
+.emmenu.tbmenu .tbnote:hover { background: transparent; color: rgb(var(--accent)); }
+.tbnote-t { display: flex; flex-direction: column; min-width: 0; }
+.tbnote-t b { font-weight: 600; }
+.tbnote-t span { color: rgb(var(--ink-2)); font-size: .75rem; }
+
+/* Who is signed in: the reference's account menu. */
+.emmenu.tbmemenu { width: auto; min-width: 12.5rem; padding: 6px; border-radius: 14px; }
+.tbmemenu > h4 { margin: 0; padding: .5rem .625rem .375rem; overflow: hidden; color: rgb(var(--ink-3)); font-size: .75rem; font-weight: 600; text-overflow: ellipsis; }
+.emmenu.tbmemenu .tbnote { padding: .5625rem .625rem; border: 0; border-radius: 9px; font-size: .875rem; }
+.emmenu.tbmemenu .tbnote b { font-weight: 500; }
+.emmenu.tbmemenu .tbnote:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
+.emmenu.tbmemenu .tbnote.danger { margin-top: 4px; border-top: 1px solid rgb(var(--line)); border-radius: 0 0 9px 9px; color: rgb(var(--bad)); }
+
+/* ---- the strip of pages ----
+   Where it shows: the reference's underlined tabs. With the menu open on a
+   desktop, a module whose pages the menu lists does not need it; Reports and
+   Settings do. */
+.subbar {
+  display: flex;
+  gap: 4px;
+  margin: 1.75rem 1.75rem 0;
+  overflow-x: auto;
+  border-bottom: 1px solid rgb(var(--line));
+  scrollbar-width: none;
+}
+.subbar::-webkit-scrollbar { display: none; }
+.subbar:empty { display: none; }
+.subtab {
+  position: relative;
+  flex-shrink: 0;
+  padding: .75rem 1rem;
+  color: rgb(var(--ink-2));
+  font-size: .875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color .2s;
+}
+.subtab:hover { color: rgb(var(--ink)); }
+.subtab[aria-current="page"] { color: rgb(var(--accent)); }
+.subtab[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: .5rem;
+  right: .5rem;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--brand));
+  animation: tab-under .3s var(--ease-out);
+}
+@keyframes tab-under { from { transform: scaleX(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (min-width: 881px) {
+  .shell:not([data-rail="slim"]) .subbar[data-inrail] { display: none; }
+}
+
+@media (max-width: 1200px) {
+  .toplinks { display: none; }
+}
+
+/* ---- 880px and under: the drawer and the bottom bar ---- */
+@media (max-width: 880px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .side {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 17.5rem;
+    height: 100%;
+    z-index: 90;
+    padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
+    transform: translateX(-102%);
+    transition: transform .32s var(--ease-out);
+  }
+  .shell[data-drawer="open"] .side { transform: none; box-shadow: var(--sh-pop); }
+  .shell[data-drawer="open"] .railscrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    border: 0;
+    background: var(--overlay);
+    cursor: pointer;
+  }
+  /* The company picker moves into the drawer: a phone's header has room for
+     the search or the picker, and the search is what it is for. */
+  .sideco {
+    display: block;
+    width: 100%;
+    height: 2.875rem;
+    margin-top: .875rem;
+    padding: 0 .875rem;
+    border: 1px solid rgb(var(--line-ctl));
+    border-radius: 12px;
+    background-color: rgb(var(--card));
+    color: rgb(var(--ink));
+    font-size: .875rem;
+  }
+  .tbco { display: none; }
+
+  .topbar { gap: .625rem; padding: .75rem 1rem; }
+  .tbrail { display: grid; }
+  .tbfind { flex: 1; }
+  .tbfind .kbd { display: none; }
+  .tbfind input { padding-right: .75rem; }
+  .search-res, .emmenu.tbmenu {
+    position: fixed;
+    top: calc(4.25rem + env(safe-area-inset-top, 0px));
+    left: .75rem;
+    right: .75rem;
+    width: auto;
+    max-width: none;
+  }
+  .tbme .nm { display: none; }
+
+  .content { padding: 1.125rem 1rem calc(6rem + env(safe-area-inset-bottom, 0px)); }
+  .subbar { margin: 1.125rem 1rem 0; }
+  .subbar[data-inrail] { display: none; }
+
+  .bnav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgb(var(--line));
+    background: rgb(var(--card) / .92);
+  }
+  @supports (backdrop-filter: blur(1px)) {
+    .bnav { backdrop-filter: saturate(1.4) blur(12px); }
+  }
+  .bnav > a, .bnav > button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: rgb(var(--ink-3));
+    font-size: .6875rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color .2s;
+  }
+  .bnav .on { color: rgb(var(--accent)); }
+  .bnav .on::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    width: 26px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: rgb(var(--brand));
+    animation: tab-under .3s var(--ease-out);
+  }
+}
+@media (max-width: 640px) {
+  .topbar { gap: .5rem; }
+  .tbacts { gap: 2px; }
+  .tbme .cx { display: none; }
+}
+
+/* ===========================================================================
    The HRDashboard reference's shapes (21 October 2026).
 
    Asked for: this app to look exactly like
@@ -6017,17 +6251,13 @@ tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
    and written in rem on the 16px root, so `1rem` is its 16px. Nothing here
    names a colour: every value is a role.
 
-   **The look, not the menu.** The rail keeps this app's modules, their order
-   and the open module's page list; whether it takes the reference's groups
-   is still open (docs/kit-pages.md, D2). What changes is how each is drawn:
-   Dashboard is the reference's green button, a module is one of its groups —
-   a quiet row whose icon turns green when it is open, with a chevron — and a
-   page is a row on a hairline with a green mark.
+   These are the pieces every page is built from — cards, buttons, fields,
+   tables, menus, dialogs. The menu, the header and the bottom bar are the
+   shell block just above.
 
    After the 6 October block on purpose, so its equal-specificity rules give
    way to these, and before the responsive blocks, so a tablet still gets the
-   last word. The phone's bottom bar, which those blocks build, is restyled at
-   the very end of this file.
+   last word.
 
    It replaces the 20 October skin, measured off the Figma kit's pictures.
    =========================================================================== */
@@ -6046,277 +6276,6 @@ body { font-size: .875rem; line-height: 1.45; }
   border-radius: 8px;
 }
 
-/* ---- the rail ----
-   260px, white (or the dark surface) with a hairline down its edge. */
-/* Desktop only. Below 901px the rail is the tablet's icon column and the
-   phone's bottom bar, which the responsive blocks build; their look is in
-   the block at the end of this file. */
-.railmode { display: none; }
-@media (min-width: 901px) {
-  .shell:not([data-rail="slim"]) .railmode { display: grid; }
-  .shell:not([data-rail="slim"]) .tbmode { display: none; }
-}
-@media (min-width: 901px) {
-  .shell { --rail-w: 16.25rem; }
-  .shell[data-rail="slim"] { --rail-w: 5.5rem; }
-  .side {
-    padding: 1.5rem 1.25rem 1.25rem;
-    box-shadow: inset -1px 0 0 rgb(var(--line));
-  }
-  .side .brand {
-    min-height: 0;
-    margin-bottom: 1.625rem;
-    padding: 0 .25rem;
-    gap: .5rem;
-    justify-content: space-between;
-  }
-  .brandlogo { height: 2.375rem; }
-  .railtoggle {
-    width: 2.375rem;
-    height: 2.375rem;
-    border-radius: 11px;
-    color: rgb(var(--ink-2));
-    transition: background-color .15s, color .15s, transform .1s;
-  }
-  .railtoggle:hover { color: rgb(var(--ink)); background: rgb(var(--wash)); }
-  .railtoggle:active { transform: scale(.92); }
-  .railtoggle svg { width: 1.125rem; height: 1.125rem; stroke-width: 2; }
-
-  .railnav { gap: 2px; padding: 0; }
-  /* The reference reads straight down its groups with no headings over them. */
-  .side .navgroup { display: none; }
-
-  /* A module: the reference's group row. */
-  .side .nav {
-    margin: 0;
-    padding: .75rem .5rem;
-    min-height: 0;
-    gap: .75rem;
-    border-radius: 10px;
-    color: rgb(var(--ink));
-    font-size: .875rem;
-    font-weight: 600;
-    transition: background-color .15s;
-  }
-  .side .nav .lab { flex: 1; text-align: left; }
-  .side .nav svg { width: 1.25rem; height: 1.25rem; color: rgb(var(--ink-2)); stroke-width: 1.7; transition: color .2s; }
-  .side .nav:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
-  .side .nav:hover svg { transform: none; }
-  /* Open is a green icon and nothing else — the fill is Dashboard's alone. */
-  .side .nav[aria-current="page"] { background: transparent; color: rgb(var(--ink)); box-shadow: none; }
-  .side .nav[aria-current="page"]:hover { background: rgb(var(--wash)); }
-  .side .nav[aria-current="page"] svg { color: rgb(var(--brand)); }
-  .side .nav[aria-current="page"]::before { display: none; }
-  /* The chevron, on a module that has pages to open: down while shut, up while
-     open, turning the way the reference's does. A mask, so it takes the role's
-     colour rather than one written into the picture. */
-  .side .nav[data-sub]::after {
-    content: "";
-    flex-shrink: 0;
-    width: 1.125rem;
-    height: 1.125rem;
-    background: rgb(var(--faint));
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
-            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
-    transition: transform .28s var(--ease-out);
-  }
-  .side .nav[data-sub][aria-current="page"]::after { transform: rotate(180deg); }
-
-  /* Dashboard: the reference's green button, label first and the grid after
-     it — grey at rest, the green fill with its glow when it is the page. */
-  .side .nav[data-module="dashboard"] {
-    flex-direction: row-reverse;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-    padding: .9375rem 1.125rem;
-    border-radius: 12px;
-    background: rgb(var(--wash));
-    font-size: .9375rem;
-    transition: background-color .25s, color .25s, box-shadow .25s, transform .1s;
-  }
-  .side .nav[data-module="dashboard"] .lab { flex: 0 1 auto; }
-  .side .nav[data-module="dashboard"]::after { display: none; }
-  .side .nav[data-module="dashboard"] svg { color: currentColor; }
-  .side .nav[data-module="dashboard"]:hover { background: rgb(var(--line)); }
-  .side .nav[data-module="dashboard"]:active { transform: scale(.98); }
-  .side .nav[data-module="dashboard"][aria-current="page"] {
-    background: rgb(var(--rail-on));
-    color: rgb(var(--rail-on-ink));
-    box-shadow: 0 12px 26px -10px rgb(var(--rail-on) / .34);
-  }
-  .side .nav[data-module="dashboard"][aria-current="page"] svg { color: rgb(var(--rail-on-ink)); }
-  /* Its pages hang under it like any other module's. */
-  .side .nav[data-module="dashboard"] + .navsub { margin-top: -.75rem; margin-bottom: 1rem; }
-
-  /* The open module's pages, on the reference's hairline. */
-  .side .navsub {
-    gap: 2px;
-    margin: 2px 0 .375rem 1.125rem;
-    padding-left: .875rem;
-    border-left: 1px solid rgb(var(--line-2));
-    animation: navsub-in .3s var(--ease-out);
-  }
-  .side .navpage {
-    padding: .625rem .75rem;
-    border-radius: 10px;
-    color: rgb(var(--ink-2));
-    font-size: .875rem;
-    font-weight: 500;
-    line-height: 1.45;
-    transition: background-color .15s, color .15s;
-  }
-  .side .navpage:hover { color: rgb(var(--ink)); background: rgb(var(--wash)); padding-left: .75rem; }
-  .side .navpage[aria-current="page"] { color: rgb(var(--ink)); background: rgb(var(--wash)); font-weight: 600; }
-  .side .navpage[aria-current="page"]::before {
-    display: block;
-    left: calc(-.875rem - 1px);
-    top: .625rem;
-    bottom: .625rem;
-    width: 2px;
-    background: rgb(var(--brand));
-  }
-
-  /* The foot: no rule over it, and the reference's Light / Dark switch, whose
-     white knob slides to the side that is pressed. */
-  .railfoot { padding: 1.5rem 0 0; gap: .875rem; box-shadow: none; }
-  .railmode {
-    position: relative;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    padding: 4px;
-    border-radius: 12px;
-    background: rgb(var(--wash));
-  }
-  .railmode::before {
-    content: "";
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 4px;
-    width: calc(50% - 4px);
-    border-radius: 9px;
-    background: rgb(var(--card));
-    box-shadow: 0 1px 3px rgb(var(--char) / .1);
-    transition: transform .32s var(--ease-out);
-  }
-  .railmode:has(button:last-child[aria-pressed="true"])::before { transform: translateX(100%); }
-  .railmode button {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: .5rem;
-    min-height: 0;
-    padding: .5rem;
-    border: 0;
-    border-radius: 9px;
-    background: transparent;
-    color: rgb(var(--ink-3));
-    font-size: .8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: color .25s;
-  }
-  .railmode button svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 2; }
-  .railmode button:hover { color: rgb(var(--ink)); }
-  .railmode button[aria-pressed="true"] { background: transparent; color: rgb(var(--ink)); box-shadow: none; }
-  .railconn { padding: 0 .5rem; font-size: .75rem; color: rgb(var(--ink-3)); }
-
-  /* Collapsed: the reference's 88px rail, every row an icon centred. */
-  .shell[data-rail="slim"] .side { padding: 1.5rem 1rem 1.25rem; }
-  .shell[data-rail="slim"] .side .brand { flex-direction: column; gap: .875rem; padding: 0; }
-  .shell[data-rail="slim"] .side .nav { justify-content: center; padding: .75rem 0; margin: 0; }
-  .shell[data-rail="slim"] .side .nav::after { display: none; }
-  .shell[data-rail="slim"] .side .nav[data-module="dashboard"] { padding: .9375rem 0; }
-  .shell[data-rail="slim"] .railfoot { padding: 1.5rem 0 0; }
-}
-
-/* ---- the header ----
-   Frosted, 16px by 28px round a 46px search: 79px tall. */
-.main { --topbar-h: 4.9375rem; }
-.topbar {
-  gap: 1.25rem;
-  padding: 1rem 1.75rem;
-  border-bottom: 1px solid rgb(var(--line));
-}
-@supports (backdrop-filter: blur(1px)) {
-  .topbar { background: rgb(var(--card) / .88); backdrop-filter: saturate(1.4) blur(12px); }
-}
-.tbwhere b { font-weight: 500; color: rgb(var(--ink-2)); }
-.tbwhere i { color: rgb(var(--faint)); }
-.tbwhere span { font-weight: 700; }
-
-/* The search: a grey well with no edge until it has the caret. */
-.tbfind {
-  flex: 0 1 21.25rem;
-  max-width: 21.25rem;
-  min-height: 2.875rem;
-  gap: .625rem;
-  padding: 0 .875rem;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: rgb(var(--wash));
-  transition: border-color .2s, background-color .2s, box-shadow .2s;
-}
-.tbfind svg { width: 1.25rem; height: 1.25rem; stroke: rgb(var(--ink-2)); stroke-width: 2; }
-.tbfind input { font-size: .875rem; }
-.tbfind:focus-within {
-  border-color: rgb(var(--brand));
-  background: rgb(var(--card));
-  box-shadow: 0 0 0 4px rgb(var(--brand-soft));
-}
-
-/* The company picker is a box like any other on the page. */
-.tbco {
-  min-height: 2.875rem;
-  max-width: 13rem;
-  padding: 0 2.25rem 0 .875rem;
-  border-radius: 12px;
-  border-color: rgb(var(--line-ctl));
-  font-size: .875rem;
-}
-
-/* The round icon buttons: 38px, no edge, grey until the pointer finds them. */
-.tbacts { gap: .625rem; }
-.tbicon {
-  width: 2.375rem;
-  height: 2.375rem;
-  border: 0;
-  border-radius: 11px;
-  color: rgb(var(--ink-2));
-  transition: background-color .15s, color .15s, transform .1s;
-}
-.tbicon svg { width: 1.375rem; height: 1.375rem; stroke-width: 1.8; }
-.tbicon:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
-.tbicon:active { transform: scale(.92); }
-.tbicon[aria-expanded="true"] { background: rgb(var(--wash)); color: rgb(var(--ink)); }
-/* The count on the bell, as the reference's red badge. */
-.tbicon .n {
-  top: 2px;
-  right: 2px;
-  min-width: 1.125rem;
-  height: 1.125rem;
-  padding: 0 .3rem;
-  border-radius: 9px;
-  font-family: theme(fontFamily.body);
-  font-size: .6875rem;
-  line-height: 1.125rem;
-  box-shadow: 0 0 0 2px rgb(var(--card));
-}
-
-/* Go to a page: a small outlined button with its key on it. */
-.tbgo {
-  min-height: 2.125rem;
-  padding: 0 .5rem 0 .75rem;
-  gap: .5rem;
-  border: 1px solid rgb(var(--line-2));
-  border-radius: 10px;
-  background: rgb(var(--card));
-  color: rgb(var(--ink-2));
-  font-size: .8125rem;
-  font-weight: 600;
-}
-.tbgo:hover { border-color: rgb(var(--line-2)); background: rgb(var(--wash)); color: rgb(var(--ink)); }
 kbd {
   min-height: 1.375rem;
   padding: 0 .4rem;
@@ -6328,56 +6287,6 @@ kbd {
   font-weight: 700;
 }
 
-/* Who is signed in: a round avatar in a pill. */
-.tbme {
-  gap: .5rem;
-  padding: 4px .5rem 4px 4px;
-  border: 0;
-  border-radius: 999px;
-}
-.tbme:hover, .tbme[aria-expanded="true"] { background: rgb(var(--wash)); }
-.tbava {
-  width: 2.25rem;
-  height: 2.25rem;
-  background: rgb(var(--brand-soft));
-  color: rgb(var(--accent));
-  font-family: theme(fontFamily.body);
-  font-size: .75rem;
-  font-weight: 700;
-}
-.tbme .who b { font-size: .875rem; font-weight: 600; }
-
-/* The header's two menus: the reference's popover, 18px round, no grey head. */
-.emmenu.tbmenu {
-  min-width: 18rem;
-  max-width: 22.5rem;
-  padding: 1rem;
-  border: 1px solid rgb(var(--line));
-  border-radius: 18px;
-  box-shadow: var(--sh-pop);
-}
-.tbmenu > h4 {
-  margin: 0 0 .625rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-family: theme(fontFamily.body);
-  font-size: .9375rem;
-  font-weight: 700;
-}
-.tbmenu .tbnone { padding: .625rem 0; font-size: .8125rem; }
-.tbmenu .foot { border-top: 1px solid rgb(var(--line)); }
-.emmenu.tbmenu .tbnote {
-  padding: .625rem 0;
-  border-top: 1px solid rgb(var(--line));
-  border-radius: 0;
-  font-size: .8125rem;
-}
-.emmenu.tbmenu .tbnote:first-of-type { border-top: 0; }
-.emmenu.tbmenu .tbnote:hover { background: transparent; }
-.emmenu.tbmenu .tbnote:hover b { color: rgb(var(--accent)); }
-.tbmenu .tbnote b { font-size: .8125rem; }
-
 /* Every other menu: 14px round, rows that grey under the pointer. */
 .emmenu {
   padding: 6px;
@@ -6388,42 +6297,6 @@ kbd {
 .emmenu button, .emmenu a { padding: .5625rem .625rem; border-radius: 9px; font-weight: 500; }
 .emmenu button:hover, .emmenu a:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
 
-/* ---- the page ---- */
-.content { padding: 1.75rem; gap: 1.5rem; }
-/* The strip of pages, where it shows: the reference's underlined tabs. */
-.subbar {
-  gap: 4px;
-  margin: 1.75rem 1.75rem 0;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid rgb(var(--line));
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-.subtab {
-  position: relative;
-  padding: .75rem 1rem;
-  border-radius: 0;
-  background: transparent;
-  color: rgb(var(--ink-2));
-  font-size: .875rem;
-  font-weight: 600;
-  transition: color .2s;
-}
-.subtab:hover { background: transparent; color: rgb(var(--ink)); }
-.subtab[aria-current="page"] { background: transparent; color: rgb(var(--accent)); box-shadow: none; }
-.subtab[aria-current="page"]::after {
-  content: "";
-  position: absolute;
-  left: .5rem;
-  right: .5rem;
-  bottom: -1px;
-  height: 2px;
-  border-radius: 2px;
-  background: rgb(var(--brand));
-  animation: tab-under .3s var(--ease-out);
-}
 @keyframes tab-under { from { transform: scaleX(.2); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* Cards: 18px round, no edge, the faintest shadow, and they do not move. */
@@ -6625,96 +6498,6 @@ kbd {
 
   .req     { grid-template-columns: 1fr; }
 
-  .content { padding-left: 1rem; padding-right: 1rem; }
-  .topbar { padding-left: 1rem; padding-right: 1rem; }
-  .subbar { margin-left: 1rem; margin-right: 1rem; }
-
-  /* ---- the rail, on a tablet ----
-     The column is always the slim one at this width — 15.4rem out of 900 is a
-     sixth of the screen spent on a menu — and the hamburger in the header
-     brings the labels back as an overlay rather than by pushing the page
-     sideways. That is the one behaviour that differs from the desktop, and it
-     differs because at 900px there is nowhere for the page to be pushed to.
-
-     The slim rules are repeated here rather than reached by forcing
-     `data-rail="slim"` from JavaScript, because that attribute is the person's
-     own choice and a script that overwrote it would lose that choice the moment
-     somebody turned their tablet sideways.
-
-     **So `data-rail` is ignored entirely at this width and `data-drawer` is
-     what these rules read.** That split is not tidiness: keying the overlay off
-     the remembered width meant a tablet opened on a menu covering a grey
-     screen, because "wide" had been remembered from a desktop where wide means
-     "beside the page" rather than "over it". */
-  .shell { grid-template-columns: 4.5rem 1fr; }
-  .side { width: 4.5rem; }
-  .nav { justify-content: center; gap: 0; padding-left: 0; padding-right: 0; margin: 0 .55rem; }
-  .nav .lab, .navgroup, .brandtext, .railconn > span:last-child {
-    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;
-  }
-  .nav .cdot { position: absolute; top: .35rem; right: .35rem; margin-left: 0; }
-  .brand { flex-direction: column; gap: .3rem; padding: .5rem .35rem; }
-  .brand .mark { display: inline-flex; }
-  .railtoggle { margin-left: 0; }
-  .railfoot { padding-left: .35rem; padding-right: .35rem; align-items: center; }
-
-  /* Open, it floats over the page at full width and brings its labels back. */
-  .shell[data-drawer="open"] .side {
-    position: fixed;
-    width: 15.4rem;
-    z-index: 40;
-    box-shadow: var(--sh-modal), inset -1px 0 0 rgb(var(--rail-fg) / .08);
-  }
-  .shell[data-drawer="open"] .nav {
-    justify-content: flex-start;
-    gap: .65rem;
-    padding-left: .6rem;
-    padding-right: .6rem;
-    margin: 0 .5rem;
-  }
-  .shell[data-drawer="open"] .nav .lab,
-  .shell[data-drawer="open"] .navgroup,
-  .shell[data-drawer="open"] .brandtext,
-  .shell[data-drawer="open"] .railconn > span:last-child {
-    position: static; width: auto; height: auto; padding: revert; margin: revert;
-    overflow: visible; clip: auto; white-space: normal;
-  }
-  .shell[data-drawer="open"] .nav .lab { white-space: nowrap; }
-  /* `revert` above goes back to the browser's padding, which is none — not to
-     this file's. The headings are the one restored element that had any, and
-     without it they sat flush against the drawer's edge. */
-  .shell[data-drawer="open"] .navgroup { padding: .9rem 1.2rem .3rem; }
-  .shell[data-drawer="open"] .navgroup:first-child { padding-top: .3rem; }
-  .shell[data-drawer="open"] .nav .cdot { position: static; margin-left: auto; }
-  .shell[data-drawer="open"] .brand { flex-direction: row; gap: .6rem; padding: 0 .75rem; }
-  .shell[data-drawer="open"] .brand .mark { display: none; }
-  .shell[data-drawer="open"] .railtoggle { margin-left: auto; }
-  .shell[data-drawer="open"] .railfoot { padding-left: .75rem; padding-right: .75rem; align-items: stretch; }
-  /* The open module's pages: none on the icon rail, where there is no room for
-     a name, and back in the drawer, where there is — so the drawer is the
-     whole menu at both levels, and the strip over the page is still there for
-     somebody who never opens it. */
-  .navsub { display: none; }
-  .shell[data-drawer="open"] .navsub { display: flex; }
-
-  /* The scrim under the open rail. It is a button, so the way out is the same
-     gesture on a touch screen as the Escape key is on a keyboard — see
-     AppShell.
-
-     Keyed on the open state rather than on the element: an author rule saying
-     `display: block` beats the `hidden` attribute's own, so a scrim styled
-     unconditionally here would cover the whole app whenever the rail was
-     shut. */
-  .shell[data-drawer="open"] .railscrim {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 35;
-    border: 0;
-    cursor: pointer;
-    background: rgb(var(--char) / .45);
-  }
 
   /* Start Up's toolbar: the switch and Expand / Collapse on one row, the
      search the full width under them. Left to wrap on its own it put Collapse
@@ -6726,14 +6509,6 @@ kbd {
   /* Four headline cards across a tablet is three and a stray. Two by two is a
      grid; auto-fit at this width is a row with an orphan under it. */
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-  /* The hamburger is the only way to reach the labels here, so it appears. */
-  .tbrail { display: inline-flex; }
-  /* Two lines of breadcrumb, a search box and five icons do not fit; the
-     breadcrumb is the one a person can reconstruct from the rail and the
-     strip below it. */
-  .tbwhere { display: none; }
-
 
   /* Label above control rather than beside it. Two columns at this width leaves
      the control about nine characters wide, and a date range does not fit in
@@ -6820,188 +6595,6 @@ kbd {
      expensive that is the wrong trade. */
   :root { --manna-bar: 3.9rem; }
 
-  .shell { grid-template-columns: 1fr; }
-  .side {
-    position: fixed;
-    top: auto;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 30;
-    /* An explicit height, not `auto`. A fixed box with `top:auto; bottom:0` and
-       an auto height is ambiguous enough that Chrome stretches it from its
-       static position instead of shrink-wrapping — measured at 549px tall on a
-       667px screen, i.e. the whole page. Stating the height removes the
-       question, and `.main` below reserves exactly this much. */
-    height: calc(var(--manna-bar) + env(safe-area-inset-bottom));
-    width: 100%;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 0;
-    padding: 0 0 env(safe-area-inset-bottom) 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-top: 1px solid rgb(var(--rail-fg) / .09);
-    background: rgb(var(--rail-2));
-    box-shadow: 0 -6px 18px rgb(var(--char) / .07);
-    scrollbar-width: none;
-  }
-  .side::-webkit-scrollbar { display: none; }
-  /* The wordmark, the group headings and the foot are all vertical furniture;
-     a bar 3.9rem tall has room for the nine destinations and nothing else. */
-  .brand, .navgroup, .railfoot { display: none; }
-
-  /* The links live inside `.railnav`, which is the only flex child of `.side` —
-     so making `.side` a row lays out that one element and leaves the nine links
-     stacked inside it. This is the rule that actually turns them into a bar.
-     (They stacked at x:0 without it, which an overflow check cannot catch:
-     nine items on top of each other are exactly as wide as one.) */
-  .railnav {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 0;
-    padding: 0 .25rem;
-  }
-
-  /* Icon over label here, rather than beside it. A row of nine horizontal
-     items is nine words in a 390px bar; stacked, each is a target with its
-     name under it. */
-  /* Five across and each an equal share — four modules and More — so every
-     label is whole and every target is a fifth of the screen wide. */
-  .nav, .navmore {
-    width: auto;
-    min-width: 0;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: .2rem;
-    margin: 0;
-    padding: .45rem .2rem;
-    border-radius: 0;
-    font-size: theme(fontSize.micro);
-    font-weight: 500;
-    line-height: 1.15;
-  }
-  /* Everything past the four is in the drawer More opens. */
-  .nav:not([data-bar]) { display: none; }
-  .navmore {
-    display: flex;
-    position: relative;
-    background: transparent;
-    border: 0;
-    color: rgb(var(--rail-ink));
-    cursor: pointer;
-  }
-  .navmore svg { width: 1.2rem; height: 1.2rem; stroke: currentColor; fill: none; stroke-width: 3; }
-  .navmore .lab { max-width: 100%; }
-  /* More stands for the current page when that page is one of the ones it
-     holds — otherwise a phone on Payroll shows a bar with nothing lit. */
-  .navmore[data-on], .navmore[aria-expanded="true"] { color: rgb(var(--rail-on-ink)); font-weight: 600; }
-  .navmore[data-on] svg { color: rgb(var(--rail-mark)); }
-  /* **The label comes back.** The tablet block above hides it — that rail is
-     icons — and this width inherits every rule in it, so a bar of nine unlabelled
-     glyphs is what you get unless the hiding is undone here. It was, once, and
-     the bar photographed as nine anonymous marks. */
-  .nav .lab {
-    position: static;
-    width: auto;
-    height: auto;
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-    clip: auto;
-    max-width: 100%;
-    text-align: center;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  /* Two of the nine carry a `part` dot and one carries `none`; at this size
-     they sit on the icon rather than after the label, which there is no room
-     for. */
-  .nav .cdot { position: absolute; top: .3rem; right: .5rem; margin-left: 0; }
-  .nav[aria-current="page"] {
-    /* The marker moves from the leading edge to the top edge: on a bottom bar
-       the left edge is between two items rather than beside one. */
-    background: transparent;
-  }
-  .nav[aria-current="page"]::before {
-    top: 0; bottom: auto; left: 28%; right: 28%;
-    width: auto; height: 3px;
-    border-radius: 0 0 3px 3px;
-  }
-
-  /* ---- the drawer More opens ----
-     The bar again, drawn as the tablet's drawer: the same element, full height
-     down the left, every module with its heading. The tablet block above has
-     already restored the labels; what is undone here is only what this block
-     did to make the rail a bar. */
-  .shell[data-drawer="open"] .side {
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: auto;
-    height: 100%;
-    width: min(17rem, 86vw);
-    flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding-bottom: env(safe-area-inset-bottom);
-    border-top: 0;
-    background: rgb(var(--rail));
-  }
-  .shell[data-drawer="open"] .brand,
-  .shell[data-drawer="open"] .railfoot { display: flex; }
-  .shell[data-drawer="open"] .navgroup { display: block; }
-  .shell[data-drawer="open"] .railnav { flex: 0 0 auto; flex-direction: column; gap: .15rem; padding: .5rem 0; }
-  .shell[data-drawer="open"] .nav {
-    display: flex;
-    flex: 0 0 auto;
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: .7rem;
-    margin: 0 .6rem;
-    padding: 0 .7rem;
-    min-height: 2.75rem;
-    border-radius: theme(borderRadius.md);
-    font-size: theme(fontSize.read);
-  }
-  .shell[data-drawer="open"] .nav .lab { max-width: none; text-align: left; }
-  .shell[data-drawer="open"] .nav[aria-current="page"] { background: rgb(var(--rail-on)); }
-  .shell[data-drawer="open"] .nav[aria-current="page"]::before {
-    top: .5rem; bottom: .5rem; left: 0; right: auto; width: 3px; height: auto; border-radius: 9999px;
-  }
-  .shell[data-drawer="open"] .navmore { display: none; }
-
-  /* So the last panel is not sitting underneath the bar. */
-  .main { padding-bottom: calc(var(--manna-bar) + env(safe-area-inset-bottom) + .4rem); }
-
-  .content { padding-left: .8rem; padding-right: .8rem; padding-top: .8rem; gap: .8rem; }
-  .topbar { padding-left: .8rem; padding-right: .8rem; column-gap: .4rem; }
-  .subbar { margin-left: .8rem; margin-right: .8rem; margin-top: .8rem; }
-  /* Settings is in the drawer on a phone, and the header has a search box to
-     make room for. */
-  .tbacts > a.tbicon { display: none; }
-
-  /* The header keeps the search and the five controls on its right, and drops
-     the two things a phone can reach another way: the breadcrumb (the bar along
-     the bottom says which module, the strip says which page) and the company
-     picker, which is on every screen that scopes by it. */
-  .tbco { display: none; }
-  .tbfind { flex: 1 1 6rem; }
-  /* The rail is a bar down here and has no labels to open, so the hamburger
-     the tablet needs has nothing to do. */
-  .tbrail { display: none; }
-
-  /* Attendance has eight subtabs, and wrapped they take five rows — most of a
-     667px screen before a single panel. One scrolling row instead, which is the
-     same sideways gesture as the bar along the bottom, so it is learned once
-     rather than twice. */
-  .subbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .subbar::-webkit-scrollbar { display: none; }
-  .subtab { flex: 0 0 auto; padding: .55rem .75rem; font-size: theme(fontSize.mini); }
 
   .tiles { grid-template-columns: repeat(auto-fit, minmax(min(118px, 46%), 1fr)); }
   .links { grid-template-columns: 1fr; }
@@ -7051,7 +6644,6 @@ kbd {
   .tiles   { grid-template-columns: 1fr 1fr; }
   .legend  { font-size: theme(fontSize.mini); }
   .panel > header h3 { font-size: theme(fontSize.read); }
-  .content { padding-left: .5rem; padding-right: .5rem; }
 
   /* The avatar is the one thing on the header card that can be smaller without
      anything becoming unreadable. */
@@ -7066,7 +6658,7 @@ kbd {
    whatever width. `pointer: coarse` is the actual question — a touch laptop at
    1400px has the same thumb as a phone does, and a width query never asks. */
 @media (pointer: coarse) {
-  .embtn, .btn, .gbtn, .tab, .subtab, .protab,
+  .embtn, .btn, .gbtn, .tab, .protab,
   .qbar .icon, .dtbar .pager button,
   .embar select, .embar input, .qbar select, .qbar input,
   .repform input, .repform select, .mbf select, .mbf input,
@@ -7083,7 +6675,6 @@ kbd {
      keeps them circles. */
   .wizdot { min-width: 2.4rem; min-height: 2.4rem; }
   .yn button { width: 2.4rem; height: 2.4rem; font-size: theme(fontSize.sub); }
-  .nav { min-height: 3.4rem; }
   /* A 2.35rem row is a comfortable read and a poor target; on a touch screen
      the report tables get the height instead. */
   th, td { padding-top: .7rem; padding-bottom: .7rem; }
@@ -7105,10 +6696,8 @@ kbd {
    people hand across a desk. So the chrome, the pane list and every control
    that does nothing on paper come off, and the record itself stays. */
 @media print {
-  .side, .topbar, .subbar, .protabs, .proacts, .proico, .prochoose, .legend button { display: none; }
-  .shell { grid-template-columns: 1fr; min-height: 0; }
+   .protabs, .proacts, .proico, .prochoose, .legend button { display: none; }
   .probody-grid { grid-template-columns: 1fr; }
-  .content { padding: 0; }
   .prohead, .procard, .panel, .ecard, .legend, .emhead, .embar, .qbar, .person, .regwho, .letter {
     break-inside: avoid;
     box-shadow: none;
@@ -7393,123 +6982,4 @@ table.bshtable { min-width: 0; }
 }
 @media (max-width: 640px) {
   .hcrowcards.hcrowfit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-/* ===========================================================================
-   The HRDashboard reference on a tablet and a phone (21 October 2026).
-
-   Last in the file so it has the last word over the responsive blocks above,
-   which build the tablet's drawer and the phone's bottom bar. This is their
-   look only — the reference's side menu inside the drawer, and its frosted
-   five-button bar — and the structure is theirs. See the skin block in the
-   middle of this file for the desktop.
-   =========================================================================== */
-
-/* A page row's own ring would draw beside the outline every other control
-   now shows. */
-.side .navpage:focus-visible { box-shadow: none; }
-
-@media (max-width: 900px) {
-  .content { padding: 1.125rem 1rem; gap: 1.125rem; }
-  .topbar { gap: .625rem; padding: .75rem 1rem; }
-
-  /* The drawer is the reference's side menu, opened over the page. */
-  .shell[data-drawer="open"] .side {
-    padding: 1.5rem 1.25rem 1.25rem;
-    box-shadow: var(--sh-pop);
-  }
-  .shell[data-drawer="open"] .side .navgroup { display: none; }
-  .shell[data-drawer="open"] .side .nav {
-    margin: 0;
-    padding: .75rem .5rem;
-    min-height: 0;
-    gap: .75rem;
-    border-radius: 10px;
-    background: transparent;
-    color: rgb(var(--ink));
-    font-size: .875rem;
-    font-weight: 600;
-  }
-  .shell[data-drawer="open"] .side .nav svg { width: 1.25rem; height: 1.25rem; color: rgb(var(--ink-2)); }
-  .shell[data-drawer="open"] .side .nav:hover { background: rgb(var(--wash)); }
-  .shell[data-drawer="open"] .side .nav[aria-current="page"] { background: transparent; color: rgb(var(--ink)); }
-  .shell[data-drawer="open"] .side .nav[aria-current="page"] svg { color: rgb(var(--brand)); }
-  .shell[data-drawer="open"] .side .nav[aria-current="page"]::before { display: none; }
-  .shell[data-drawer="open"] .side .nav[data-module="dashboard"] {
-    flex-direction: row-reverse;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-    padding: .9375rem 1.125rem;
-    border-radius: 12px;
-    background: rgb(var(--wash));
-    font-size: .9375rem;
-  }
-  .shell[data-drawer="open"] .side .nav[data-module="dashboard"] svg { color: currentColor; }
-  .shell[data-drawer="open"] .side .nav[data-module="dashboard"][aria-current="page"] {
-    background: rgb(var(--rail-on));
-    color: rgb(var(--rail-on-ink));
-    box-shadow: 0 12px 26px -10px rgb(var(--rail-on) / .34);
-  }
-  .shell[data-drawer="open"] .side .navsub {
-    gap: 2px;
-    margin: 2px 0 .375rem 1.125rem;
-    padding-left: .875rem;
-    border-left: 1px solid rgb(var(--line-2));
-  }
-  .shell[data-drawer="open"] .side .navpage {
-    padding: .625rem .75rem;
-    border-radius: 10px;
-    background: transparent;
-    color: rgb(var(--ink-2));
-    font-size: .875rem;
-    font-weight: 500;
-  }
-  .shell[data-drawer="open"] .side .navpage[aria-current="page"] {
-    background: rgb(var(--wash));
-    color: rgb(var(--ink));
-    font-weight: 600;
-  }
-  .shell[data-drawer="open"] .side .navpage[aria-current="page"]::before {
-    left: calc(-.875rem - 1px);
-    top: .625rem;
-    bottom: .625rem;
-    width: 2px;
-    background: rgb(var(--brand));
-  }
-  .shell[data-drawer="open"] .railscrim { background: var(--overlay); }
-}
-
-@media (max-width: 720px) {
-  /* The bottom bar: frosted like the header, a hairline over it, and the
-     open module's label in green with a short green bar on its top edge. */
-  .side {
-    border-top: 1px solid rgb(var(--line));
-    background: rgb(var(--card) / .92);
-    box-shadow: none;
-  }
-  @supports (backdrop-filter: blur(1px)) {
-    .side { backdrop-filter: saturate(1.4) blur(12px); }
-  }
-  .nav, .navmore {
-    gap: 3px;
-    color: rgb(var(--ink-3));
-    font-size: .6875rem;
-    font-weight: 600;
-  }
-  .nav svg, .navmore svg { width: 1.375rem; height: 1.375rem; stroke-width: 1.8; }
-  .nav[aria-current="page"] { background: transparent; color: rgb(var(--accent)); }
-  .nav[aria-current="page"] svg { color: rgb(var(--accent)); }
-  .nav[aria-current="page"]::before {
-    top: 0;
-    left: calc(50% - 13px);
-    right: auto;
-    width: 26px;
-    height: 3px;
-    border-radius: 0 0 3px 3px;
-    background: rgb(var(--brand));
-    animation: tab-under .3s var(--ease-out);
-  }
-  .navmore[data-on], .navmore[aria-expanded="true"] { color: rgb(var(--accent)); }
-  .navmore[data-on] svg { color: rgb(var(--accent)); }
-  .content { padding: 1.125rem 1rem; }
 }

@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import Sidebar from "@/layout/Sidebar";
 import TopBar from "@/layout/TopBar";
+import BottomBar from "@/layout/BottomBar";
+import { KitToast } from "@/components/kit/overlay";
 import SubNav from "@/layout/SubNav";
 import PageOutlet from "@/layout/PageOutlet";
 import GoTo from "@/layout/GoTo";
@@ -33,7 +35,7 @@ export default function AppShell() {
 		   off `data-rail`, and the tablet block ignores it and keys off
 		   `data-drawer` instead. */
 		<div className="shell" data-rail={rail} data-drawer={drawer ? "open" : undefined}>
-			{/* Nine rail links and a header stand between the top of the document
+			{/* The side menu and a header stand between the top of the document
 			    and the page, on every page. Somebody driving this by keyboard should
 			    not pay for them twice a click. Hidden until focused, which is the one
 			    time it is any use. */}
@@ -57,6 +59,9 @@ export default function AppShell() {
 				<SubNav />
 				<PageOutlet />
 			</div>
+			{/* The phone's bar, drawn at 880px and under — see BottomBar. */}
+			<BottomBar />
+			<KitToast />
 			{/* Any page can open it — see components/PunchMap.jsx. */}
 			<MapDialog />
 			<PhotoDialog />

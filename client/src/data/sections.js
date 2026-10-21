@@ -14,6 +14,11 @@ export const SECTIONS = [
   {key:"loans",     label:"Loans",     cov:"none", hidden:true, icon:"M4 8h16v11H4zM8 8V6a4 4 0 0 1 8 0v2M12 12v3"},
   {key:"reports",   label:"Reports",   cov:"live", icon:"M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"},
   {key:"survey",    label:"Survey",    cov:"none", hidden:true, icon:"M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"},
+  /* The HRDashboard reference's two top-bar pages, 21 Oct 2026: on the site's
+     own File folders and Manna Announcement. Not on the side menu — the
+     reference reaches them from the top bar — and with no Factor HR item. */
+  {key:"documents", label:"Documents", cov:"live", icon:"M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"},
+  {key:"news",      label:"News",      cov:"live", icon:"M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V9h4M12 8h6M12 12h6M12 16h4"},
   {key:"settings",  label:"Settings",  cov:"part", icon:"M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z"},
 ];
 

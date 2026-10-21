@@ -3,28 +3,41 @@ import { act, fireEvent, render } from "@testing-library/react";
 import { Provider } from "react-redux";
 
 import Sidebar, { pagesOf } from "@/layout/Sidebar";
+import SubNav from "@/layout/SubNav";
 import GoTo, { destinations, rank } from "@/layout/GoTo";
 import { MODULES } from "@/routes/registry";
 import { tabsFor } from "@/data/menus";
 import { isHidden, visibleSections } from "@/data/sections";
+import { groupsFor, inRail } from "@/data/nav";
 import { store, set, getState, resetStore } from "@/store";
 
 /* ---------------------------------------------------------------------------
-   The navigation of 6 October 2026: the open module's pages listed in the rail,
-   and Ctrl+K to go to any page by name.
+   The navigation: the pages listed in the side menu, and Ctrl+K to go to any
+   page by name.
 
    **The rule both of these share** is that they offer exactly what the page
    strip offers — no page a login's menu would hide, and none it would show
    left out. The strip is read through `tabsFor` and `isHidden`; so are these,
    and the tests below hold them to it rather than to a list typed out here.
+
+   Since 21 October 2026 the menu is the HRDashboard reference's groups, and a
+   group lists the pages of every module it holds (data/nav.js) where the old
+   rail listed the open module's only. The rule did not move.
    --------------------------------------------------------------------------- */
 
 const HR = "hr@mannarubber.com";
+const COMPANY = "mannarubber.products@mannarubber.com";
 const draw = (ui) => render(<Provider store={store}>{ui}</Provider>);
 
 /** What the page strip would draw for this module — the reference. */
 const stripOf = (section, user) =>
 	tabsFor(section, MODULES[section]?.tabs || [], user, null).filter((t) => !isHidden(section, t[0]));
+
+/** The pages a group lists for one of its modules, by name. */
+const listed = (container, group, section) =>
+	[...container.querySelectorAll(`[data-group="${group}"] .sub-in a`)]
+		.filter((a) => a.getAttribute("href").split("/")[1] === section)
+		.map((a) => a.textContent);
 
 beforeEach(() => {
 	resetStore();
@@ -33,44 +46,45 @@ beforeEach(() => {
 });
 afterEach(() => localStorage.clear());
 
-describe("the rail's list of pages", () => {
-	it("lists the open module's pages, the same ones the strip over the page would", () => {
+describe("the menu's list of pages", () => {
+	it("lists each module's pages in its group, the same ones the strip over the page would", () => {
 		set({ user: HR, section: "attendance", subtab: "daily" });
 		const { container } = draw(<Sidebar />);
-		const listed = [...container.querySelectorAll(".navsub .navpage")].map((a) => a.textContent);
-		expect(listed).toEqual(stripOf("attendance", HR).map((t) => t[1]));
-		expect(listed.length).toBeGreaterThan(1);
+		expect(listed(container, "attendance", "attendance")).toEqual(stripOf("attendance", HR).map((t) => t[1]));
+		expect(listed(container, "timeoff", "leave")).toEqual(stripOf("leave", HR).map((t) => t[1]));
+		expect(listed(container, "checklist", "onboard")).toEqual(stripOf("onboard", HR).map((t) => t[1]));
 	});
 
-	it("lists the pages of the open module only, so the rail stays a short menu", () => {
-		set({ user: HR, section: "attendance" });
+	it("lists only what a login's own menu shows it", () => {
+		/* The company login is shown eight Attendance pages and three of
+		   Payroll (data/menus.js); its menu must not offer the rest. */
+		set({ user: COMPANY, section: "attendance" });
 		const { container } = draw(<Sidebar />);
-		const groups = [...container.querySelectorAll(".navsub")];
-		expect(groups).toHaveLength(1);
-		expect(groups[0].getAttribute("aria-label")).toBe("Attendance pages");
+		expect(listed(container, "attendance", "attendance")).toEqual(stripOf("attendance", COMPANY).map((t) => t[1]));
+		expect(listed(container, "payroll", "payroll")).toEqual(stripOf("payroll", COMPANY).map((t) => t[1]));
+		expect(listed(container, "attendance", "attendance").length)
+			.toBeLessThan(stripOf("attendance", HR).length);
 	});
 
 	it("marks the open page as current, and no other page", () => {
 		set({ user: HR, section: "attendance", subtab: "daily" });
 		const { container } = draw(<Sidebar />);
-		const on = [...container.querySelectorAll('.navpage[aria-current="page"]')];
+		const on = [...container.querySelectorAll('.sub-in a[aria-current="page"]')];
 		expect(on).toHaveLength(1);
 		expect(on[0].textContent).toBe(stripOf("attendance", HR).find((t) => t[0] === "daily")[1]);
 	});
 
-	it("does not count a page as a module, so the rail still has one link per module", () => {
-		/* chrome.test.jsx counts `.nav .lab` against SECTIONS; a page drawn as a
-		   `.nav` would make every module look like it had grown a dozen siblings. */
+	it("does not count a page as a group, so the menu still has one button per group", () => {
 		set({ user: HR, section: "attendance" });
 		const { container } = draw(<Sidebar />);
-		expect(container.querySelector(".navsub .nav")).toBeNull();
-		expect(container.querySelector(".navsub .lab")).toBeNull();
+		expect(container.querySelector(".sub-in .nav-g")).toBeNull();
+		expect(container.querySelectorAll(".nav-g > button")).toHaveLength(groupsFor(HR, null).length);
 	});
 
 	it("moves to the page in the store when one is clicked, without reloading", () => {
 		set({ user: HR, section: "attendance", subtab: "overview" });
 		const { container } = draw(<Sidebar />);
-		const daily = [...container.querySelectorAll(".navpage")]
+		const daily = [...container.querySelectorAll(".sub-in a")]
 			.find((a) => a.textContent === stripOf("attendance", HR).find((t) => t[0] === "daily")[1]);
 		const click = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
 		act(() => { daily.dispatchEvent(click); });
@@ -78,15 +92,27 @@ describe("the rail's list of pages", () => {
 		expect(getState().subtab).toBe("daily");
 	});
 
-	it("draws no list for a module with a single page, whose link already goes there", () => {
+	it("leaves the strip over the page to the modules the menu does not list", () => {
+		/* Reports and Settings are the header's link and the menu's foot, not
+		   groups, so their pages are switched by the strip; every other module's
+		   strip says it is in the menu, and a desktop with the menu open hides it. */
 		for (const m of visibleSections()) {
-			const n = pagesOf(m.key, HR, null).length;
+			if (stripOf(m.key, HR).length < 2) continue;
 			resetStore();
-			set({ user: HR, section: m.key });
-			const { container, unmount } = draw(<Sidebar />);
-			expect(Boolean(container.querySelector(".navsub")), m.key).toBe(n > 1);
+			set({ user: HR, section: m.key, subtab: stripOf(m.key, HR)[0][0] });
+			const { container, unmount } = draw(<SubNav />);
+			const bar = container.querySelector("nav.subbar");
+			expect(bar, m.key).not.toBeNull();
+			expect(bar.hasAttribute("data-inrail"), m.key).toBe(inRail(m.key));
 			unmount();
 		}
+		expect(inRail("settings")).toBe(false);
+		expect(inRail("reports")).toBe(false);
+		expect(inRail("attendance")).toBe(true);
+	});
+
+	it("keeps pagesOf on the menu, where GoTo has always found it", () => {
+		expect(pagesOf("attendance", HR, null)).toEqual(stripOf("attendance", HR));
 	});
 });
 

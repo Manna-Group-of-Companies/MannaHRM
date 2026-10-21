@@ -95,6 +95,19 @@ const initial = {
 	/** Whether `user` is an admin, as the site answered it — see `isAdmin` in
 	    api/client.js and USER_ONLY in data/menus.js. `null` until it answers. */
 	admin: null,
+	/** The signed-in person as their User record names them — `{first_name,
+	    full_name, user_image}` — for the account button. `null` until it
+	    answers, and the button shows the login meanwhile (api/client.js whoIs). */
+	me: null,
+	/** Documents: the folder `/documents/folder` shows (a File name). */
+	docFolder: "",
+	/** News: the post `/news/item` and `/news/edit` show. */
+	newsId: "",
+	/** Payslips: what the find box starts with — the header's Payslip link
+	    puts the signed-in person's own code here. Read once and cleared. */
+	slipFind: "",
+	/** The reference's toast at the foot of the screen (components/kit/overlay). */
+	kitToast: null,
 	/** Settings → Security's rules as the site holds them — the same object
 	    data/sections.js is obeying, here so a menu redraws when they change.
 	    See api/pagerules.js. The state is "" before a sign-in, then "loading",

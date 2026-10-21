@@ -169,7 +169,10 @@ function when(at) {
     only thing that makes them different from this one. Left out, the picker
     decides, which is what Start Up wants. `companyView` is where the narrowing
     is, including the four person-keyed lists this page used to read unscoped. */
-export default function Dashboard({ company }) {
+/* `embedded` is the front page's Layout 2 (21 October 2026, D16), which shows
+   these panels under the HRDashboard reference's own band — so its greeting is
+   the band's, and this page's heading is left out rather than said twice. */
+export default function Dashboard({ company, embedded = false }) {
 	const s = companyView(useApp(), company);
 	const all = scoped(s);
 	const a = active(s);
@@ -280,7 +283,7 @@ export default function Dashboard({ company }) {
 
 	return (
 		<div className="dash">
-			<header className="dhero">
+			{embedded ? null : <header className="dhero">
 				<div className="dhello">
 					<p className="dgreet">{greeting()}</p>
 					<h1>{company || s.company || "Manna Group"}</h1>
@@ -298,7 +301,7 @@ export default function Dashboard({ company }) {
 						{waiting ? <span className="pilln">{fmt(waiting)}</span> : null}
 					</Link>
 				</div>
-			</header>
+			</header>}
 
 			{/* **Their own toolbar, in their own words.** Active / InActive / All
 			    sits above the headline counts on their page; Search filters the

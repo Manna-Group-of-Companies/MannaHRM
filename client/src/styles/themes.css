@@ -285,6 +285,26 @@
   --chart-1:      26 174 95;
   --chart-2:      47 111 237;
   --chart-3:      245 197 24;
+
+  /* **The avatars.** The reference colours a person's initials by a hash of
+     their name, from seven pastel pairs, and keeps the same pastels in dark
+     mode: a face is the one light thing in a dark list, which is how it is
+     found. Initials are text, so each pair is checked; the green one's ink is
+     a step darker than the reference's #138A4A (3.8 -> 4.6). */
+  --av1:          253 231 214;
+  --av1-ink:      154 74 18;
+  --av2:          223 243 231;
+  --av2-ink:      17 123 66;
+  --av3:          227 236 254;
+  --av3-ink:      36 89 196;
+  --av4:          251 226 234;
+  --av4-ink:      168 50 90;
+  --av5:          254 243 199;
+  --av5-ink:      138 106 0;
+  --av6:          237 229 251;
+  --av6-ink:      91 59 176;
+  --av7:          221 242 244;
+  --av7-ink:      28 116 128;
 }
 
 /* ---------------------------------------------------------------------------
@@ -397,4 +417,20 @@
   --chart-1:      25 170 93;
   --chart-2:      47 111 237;
   --chart-3:      182 144 8;
+
+  /* The same seven pairs as dark: see the note there. */
+  --av1:          253 231 214;
+  --av1-ink:      154 74 18;
+  --av2:          223 243 231;
+  --av2-ink:      17 123 66;
+  --av3:          227 236 254;
+  --av3-ink:      36 89 196;
+  --av4:          251 226 234;
+  --av4-ink:      168 50 90;
+  --av5:          254 243 199;
+  --av5-ink:      138 106 0;
+  --av6:          237 229 251;
+  --av6-ink:      91 59 176;
+  --av7:          221 242 244;
+  --av7-ink:      28 116 128;
 }

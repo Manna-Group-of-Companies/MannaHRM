@@ -23,6 +23,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
    second case seeing the first one's prefix.
    --------------------------------------------------------------------------- */
 
+/* **Thirty seconds a case, not Vitest's five.** Each case loads the router
+   from an empty module cache, and the router loads the registry, which loads
+   every page in the app. On the office's machines that is five seconds and
+   more on its own — the first case timed out there on 21 October 2026 with no
+   code changed, and every case did with the suite running beside it. The
+   cases assert exactly what they did; only the waiting is longer. */
+vi.setConfig({ testTimeout: 30_000 });
+
 /** The router, loaded fresh with `VITE_ROUTE_BASE` set to `value`. */
 async function routerWith(value) {
 	vi.resetModules();

@@ -12,7 +12,7 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { set, getState, useApp } from "@/store";
-import { isAdmin, whoami } from "@/api/client";
+import { isAdmin, whoIs, whoami } from "@/api/client";
 import { clearPageRules, loadPageRules } from "@/api/pagerules";
 import { startLeaveRules } from "@/api/leaverules";
 import Login from "@/features/auth/Login";
@@ -55,11 +55,12 @@ export default function App() {
 	/* Asked again for every sign-in, and cleared first, so the next person is
 	   never drawn with the last one's menu. */
 	useEffect(() => {
-		set({ admin: null });
+		set({ admin: null, me: null });
 		clearPageRules();
 		if (!user) return undefined;
 		let live = true;
 		isAdmin().then((admin) => { if (live) set({ admin }); });
+		whoIs(user).then((me) => { if (live) set({ me }); });
 		void loadPageRules();
 		return () => { live = false; };
 	}, [user]);

@@ -105,6 +105,8 @@ const ON_WASH = [
 	["brand-deep", "brand-soft"], ["accent", "brand-soft"],
 	["bad-deep", "bad-wash"], ["bad-deep", "bad-faint"],
 	["info-ink", "info-wash"],
+	/* The seven avatar pairs: initials are text on their disc. */
+	...[1, 2, 3, 4, 5, 6, 7].map((n) => [`av${n}-ink`, `av${n}`]),
 ];
 
 /** Every fill this app puts white text on.

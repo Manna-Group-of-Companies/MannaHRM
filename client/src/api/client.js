@@ -214,6 +214,22 @@ export async function whoami() {
 	}
 }
 
+/** The signed-in person as the site names them — first name, full name and
+    photograph off their own User record — for the account button. Null on any
+    failure: the button then shows the login, never somebody else's name. */
+export async function whoIs(user) {
+	if (!user) return null;
+	try {
+		const r = await http.get("/api/method/frappe.client.get_value", {
+			params: { doctype: "User", filters: JSON.stringify({ name: user }), fieldname: JSON.stringify(["first_name", "full_name", "user_image"]) },
+		});
+		const m = r.data?.message;
+		return m && typeof m === "object" ? { first_name: m.first_name || "", full_name: m.full_name || "", user_image: m.user_image || "" } : null;
+	} catch {
+		return null;
+	}
+}
+
 /** Whether the signed-in person may `perm` a document, in the site's own words.
 
     For drawing controls only — a button hidden here is a courtesy, and the
