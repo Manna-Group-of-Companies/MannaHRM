@@ -117,6 +117,20 @@ const initial = {
 	homeAtt: null,
 	/** Employee Attendance: whose days it shows. Team Attendance sets it. */
 	attEmp: "",
+	/** Team Time Off: every leave application from the start of last year (api/leavelist.js). */
+	lvAll: { state: "", rows: [] },
+	/** Payroll Detail: whose slip, and which month (`{emp, ym}`). Employee Payroll sets it. */
+	payView: null,
+	/** Recruitment: every opening and applicant (api/jobs.js), and the job and applicant open. */
+	rec: { state: "", jobs: [], apps: [], criteria: false, detail: false, err: "" },
+	recJob: "",
+	recApp: "",
+	/** Checklist: the signed-in person's to-dos, onboarding and separations, and what is open. */
+	todos: { state: "", rows: [] },
+	boarding: { state: "", Onboarding: [], Offboarding: [] },
+	chkTodo: "",
+	chkList: null,
+	chkTpl: null,
 	/** Settings → Security's rules as the site holds them — the same object
 	    data/sections.js is obeying, here so a menu redraws when they change.
 	    See api/pagerules.js. The state is "" before a sign-in, then "loading",

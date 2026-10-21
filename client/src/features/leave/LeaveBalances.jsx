@@ -5,11 +5,14 @@ import { scoped } from "@/lib/scope";
 import { dmy, fmt, todayIso } from "@/lib/format";
 import { sheetsPdf, sheetsXlsx } from "@/lib/export";
 import { HEAD_FILL, ZEBRA_FILL } from "@/lib/fills";
-import { availedUpTo, ledgerUpTo, lvbFill, lvbKey } from "@/lib/leavebalance";
+import { availedUpTo, balanceOf, ledgerUpTo, lvbFill, lvbKey } from "@/lib/leavebalance";
 import { LVB_COLS } from "@/data/leave";
 import EmpPick from "@/components/EmpPick";
 import { Empty, Scroll } from "@/components/ui";
 import { loadLeaveBalances } from "@/api/load";
+import { tidyDept } from "@/lib/format";
+import { openEmployee } from "@/features/employees/openEmployee";
+import { EmptyState, PageHead, Seg, Who } from "@/components/kit/ui";
 
 /* Leave Balance Report — who was given how much leave, how much of it they
    took, and what is left, as at one date.
@@ -235,19 +238,74 @@ function Table({ s, rows }) {
 	);
 }
 
+/** Employee Time Off's summary, the reference's table: one line per person,
+    "taken / left" under each leave type, and what is waiting. Off the same
+    rows as the detail, so the two cannot disagree. */
+function Summary({ s, rows }) {
+	const types = [...new Set(rows.map((r) => r.type))].sort();
+	const by = new Map();
+	for (const r of rows) {
+		const g = by.get(r.emp.name) || { emp: r.emp, t: {} };
+		g.t[r.type] = r;
+		by.set(r.emp.name, g);
+	}
+	const pending = new Map();
+	for (const a of s.approvals.leave || []) pending.set(a.employee, (pending.get(a.employee) || 0) + 1);
+	const people = [...by.values()].sort((a, b) => (a.emp.employee_name || "").localeCompare(b.emp.employee_name || ""));
+	if (!people.length) return <EmptyState icon="clock" title="Nobody to show" sub="Pick an employee, or widen the status or leave type." />;
+	return (
+		<div className="k-tbl-wrap">
+			<table className="k-rt">
+				<thead>
+					<tr>{["Employee", ...types.map((t) => `${t} (taken / left)`), "Pending"].map((c) => <th key={c}><span>{c}</span></th>)}</tr>
+				</thead>
+				<tbody>
+					{people.map((g) => (
+						<tr key={g.emp.name} className="k-click" tabIndex={0} onClick={() => openEmployee(g.emp.name)}
+							onKeyDown={(ev) => { if (ev.key === "Enter") openEmployee(g.emp.name); }}>
+							<td className="k-title-cell"><Who name={g.emp.employee_name || g.emp.name} sub={tidyDept(g.emp.department) || g.emp.employee_number || ""} /></td>
+							{types.map((t) => {
+								const r = g.t[t];
+								const left = r ? balanceOf(r) : null;
+								return (
+									<td key={t} data-label={t} className="k-num">
+										{r ? <>{(r.availed || 0).toFixed(1)} / <b>{left == null ? "—" : left.toFixed(1)}</b></> : "—"}
+									</td>
+								);
+							})}
+							<td data-label="Pending">{pending.get(g.emp.name) || "—"}</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
+/** Employee Time Off, as the HRDashboard reference draws it (21 October 2026),
+    at the Leave Balance Report's address and on its figures (D2): the
+    reference's heading and card, the report's own filters and download in it,
+    and the reference's summary — with the report's full table one switch away. */
 export default function LeaveBalances() {
 	const s = useApp();
 	const rows = lvbRows(s);
+	const [view, setView] = useState("summary");
 
 	/* One request, the first time somebody opens this page. loadLeaveBalances()
 	   guards itself against the re-render it causes. */
 	useEffect(() => { void loadLeaveBalances(); }, []);
 
 	return (
-		<>
-			<div className="fhtitle">Leave Balance Report</div>
-			<Toolbar s={s} rows={rows} />
-			<Table s={s} rows={rows} />
-		</>
+		<div className="kit k-enter">
+			<PageHead title="Employee Time Off" sub="Balances and time taken for everyone">
+				<Seg label="View" value={view} onChange={setView} options={[["summary", "Summary"], ["detail", "Detail"]]} />
+			</PageHead>
+			<div className="k-card">
+				<Toolbar s={s} rows={rows} />
+				<div style={{ marginTop: 16 }}>
+					{view === "summary" ? <Summary s={s} rows={rows} /> : <Table s={s} rows={rows} />}
+				</div>
+			</div>
+		</div>
 	);
 }

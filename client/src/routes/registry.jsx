@@ -56,6 +56,9 @@ import Shifts from "@/features/attendance/Shifts";
 import ApplyLeave from "@/features/leave/ApplyLeave";
 import LeaveMonthly from "@/features/leave/LeaveMonthly";
 import LeaveBalances from "@/features/leave/LeaveBalances";
+import TeamTimeOff from "@/features/leave/TeamTimeOff";
+import TimeOffSettings from "@/features/leave/TimeOffSettings";
+import MyTimeOff from "@/features/leave/MyTimeOff";
 import PayrollRun from "@/features/payroll/PayrollRun";
 import SalarySetup from "@/features/payroll/SalarySetup";
 import ActualSalary from "@/features/payroll/ActualSalary";
@@ -67,6 +70,9 @@ import CompanyChart from "@/features/employees/CompanyChart";
 import Increments from "@/features/payroll/Increments";
 import AdvancesLoans from "@/features/payroll/AdvancesLoans";
 import Payslips from "@/features/payroll/Payslips";
+import EmployeePayroll from "@/features/payroll/EmployeePayroll";
+import PayslipDetail from "@/features/payroll/PayslipDetail";
+import PayrollSettings from "@/features/payroll/PayrollSettings";
 import BankSheet from "@/features/payroll/BankSheet";
 import Adhoc from "@/features/payroll/Adhoc";
 import FrappePayroll from "@/features/payroll/FrappePayroll";
@@ -89,6 +95,8 @@ import Coverage from "@/features/settings/Coverage";
 import Security from "@/features/settings/Security";
 import CompanyDocuments from "@/features/documents/Documents";
 import News from "@/features/news/News";
+import Recruitment from "@/features/recruitment/Recruitment";
+import Checklist from "@/features/checklist/Checklist";
 
 /* Factor HR's second-level menus, under the module each belongs to, in its
    order. Only pages the tenant has actually been seen to have are listed:
@@ -198,7 +206,10 @@ const TABS = {
 	   clicking Leave in the nav lands on it. `all` has no menu item there and is
 	   appended rather than interleaved, so the first two still compare item for
 	   item. */
-	leave: [["overview", "Apply Leave"], ["balances", "Leave Balance Report"],
+	/* The HRDashboard reference's Time Off first (21 October 2026): Team,
+	   Employee (at Leave Balance Report's address, D2) and Settings, then ours. */
+	leave: [["team", "Team Time Off"], ["balances", "Employee Time Off"], ["overview", "Apply Leave"],
+		["settings", "Time Off Settings"],
 		["history", "Leave Application History"], ["pending", "Pending Leave Applications"],
 		["availed", "Leave Availed Detail"], ["monthly", "Leave Monthly Availed"], ["all", "All"]],
 	/* Factor HR's Payroll menu, captured 29 Aug 2026, in its order. The capture
@@ -216,8 +227,12 @@ const TABS = {
 	   — beside four more of ours: Salary Setup, Advances & Loans, Payslips and
 	   Bank Transfer. The older tabs are hidden, not deleted. 5 Oct 2026:
 	   Increments, January's raises from HR's Excel sheet. */
-	payroll: [["overview", "Payroll"], ["setup", "Salary Setup"], ...managedTabs("payroll"), ["increments", "Increments"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
-		["transfer", "Bank Transfer"], ["adhoc", "Adhoc Payments/Deductions"], ["process", "Salary Process"],
+	/* The run stays first — Payroll opens on its own page. The HRDashboard
+	   reference's Employee Payroll beside it (21 October 2026), which opens the
+	   run and pays nobody (D14), and its Payroll Settings, read and not written
+	   (D6), after ours. */
+	payroll: [["overview", "Payroll"], ["employees", "Employee Payroll"], ["setup", "Salary Setup"], ...managedTabs("payroll"), ["increments", "Increments"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
+		["transfer", "Bank Transfer"], ["settings", "Payroll Settings"], ["adhoc", "Adhoc Payments/Deductions"], ["process", "Salary Process"],
 		["sheet", "Salary Sheet"], ["payslip", "Salary Payslip"], ["register", "Salary Register"],
 		["bank", "Bank Transfer"], ["frappe", "Frappe Payroll"], ["fnf", "Final Settlement"],
 		["itdec", "IT Declarations"], ["bonus", "Bonus Working Report"], ["ptax", "Prof. Tax Statement"], ["all", "All"]],
@@ -228,6 +243,8 @@ const TABS = {
 		["projection", "Loan Projection"], ...managedTabs("loans"), ["all", "All"]],
 	survey: [["overview", "Survey"], ...managedTabs("survey")],
 	reports: [["overview", "All Reports"]],
+	checklist: [["overview", "To-do list"], ["onboarding", "Onboarding"], ["offboarding", "Offboarding"], ["settings", "Checklist Settings"]],
+	recruitment: [["overview", "Jobs"], ["candidates", "Candidates"], ["settings", "Recruitment Settings"]],
 	documents: [["overview", "Documents"]],
 	news: [["overview", "News"]],
 	/* Security is ours, 29 Sep 2026: which pages everybody is shown, for the
@@ -286,12 +303,14 @@ const PAGES = {
 		app: AppPunches,
 		all: moduleAll("attendance", "Attendance"),
 		...managedPages("attendance"), ...blueprintPages("attendance") },
-	leave: { overview: ApplyLeave, balances: LeaveBalances,
+	leave: { team: TeamTimeOff, settings: TimeOffSettings, mine: MyTimeOff,
+		overview: ApplyLeave, balances: LeaveBalances,
 		history: report("leave", "history"), pending: report("leave", "pending"),
 		availed: report("leave", "availed"), monthly: LeaveMonthly,
 		all: moduleAll("leave", "Leave"),
 		...blueprintPages("leave") },
-	payroll: { overview: PayrollRun, setup: SalarySetup, increments: Increments, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
+	payroll: { employees: EmployeePayroll, slip: PayslipDetail, settings: PayrollSettings,
+		overview: PayrollRun, setup: SalarySetup, increments: Increments, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
 		itdec: ITDeclarations, bank: BankTransfer, bonus: BonusReport, payslip: Payslip,
 		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
 		...managedPages("payroll"), ...blueprintPages("payroll"),
@@ -302,6 +321,8 @@ const PAGES = {
 		...managedPages("loans"), ...blueprintPages("loans") },
 	survey: { overview: Survey, ...managedPages("survey"), ...blueprintPages("survey") },
 	reports: { overview: ReportsHub },
+	checklist: { overview: Checklist, todo: Checklist, onboarding: Checklist, offboarding: Checklist, list: Checklist, settings: Checklist, template: Checklist },
+	recruitment: { overview: Recruitment, candidates: Recruitment, settings: Recruitment, job: Recruitment, applicant: Recruitment, new: Recruitment },
 	documents: { overview: CompanyDocuments, folder: CompanyDocuments },
 	news: { overview: News, item: News, new: News, edit: News },
 	settings: { overview: Settings, coverage: Coverage, security: Security },
@@ -364,7 +385,7 @@ export function fullPage(s) {
 /* `attendance/mine` (21 Oct 2026): My Attendance, for a login an Employee is
    linked to (D3) — none of today's are — so it is opened from Team Attendance's
    own button rather than offered on every login's menu. */
-const OFF_MENU = { employees: ["new", "import", "upload", "chart"], documents: ["folder"], news: ["item", "new", "edit"], attendance: ["mine"] };
+const OFF_MENU = { employees: ["new", "import", "upload", "chart"], documents: ["folder"], news: ["item", "new", "edit"], attendance: ["mine"], leave: ["mine"], payroll: ["slip"], recruitment: ["job", "applicant", "new"], checklist: ["todo", "list", "template"] };
 
 /** What the breadcrumb calls an off-menu page. These have no tab to be named
     by, and before 10 Oct 2026 every one of them read "Overview" up there. */
@@ -374,6 +395,14 @@ const OFF_MENU_TITLE = {
 	"employees/upload": "File Import",
 	"employees/chart": "Company Chart",
 	"attendance/mine": "My Attendance",
+	"leave/mine": "My Time Off",
+	"payroll/slip": "Payroll Detail",
+	"recruitment/job": "Job",
+	"recruitment/applicant": "Applicant",
+	"recruitment/new": "Post a new job",
+	"checklist/todo": "Task detail",
+	"checklist/list": "Checklist",
+	"checklist/template": "Template details",
 	"documents/folder": "Folder",
 	"news/item": "News detail",
 	"news/new": "Create news",

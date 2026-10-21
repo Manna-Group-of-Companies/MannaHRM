@@ -129,6 +129,9 @@ describe("the Leave Balance Report, with a ledger", () => {
 		});
 		let out;
 		await act(async () => { out = render(<Provider store={store}><LeaveBalances /></Provider>); });
+		/* Since 21 October 2026 the page opens on the reference's summary; the
+		   report's own table is Detail. */
+		await act(async () => { [...out.container.querySelectorAll('[aria-label="View"] button')].find((b) => b.textContent === "Detail").click(); });
 		const row = [...out.container.querySelectorAll("table tbody tr")].map((r) => r.textContent);
 		expect(row).toHaveLength(1);
 		expect(row[0]).toContain(emp.employee_name);

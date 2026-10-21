@@ -12,6 +12,13 @@ export const SECTIONS = [
   {key:"leave",     label:"Leave",     cov:"part", icon:"M3 5h18v16H3zM3 9h18M8 3v4M16 3v4"},
   {key:"payroll",   label:"Payroll",   cov:"part", icon:"M6 4h9a4 4 0 0 1 0 8H6M6 8h12M9 12l5 8"},
   {key:"loans",     label:"Loans",     cov:"none", hidden:true, icon:"M4 8h16v11H4zM8 8V6a4 4 0 0 1 8 0v2M12 12v3"},
+  /* The HRDashboard reference's Recruitment (21 Oct 2026): jobs, applicants and
+     the pipeline, on hrms's Job Opening and Job Applicant. No Factor HR item. */
+  /* The HRDashboard reference's Checklist (21 Oct 2026): the to-do list, and
+     onboarding and offboarding as checklists, on ToDo and hrms's boarding
+     records. On Board, beside it in the menu, is a different job. */
+  {key:"checklist", label:"Checklist", cov:"live", icon:"M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"},
+  {key:"recruitment", label:"Recruitment", cov:"live", icon:"M3 7h18v13H3zM8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"},
   {key:"reports",   label:"Reports",   cov:"live", icon:"M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"},
   {key:"survey",    label:"Survey",    cov:"none", hidden:true, icon:"M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"},
   /* The HRDashboard reference's two top-bar pages, 21 Oct 2026: on the site's

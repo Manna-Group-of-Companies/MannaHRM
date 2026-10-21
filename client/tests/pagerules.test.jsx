@@ -116,7 +116,7 @@ const button = (view, text) => [...view.container.querySelectorAll("button")].fi
 describe("the Security page", () => {
 	it("saves a page hidden with its switch, and only what differs from the default", async () => {
 		const view = await draw(ADMIN);
-		const sw = view.container.querySelector('[aria-label="Leave → Leave Balance Report"]');
+		const sw = view.container.querySelector('[aria-label="Leave → Employee Time Off"]');
 		await act(async () => { [...sw.querySelectorAll("button")].find((b) => b.textContent === "Hidden").click(); });
 		await act(async () => { button(view, "Save").click(); });
 		expect(writes).toEqual([{ page_visibility: '{"leave/balances":"hide"}' }]);
@@ -141,7 +141,7 @@ describe("the Security page", () => {
 		doc = { name: "Manna HR Settings" };
 		const view = await draw(ADMIN);
 		expect(view.container.textContent).toContain("no page_visibility field");
-		const sw = view.container.querySelector('[aria-label="Leave → Leave Balance Report"]');
+		const sw = view.container.querySelector('[aria-label="Leave → Employee Time Off"]');
 		await act(async () => { [...sw.querySelectorAll("button")].find((b) => b.textContent === "Hidden").click(); });
 		expect(button(view, "Save").disabled).toBe(true);
 	});
