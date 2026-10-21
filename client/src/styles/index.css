@@ -203,6 +203,19 @@
   .skip:focus { top: .5rem; }
 
   /* ---------------------------------------------------------- sign in ---- */
+  /* The reference's sign-in page (21 October 2026) is the kit's `k-auth`; these
+     are the two things it needs here (its full height is set on the element —
+     see Login.jsx). The logo on a white plate: the PNG has a white ground, so on the dark art panel it is
+     a badge rather than a white rectangle — a fixed surface, like the kit's own
+     white art cards, not a palette colour. And on a phone, where the art panel
+     is not drawn, the logo over the form. */
+  .k-auth-logo { display: inline-flex; align-items: center; background: #fff; border-radius: 10px; padding: .3rem .55rem; }
+  .k-auth-logo img { height: 26px; width: auto; display: block; }
+  .k-auth-mlogo { display: none; text-align: center; margin-bottom: 1.4rem; }
+  .k-auth-mlogo .k-auth-logo img { height: 40px; }
+  .k-auth-foot button:hover { text-decoration: underline; }
+  @media (max-width: 980px) { .k-auth-mlogo { display: block; } }
+
   /* The one screen outside the shell. Centred on the dark chrome so it reads
      as the door to the app rather than as an empty page of it. */
   .login {

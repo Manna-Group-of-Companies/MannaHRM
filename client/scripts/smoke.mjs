@@ -73,28 +73,28 @@ async function main() {
 
 	console.log("\nthe page");
 	await page.goto(APP, { waitUntil: "networkidle" });
-	await page.waitForSelector(".loginbox", { timeout: 20000 });
-	ok("sign-in renders", await page.locator(".loginbox h1").isVisible());
+	await page.waitForSelector(".k-auth-box", { timeout: 20000 });
+	ok("sign-in renders", await page.locator(".k-auth-box h1").isVisible());
 	ok("both boxes are there",
-		await page.locator('.loginbox input[type="text"]').isVisible()
-		&& await page.locator('.loginbox input[type="password"]').isVisible());
+		await page.locator('.k-auth-box input[type="text"]').isVisible()
+		&& await page.locator('.k-auth-box input[type="password"]').isVisible());
 	ok("submit is disabled until both are filled",
-		await page.locator('.loginbox button[type="submit"]').isDisabled());
+		await page.locator('.k-auth-box button[type="submit"]').isDisabled());
 	await page.screenshot({ path: `${SHOTS}/01-signin.png` });
 
 	console.log("\nthe form takes typing");
-	const user = page.locator('.loginbox input[type="text"]');
-	const pass = page.locator('.loginbox input[type="password"]');
+	const user = page.locator('.k-auth-box input[type="text"]');
+	const pass = page.locator('.k-auth-box input[type="password"]');
 	await user.fill("smoke@example.invalid");
 	await pass.fill("deliberately-wrong");
 	ok("user box holds what was typed", (await user.inputValue()) === "smoke@example.invalid");
 	ok("password box holds what was typed", (await pass.inputValue()).length === 18);
-	ok("submit is enabled now", await page.locator('.loginbox button[type="submit"]').isEnabled());
+	ok("submit is enabled now", await page.locator('.k-auth-box button[type="submit"]').isEnabled());
 
 	console.log("\nthe site answers");
-	await page.locator('.loginbox button[type="submit"]').click();
-	await page.waitForSelector(".loginbox [role=alert]", { timeout: 30000 });
-	const message = (await page.locator(".loginbox [role=alert]").innerText()).trim();
+	await page.locator('.k-auth-box button[type="submit"]').click();
+	await page.waitForSelector(".k-auth-box [role=alert]", { timeout: 30000 });
+	const message = (await page.locator(".k-auth-box [role=alert]").innerText()).trim();
 	/* The words matter. A 401 read as anything else means `reason()` stopped
 	   understanding Frappe's error shape, and every refusal on every screen
 	   goes with it. */
@@ -105,7 +105,7 @@ async function main() {
 	console.log("\ndeep links survive a cold load");
 	for (const [ask, want] of ROUTES) {
 		await page.goto(APP + ask, { waitUntil: "networkidle" });
-		await page.waitForSelector(".loginbox", { timeout: 20000 });
+		await page.waitForSelector(".k-auth-box", { timeout: 20000 });
 		const got = new URL(page.url()).pathname;
 		ok(`${ask} → ${want}`, got === want, got === want ? "" : `got ${got}`);
 	}

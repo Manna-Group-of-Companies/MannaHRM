@@ -15,6 +15,7 @@ import { dmy } from "@/lib/format";
 import KitIcon from "@/components/kit/KitIcon";
 import { EmptyState, PageHead, SegTabs } from "@/components/kit/ui";
 import { toast } from "@/components/kit/overlay";
+import { PRIVACY, SUPPORT_EMAIL } from "@/data/policies";
 
 /* ---------------------------------------------------------- the reads --- */
 
@@ -151,29 +152,18 @@ export function Notifications() {
 
 /* ------------------------------------------------------------------ help --- */
 
-/** Who support goes to (D18): IT, by email. */
-export const SUPPORT_EMAIL = "it@mannarubber.com";
+/* Who support goes to, and the privacy policy, are data/policies.js — the
+   sign-in page reads them too. */
+export { SUPPORT_EMAIL };
 
 export const FAQ = [
 	["How do I add a new employee?", "Employees → Employee Master → Add new profile. Fill in the three steps and save. They appear on the list, the directory and the org chart straight away."],
-	["Somebody’s punches are missing. What do I do?", "Open Attendance → Employee Attendance, pick the person and the day, and choose Correct this day. A correction writes the missing punch; the day is worked out again from the punches."],
+	["Somebody’s punches are missing. What do I do?", "Open Attendance → Employee Attendance Regularization and correct the person’s day there. A correction writes the missing punch; the day is worked out again from the punches."],
 	["How do people ask for leave?", "Time Off → Apply Leave raises the request as a draft. The approver decides it on Dashboard → Approvals."],
-	["Where are the attendance reports?", "Attendance → Team Attendance → Download report. Pick the report, its dates and Excel or PDF."],
+	["Where are the attendance reports?", "Report, in the top bar: every attendance report is a box there. Employee Attendance Regularization also has Download report, for Excel or PDF."],
 	["How is a month paid?", "Payroll → Payroll runs the month step by step: the salary slips, then the bank sheet. Employee Payroll shows each slip and its status."],
 	["Why can I not see a page?", "Each login sees its own menu. Ask HR if a page you need is missing."],
 	["Is anything deleted when I deactivate somebody?", "No. Deactivate sets the status to Inactive and hides their details until they are activated again."],
-];
-
-/* The reference's own policy (D18), kept as it is except the two places it
-   describes its demo, which are not true of this app. Marked a draft until HR
-   has read it. */
-const PRIVACY = [
-	["What we collect", "We store the information you enter about your company and your people: names, contact details, job details, time off, attendance and pay."],
-	["How we use it", "Only to run HR features for your company: showing profiles, calculating balances and pay, and sending notifications you’ve turned on."],
-	["Who can see it", "People in your company, based on the roles each login has on the site. We never sell your data."],
-	["Where it lives", "On the company’s own ERPNext site. This app reads and writes it there, as the person signed in."],
-	["Your choices", "You can correct any record you are allowed to change. Ask HR to change one you cannot."],
-	["Contact", "Questions? Reach us from Help center → Contact support."],
 ];
 
 /** The shortcuts this app has — and only those. */
