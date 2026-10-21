@@ -62,8 +62,16 @@ describe("Team Time Off", () => {
 	});
 });
 
-describe("Employee Time Off", () => {
-	it("opens on the reference's summary and keeps the report's table one switch away", async () => {
+describe("Employee Time Off, taken off again", () => {
+	it("leaves Team Time Off and Time Off Settings off the menu, and the balance report as it was", async () => {
+		const { isHidden } = await import("@/data/sections");
+		const { MODULES } = await import("@/routes/registry");
+		expect(isHidden("leave", "team")).toBe(true);
+		expect(isHidden("leave", "settings")).toBe(true);
+		expect(isHidden("leave", "all")).toBe(true);
+		expect(isHidden("leave", "balances")).toBe(false);
+		expect(MODULES.leave.tabs[0]).toEqual(["overview", "Apply Leave"]);
+		expect(MODULES.leave.tabs.find((t) => t[0] === "balances")[1]).toBe("Leave Balance Report");
 		const st = loadedState();
 		const emp = st.employees.find((x) => x.status === "Active");
 		await act(async () => set({
@@ -72,10 +80,8 @@ describe("Employee Time Off", () => {
 			lvb: { ...getState().lvb, emp: emp.name, status: "", ason: "2026-09-24" },
 		}));
 		const { container } = draw(<LeaveBalances />);
-		expect(container.querySelector("h1").textContent).toBe("Employee Time Off");
-		expect(container.querySelector("thead").textContent).toContain("Casual Leave (taken / left)");
-		expect(container.querySelector("tbody").textContent).toContain("3.0");
-		await act(async () => { within(container.querySelector('[aria-label="View"]')).getByText("Detail").click(); });
+		expect(container.textContent).not.toContain("Employee Time Off");
+		expect(container.querySelector('[aria-label="View"]')).toBeNull();
 		expect(container.querySelector("thead").textContent).toContain("Carried Fwd");
 	});
 });

@@ -44,7 +44,7 @@ const SHOTS = process.env.SMOKE_SHOTS || path.join("scripts", ".smoke");
    front page rather than on a blank screen. */
 const ROUTES = [
 	["/employees/salary", "/employees/salary"],
-	["/attendance/shifts", "/attendance/shifts"],
+	["/settings/shifts", "/settings/shifts"],
 	["/employees", "/employees"],
 	["/nonsense", "/dashboard"],
 ];

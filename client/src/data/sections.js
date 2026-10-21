@@ -64,14 +64,25 @@ export const HIDDEN_PAGES = {
 	   Organization Chart was too, and went again the same day, asked for by
 	   HR: the Hierarchy Chart is the org chart, and took the name. New Joining
 	   left with it — it is Reports → Onboarding now (features/reports/Reports.jsx). */
-	employees: ["salary", "changes", "detail", "cattypes", "ctc", "weekoff", "letters", "all", "joining", "orgchart"],
+	/* Calendar too, 21 Oct 2026, asked for by HR: it is Settings → Calendar now. */
+	employees: ["salary", "changes", "detail", "cattypes", "ctc", "weekoff", "letters", "all", "joining", "orgchart", "calendar"],
 	/* The eleven reports, off the menu on 21 Oct 2026: the HRDashboard
 	   reference has no report pages under Attendance, so they are files from the
 	   Download report dialog (features/attendance/reportrun.js). Their pages and
 	   tests stay; Settings → Security can show any of them again. */
 	attendance: ["submit", "statutory", "all", "inout", "daily", "summary", "present", "absent", "msp",
-		"iocount", "shiftrep", "headcount", "ot", "weekly"],
-	leave: ["availed", "pending"],
+		"iocount", "shiftrep", "headcount", "ot", "weekly",
+		/* Work Locations, 21 Oct 2026, asked for by HR: added and changed on
+		   Attendance Settings → Location now. Team Attendance and Employee
+		   Attendance the same day, also asked for, and Manage Shift, which is
+		   Settings → Manage Shift now. Monthly Basic Attendance too: it is a
+		   box on Reports, like the other ten. */
+		"locations", "team", "employee", "shifts", "monthly"],
+	/* Team Time Off and Time Off Settings, 21 Oct 2026, asked for by HR, and
+	   Leave → All the same day, also asked for. */
+	leave: ["availed", "pending", "team", "settings", "all"],
+	/* Checklist's To-do list, 21 Oct 2026, asked for by HR. */
+	checklist: ["todos"],
 	payroll: ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],
 };
 

@@ -56,9 +56,12 @@ describe("the eleven reports", () => {
 		}
 	});
 
-	it("keeps the muster and App Punches as pages on the menu", () => {
-		expect(isHidden("attendance", "monthly")).toBe(false);
+	/* Monthly Basic Attendance left the menu on 21 October 2026, asked for by
+	   HR: it is a box on Reports, as the other ten are. */
+	it("keeps App Punches on the menu and Monthly Basic on Reports", () => {
+		expect(isHidden("attendance", "monthly")).toBe(true);
 		expect(isHidden("attendance", "app")).toBe(false);
+		expect(MODULES.attendance.pages.monthly).toBeTruthy();
 	});
 
 	it("offers HR every one, and a company login only the ones its menu had", () => {
@@ -82,6 +85,12 @@ describe("the eleven reports", () => {
 });
 
 describe("the pages", () => {
+	it("keeps Team Attendance and Employee Attendance off the menu, Download report staying on Regularization", () => {
+		expect(isHidden("attendance", "team")).toBe(true);
+		expect(isHidden("attendance", "employee")).toBe(true);
+		expect(isHidden("attendance", "overview")).toBe(false);
+	});
+
 	it("Team Attendance opens on four figures, a row of tabs and the Download report button", async () => {
 		await act(async () => set({ ...loadedState(), user: "hr@mannarubber.com", admin: true }));
 		const { container } = draw(<TeamAttendance />);
@@ -114,5 +123,45 @@ describe("the pages", () => {
 		fireEvent.change(view.container.querySelector("#as-late"), { target: { value: "10" } });
 		await act(async () => { fireEvent.submit(view.container.querySelector("form")); });
 		expect(wrote).toEqual([["/api/resource/Shift Type/General", { late_entry_grace_period: 10, enable_late_entry_marking: 1 }]]);
+	});
+
+	/* Work locations are added and changed on Settings → Location since 21
+	   October 2026; the Work Locations page left the menu. */
+	const LOCS = [{ name: "Main Gate", location_name: "Main Gate", latitude: 9.59, longitude: 76.52, is_active: 1 }];
+	const openLocation = async (user) => {
+		vi.spyOn(http, "get").mockImplementation((url) => Promise.resolve({
+			data: { data: decodeURIComponent(String(url)).endsWith("/Work Location/Main Gate")
+				? { ...LOCS[0], doctype: "Work Location", company: "Manna Rubber", radius_metres: 150 }
+				: [] },
+		}));
+		await act(async () => set({ ...loadedState(), user, admin: true, workLocs: LOCS, workLocState: "ok", shiftTypes: [] }));
+		let view;
+		await act(async () => { view = draw(<AttendanceSettings />); });
+		await act(async () => { view.getByRole("tab", { name: "Location" }).click(); });
+		return view;
+	};
+
+	it("Settings → Location adds a work location in the records form, the Work Locations page being off the menu", async () => {
+		expect(isHidden("attendance", "locations")).toBe(true);
+		const view = await openLocation("hr@mannarubber.com");
+		expect(view.container.textContent).toContain("Main Gate");
+		await act(async () => { view.getByRole("button", { name: "Add location" }).click(); });
+		expect(document.body.textContent).toContain("New Work Location");
+		expect(document.querySelector("#rf-location_name")).not.toBeNull();
+		expect(document.querySelector("#rf-latitude")).not.toBeNull();
+	});
+
+	it("Settings → Location opens a location from the site to change it", async () => {
+		const view = await openLocation("hr@mannarubber.com");
+		await act(async () => { view.getByRole("button", { name: "Edit Main Gate" }).click(); });
+		await vi.waitFor(() => expect(document.querySelector("#rf-radius_metres")).not.toBeNull());
+		expect(document.querySelector("#rf-radius_metres").value).toBe("150");
+	});
+
+	it("Settings → Location shows a login that only reads employees the names and nothing to change", async () => {
+		const view = await openLocation("hitechrubber@mannarubber.com");
+		expect(view.container.textContent).toContain("Main Gate");
+		expect(view.queryByRole("button", { name: "Add location" })).toBeNull();
+		expect(view.queryByRole("button", { name: "Edit Main Gate" })).toBeNull();
 	});
 });

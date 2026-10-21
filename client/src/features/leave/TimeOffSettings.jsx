@@ -40,7 +40,7 @@ function Holidays() {
 							{lists.map((l) => <option key={l}>{l}</option>)}
 						</select>
 					) : null}
-					<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => navigate("employees", "calendar")}>
+					<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => navigate("settings", "calendar")}>
 						<KitIcon name="edit" size={14} stroke={2} />Edit on Calendar
 					</button>
 				</div>

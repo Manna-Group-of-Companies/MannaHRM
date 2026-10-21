@@ -82,14 +82,14 @@ describe("the side menu", () => {
 	});
 
 	it("lights the open page and its group, and nothing else", () => {
-		set({ user: HR, section: "attendance", subtab: "monthly" });
+		set({ user: HR, section: "attendance", subtab: "app" });
 		const { container } = draw(<Sidebar />);
 		const lit = [...container.querySelectorAll(".nav-g.has-on")];
 		expect(lit).toHaveLength(1);
 		expect(lit[0].textContent).toContain("Attendance");
 		const on = [...container.querySelectorAll('.sidenav a[aria-current="page"]')];
 		expect(on).toHaveLength(1);
-		expect(on[0].getAttribute("href")).toBe("/attendance/monthly");
+		expect(on[0].getAttribute("href")).toBe("/attendance/app");
 		expect(container.querySelector('.dash-btn[aria-current="page"]')).toBeNull();
 	});
 
@@ -296,9 +296,9 @@ describe("the header", () => {
 		expect(within(res).getByText("People")).toBeTruthy();
 		expect(res.textContent).toContain(someone.employee_name);
 
-		fireEvent.change(box, { target: { value: "monthly basic" } });
+		fireEvent.change(box, { target: { value: "app punches" } });
 		expect(within(res).getByText("Pages")).toBeTruthy();
-		expect(res.textContent).toContain("Monthly Basic Attendance");
+		expect(res.textContent).toContain("App Punches");
 
 		fireEvent.change(box, { target: { value: "sign out" } });
 		expect(within(res).getByText("Actions")).toBeTruthy();
@@ -309,10 +309,10 @@ describe("the header", () => {
 		const { container } = draw(<TopBar />);
 		const box = container.querySelector(".tbfind input");
 		fireEvent.focus(box);
-		fireEvent.change(box, { target: { value: "monthly basic" } });
+		fireEvent.change(box, { target: { value: "app punches" } });
 		fireEvent.keyDown(box, { key: "Enter" });
 		expect(getState().section).toBe("attendance");
-		expect(getState().subtab).toBe("monthly");
+		expect(getState().subtab).toBe("app");
 		expect(box.value).toBe("");
 	});
 

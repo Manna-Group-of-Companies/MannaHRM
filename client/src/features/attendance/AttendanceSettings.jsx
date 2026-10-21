@@ -8,19 +8,26 @@
  *  automatic clock-out switches have no single home here (the phone app and
  *  each Employee hold them) and are not drawn.
  *
- *  Location: the check-in places, which are Work Locations; they are made and
- *  changed on the Work Locations page.
+ *  Location: the check-in places, which are Work Locations. Added and changed
+ *  here since 21 October 2026, asked for by HR, in the records form the Work
+ *  Locations page used — so the same fields, required checks and write rules —
+ *  and that page is off the menu. A login that only reads employees (the four
+ *  company logins) is shown the names and nothing to change.
  *
  *  A night shift ends before it starts — that is what makes it a night — so
  *  the reference's "must end after it starts" is not asked here.
  */
 
 import { useEffect, useState } from "react";
-import { useApp } from "@/store";
+import { set, useApp } from "@/store";
 import { navigate } from "@/routes/router";
 import { apiWrite, getDoc } from "@/api/client";
 import { loadShiftTypes } from "@/api/shifttype";
 import { loadWorkLocations } from "@/api/load";
+import { read } from "@/api/crud";
+import { canCreate } from "@/lib/write";
+import { employeesLocked } from "@/data/menus";
+import RecordForm from "@/features/records/RecordForm";
 import { toInput, toSite } from "@/data/shiftwizard";
 import KitIcon from "@/components/kit/KitIcon";
 import { EmptyState, PageHead } from "@/components/kit/ui";
@@ -104,24 +111,38 @@ function General() {
 			</div>
 			{err ? <p className="k-err" role="alert" style={{ marginTop: 12 }}>{err}</p> : null}
 			<div className="k-modal-f">
-				<button type="button" className="k-btn k-btn-line" onClick={() => navigate("attendance", "shifts")}>All shift settings</button>
+				<button type="button" className="k-btn k-btn-line" onClick={() => navigate("settings", "shifts")}>All shift settings</button>
 				<button type="submit" className="k-btn k-btn-ink" disabled={busy || !f}>{busy ? "Saving…" : "Save changes"}</button>
 			</div>
 		</form>
 	);
 }
 
+const WORK_LOCATION = "Work Location";
+
+/** The list again from the site: it names the record and fills what it derives. */
+const reloadLocations = () => { set({ workLocState: "" }); void loadWorkLocations(); };
+
 function Location() {
 	const s = useApp();
+	const [open, setOpen] = useState(null); // null | {} for new | the location being edited
 	useEffect(() => { void loadWorkLocations(); }, []);
 	const locs = s.workLocs || [];
+	const writes = !employeesLocked(s.user) && canCreate(WORK_LOCATION).ok;
+	const edit = async (name) => {
+		const r = await read(WORK_LOCATION, name);
+		if (!r.ok) { toast(r.error || "The site would not open this location."); return; }
+		setOpen(r.doc);
+	};
 	return (
 		<>
 			<div className="k-sec-h">
 				<h3>Check-in locations</h3>
-				<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => navigate("attendance", "locations")}>
-					<KitIcon name="plus" size={16} stroke={2} />Manage locations
-				</button>
+				{writes ? (
+					<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => setOpen({})}>
+						<KitIcon name="plus" size={16} stroke={2} />Add location
+					</button>
+				) : null}
 			</div>
 			{locs.length ? (
 				<div className="k-grid2" style={{ marginTop: 16 }}>
@@ -133,6 +154,12 @@ function Location() {
 							<div className="k-sec-h" style={{ margin: "14px 0 4px" }}>
 								<h3>{o.location_name || o.name}</h3>
 								{Number(o.is_active) === 0 ? <span className="k-pill k-p-grey k-nodot">Not in use</span> : null}
+								{writes ? (
+									<button type="button" className="k-btn k-btn-line k-btn-sm" aria-label={`Edit ${o.location_name || o.name}`}
+										onClick={() => void edit(o.name)}>
+										<KitIcon name="edit" size={16} stroke={2} />Edit
+									</button>
+								) : null}
 							</div>
 							<div className="k-muted" style={{ fontSize: 13 }}>
 								{o.latitude && o.longitude ? `${Number(o.latitude).toFixed(5)}, ${Number(o.longitude).toFixed(5)}` : "No coordinates yet"}
@@ -143,6 +170,11 @@ function Location() {
 			) : (
 				<EmptyState icon="pin" title="No locations yet" sub="Add one to let the phone app check people in near it." />
 			)}
+			{open ? (
+				<RecordForm doctype={WORK_LOCATION} doc={open.name ? open : null}
+					onCancel={() => setOpen(null)}
+					onDone={() => { setOpen(null); reloadLocations(); }} />
+			) : null}
 		</>
 	);
 }

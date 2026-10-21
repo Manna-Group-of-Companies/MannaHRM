@@ -192,7 +192,9 @@ const TABS = {
 	   it — so clicking Attendance in the nav lands on it. */
 	/* The HRDashboard reference's Attendance first (21 October 2026): Team,
 	   Employee and Settings, then ours. The eleven report pages after them are
-	   off the menu (data/sections.js) and come as files from Download report. */
+	   off the menu (data/sections.js) and come as files from Download report.
+	   Team and Employee came off the menu again the same day, asked for by HR;
+	   Download report stays on Employee Attendance Regularization. */
 	attendance: [["team", "Team Attendance"], ["employee", "Employee Attendance"],
 		["overview", "Employee Attendance Regularization"], ["settings", "Attendance Settings"], ["submit", "Submit Attendance"],
 		["inout", "In Out Activities Report"], ["daily", "Daily Detail Attendance Report"],
@@ -213,12 +215,14 @@ const TABS = {
 	   clicking Leave in the nav lands on it. `all` has no menu item there and is
 	   appended rather than interleaved, so the first two still compare item for
 	   item. */
-	/* The HRDashboard reference's Time Off first (21 October 2026): Team,
-	   Employee (at Leave Balance Report's address, D2) and Settings, then ours. */
-	leave: [["team", "Team Time Off"], ["balances", "Employee Time Off"], ["overview", "Apply Leave"],
-		["settings", "Time Off Settings"],
+	/* The HRDashboard reference's Team Time Off and Time Off Settings went in
+	   on 21 October 2026, with Employee Time Off over the Leave Balance Report,
+	   and all three came off again the same day, asked for by HR: the two are
+	   hidden (data/sections.js) and the report is its own page again. */
+	leave: [["overview", "Apply Leave"], ["balances", "Leave Balance Report"],
 		["history", "Leave Application History"], ["pending", "Pending Leave Applications"],
-		["availed", "Leave Availed Detail"], ["monthly", "Leave Monthly Availed"], ["all", "All"]],
+		["availed", "Leave Availed Detail"], ["monthly", "Leave Monthly Availed"],
+		["team", "Team Time Off"], ["settings", "Time Off Settings"], ["all", "All"]],
 	/* Factor HR's Payroll menu, captured 29 Aug 2026, in its order. The capture
 	   starts at Adhoc Payments/Deductions — whatever sits above it there has not
 	   been seen — so that is where this menu starts too, and `overview` is it:
@@ -253,15 +257,21 @@ const TABS = {
 	reports: [["overview", "Report"]],
 	notifications: [["overview", "Notifications"]],
 	help: [["overview", "Help center"]],
-	checklist: [["overview", "To-do list"], ["onboarding", "Onboarding"], ["offboarding", "Offboarding"], ["settings", "Checklist Settings"]],
+	/* The To-do list left the menu on 21 Oct 2026, asked for by HR, so the
+	   module opens on Onboarding; the list is `todos` now, hidden (data/sections.js),
+	   and `/checklist/onboarding` falls through to `/checklist`, the same page. */
+	checklist: [["overview", "Onboarding"], ["offboarding", "Offboarding"], ["settings", "Checklist Settings"], ["todos", "To-do list"]],
 	recruitment: [["overview", "Jobs"], ["candidates", "Candidates"], ["settings", "Recruitment Settings"]],
 	documents: [["overview", "Documents"]],
 	news: [["overview", "News"]],
 	/* Security is ours, 29 Sep 2026: which pages everybody is shown, for the
 	   one login in data/menus.js PAGE_ADMINS and nobody else's strip. */
-	/* The HRDashboard reference's Settings first (21 October 2026), then ours. */
+	/* The HRDashboard reference's Settings first (21 October 2026), then ours.
+	   Manage Shift moved here from Attendance the same day, asked for by HR:
+	   making shifts is setting up, beside the reference's Work schedules. And
+	   Calendar from Employees, also asked for: the holiday lists are setup too. */
 	settings: [["company", "Company info"], ["offices", "Offices"], ["departments", "Departments"], ["titles", "Job titles"],
-		["schedules", "Work schedules"], ["permission", "Permission"], ["password", "Change password"], ["notifications", "Notifications"],
+		["schedules", "Work schedules"], ["shifts", "Manage Shift"], ["calendar", "Calendar"], ["permission", "Permission"], ["password", "Change password"], ["notifications", "Notifications"],
 		["overview", "Setup readiness"], ["coverage", "Module coverage"], ["security", "Security"]],
 };
 
@@ -336,12 +346,12 @@ const PAGES = {
 	reports: { overview: Reports, ...Object.fromEntries(REPORT_PAGES.map((k) => [k, Reports])) },
 	notifications: { overview: Notifications },
 	help: { overview: Help, faq: Help, privacy: Help, shortcuts: Help, contact: Help },
-	checklist: { overview: Checklist, todo: Checklist, onboarding: Checklist, offboarding: Checklist, list: Checklist, settings: Checklist, template: Checklist },
+	checklist: { overview: Checklist, todo: Checklist, todos: Checklist, offboarding: Checklist, list: Checklist, settings: Checklist, template: Checklist },
 	recruitment: { overview: Recruitment, candidates: Recruitment, settings: Recruitment, job: Recruitment, applicant: Recruitment, new: Recruitment },
 	documents: { overview: CompanyDocuments, folder: CompanyDocuments },
 	news: { overview: News, item: News, new: News, edit: News },
 	settings: { overview: framed(Settings), coverage: framed(Coverage), security: framed(Security),
-		company: CompanyInfo, offices: Offices, departments: Departments, titles: Titles, schedules: Schedules,
+		company: CompanyInfo, offices: Offices, departments: Departments, titles: Titles, schedules: Schedules, shifts: framed(Shifts), calendar: framed(Calendar),
 		permission: Permission, password: Password, notifications: NotificationSettings },
 };
 /* A page opened from another page rather than from a menu.

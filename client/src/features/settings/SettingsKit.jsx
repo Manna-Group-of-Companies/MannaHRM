@@ -24,7 +24,7 @@ import { toast } from "@/components/kit/overlay";
 
 const ICON = {
 	company: "building", offices: "pin", departments: "layers", titles: "brief", schedules: "clock",
-	permission: "shield", password: "lock", notifications: "bell", overview: "check", coverage: "chart", security: "eye",
+	shifts: "timer", calendar: "calendar", permission: "shield", password: "lock", notifications: "bell", overview: "check", coverage: "chart", security: "eye",
 };
 const why = (e) => String(e?.message || e || "The site would not do that.").slice(0, 240);
 
@@ -203,7 +203,7 @@ export function Schedules() {
 	const active = (s.employees || []).filter((e) => e.status === "Active");
 	return (
 		<SettingsFrame>
-			<Card title="Work schedules" act={<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => navigate("attendance", "shifts")}><KitIcon name="edit" size={14} stroke={2} />Manage shifts</button>}>
+			<Card title="Work schedules" act={<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => navigate("settings", "shifts")}><KitIcon name="edit" size={14} stroke={2} />Manage shifts</button>}>
 				{shifts.length ? shifts.map((n) => (
 					<div className="k-list-row" key={n}>
 						<span className="k-icon-sq"><KitIcon name="clock" size={18} stroke={2} /></span>

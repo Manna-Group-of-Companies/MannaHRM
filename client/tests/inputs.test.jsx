@@ -118,6 +118,7 @@ function describeBox(el) {
    Pages absent from this table draw none, which is most of them. */
 const DEAD_CONTROLS = {
 	"employees/calendar": { empty: 2, loaded: 1 },
+	"settings/calendar": { empty: 2, loaded: 1 },
 	"employees/detail": { empty: 13, loaded: 13 },
 	"employees/import": { empty: 1, loaded: 0 },
 	"employees/new": { empty: 1, loaded: 1 },

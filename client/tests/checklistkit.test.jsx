@@ -26,8 +26,20 @@ beforeEach(() => resetStore());
 afterEach(() => vi.restoreAllMocks());
 
 describe("the to-do list", () => {
-	it("groups what is open into Overdue, Today and Upcoming, as text and never as markup", async () => {
+	it("is off the menu, and Checklist opens on Onboarding", async () => {
+		const { isHidden } = await import("@/data/sections");
+		const { MODULES } = await import("@/routes/registry");
+		expect(isHidden("checklist", "todos")).toBe(true);
+		expect(MODULES.checklist.tabs[0]).toEqual(["overview", "Onboarding"]);
+		vi.spyOn(http, "get").mockImplementation(() => Promise.resolve({ data: { data: [] } }));
 		await act(async () => set({ ...loadedState(), user: HR, section: "checklist", subtab: "overview", todos: { state: "ok", rows: TODOS } }));
+		const { container } = draw();
+		expect(container.textContent).not.toContain("Send offer letter");
+		expect(container.querySelector('input[aria-label="New task"]')).toBeNull();
+	});
+
+	it("groups what is open into Overdue, Today and Upcoming, as text and never as markup", async () => {
+		await act(async () => set({ ...loadedState(), user: HR, section: "checklist", subtab: "todos", todos: { state: "ok", rows: TODOS } }));
 		const { container } = draw();
 		expect([...container.querySelectorAll(".k-group-h")].map((h) => h.firstChild.textContent)).toEqual(["Overdue", "Today"]);
 		expect(container.textContent).toContain("Send offer letter");
@@ -36,7 +48,7 @@ describe("the to-do list", () => {
 	});
 
 	it("closes a to-do when it is ticked, and writes nothing else", async () => {
-		await act(async () => set({ ...loadedState(), user: HR, section: "checklist", subtab: "overview", todos: { state: "ok", rows: TODOS } }));
+		await act(async () => set({ ...loadedState(), user: HR, section: "checklist", subtab: "todos", todos: { state: "ok", rows: TODOS } }));
 		const wrote = [];
 		vi.spyOn(http, "put").mockImplementation((url, body) => { wrote.push([decodeURIComponent(url), body]); return Promise.resolve({ data: {} }); });
 		const { container } = draw();
@@ -46,7 +58,7 @@ describe("the to-do list", () => {
 	});
 
 	it("quick-adds a to-do for the signed-in person, due today", async () => {
-		await act(async () => set({ ...loadedState(), user: HR, section: "checklist", subtab: "overview", todos: { state: "ok", rows: [] } }));
+		await act(async () => set({ ...loadedState(), user: HR, section: "checklist", subtab: "todos", todos: { state: "ok", rows: [] } }));
 		const sent = [];
 		vi.spyOn(http, "post").mockImplementation((url, body) => { sent.push([decodeURIComponent(url), body]); return Promise.resolve({ data: { data: { name: "T9" } } }); });
 		vi.spyOn(http, "get").mockImplementation(() => Promise.resolve({ data: { data: [] } }));

@@ -290,8 +290,10 @@ const PAGES = [
 	["reports", "/reports", "All Reports — every one on Factor HR's Reports menu"],
 	["blueprint", "/attendance/manage-attendance-policy", "a blueprint — the biggest unbuilt item"],
 	["refused", "/attendance/online-attendance", "the one item that will not be built"],
-	["locations", "/attendance/locations", "Work Locations — new, edit, delete"],
+	["locations", "/attendance/settings", "Attendance Settings → Location — locations added and changed here",
+		(p) => p.getByRole("tab", { name: "Location", exact: true }).click()],
 	["lettertypes", "/onboard/lettertypes", "Letter Types, managed here"],
+	["settings-shifts", "/settings/shifts", "Settings → Manage Shift — shifts made and assigned here"],
 	["notices", "/dashboard/notices", "Announcements & CEO Speak — the composer"],
 	/* The shell's own states (21 October 2026), which have no address: the
 	   fourth item is something to do first. A function rather than a button's

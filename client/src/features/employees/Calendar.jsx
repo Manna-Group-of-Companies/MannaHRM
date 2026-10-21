@@ -259,7 +259,7 @@ function CalToolbar({ s, can }) {
 			<button
 				className="embtn"
 				title="Back to Employee Master, which is where Factor HR’s Close returns to"
-				onClick={() => go({ subtab: "overview" })}
+				onClick={() => go({ section: "employees", subtab: "overview" })}
 			>
 				<span className="cico close">✕</span>Close
 			</button>

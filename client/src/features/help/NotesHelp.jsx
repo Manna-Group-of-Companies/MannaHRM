@@ -157,7 +157,7 @@ export const SUPPORT_EMAIL = "it@mannarubber.com";
 export const FAQ = [
 	["How do I add a new employee?", "Employees → Employee Master → Add new profile. Fill in the three steps and save. They appear on the list, the directory and the org chart straight away."],
 	["Somebody’s punches are missing. What do I do?", "Open Attendance → Employee Attendance, pick the person and the day, and choose Correct this day. A correction writes the missing punch; the day is worked out again from the punches."],
-	["How do people ask for leave?", "Time Off → Apply Leave raises the request as a draft. The approver decides it on Team Time Off or Dashboard → Approvals."],
+	["How do people ask for leave?", "Time Off → Apply Leave raises the request as a draft. The approver decides it on Dashboard → Approvals."],
 	["Where are the attendance reports?", "Attendance → Team Attendance → Download report. Pick the report, its dates and Excel or PDF."],
 	["How is a month paid?", "Payroll → Payroll runs the month step by step: the salary slips, then the bank sheet. Employee Payroll shows each slip and its status."],
 	["Why can I not see a page?", "Each login sees its own menu. Ask HR if a page you need is missing."],

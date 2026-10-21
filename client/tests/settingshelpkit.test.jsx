@@ -72,7 +72,7 @@ describe("Reports", () => {
 		expect(container.textContent).not.toContain("New employees");
 	});
 
-	it("opens Time Off Balance on Employee Time Off, which is that report", async () => {
+	it("opens Time Off Balance on the Leave Balance Report, which is that report", async () => {
 		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "reports", subtab: "overview" }));
 		const { container } = draw(<Reports />);
 		await act(async () => { [...container.querySelectorAll(".k-tile")].find((b) => b.textContent.includes("Time Off Balance")).click(); });

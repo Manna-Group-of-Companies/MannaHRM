@@ -168,7 +168,7 @@ export function TodoDetail() {
 	const [ask, setAsk] = useState(false);
 	useEffect(() => { void loadTodos(); }, []);
 	const t = (s.todos.rows || []).find((x) => x.name === s.chkTodo);
-	const back = () => navigate("checklist", "overview");
+	const back = () => navigate("checklist", "todos");
 	if (s.todos.state === "ok" && !t) return <div className="kit"><div className="k-card"><EmptyState icon="check" title="This task is not there" sub="It may have been cancelled."><button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={back}>Go to To-do</button></EmptyState></div></div>;
 	if (!t) return <div className="kit"><div className="k-sk" style={{ height: 240 }} /></div>;
 	const done = t.status === "Closed";
@@ -257,7 +257,7 @@ export function ChecklistDetail() {
 	const [busy, setBusy] = useState("");
 	const reload = () => readChecklist(kind, name).then(setData).catch(() => setData(null));
 	useEffect(() => { if (kind && name) void reload(); else setData(null); }, [kind, name]);
-	const back = () => navigate("checklist", kind === "Offboarding" ? "offboarding" : "onboarding");
+	const back = () => navigate("checklist", kind === "Offboarding" ? "offboarding" : "overview");
 	if (data === undefined) return <div className="kit"><div className="k-sk" style={{ height: 300 }} /></div>;
 	if (!data) return <div className="kit"><div className="k-card"><EmptyState icon="check" title="This checklist is not there" sub="It may have been cancelled on the site."><button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={back}>Go back</button></EmptyState></div></div>;
 	const { doc, items } = data;
@@ -398,10 +398,10 @@ export function TemplateDetail() {
 export default function Checklist() {
 	const { subtab } = useApp();
 	if (subtab === "todo") return <TodoDetail />;
-	if (subtab === "onboarding") return <Boarding kind="Onboarding" />;
+	if (subtab === "todos") return <Todo />;
 	if (subtab === "offboarding") return <Boarding kind="Offboarding" />;
 	if (subtab === "list") return <ChecklistDetail />;
 	if (subtab === "settings") return <ChecklistSettings />;
 	if (subtab === "template") return <TemplateDetail />;
-	return <Todo />;
+	return <Boarding kind="Onboarding" />;
 }
