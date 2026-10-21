@@ -265,7 +265,7 @@ const PAGES = [
 	["dashboard", "/dashboard", "Factor HR's Start Up, panel for panel"],
 	["employees", "/employees", "Employee Master"],
 	["employee-profile", "/employees/profile", "one person's record"],
-	["hierarchy", "/employees/hierarchy", "Hierarchy Chart — the head office and the companies under it"],
+	["hierarchy", "/employees/hierarchy", "Org Chart — the head office and the companies under it"],
 	["company-chart", "/employees/chart", "one company's flow chart — levels as boxes, arrows between"],
 	["attendance", "/attendance", "the correction queue"],
 	["attendance-inout", "/attendance/inout", "In / Out activity"],

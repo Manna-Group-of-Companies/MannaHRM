@@ -42,6 +42,15 @@ describe("the front page", () => {
 		expect(total.querySelector(".k-stat-v b").textContent).toBe(String(active));
 	});
 
+	it("opens New Employees on Reports → Onboarding, where New Joining is", async () => {
+		await loaded();
+		const { container } = draw();
+		const tile = [...container.querySelectorAll(".k-stat")].find((b) => b.textContent.includes("New Employees"));
+		await act(async () => { fireEvent.click(tile); });
+		expect(getState().section).toBe("reports");
+		expect(getState().subtab).toBe("onboarding");
+	});
+
 	it("says what is waiting, with the button to it", async () => {
 		await loaded();
 		const { container } = draw();

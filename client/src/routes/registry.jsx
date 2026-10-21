@@ -181,10 +181,11 @@ const TABS = {
 		   already holds. Their menu titles, so the tab reads as theirs. */
 		["joining", "New Joining"],
 		["directory", "Directory"], ["weekoff", "Weekoff Holiday Report"],
-		["orgchart", "Org Chart"],
+		["orgchart", "Organization Chart"],
 		/* The seven-level ladder, asked for 10 October 2026. Not theirs: Factor
-		   HR's Organization Chart is the reports_to tree above. */
-		["hierarchy", "Hierarchy Chart"], ...managedTabs("employees"), ["all", "All"]],
+		   HR's Organization Chart is the reports_to tree above. Called Org Chart
+		   since 21 Oct 2026, asked for by HR, when the tree above left the menu. */
+		["hierarchy", "Org Chart"], ...managedTabs("employees"), ["all", "All"]],
 	/* Factor HR's own Attendance menu, captured 28 Aug 2026, item for item and
 	   in its order. `overview` is Attendance Regularization because that is the
 	   first item on their menu and the one page here with a live queue behind
@@ -395,7 +396,7 @@ export function fullPage(s) {
    **`upload` is the third**, 5 Oct 2026: Add New Employee's ▾ → File Import,
    new people and corrections from an Excel sheet, at `/employees/upload`. */
 /* `chart` is the fourth (10 Oct 2026): one company's flow chart, opened by
-   clicking its box on Hierarchy Chart. */
+   clicking its box on Org Chart (Hierarchy Chart until 21 Oct 2026). */
 /* Documents' one folder and News' post, new post and edit (21 Oct 2026) are
    pages of the reference's that it opens from a card, with a back arrow. */
 /* `attendance/mine` (21 Oct 2026): My Attendance, for a login an Employee is

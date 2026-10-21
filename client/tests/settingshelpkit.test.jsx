@@ -62,6 +62,16 @@ describe("Reports", () => {
 		expect(last12(new Date("2026-10-21T10:00:00"))[11]).toBe("2026-10");
 	});
 
+	it("shows New Joining in the Onboarding box, under the joiners by month", async () => {
+		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "reports", subtab: "overview" }));
+		const { container } = draw(<Reports />);
+		await act(async () => { [...container.querySelectorAll(".k-tile")].find((b) => b.textContent.includes("Onboarding")).click(); });
+		expect(getState().subtab).toBe("onboarding");
+		expect(container.textContent).toContain("Joiners by month");
+		expect(container.textContent).toContain("New Joining");
+		expect(container.textContent).not.toContain("New employees");
+	});
+
 	it("opens Time Off Balance on Employee Time Off, which is that report", async () => {
 		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "reports", subtab: "overview" }));
 		const { container } = draw(<Reports />);

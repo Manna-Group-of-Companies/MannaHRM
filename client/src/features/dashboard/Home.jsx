@@ -329,7 +329,7 @@ export default function Home() {
 	const go = {
 		total: ["employees", "overview"],
 		applicants: ["employees", "hierarchy"],
-		new: ["employees", "joining"],
+		new: ["reports", "onboarding"],
 		left: ["employees", "overview"],
 	};
 

@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 
 import { allowedFor, landingFor, sectionFor, tabsFor } from "@/data/menus";
 import { MODULES } from "@/routes/registry";
+import { isHidden } from "@/data/sections";
 import SubNav from "@/layout/SubNav";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
@@ -75,10 +76,11 @@ describe.each([MRP, "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com
 		expect(landingFor("employees", "profile", login, true)).toBe("profile");
 	});
 
-	it("draws three tabs on the strip", async () => {
+	it("draws Employee Master and Calendar on the strip, New Joining being Reports → Onboarding", async () => {
+		expect(isHidden("employees", "joining")).toBe(true);
 		set({ ...loadedState(), user: login, admin: true, section: "employees", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link")).toHaveLength(3);
+		expect(screen.getAllByRole("link")).toHaveLength(2);
 	});
 });
 
@@ -163,10 +165,10 @@ describe("a login that is not an admin", () => {
 		expect(landingFor("employees", "calendar", "", false)).toBe("calendar");
 	});
 
-	it("draws three tabs on the strip", async () => {
+	it("draws Employee Master and Calendar on the strip", async () => {
 		set({ ...loadedState(), user: "someone@mannarubber.com", admin: false, section: "employees", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link")).toHaveLength(3);
+		expect(screen.getAllByRole("link")).toHaveLength(2);
 	});
 });
 

@@ -150,13 +150,19 @@ describe("Payroll, shown again on 2 Oct 2026 as one page", () => {
 	});
 });
 
-describe("Directory and Org chart, shown again (D15, 21 October 2026)", () => {
-	it("opens each at its own address and puts it on the Employees strip", async () => {
+describe("Directory shown again (D15, 21 October 2026), and Organization Chart gone again", () => {
+	it("opens Directory at its own address and puts it on the Employees strip", async () => {
 		const { routeFromPath, pathFor: mounted } = await import("@/routes/router");
 		const { isHidden } = await import("@/data/sections");
-		for (const subtab of ["directory", "orgchart"]) {
-			expect(routeFromPath(mounted("employees", subtab))).toMatchObject({ section: "employees", subtab });
-			expect(isHidden("employees", subtab)).toBe(false);
-		}
+		expect(routeFromPath(mounted("employees", "directory"))).toMatchObject({ section: "employees", subtab: "directory" });
+		expect(isHidden("employees", "directory")).toBe(false);
+	});
+
+	it("keeps the reports_to tree off the menu, the Hierarchy Chart being the org chart now", async () => {
+		const { isHidden } = await import("@/data/sections");
+		const { MODULES } = await import("@/routes/registry");
+		expect(isHidden("employees", "orgchart")).toBe(true);
+		expect(MODULES.employees.tabs.find((t) => t[0] === "hierarchy")[1]).toBe("Org Chart");
+		expect(MODULES.employees.tabs.filter((t) => t[1] === "Org Chart")).toHaveLength(1);
 	});
 });

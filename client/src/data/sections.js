@@ -60,9 +60,11 @@ export const VISIBLE_SECTIONS = SECTIONS.filter((s) => !s.hidden);
    screens — modelled on another system's — stay as hidden code. Attendance →
    All 5 Oct 2026, asked for by IT, the same way as Employees → All. */
 export const HIDDEN_PAGES = {
-	/* Directory and Organization Chart shown again 21 Oct 2026 (D15), as the
-	   HRDashboard reference's Directory and Org chart. */
-	employees: ["salary", "changes", "detail", "cattypes", "ctc", "weekoff", "letters", "all"],
+	/* Directory shown again 21 Oct 2026 (D15), as the HRDashboard reference's.
+	   Organization Chart was too, and went again the same day, asked for by
+	   HR: the Hierarchy Chart is the org chart, and took the name. New Joining
+	   left with it — it is Reports → Onboarding now (features/reports/Reports.jsx). */
+	employees: ["salary", "changes", "detail", "cattypes", "ctc", "weekoff", "letters", "all", "joining", "orgchart"],
 	/* The eleven reports, off the menu on 21 Oct 2026: the HRDashboard
 	   reference has no report pages under Attendance, so they are files from the
 	   Download report dialog (features/attendance/reportrun.js). Their pages and

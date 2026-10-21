@@ -157,6 +157,12 @@ function Headcount() {
 	);
 }
 
+/* New Joining, Employees' report of 8 Sep 2026, is the Onboarding box's list
+   since 21 Oct 2026 (asked for by HR): its window, its company and its
+   downloads, under the joiners-by-month chart, in place of a second list of
+   the same people. Drawn outside `.kit`, as an attendance report is. */
+const NewJoining = report("employees", "joining");
+
 function Boarding({ on }) {
 	const s = useApp();
 	const relieved = useSeps();
@@ -177,7 +183,7 @@ function Boarding({ on }) {
 				<Bars labels={M.map(mLabel)} values={M.map((m) => list.filter((e) => (when(e) || "").slice(0, 7) === m).length)}
 					tone={on ? "chart-1" : "chart-2"} label={`${on ? "Joiners" : "Leavers"} by month`} />
 			</div>
-			<div className="k-card">
+			{on ? null : <div className="k-card">
 				<div className="k-card-h"><h3>{on ? "New employees" : "Leaving employees"}</h3><span className="k-muted">{list.length} {list.length === 1 ? "person" : "people"}</span></div>
 				{list.length ? (
 					<div className="k-tbl-wrap">
@@ -197,7 +203,7 @@ function Boarding({ on }) {
 						</table>
 					</div>
 				) : <EmptyState icon="users" title="No one in this period" sub="" />}
-			</div>
+			</div>}
 		</>
 	);
 }
@@ -466,7 +472,8 @@ export default function Reports() {
 		return <Opened title={att[1]}><Page /></Opened>;
 	}
 	if (k === "all") return <Opened title="All reports"><ReportsHub /></Opened>;
-	const body = k === "headcount" ? <Headcount /> : k === "onboarding" ? <Boarding on /> : k === "offboarding" ? <Boarding on={false} />
+	if (k === "onboarding") return <div className="repopen"><div className="kit k-enter"><Boarding on /></div><NewJoining /></div>;
+	const body = k === "headcount" ? <Headcount /> : k === "offboarding" ? <Boarding on={false} />
 		: k === "pipeline" ? <Pipeline /> : k === "data" ? <DataReport /> : k === "schedule" ? <Schedule /> : k === "turnover" ? <Turnover /> : null;
 	if (body) return <div className="kit k-enter">{body}</div>;
 	return <Tiles />;

@@ -19,7 +19,9 @@
 /* Asked for on 17 September 2026: the four company logins' Employees module is
    Employee Master, Calendar, Employee Profile and New Joining, and nothing else
    there — whether or not the site calls them admin. Their other modules are
-   left to the rules below. */
+   left to the rules below. On 21 Oct 2026 Employee Profile went off the strip
+   (opened from a person) and New Joining into Reports → Onboarding; both stay
+   named here, so a login's own menu still lets the address through. */
 const COMPANY_EMPLOYEES = ["overview", "calendar", "profile", "joining"];
 
 /* Asked for on 16 October 2026: the four company logins never change a
