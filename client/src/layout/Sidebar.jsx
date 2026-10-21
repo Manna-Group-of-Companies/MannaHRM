@@ -74,6 +74,9 @@ export default function Sidebar() {
 	const rows = [];
 	let group = "";
 	for (const s of shown) {
+		/* Every module's pages, not only the open one's: whether a module has
+		   any to open is what puts the chevron on its row (`data-sub`). */
+		const own = pagesOf(s.key, user, admin);
 		const g = groupOf(s.key);
 		if (g && g !== group) {
 			group = g;
@@ -99,6 +102,11 @@ export default function Sidebar() {
 				title={`${s.label} — ${COV_LABEL[s.cov]}`}
 				aria-current={section === s.key ? "page" : undefined}
 				data-bar={bar.has(s.key) ? "" : undefined}
+				/* Hooks for the HRDashboard reference's look (index.css):
+				   Dashboard is drawn as its green button, and a module with pages
+				   gets its chevron. */
+				data-module={s.key}
+				data-sub={own.length > 1 ? "" : undefined}
 			>
 				<svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 					<path d={s.icon} />
@@ -114,7 +122,7 @@ export default function Sidebar() {
 		   modules each spilling a dozen pages is a hundred-row menu, and the
 		   point of this change was a shorter one. A module with a single page
 		   needs no list — its link already goes there. */
-		const pages = section === s.key ? pagesOf(s.key, user, admin) : [];
+		const pages = section === s.key ? own : [];
 		if (pages.length > 1) {
 			rows.push(
 				<div className="navsub" role="group" aria-label={`${s.label} pages`} key={s.key + ":pages"}>

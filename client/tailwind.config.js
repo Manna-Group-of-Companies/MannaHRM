@@ -71,6 +71,10 @@ export default {
         brand: {
           DEFAULT: "rgb(var(--brand) / <alpha-value>)",
           dark: "rgb(var(--brand-dark) / <alpha-value>)",
+          /* The text on a `dark` fill. Not white in every mode since
+             21 October 2026: the reference's dark-mode button is near-white
+             with dark text on it. */
+          on: "rgb(var(--on-brand) / <alpha-value>)",
           deep: "rgb(var(--brand-deep) / <alpha-value>)",
           soft: "rgb(var(--brand-soft) / <alpha-value>)",
           tint: "rgb(var(--brand-tint) / <alpha-value>)",
@@ -129,6 +133,9 @@ export default {
           2: "rgb(var(--ink-2) / <alpha-value>)",
           3: "rgb(var(--ink-3) / <alpha-value>)",
         },
+        /* The reference's lightest grey, for a chevron, a sort arrow or an
+           empty star — **never for text**: it is 2.5:1 on white. */
+        faint: "rgb(var(--faint) / <alpha-value>)",
         accent: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           wash: "rgb(var(--accent-wash) / <alpha-value>)",
@@ -188,7 +195,12 @@ export default {
            had no user left, and it was the one pairing in this palette that
            missed AA at 4.43:1. As a dot it clears 1.4.11's 3:1 easily, which is
            the bar a dot actually has to meet. */
-        info: "rgb(var(--info) / <alpha-value>)",
+        info: {
+          DEFAULT: "rgb(var(--info) / <alpha-value>)",
+          /* The reference's blue notice: its text, and the notice. */
+          ink: "rgb(var(--info-ink) / <alpha-value>)",
+          wash: "rgb(var(--info-wash) / <alpha-value>)",
+        },
         /* The empty half of a coverage bar. */
         track: "rgb(var(--track) / <alpha-value>)",
         /* The connection dots in the top bar. They sit on dark chrome, so they
@@ -206,15 +218,14 @@ export default {
          palette here owns. Pointing the default at `line` means the handful of
          such places follow the theme like everything else. */
       borderColor: { DEFAULT: "rgb(var(--line))" },
-      /* The HRDashboard kit's, measured off its frames (20 October 2026):
-         10px on a control — buttons, fields, the rail's pill — and 16px on a
-         panel. `sm` and `md` are the steps either side for the few places
-         that are neither. */
+      /* The HRDashboard reference's (21 October 2026): 12px on a control —
+         a button, a field, the Dashboard button — and 18px on a card. `sm` is
+         its small button and a menu row, `md` a figure tile. */
       borderRadius: {
-        DEFAULT: "10px",
-        sm: "8px",
-        md: "12px",
-        lg: "16px",
+        DEFAULT: "12px",
+        sm: "10px",
+        md: "16px",
+        lg: "18px",
       },
       boxShadow: {
         /* Four steps and no more. A screen that needs a fifth is a screen with

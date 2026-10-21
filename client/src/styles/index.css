@@ -515,7 +515,7 @@
   /* Off-screen rather than `display: none`: a hidden link is not focusable, and
      being focusable is the entire point of this one. */
   .skip {
-    @apply fixed left-2 z-50 px-[.9rem] py-[.5rem] rounded bg-brand-dark text-white
+    @apply fixed left-2 z-50 px-[.9rem] py-[.5rem] rounded bg-brand-dark text-brand-on
            font-semibold text-read no-underline shadow-pop;
     top: -100%;
   }
@@ -684,7 +684,7 @@
   .stat .sico {
     grid-area: ico;
     @apply self-center inline-flex items-center justify-center w-[2.9rem] h-[2.9rem]
-           text-sub leading-none bg-brand-soft text-brand;
+           text-sub leading-none bg-brand-soft text-accent;
     border-radius: 12px;
     transition: transform var(--ui-med) var(--ease-out);
   }
@@ -1218,7 +1218,7 @@
     border-color: rgb(var(--bad)); color: rgb(var(--bad-deep)); background: rgb(var(--bad-wash));
   }
   .embtn.pri                   {
-    @apply border-brand-dark text-white font-semibold shadow-raise;
+    @apply border-brand-dark text-brand-on font-semibold shadow-raise;
     /* Flat, and `brand-dark` from edge to edge. The gradient started at
        `brand`, which white text clears at 3.6:1 — under AA at the top of every
        primary button in the app.
@@ -1231,7 +1231,7 @@
     background-image: linear-gradient(rgb(var(--brand-dark)), rgb(var(--brand-dark)));
   }
   .embtn.pri:hover:not([disabled]) {
-    @apply border-brand-dark text-white shadow-lift;
+    @apply border-brand-dark text-brand-on shadow-lift;
     filter: brightness(.92);
   }
   .embtn.pri.split             { @apply px-[.4rem] py-[.4rem]; }
@@ -1408,7 +1408,7 @@
   .fhcat > header { @apply flex flex-wrap gap-[.5rem] items-center px-[.9rem] py-[.6rem] border-b border-line; }
   .fhcat > header h3 { @apply font-display text-norm font-bold; }
   .fhcat > header .right { @apply ml-auto flex gap-[.4rem] items-center; }
-  .fhcat .embtn.pri { @apply bg-brand-dark border-brand-dark text-white; }
+  .fhcat .embtn.pri { @apply bg-brand-dark border-brand-dark text-brand-on; }
   .fhcat .find { @apply px-[.9rem] py-[.6rem] border-b border-line; }
   .fhcat .find input {
     @apply text-read px-[.7rem] py-[.4rem] border border-line-ctl rounded bg-card;
@@ -1489,7 +1489,7 @@
      changes the row height would shift every other row to describe one. */
   .clipn {
     @apply absolute -top-[.1rem] -right-[.05rem] text-micro font-semibold leading-none
-           bg-brand-dark text-white rounded-full px-[.25rem] py-[.1rem] tabular-nums;
+           bg-brand-dark text-brand-on rounded-full px-[.25rem] py-[.1rem] tabular-nums;
     min-width: .95rem;
     text-align: center;
   }
@@ -1699,7 +1699,7 @@
   .docpage { @apply ml-auto flex flex-wrap gap-[.3rem] items-center; }
   .docpage .embtn { @apply px-[.55rem] py-[.25rem] text-fine tabular-nums; min-height: 1.9rem; }
   .docpage .embtn[aria-current="page"] {
-    @apply bg-brand-dark border-brand-dark text-white font-semibold;
+    @apply bg-brand-dark border-brand-dark text-brand-on font-semibold;
   }
   .docpage .embtn[aria-current="page"]:hover { filter: brightness(1.12); }
 
@@ -2760,7 +2760,7 @@
      plain — two coloured buttons side by side is two decisions, and only one of
      them is. */
   .afbar .embtn[data-act="save"] {
-    @apply bg-brand-dark border-brand-dark text-white font-semibold;
+    @apply bg-brand-dark border-brand-dark text-brand-on font-semibold;
     background-image: none;
   }
   .afbar .embtn[data-act="save"]:hover:not([disabled]) { filter: brightness(1.12); }
@@ -2871,7 +2871,7 @@
      nothing behind it. See AddTypesDialog in features/onboard/AssetEntry.jsx. */
   .attbar { @apply flex flex-wrap gap-[.4rem] items-center mb-[.8rem]; }
   .attbar .embtn[data-act="save"] {
-    @apply bg-brand-dark border-brand-dark text-white font-semibold;
+    @apply bg-brand-dark border-brand-dark text-brand-on font-semibold;
   }
   .attbar .embtn[data-act="save"]:hover:not([disabled]) { filter: brightness(1.12); }
   .attbar .embtn[data-act="save"] svg { @apply text-white; }
@@ -2957,9 +2957,9 @@
            bg-card border border-brand rounded px-[.9rem] py-[.4rem] cursor-pointer;
     min-height: 2.1rem;
   }
-  .bulkbrowse:hover { @apply bg-brand-dark border-brand-dark text-white; }
+  .bulkbrowse:hover { @apply bg-brand-dark border-brand-dark text-brand-on; }
   .bulkbrowse input[type="file"] { @apply sr-only; }
-  .bulkbrowse:focus-within { @apply bg-brand-dark border-brand-dark text-white; }
+  .bulkbrowse:focus-within { @apply bg-brand-dark border-brand-dark text-brand-on; }
 
   .bulkrun { @apply inline-flex items-center gap-[.45rem] text-read text-ink-3 mt-[.5rem] cursor-not-allowed; }
   .bulkrun input { @apply cursor-not-allowed; }
@@ -3198,7 +3198,7 @@
   /* Same outlined blue as Salary Master's, because it is the same button on
      their bar — the one control on it meant to be found by colour. */
   .asgscreen .asgbar .list { @apply ml-auto border-brand text-accent px-[.7rem]; }
-  .asgscreen .asgbar .list:hover:not([disabled]) { @apply border-brand-dark text-white bg-brand-dark; }
+  .asgscreen .asgbar .list:hover:not([disabled]) { @apply border-brand-dark text-brand-on bg-brand-dark; }
 
   /* Their ASSETS table. The two columns with nothing behind them are drawn like
      any other and say why on hover — a column quietly dropped is a column
@@ -3459,7 +3459,7 @@
      cannot be checked by `npm run contrast`. `brand-dark` is the step white
      text is checked on, in both modes. */
   .btn.tpl {
-    @apply bg-brand-dark;
+    @apply bg-brand-dark text-brand-on;
     /* A hairline of light along the top edge — the one thing that makes a
        flat fill read as a raised button rather than as a coloured box. */
     box-shadow: inset 0 1px 0 rgb(255 255 255 / .14), 0 1px 2px rgb(var(--brand-dark) / .3),
@@ -4037,7 +4037,7 @@
      `brand-dark` rather than a nearer match for their navy: white on it is one
      of the pairings `npm run contrast` already checks, on all four palettes,
      which a hand-picked blue would not be. */
-  .ev.work { @apply bg-brand-dark text-white; }
+  .ev.work { @apply bg-brand-dark text-brand-on; }
   .more { @apply bg-transparent border-0 p-0 text-tiny text-accent cursor-pointer text-left; font: inherit; }
   .more:hover { @apply underline; }
   .callegend { @apply flex flex-wrap gap-y-[.4rem] gap-x-[.8rem] items-center text-fine; }
@@ -4105,7 +4105,7 @@
      So it is the brand ramp, and the outline is what sets it apart on a bar of
      grey-edged buttons. */
   .salbar .list { @apply ml-auto border-brand text-accent px-[.7rem]; }
-  .salbar .list:hover:not([disabled]) { @apply border-brand-dark text-white bg-brand-dark; }
+  .salbar .list:hover:not([disabled]) { @apply border-brand-dark text-brand-on bg-brand-dark; }
 
   /* Their empty state carries a washed-out drawing. Kept, and kept quiet: it is
      the one part of the screen with nothing to say. */
@@ -4303,7 +4303,7 @@
      taken it, so the eye finds it in the place it already looks. */
   .srback { @apply flex flex-wrap gap-y-[.3rem] gap-x-[.7rem] items-center; }
   .srback .embtn { @apply gap-[.3rem] border-brand text-accent px-[.7rem] font-semibold; }
-  .srback .embtn:hover { @apply bg-brand-dark border-brand-dark text-white; }
+  .srback .embtn:hover { @apply bg-brand-dark border-brand-dark text-brand-on; }
   .srback .muted { @apply text-fine; }
 
   .srhead {
@@ -4378,7 +4378,7 @@
   /* Not merely dimmed: a step you cannot reach yet is a control, and a control
      that looks live and does nothing is the thing this dashboard avoids. */
   .wizdot[disabled] { @apply border-line-2 text-line-2 cursor-not-allowed; }
-  .wizsteps li.on .wizdot { @apply bg-brand-dark border-brand-dark text-white; }
+  .wizsteps li.on .wizdot { @apply bg-brand-dark border-brand-dark text-brand-on; }
   .wizsteps li.ok .wizdot { @apply bg-live border-live text-white; }
   .wizlab { @apply text-fine text-ink-2 text-center leading-[1.25] px-[.2rem]; }
   .wizsteps li.on .wizlab { @apply text-ink font-semibold; }
@@ -4808,7 +4808,7 @@
   .spm:hover:not([disabled]) { @apply border-brand text-brand-deep; }
   /* The selected chip is theirs — lifted out of the strip rather than merely
      tinted, because on a row of twelve a tint is not a selection anybody finds. */
-  .spm.on { @apply bg-brand-dark border-brand-dark text-white; }
+  .spm.on { @apply bg-brand-dark border-brand-dark text-brand-on; }
   .spm.on small { @apply text-white/75; }
   /* A month that has not happened. Dimmed, never disabled: looking at next
      month is not the mistake, paying it is. */
@@ -5018,7 +5018,7 @@
   }
   .protab:last-child { @apply border-b-0; }
   .protab:hover { @apply bg-brand-soft text-brand-deep; }
-  .protab[aria-current="page"] { @apply bg-brand-dark text-white font-semibold; }
+  .protab[aria-current="page"] { @apply bg-brand-dark text-brand-on font-semibold; }
   .protab .ico { @apply text-norm w-[1.15rem] text-center; }
   .protab .lb  { @apply truncate; }
   .protab .cnt { @apply ml-auto font-mono text-micro font-semibold px-[.4rem] py-[.05rem] rounded-full bg-skip-wash text-skip; }
@@ -5034,7 +5034,7 @@
   .pgroup[aria-expanded="true"] { @apply text-ink font-semibold; }
   .protab.pchild { @apply bg-wash pl-[2.1rem] text-fine; }
   .protab.pchild:hover { @apply bg-brand-soft text-brand-deep; }
-  .protab.pchild[aria-current="page"] { @apply bg-brand-dark text-white; }
+  .protab.pchild[aria-current="page"] { @apply bg-brand-dark text-brand-on; }
 
   .propane { @apply flex flex-col gap-[1rem] min-w-0; }
   .procard { @apply bg-card border border-line rounded-md overflow-hidden; }
@@ -5162,7 +5162,7 @@
     transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease), border-color var(--ui-fast) var(--ui-ease);
   }
   .fnftab:hover { @apply border-brand text-brand-deep; }
-  .fnftab[aria-selected="true"] { @apply bg-brand-dark border-brand-dark text-white font-semibold; }
+  .fnftab[aria-selected="true"] { @apply bg-brand-dark border-brand-dark text-brand-on font-semibold; }
   .fnftab .num {
     @apply not-italic inline-flex items-center justify-center w-[1.25rem] h-[1.25rem] rounded-full
            border border-current font-mono text-tiny leading-none;
@@ -5271,7 +5271,7 @@
      every other control on the rail. */
   .btreset { @apply px-[.8rem] py-[.7rem] border-t border-line; }
   .btreset .embtn { @apply w-full justify-center border-brand text-accent; }
-  .btreset .embtn:hover { @apply bg-brand-dark border-brand-dark text-white; }
+  .btreset .embtn:hover { @apply bg-brand-dark border-brand-dark text-brand-on; }
 
   .btmain { @apply bg-card border border-line rounded-md overflow-hidden min-w-0 shadow-raise; }
   .btmain > header {
@@ -5345,7 +5345,7 @@
      the page that stands forward. */
   .prstep.now > .panel { @apply border-brand shadow-lift; }
   .prstep.now > .panel > header { @apply bg-brand-soft; }
-  .prstep.now > .panel > header h3 .ico { @apply bg-brand-dark border-brand-dark text-white; }
+  .prstep.now > .panel > header h3 .ico { @apply bg-brand-dark border-brand-dark text-brand-on; }
   .prnext {
     @apply inline-flex items-center gap-[.35rem] mb-[.6rem] px-[.6rem] py-[.15rem] rounded-full
            text-tiny font-semibold bg-brand-soft text-brand-deep;
@@ -5490,225 +5490,6 @@
     height: 34rem; background: #fff;
   }
 }
-/* ===========================================================================
-   The HRDashboard skin (20 October 2026).
-
-   Asked for: the look of the HRDashboard UI kit, on every page, with the kit
-   as the benchmark. The colours are `themes.css` (measured off the kit's
-   frames, both modes re-run through `npm run contrast`), the radii and the
-   one typeface are tailwind.config.js. What is here is the shapes and sizes
-   a palette cannot change, and nothing in it names a colour: every value is
-   a role.
-
-   Outside `@layer` for the same reason as the block below it, and before the
-   media queries so the tablet and phone rules still win where they disagree.
-   =========================================================================== */
-
-/* Sizes are the kit's at 1440px, measured off its frames and written in rem
-   on the 16px root: a 280px rail, a 96px header, 56px rows in the rail, 24px
-   gutters, 54-56px controls. */
-
-/* ---- the shell ----
-   Restated for the slim rail too: this block is outside `@layer`, so the
-   width here would otherwise beat the layered slim rule at any specificity. */
-.shell { --rail-w: 17.5rem; }
-.shell[data-rail="slim"] { --rail-w: 4.5rem; }
-.main { --topbar-h: 6rem; }
-.topbar { padding-left: 2rem; padding-right: 2rem; }
-.content { padding: 2rem 1.5rem 2.5rem; gap: 1.5rem; }
-
-/* The logo row is the header's height, so the rail's first link starts on
-   the line the page's first card does. */
-.side .brand { min-height: 6rem; padding-left: 2rem; padding-right: 1.5rem; }
-
-/* ---- the rail ----
-   Rows touch: the kit spaces its links by their own 56px height, not by a
-   gap. The label is the ink and the icon the quiet grey beside it. */
-.railnav { gap: 0; }
-.nav {
-  min-height: 3.5rem;
-  margin-left: 2rem;
-  margin-right: 2rem;
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
-  gap: .75rem;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-}
-.nav svg { color: rgb(var(--ink-3)); }
-.nav:hover svg { color: rgb(var(--rail-fg)); }
-
-/* **The current module is a filled pill, not a tinted one with a stripe.**
-   That is the kit's green "Dashboard" button, and the glow under it is what
-   makes it read as the one place you are rather than one row of nine. The
-   stripe goes because a solid fill already says it; two markers on one row
-   is one too many. Its icon follows the label, white on the fill. */
-.nav[aria-current="page"] {
-  background: rgb(var(--rail-on));
-  color: rgb(var(--rail-on-ink));
-  box-shadow: 0 8px 24px -8px rgb(var(--rail-on) / .55);
-}
-.nav[aria-current="page"]::before { display: none; }
-.nav[aria-current="page"] svg { color: rgb(var(--rail-on-ink)); }
-/* A ring outside the pill: the inset one the rest of the rail uses would be
-   the same white as the label, on the same green. */
-.nav[aria-current="page"]:focus-visible {
-  box-shadow: 0 0 0 2px rgb(var(--rail)), 0 0 0 4px rgb(var(--rail-mark));
-}
-
-/* **The open page under it is grey, not green.** With the module filled, a
-   second green row beneath it reads as two places at once; the kit draws the
-   page as a quiet pill on the rail's own step, hung off a 2px tree line.
-
-   Scoped under `.side` on purpose: the 6 October block below sets the same
-   selectors, and at equal specificity the later block wins. The extra class
-   is what lets these hold without moving either block. */
-.side .navsub {
-  gap: 0;
-  margin: 0 2rem 0 2.45rem;
-  padding-left: .7rem;
-  border-left: 2px solid rgb(var(--track));
-}
-.side .navpage {
-  min-height: 3.125rem;
-  display: flex;
-  align-items: center;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 500;
-  color: rgb(var(--rail-ink));
-}
-.side .navpage:hover { padding-left: 1rem; }
-.side .navpage[aria-current="page"] {
-  color: rgb(var(--rail-fg));
-  background: rgb(var(--rail-3));
-  font-weight: 600;
-}
-.side .navpage[aria-current="page"]::before { display: none; }
-
-/* **The kit's Light / Dark switch, in the rail foot.** It stands in for the
-   header's appearance button only where the rail is open on a desktop, so the
-   same control is never on screen twice; a slim rail, a tablet and a phone
-   keep the header's button, which also reaches "Match my device". */
-.railmode { display: none; }
-@media (min-width: 901px) {
-  .shell:not([data-rail="slim"]) .railmode { display: grid; }
-  .shell:not([data-rail="slim"]) .tbmode { display: none; }
-}
-.railmode {
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  padding: 4px;
-  border-radius: 12px;
-  background: rgb(var(--rail-3));
-}
-.railmode button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .4rem;
-  min-height: 2.25rem;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: rgb(var(--ink-3));
-  font-family: theme(fontFamily.body);
-  font-size: .875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color var(--ui-fast) var(--ui-ease), color var(--ui-fast) var(--ui-ease),
-              box-shadow var(--ui-fast) var(--ui-ease);
-}
-.railmode button svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 1.8; }
-.railmode button:hover { color: rgb(var(--rail-fg)); }
-.railmode button[aria-pressed="true"] {
-  background: rgb(var(--card));
-  color: rgb(var(--rail-fg));
-  box-shadow: 0 2px 6px rgb(var(--char) / .08);
-}
-.railmode button:focus-visible { box-shadow: inset 0 0 0 2px rgb(var(--rail-mark)); }
-
-/* ---- the header ----
-   The kit's search is a grey well with no edge; the edge comes back with the
-   focus ring, which is where somebody needs it. */
-.tbfind {
-  min-height: 3rem;
-  max-width: 19.625rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  border-color: transparent;
-  border-radius: 12px;
-  background: rgb(var(--wash));
-}
-.tbicon { border-radius: 10px; }
-
-/* ---- panels ----
-   White on the #FAFAFA page with no edge: on light the step between the two
-   surfaces is the card's whole outline, as in the kit. Dark keeps its
-   hairline, because its two navies are closer than white and #FAFAFA. */
-.panel, .emhead, .embar, .tile { border-radius: 16px; }
-[data-mode="light"] :is(.panel, .emhead, .embar, .tile) { border-color: transparent; }
-.panel > header { padding: 1.25rem 1.5rem; }
-.panel > header h3 { font-size: 1.125rem; font-weight: 600; }
-.panel .body { padding: 1.5rem; }
-
-/* The page's own heading, inside its card: 24px semibold over a 14px grey
-   line, as the kit heads Employees and Payroll. */
-.emhead { padding: 1.5rem; }
-.emhead h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.01em; }
-.emhead .n { font-size: .875rem; color: rgb(var(--ink-2)); }
-.embar { padding: 1rem 1.5rem; }
-
-/* The number on a figure tile, at the kit's 32px semibold over a 14px label:
-   it is the thing the tile is for. */
-.tile { padding: 1.5rem; }
-.tile .n { font-size: 2rem; font-weight: 600; letter-spacing: -.02em; }
-.tile .k { font-size: .875rem; font-weight: 500; color: rgb(var(--ink-2)); }
-
-/* ---- controls ----
-   The kit's 56px filled button and 54px outlined box, 10px round, flat: no
-   highlight along the top and no glow under it. */
-.btn {
-  min-height: 3.5rem;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-  border-radius: 10px;
-  font-size: 1rem;
-}
-.btn.tpl, .btn.tpl:hover:not([disabled]) { box-shadow: none; }
-.btn.split { padding-left: .75rem; padding-right: .75rem; }
-.embtn { min-height: 3.375rem; padding-left: 1.25rem; padding-right: 1.25rem; border-radius: 10px; box-shadow: none; }
-.embar :is(select, input:not([type="checkbox"], [type="radio"])) { min-height: 3.375rem; border-radius: 10px; }
-.embtn.pri.split { padding-left: .6rem; padding-right: .6rem; }
-
-/* ---- tables ----
-   Inside the components layer, not out here: a screen that sizes its own
-   cells keeps them, because its rule is more specific than these and the
-   layer lets specificity decide.
-
-   The kit's list: a 56px grey heading band with rounded ends and no rule
-   under it, then 64px rows over a pale divider.
-
-   **Not the muster grids.** They size their day cells and nothing else, so
-   the name and total cells would take 64px and stretch a month of thirty
-   people to twice its height. The kit has no grid like it to follow. The
-   `:where()` keeps the exclusion from adding weight, so this still loses to
-   any screen's own cell rule. */
-@layer components {
-  :where(table:not(.muster)) :is(th, td) { padding: 1.375rem 1rem; }
-  :where(table:not(.muster)) thead th {
-    padding-top: 1.125rem;
-    padding-bottom: 1.125rem;
-    border-bottom: 0;
-    font-weight: 500;
-  }
-  :where(table:not(.muster)) thead th:first-child { border-radius: 10px 0 0 10px; }
-  :where(table:not(.muster)) thead th:last-child  { border-radius: 0 10px 10px 0; }
-}
-
 /* ===========================================================================
    The interface of 6 October 2026: navigation, fields, the dashboard, motion.
 
@@ -5919,7 +5700,7 @@ kbd {
   animation: rise .5s var(--ease-out) both;
 }
 .dhello { min-width: 0; }
-.dgreet { margin: 0 0 .2rem; color: rgb(var(--brand)); font-size: theme(fontSize.read); font-weight: 600; }
+.dgreet { margin: 0 0 .2rem; color: rgb(var(--accent)); font-size: theme(fontSize.read); font-weight: 600; }
 .dhero h1 { font-size: theme(fontSize.mega); font-weight: 700; line-height: 1.15; color: rgb(var(--ink)); letter-spacing: -.02em; }
 .dsub { margin: .4rem 0 0; color: rgb(var(--ink-2)); font-size: theme(fontSize.read); }
 .dsub b { color: rgb(var(--ink)); font-weight: 600; }
@@ -6225,6 +6006,584 @@ tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
    the fifth would sit alone at half width; it takes the row instead. */
 @media (max-width: 420px) {
   .paypage .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* ===========================================================================
+   The HRDashboard reference's shapes (21 October 2026).
+
+   Asked for: this app to look exactly like
+   docs/design/hrdashboard-reference.html. Its colours are themes.css; what is
+   here is its sizes, radii, weights and states, copied from its stylesheet
+   and written in rem on the 16px root, so `1rem` is its 16px. Nothing here
+   names a colour: every value is a role.
+
+   **The look, not the menu.** The rail keeps this app's modules, their order
+   and the open module's page list; whether it takes the reference's groups
+   is still open (docs/kit-pages.md, D2). What changes is how each is drawn:
+   Dashboard is the reference's green button, a module is one of its groups —
+   a quiet row whose icon turns green when it is open, with a chevron — and a
+   page is a row on a hairline with a green mark.
+
+   After the 6 October block on purpose, so its equal-specificity rules give
+   way to these, and before the responsive blocks, so a tablet still gets the
+   last word. The phone's bottom bar, which those blocks build, is restyled at
+   the very end of this file.
+
+   It replaces the 20 October skin, measured off the Figma kit's pictures.
+   =========================================================================== */
+
+/* ---- the page ----
+   The reference's body is 14px at 1.45. The type scale's steps are unchanged;
+   this is the size everything that does not set one inherits. */
+body { font-size: .875rem; line-height: 1.45; }
+
+/* Its focus ring: a 2px green outline two pixels out, on everything but a
+   field — a field shows focus as its own edge and halo, below. */
+:where(button, a, summary, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--brand));
+  outline-offset: 2px;
+  box-shadow: none;
+  border-radius: 8px;
+}
+
+/* ---- the rail ----
+   260px, white (or the dark surface) with a hairline down its edge. */
+/* Desktop only. Below 901px the rail is the tablet's icon column and the
+   phone's bottom bar, which the responsive blocks build; their look is in
+   the block at the end of this file. */
+.railmode { display: none; }
+@media (min-width: 901px) {
+  .shell:not([data-rail="slim"]) .railmode { display: grid; }
+  .shell:not([data-rail="slim"]) .tbmode { display: none; }
+}
+@media (min-width: 901px) {
+  .shell { --rail-w: 16.25rem; }
+  .shell[data-rail="slim"] { --rail-w: 5.5rem; }
+  .side {
+    padding: 1.5rem 1.25rem 1.25rem;
+    box-shadow: inset -1px 0 0 rgb(var(--line));
+  }
+  .side .brand {
+    min-height: 0;
+    margin-bottom: 1.625rem;
+    padding: 0 .25rem;
+    gap: .5rem;
+    justify-content: space-between;
+  }
+  .brandlogo { height: 2.375rem; }
+  .railtoggle {
+    width: 2.375rem;
+    height: 2.375rem;
+    border-radius: 11px;
+    color: rgb(var(--ink-2));
+    transition: background-color .15s, color .15s, transform .1s;
+  }
+  .railtoggle:hover { color: rgb(var(--ink)); background: rgb(var(--wash)); }
+  .railtoggle:active { transform: scale(.92); }
+  .railtoggle svg { width: 1.125rem; height: 1.125rem; stroke-width: 2; }
+
+  .railnav { gap: 2px; padding: 0; }
+  /* The reference reads straight down its groups with no headings over them. */
+  .side .navgroup { display: none; }
+
+  /* A module: the reference's group row. */
+  .side .nav {
+    margin: 0;
+    padding: .75rem .5rem;
+    min-height: 0;
+    gap: .75rem;
+    border-radius: 10px;
+    color: rgb(var(--ink));
+    font-size: .875rem;
+    font-weight: 600;
+    transition: background-color .15s;
+  }
+  .side .nav .lab { flex: 1; text-align: left; }
+  .side .nav svg { width: 1.25rem; height: 1.25rem; color: rgb(var(--ink-2)); stroke-width: 1.7; transition: color .2s; }
+  .side .nav:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
+  .side .nav:hover svg { transform: none; }
+  /* Open is a green icon and nothing else — the fill is Dashboard's alone. */
+  .side .nav[aria-current="page"] { background: transparent; color: rgb(var(--ink)); box-shadow: none; }
+  .side .nav[aria-current="page"]:hover { background: rgb(var(--wash)); }
+  .side .nav[aria-current="page"] svg { color: rgb(var(--brand)); }
+  .side .nav[aria-current="page"]::before { display: none; }
+  /* The chevron, on a module that has pages to open: down while shut, up while
+     open, turning the way the reference's does. A mask, so it takes the role's
+     colour rather than one written into the picture. */
+  .side .nav[data-sub]::after {
+    content: "";
+    flex-shrink: 0;
+    width: 1.125rem;
+    height: 1.125rem;
+    background: rgb(var(--faint));
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: transform .28s var(--ease-out);
+  }
+  .side .nav[data-sub][aria-current="page"]::after { transform: rotate(180deg); }
+
+  /* Dashboard: the reference's green button, label first and the grid after
+     it — grey at rest, the green fill with its glow when it is the page. */
+  .side .nav[data-module="dashboard"] {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding: .9375rem 1.125rem;
+    border-radius: 12px;
+    background: rgb(var(--wash));
+    font-size: .9375rem;
+    transition: background-color .25s, color .25s, box-shadow .25s, transform .1s;
+  }
+  .side .nav[data-module="dashboard"] .lab { flex: 0 1 auto; }
+  .side .nav[data-module="dashboard"]::after { display: none; }
+  .side .nav[data-module="dashboard"] svg { color: currentColor; }
+  .side .nav[data-module="dashboard"]:hover { background: rgb(var(--line)); }
+  .side .nav[data-module="dashboard"]:active { transform: scale(.98); }
+  .side .nav[data-module="dashboard"][aria-current="page"] {
+    background: rgb(var(--rail-on));
+    color: rgb(var(--rail-on-ink));
+    box-shadow: 0 12px 26px -10px rgb(var(--rail-on) / .34);
+  }
+  .side .nav[data-module="dashboard"][aria-current="page"] svg { color: rgb(var(--rail-on-ink)); }
+  /* Its pages hang under it like any other module's. */
+  .side .nav[data-module="dashboard"] + .navsub { margin-top: -.75rem; margin-bottom: 1rem; }
+
+  /* The open module's pages, on the reference's hairline. */
+  .side .navsub {
+    gap: 2px;
+    margin: 2px 0 .375rem 1.125rem;
+    padding-left: .875rem;
+    border-left: 1px solid rgb(var(--line-2));
+    animation: navsub-in .3s var(--ease-out);
+  }
+  .side .navpage {
+    padding: .625rem .75rem;
+    border-radius: 10px;
+    color: rgb(var(--ink-2));
+    font-size: .875rem;
+    font-weight: 500;
+    line-height: 1.45;
+    transition: background-color .15s, color .15s;
+  }
+  .side .navpage:hover { color: rgb(var(--ink)); background: rgb(var(--wash)); padding-left: .75rem; }
+  .side .navpage[aria-current="page"] { color: rgb(var(--ink)); background: rgb(var(--wash)); font-weight: 600; }
+  .side .navpage[aria-current="page"]::before {
+    display: block;
+    left: calc(-.875rem - 1px);
+    top: .625rem;
+    bottom: .625rem;
+    width: 2px;
+    background: rgb(var(--brand));
+  }
+
+  /* The foot: no rule over it, and the reference's Light / Dark switch, whose
+     white knob slides to the side that is pressed. */
+  .railfoot { padding: 1.5rem 0 0; gap: .875rem; box-shadow: none; }
+  .railmode {
+    position: relative;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgb(var(--wash));
+  }
+  .railmode::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 9px;
+    background: rgb(var(--card));
+    box-shadow: 0 1px 3px rgb(var(--char) / .1);
+    transition: transform .32s var(--ease-out);
+  }
+  .railmode:has(button:last-child[aria-pressed="true"])::before { transform: translateX(100%); }
+  .railmode button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-height: 0;
+    padding: .5rem;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: rgb(var(--ink-3));
+    font-size: .8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color .25s;
+  }
+  .railmode button svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 2; }
+  .railmode button:hover { color: rgb(var(--ink)); }
+  .railmode button[aria-pressed="true"] { background: transparent; color: rgb(var(--ink)); box-shadow: none; }
+  .railconn { padding: 0 .5rem; font-size: .75rem; color: rgb(var(--ink-3)); }
+
+  /* Collapsed: the reference's 88px rail, every row an icon centred. */
+  .shell[data-rail="slim"] .side { padding: 1.5rem 1rem 1.25rem; }
+  .shell[data-rail="slim"] .side .brand { flex-direction: column; gap: .875rem; padding: 0; }
+  .shell[data-rail="slim"] .side .nav { justify-content: center; padding: .75rem 0; margin: 0; }
+  .shell[data-rail="slim"] .side .nav::after { display: none; }
+  .shell[data-rail="slim"] .side .nav[data-module="dashboard"] { padding: .9375rem 0; }
+  .shell[data-rail="slim"] .railfoot { padding: 1.5rem 0 0; }
+}
+
+/* ---- the header ----
+   Frosted, 16px by 28px round a 46px search: 79px tall. */
+.main { --topbar-h: 4.9375rem; }
+.topbar {
+  gap: 1.25rem;
+  padding: 1rem 1.75rem;
+  border-bottom: 1px solid rgb(var(--line));
+}
+@supports (backdrop-filter: blur(1px)) {
+  .topbar { background: rgb(var(--card) / .88); backdrop-filter: saturate(1.4) blur(12px); }
+}
+.tbwhere b { font-weight: 500; color: rgb(var(--ink-2)); }
+.tbwhere i { color: rgb(var(--faint)); }
+.tbwhere span { font-weight: 700; }
+
+/* The search: a grey well with no edge until it has the caret. */
+.tbfind {
+  flex: 0 1 21.25rem;
+  max-width: 21.25rem;
+  min-height: 2.875rem;
+  gap: .625rem;
+  padding: 0 .875rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgb(var(--wash));
+  transition: border-color .2s, background-color .2s, box-shadow .2s;
+}
+.tbfind svg { width: 1.25rem; height: 1.25rem; stroke: rgb(var(--ink-2)); stroke-width: 2; }
+.tbfind input { font-size: .875rem; }
+.tbfind:focus-within {
+  border-color: rgb(var(--brand));
+  background: rgb(var(--card));
+  box-shadow: 0 0 0 4px rgb(var(--brand-soft));
+}
+
+/* The company picker is a box like any other on the page. */
+.tbco {
+  min-height: 2.875rem;
+  max-width: 13rem;
+  padding: 0 2.25rem 0 .875rem;
+  border-radius: 12px;
+  border-color: rgb(var(--line-ctl));
+  font-size: .875rem;
+}
+
+/* The round icon buttons: 38px, no edge, grey until the pointer finds them. */
+.tbacts { gap: .625rem; }
+.tbicon {
+  width: 2.375rem;
+  height: 2.375rem;
+  border: 0;
+  border-radius: 11px;
+  color: rgb(var(--ink-2));
+  transition: background-color .15s, color .15s, transform .1s;
+}
+.tbicon svg { width: 1.375rem; height: 1.375rem; stroke-width: 1.8; }
+.tbicon:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
+.tbicon:active { transform: scale(.92); }
+.tbicon[aria-expanded="true"] { background: rgb(var(--wash)); color: rgb(var(--ink)); }
+/* The count on the bell, as the reference's red badge. */
+.tbicon .n {
+  top: 2px;
+  right: 2px;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 .3rem;
+  border-radius: 9px;
+  font-family: theme(fontFamily.body);
+  font-size: .6875rem;
+  line-height: 1.125rem;
+  box-shadow: 0 0 0 2px rgb(var(--card));
+}
+
+/* Go to a page: a small outlined button with its key on it. */
+.tbgo {
+  min-height: 2.125rem;
+  padding: 0 .5rem 0 .75rem;
+  gap: .5rem;
+  border: 1px solid rgb(var(--line-2));
+  border-radius: 10px;
+  background: rgb(var(--card));
+  color: rgb(var(--ink-2));
+  font-size: .8125rem;
+  font-weight: 600;
+}
+.tbgo:hover { border-color: rgb(var(--line-2)); background: rgb(var(--wash)); color: rgb(var(--ink)); }
+kbd {
+  min-height: 1.375rem;
+  padding: 0 .4rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 7px;
+  background: rgb(var(--card));
+  color: rgb(var(--ink-2));
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+/* Who is signed in: a round avatar in a pill. */
+.tbme {
+  gap: .5rem;
+  padding: 4px .5rem 4px 4px;
+  border: 0;
+  border-radius: 999px;
+}
+.tbme:hover, .tbme[aria-expanded="true"] { background: rgb(var(--wash)); }
+.tbava {
+  width: 2.25rem;
+  height: 2.25rem;
+  background: rgb(var(--brand-soft));
+  color: rgb(var(--accent));
+  font-family: theme(fontFamily.body);
+  font-size: .75rem;
+  font-weight: 700;
+}
+.tbme .who b { font-size: .875rem; font-weight: 600; }
+
+/* The header's two menus: the reference's popover, 18px round, no grey head. */
+.emmenu.tbmenu {
+  min-width: 18rem;
+  max-width: 22.5rem;
+  padding: 1rem;
+  border: 1px solid rgb(var(--line));
+  border-radius: 18px;
+  box-shadow: var(--sh-pop);
+}
+.tbmenu > h4 {
+  margin: 0 0 .625rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: theme(fontFamily.body);
+  font-size: .9375rem;
+  font-weight: 700;
+}
+.tbmenu .tbnone { padding: .625rem 0; font-size: .8125rem; }
+.tbmenu .foot { border-top: 1px solid rgb(var(--line)); }
+.emmenu.tbmenu .tbnote {
+  padding: .625rem 0;
+  border-top: 1px solid rgb(var(--line));
+  border-radius: 0;
+  font-size: .8125rem;
+}
+.emmenu.tbmenu .tbnote:first-of-type { border-top: 0; }
+.emmenu.tbmenu .tbnote:hover { background: transparent; }
+.emmenu.tbmenu .tbnote:hover b { color: rgb(var(--accent)); }
+.tbmenu .tbnote b { font-size: .8125rem; }
+
+/* Every other menu: 14px round, rows that grey under the pointer. */
+.emmenu {
+  padding: 6px;
+  border: 1px solid rgb(var(--line));
+  border-radius: 14px;
+  box-shadow: var(--sh-pop);
+}
+.emmenu button, .emmenu a { padding: .5625rem .625rem; border-radius: 9px; font-weight: 500; }
+.emmenu button:hover, .emmenu a:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
+
+/* ---- the page ---- */
+.content { padding: 1.75rem; gap: 1.5rem; }
+/* The strip of pages, where it shows: the reference's underlined tabs. */
+.subbar {
+  gap: 4px;
+  margin: 1.75rem 1.75rem 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgb(var(--line));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.subtab {
+  position: relative;
+  padding: .75rem 1rem;
+  border-radius: 0;
+  background: transparent;
+  color: rgb(var(--ink-2));
+  font-size: .875rem;
+  font-weight: 600;
+  transition: color .2s;
+}
+.subtab:hover { background: transparent; color: rgb(var(--ink)); }
+.subtab[aria-current="page"] { background: transparent; color: rgb(var(--accent)); box-shadow: none; }
+.subtab[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: .5rem;
+  right: .5rem;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--brand));
+  animation: tab-under .3s var(--ease-out);
+}
+@keyframes tab-under { from { transform: scaleX(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Cards: 18px round, no edge, the faintest shadow, and they do not move. */
+.panel, .emhead, .embar, .stat {
+  border-color: transparent;
+  border-radius: 18px;
+  box-shadow: var(--sh-raise);
+}
+.panel:hover { border-color: transparent; box-shadow: var(--sh-raise); }
+.panel > header { padding: 1.375rem 1.375rem 0; border-bottom: 0; }
+.panel > header h3 { font-size: 1.125rem; font-weight: 700; letter-spacing: -.01em; }
+.panel .body { padding: 1.125rem 1.375rem 1.375rem; }
+.emhead { padding: 1.375rem; }
+.emhead h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.015em; }
+.emhead .n { font-size: .875rem; color: rgb(var(--ink-2)); }
+.embar { padding: 1rem 1.375rem; }
+
+/* A figure: the reference's mini card — its title over its number. */
+.tile {
+  gap: .375rem;
+  padding: 1.125rem 1.25rem;
+  border-color: transparent;
+  border-radius: 16px;
+  box-shadow: var(--sh-raise);
+}
+.tile .k { font-size: .9375rem; font-weight: 700; color: rgb(var(--ink)); }
+.tile .n { font-size: 1.375rem; font-weight: 700; letter-spacing: -.01em; }
+.tile .s { font-size: .875rem; color: rgb(var(--ink-2)); }
+
+/* ---- controls ----
+   44px buttons, 12px round, flat at rest. They press in and never lift. */
+.btn {
+  min-height: 2.75rem;
+  padding: 0 1.125rem;
+  gap: .5rem;
+  border-radius: 12px;
+  font-size: .875rem;
+  font-weight: 600;
+  box-shadow: none;
+  transition: background-color .15s, opacity .15s, transform .1s, box-shadow .2s, border-color .15s;
+}
+.btn:hover:not([disabled]) { transform: none; box-shadow: none; }
+.btn:active:not([disabled]) { transform: scale(.97); }
+.btn.go:hover, .btn.tpl:hover, .btn.bad:hover { filter: none; }
+.btn.tpl, .btn.tpl:hover:not([disabled]) { box-shadow: none; }
+.btn.tpl:hover:not([disabled]) { box-shadow: 0 10px 22px -10px rgb(var(--char) / .55); }
+.btn.go:hover:not([disabled]) { box-shadow: 0 10px 22px -10px rgb(var(--live-dark) / .55); }
+.btn.ghost { background: rgb(var(--card)); color: rgb(var(--ink)); border-color: rgb(var(--line-2)); }
+.btn.ghost:hover { background: rgb(var(--wash)); border-color: rgb(var(--line-2)); }
+.btn.split { padding-left: .75rem; padding-right: .75rem; }
+
+/* The toolbars' buttons: the reference's outlined one, and its ink one. */
+.embtn {
+  min-height: 2.75rem;
+  padding: 0 1.125rem;
+  gap: .5rem;
+  border-color: rgb(var(--line-2));
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: none;
+  transition: background-color .15s, border-color .15s, color .15s, box-shadow .2s, transform .1s;
+}
+.embtn:hover:not([disabled]) { background: rgb(var(--wash)); border-color: rgb(var(--line-2)); color: rgb(var(--ink)); }
+.embtn:active:not([disabled]) { transform: scale(.97); }
+.embtn.pri { border-color: transparent; }
+.embtn.pri:hover:not([disabled]) { filter: none; border-color: transparent; box-shadow: 0 10px 22px -10px rgb(var(--char) / .55); }
+.embtn.pri.split, .btn.tpl.split { padding-left: .6rem; padding-right: .6rem; }
+.embar :is(select, input:not([type="checkbox"], [type="radio"])) { min-height: 2.875rem; border-radius: 12px; }
+
+/* The reference's segmented control: a grey well with a white pill in it. */
+.segs { gap: 2px; padding: 4px; border: 0; border-radius: 12px; background: rgb(var(--wash)); }
+.segs .embtn {
+  min-height: 0;
+  padding: .4375rem .75rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgb(var(--ink-2));
+  font-size: .8125rem;
+  font-weight: 600;
+}
+.segs .embtn:hover:not([disabled]) { background: transparent; color: rgb(var(--ink)); }
+.segs .embtn[aria-pressed="true"],
+.segs .embtn[aria-pressed="true"]:hover:not([disabled]) {
+  background: rgb(var(--card));
+  color: rgb(var(--ink));
+  box-shadow: 0 1px 3px rgb(var(--char) / .08);
+}
+
+/* Fields: 12px round, and the green edge with a soft halo when one has the
+   caret. Sizes stay each screen's own. */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"],
+                 [type="submit"], [type="button"], [type="reset"], [type="image"], [type="hidden"]),
+       select, textarea) {
+  border-radius: 12px;
+}
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"],
+                 [type="submit"], [type="button"], [type="reset"], [type="image"]),
+       select, textarea):focus-visible {
+  border-color: rgb(var(--brand));
+  box-shadow: 0 0 0 4px rgb(var(--brand-soft));
+}
+
+/* A status word: the reference's pill, with its dot. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: .25rem .625rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+.tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* Nothing to show: the reference's empty state, centred on the card. */
+.empty {
+  padding: 2.75rem 1.25rem;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: rgb(var(--ink-2));
+  font-size: .875rem;
+}
+.empty b { font-family: theme(fontFamily.body); font-size: .9375rem; font-weight: 700; margin-bottom: 4px; }
+
+/* Dialogs: a 22px card on the reference's dimming, rising into place. */
+.modal { background: var(--overlay); backdrop-filter: none; }
+.modal .box {
+  border-color: transparent;
+  border-radius: 22px;
+  box-shadow: var(--sh-modal);
+  animation: pop-in .3s var(--ease-out);
+}
+.modal header { padding: 1.625rem 1.625rem .5rem; border-bottom: 0; background: transparent; }
+.modal header h3 { font-size: 1.25rem; font-weight: 700; }
+.modal .acts { padding: 1rem 1.625rem 1.625rem; gap: .625rem; }
+.modal .foot { padding: 1rem 1.625rem 1.625rem; border-top: 0; gap: .625rem; }
+
+/* ---- tables ----
+   Inside the components layer, so a screen that sizes its own cells keeps
+   them. The reference's list: a grey head with rounded ends, 14px cells,
+   13px text, a hairline under each row and a grey row under the pointer.
+
+   **Not the muster grids.** They size their day cells and nothing else, and
+   a month of thirty people at 14px a cell would be twice its height. */
+@layer components {
+  :where(table:not(.muster)) :is(th, td) { padding: .875rem; }
+  :where(table:not(.muster)) td { border-bottom: 1px solid rgb(var(--line)); font-size: .8125rem; }
+  :where(table:not(.muster)) thead th {
+    border-bottom: 0;
+    background: rgb(var(--wash));
+    color: rgb(var(--ink-2));
+    font-size: .78125rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  :where(table:not(.muster)) thead th:first-child { border-radius: 12px 0 0 12px; }
+  :where(table:not(.muster)) thead th:last-child  { border-radius: 0 12px 12px 0; }
+  :where(table:not(.muster)) tbody tr:hover td { background: rgb(var(--wash)); }
 }
 
 /* ---------------------------------------------------------------------------
@@ -7034,4 +7393,123 @@ table.bshtable { min-width: 0; }
 }
 @media (max-width: 640px) {
   .hcrowcards.hcrowfit { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ===========================================================================
+   The HRDashboard reference on a tablet and a phone (21 October 2026).
+
+   Last in the file so it has the last word over the responsive blocks above,
+   which build the tablet's drawer and the phone's bottom bar. This is their
+   look only — the reference's side menu inside the drawer, and its frosted
+   five-button bar — and the structure is theirs. See the skin block in the
+   middle of this file for the desktop.
+   =========================================================================== */
+
+/* A page row's own ring would draw beside the outline every other control
+   now shows. */
+.side .navpage:focus-visible { box-shadow: none; }
+
+@media (max-width: 900px) {
+  .content { padding: 1.125rem 1rem; gap: 1.125rem; }
+  .topbar { gap: .625rem; padding: .75rem 1rem; }
+
+  /* The drawer is the reference's side menu, opened over the page. */
+  .shell[data-drawer="open"] .side {
+    padding: 1.5rem 1.25rem 1.25rem;
+    box-shadow: var(--sh-pop);
+  }
+  .shell[data-drawer="open"] .side .navgroup { display: none; }
+  .shell[data-drawer="open"] .side .nav {
+    margin: 0;
+    padding: .75rem .5rem;
+    min-height: 0;
+    gap: .75rem;
+    border-radius: 10px;
+    background: transparent;
+    color: rgb(var(--ink));
+    font-size: .875rem;
+    font-weight: 600;
+  }
+  .shell[data-drawer="open"] .side .nav svg { width: 1.25rem; height: 1.25rem; color: rgb(var(--ink-2)); }
+  .shell[data-drawer="open"] .side .nav:hover { background: rgb(var(--wash)); }
+  .shell[data-drawer="open"] .side .nav[aria-current="page"] { background: transparent; color: rgb(var(--ink)); }
+  .shell[data-drawer="open"] .side .nav[aria-current="page"] svg { color: rgb(var(--brand)); }
+  .shell[data-drawer="open"] .side .nav[aria-current="page"]::before { display: none; }
+  .shell[data-drawer="open"] .side .nav[data-module="dashboard"] {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding: .9375rem 1.125rem;
+    border-radius: 12px;
+    background: rgb(var(--wash));
+    font-size: .9375rem;
+  }
+  .shell[data-drawer="open"] .side .nav[data-module="dashboard"] svg { color: currentColor; }
+  .shell[data-drawer="open"] .side .nav[data-module="dashboard"][aria-current="page"] {
+    background: rgb(var(--rail-on));
+    color: rgb(var(--rail-on-ink));
+    box-shadow: 0 12px 26px -10px rgb(var(--rail-on) / .34);
+  }
+  .shell[data-drawer="open"] .side .navsub {
+    gap: 2px;
+    margin: 2px 0 .375rem 1.125rem;
+    padding-left: .875rem;
+    border-left: 1px solid rgb(var(--line-2));
+  }
+  .shell[data-drawer="open"] .side .navpage {
+    padding: .625rem .75rem;
+    border-radius: 10px;
+    background: transparent;
+    color: rgb(var(--ink-2));
+    font-size: .875rem;
+    font-weight: 500;
+  }
+  .shell[data-drawer="open"] .side .navpage[aria-current="page"] {
+    background: rgb(var(--wash));
+    color: rgb(var(--ink));
+    font-weight: 600;
+  }
+  .shell[data-drawer="open"] .side .navpage[aria-current="page"]::before {
+    left: calc(-.875rem - 1px);
+    top: .625rem;
+    bottom: .625rem;
+    width: 2px;
+    background: rgb(var(--brand));
+  }
+  .shell[data-drawer="open"] .railscrim { background: var(--overlay); }
+}
+
+@media (max-width: 720px) {
+  /* The bottom bar: frosted like the header, a hairline over it, and the
+     open module's label in green with a short green bar on its top edge. */
+  .side {
+    border-top: 1px solid rgb(var(--line));
+    background: rgb(var(--card) / .92);
+    box-shadow: none;
+  }
+  @supports (backdrop-filter: blur(1px)) {
+    .side { backdrop-filter: saturate(1.4) blur(12px); }
+  }
+  .nav, .navmore {
+    gap: 3px;
+    color: rgb(var(--ink-3));
+    font-size: .6875rem;
+    font-weight: 600;
+  }
+  .nav svg, .navmore svg { width: 1.375rem; height: 1.375rem; stroke-width: 1.8; }
+  .nav[aria-current="page"] { background: transparent; color: rgb(var(--accent)); }
+  .nav[aria-current="page"] svg { color: rgb(var(--accent)); }
+  .nav[aria-current="page"]::before {
+    top: 0;
+    left: calc(50% - 13px);
+    right: auto;
+    width: 26px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: rgb(var(--brand));
+    animation: tab-under .3s var(--ease-out);
+  }
+  .navmore[data-on], .navmore[aria-expanded="true"] { color: rgb(var(--accent)); }
+  .navmore[data-on] svg { color: rgb(var(--accent)); }
+  .content { padding: 1.125rem 1rem; }
 }
