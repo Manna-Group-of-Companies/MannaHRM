@@ -6459,6 +6459,97 @@ kbd {
   :where(table:not(.muster)) tbody tr:hover td { background: rgb(var(--wash)); }
 }
 
+/* ---- every page's own pieces, the reference's way (21 October 2026) ----
+   Asked for: every page in the reference's look before any page is rebuilt,
+   with nothing moved, renamed or rewired. So these restyle classes the pages
+   already use, and touch no markup.
+
+   **The page's heading.** A page here opens with a strip card — a `.legend`
+   naming the report, or an `.emhead` card holding the title and the page's
+   own controls. The reference opens with no card at all: a 24px title on the
+   page itself, a grey line after it and the buttons to the right. Only the
+   page's *first* strip becomes that; a `.legend` further down is still a
+   card, because there it is a key or a toolbar, not a title. */
+.content > :is(.legend, .emhead):first-child,
+.content > :first-child > :is(.legend, .emhead):first-child {
+  padding: 0 0 .25rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-size: .875rem;
+  color: rgb(var(--ink-2));
+}
+.content > .legend:first-child > b:first-child,
+.content > :first-child > .legend:first-child > b:first-child,
+.content > :is(.emhead):first-child h2,
+.content > :first-child > .emhead:first-child h2 {
+  color: rgb(var(--ink));
+  font-family: theme(fontFamily.body);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1.25;
+}
+
+/* The report form card (components/ReportForm.jsx and the screens built like
+   it): a card like every other, its title the reference's card title. */
+.fhcat { border-color: transparent; border-radius: 18px; box-shadow: var(--sh-raise); }
+.fhcat > header { padding: 1.125rem 1.375rem .25rem; border-bottom: 0; }
+.fhcat > header h3 { font-family: theme(fontFamily.body); font-size: 1.125rem; font-weight: 700; letter-spacing: -.01em; }
+.iof .lab { color: rgb(var(--ink)); font-size: .8125rem; font-weight: 600; }
+
+/* Fields at the reference's height — 46px, 14px in from the edge, on the
+   card's own colour with the control edge — everywhere a field stands on
+   its own. Not inside a table (a grid's filter row and its cell editors size
+   themselves), a segmented switch, or a box whose wrapper draws the edge. */
+.content :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"],
+                            [type="submit"], [type="button"], [type="reset"], [type="image"], [type="hidden"]),
+                select):not(table *, .segs *, .find *, .gotofind *, .letfind *, .defilepick *) {
+  min-height: 2.875rem;
+  padding-left: .875rem;
+  padding-right: .875rem;
+  border-color: rgb(var(--line-ctl));
+  border-radius: 12px;
+  background-color: rgb(var(--card));
+}
+.content select:not([multiple]):not([size]):not(table *) { padding-right: 2.25rem !important; }
+.content textarea:not(table *) { padding: .75rem .875rem; border-color: rgb(var(--line-ctl)); border-radius: 12px; }
+
+/* Tabs that switch a view in place (`.tabs` / `.tab`): the reference's grey
+   well with the chosen one white, rather than a row of outlined chips. */
+.tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgb(var(--wash));
+}
+.tab {
+  padding: .4375rem .75rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgb(var(--ink-2));
+  font-size: .8125rem;
+  font-weight: 600;
+}
+.tab:hover { border-color: transparent; color: rgb(var(--ink)); }
+.tab[aria-selected="true"] {
+  border-color: transparent;
+  background: rgb(var(--card));
+  color: rgb(var(--ink));
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgb(var(--char) / .08);
+}
+
+/* Chips and pills: the reference's pill — round ends, 12px, semibold. */
+.chip, .pill, .ptag, .cov {
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
 /* ---------------------------------------------------------------------------
    Responsive.
 
