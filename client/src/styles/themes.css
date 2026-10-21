@@ -50,15 +50,15 @@
    clears.
 
      green #1AAE5F  -> #14884A  a fill with white on it: the Dashboard
-                                button, `rail-on`, `live-dark` (2.95 -> 4.5)
+                                button, `rail-on`, `live-dark` (2.89 -> 4.5)
                     -> #19AA5D  `brand`, rings and marks (3:1 on white)
      #138A4A        -> #117B42  green text on every surface (`accent`)
-     #6B7280        -> #666C7A  `ink-2`, which is 4.43 on its own --surface-2
-     #A0A6B1        -> #666C7A  `ink-3` (2.5 -> 4.5); `faint` keeps #A0A6B1
+     #6B7280        -> #666C7A  `ink-2`, 4.16 on the divider
+     #A0A6B1        -> #666C7A  `ink-3` (2.1 -> 4.5); `faint` keeps #A0A6B1
      #C9353A        -> #C73439  red text on the divider
-     #E5484D        -> #E12E34  the red fill under white text (3.9 -> 4.5)
+     #E5484D        -> #E12E34  the red fill under white text (3.91 -> 4.5)
      #8F7000        -> #856800  "partial" text on the divider
-     edge #E3E6EA   -> #7C8A9D  `line-ctl`: a control's edge needs 3:1 (1.2)
+     edge #E3E6EA   -> #7C8A9D  `line-ctl`: a control's edge needs 3:1 (1.25)
      #F5C518        -> #B69008  `chart-3`, a chart mark needs 3:1 on white
      dark #6A7384   -> #8991A0  `ink-3` on dark
      dark #2C3340   -> #637390  `line-ctl` on dark

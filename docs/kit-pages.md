@@ -276,18 +276,18 @@ the lightness stepped:
 
 | Reference | Used | Where | Why |
 |---|---|---|---|
-| green `#1AAE5F` | `#14884A` | the Dashboard button, green buttons (white text on them) | white on it is 2.95:1 |
-| green `#1AAE5F` | `#19AA5D` | focus ring, marks, bars, the chart's first hue | 2.95:1 against white, needs 3:1 |
-| green ink `#138A4A` | `#117B42` | green text | 4.3:1 on the row divider |
-| muted `#6B7280` | `#666C7A` | second text | 4.43:1 on its own grey well |
-| faint `#A0A6B1` | `#666C7A` | the lightest text | 2.5:1. The exact `#A0A6B1` is kept for chevrons and icons only, never text |
-| red ink `#C9353A` | `#C73439` | red text | 4.45:1 on the divider |
-| red `#E5484D` | `#E12E34` | red buttons (white text) | white on it is 3.9:1 |
-| yellow ink `#8F7000` | `#856800` | "partial" text | 4.4:1 on the divider |
-| line-2 `#E3E6EA` | `#7C8A9D` | the edge of an input or select | 1.2:1. A control's edge needs 3:1 |
-| yellow `#F5C518` | `#B69008` | the chart's third hue on white | 1.6:1 |
-| dark faint `#6A7384` | `#8991A0` | the lightest text, dark mode | 3.6:1 |
-| dark line-2 `#2C3340` | `#637390` | the edge of a control, dark mode | 1.3:1 |
+| green `#1AAE5F` | `#14884A` | the Dashboard button, green buttons (white text on them) | white on it is 2.89:1 |
+| green `#1AAE5F` | `#19AA5D` | focus ring, marks, bars, the chart's first hue | 2.89:1 against white, needs 3:1 |
+| green ink `#138A4A` | `#117B42` | green text | 3.79:1 on the row divider |
+| muted `#6B7280` | `#666C7A` | second text | 4.16:1 on the row divider |
+| faint `#A0A6B1` | `#666C7A` | the lightest text | 2.45:1 on white, 2.1:1 on the divider. The exact `#A0A6B1` is kept for chevrons and icons only, never text |
+| red ink `#C9353A` | `#C73439` | red text | 4.46:1 on the divider |
+| red `#E5484D` | `#E12E34` | red buttons (white text) | white on it is 3.91:1 |
+| yellow ink `#8F7000` | `#856800` | "partial" text | 4.03:1 on the divider |
+| line-2 `#E3E6EA` | `#7C8A9D` | the edge of an input or select | 1.25:1 on white. A control's edge needs 3:1 |
+| yellow `#F5C518` | `#B69008` | the chart's third hue on white | 1.63:1 |
+| dark faint `#6A7384` | `#8991A0` | the lightest text, dark mode | 3.02:1 on the dark divider |
+| dark line-2 `#2C3340` | `#637390` | the edge of a control, dark mode | 1.14:1 |
 
 Everything else is the reference's value exactly. In dark mode its
 see-through washes (green 16%, red 16%, yellow 15%, blue 18%) are worked out
@@ -303,6 +303,37 @@ its data is a sample. This list shrinks as decisions come in.
 ---
 
 ## Decisions
+
+### Answered, 21 October 2026
+
+| | Answer |
+|---|---|
+| D1 record addresses | yes |
+| D2 the reference's menu | yes |
+| D3 no Check in/out; "My" pages only for a login linked to an Employee | yes |
+| D4 news categories and pin | yes, **but list the exact custom fields first and wait for an OK before adding them to the live site** |
+| D5 hiring stages and job status | yes, with the same condition as D4 |
+| D6 payroll settings read-only, no pay cycle | yes |
+| D7 Performance on Appraisal, empty until a cycle is started | yes |
+| D8 roles shown, not edited | yes |
+| D9 no sign-up, no code screen, Frappe's reset link | yes |
+| D10 no set-up wizard | yes, not built |
+| D11 Left, never deleted; undo only where it can be put back | yes |
+| D12 no Messages, no subtasks | yes |
+| D13 attendance settings edit one chosen shift | yes |
+| D14 the payroll list opens the run, never pays | yes |
+| D15 Directory and Org Chart | shown again, styled like the reference |
+| D16 the reference's dashboard, attendance in the chart | yes |
+| D17 leave policies read-only | yes |
+| D18 Help | FAQ as fixed text for now; the privacy policy is the reference's text, marked "draft, HR to review"; support requests go by email to IT |
+| D19 the company picker in the top bar | yes |
+
+Build order: shell, Dashboard, Employees, Time Off, Attendance, Payroll,
+Recruitment, Checklist, Documents, News, Reports, Settings, Notifications,
+Help, sign-in. After each section: the checks, a commit, a push to
+`feature/hrdashboard-ui`, and reference-against-ours pictures before the next.
+
+### The questions as they were put
 
 **D1, record addresses.** Add `/module/page/<record>/<view>` for one employee,
 job, applicant, slip, list, template, folder or news item, so that each has an
