@@ -248,9 +248,49 @@ function markSeen(day) {
 	try { localStorage.setItem(BDAY_SEEN, day); } catch { /* nothing kept; shown again next time */ }
 }
 
-function Birthdays({ people, onClose }) {
+/** Whether this page was opened as `?birthday=test` on the dev server — to see
+    the pop-up on a day nobody has a birthday. Never in the built app. */
+export function previewAsked(search, dev = import.meta.env.DEV) {
+	return Boolean(dev) && new URLSearchParams(search || "").get("birthday") === "test";
+}
+/* Read as the module loads: the router tidies the address before this page
+   draws, and the query goes with it. */
+const PREVIEW = typeof window !== "undefined" && previewAsked(window.location.search);
+
+/* The party popper (21 October 2026, asked for): 🎉, and confetti bursting out
+   of it once each time the window opens. The pieces' paths are fixed rather
+   than random, so every opening looks the same and a test can count them; they
+   fall a little, as confetti does. Colours are roles. With reduced motion every
+   animation here ends at once, so the pieces are gone before they are seen and
+   the popper simply sits there. */
+const CONFETTI = ["chart-1", "chart-2", "chart-3", "brand", "part", "bad-fill"];
+export const PIECES = Array.from({ length: 28 }, (_, i) => {
+	const a = (i / 28) * Math.PI * 2 + (i % 3) * 0.2;
+	const r = 70 + (i % 5) * 22;
+	return {
+		dx: Math.round(Math.cos(a) * r * 1.6),
+		dy: Math.round(Math.sin(a) * r * 0.7 + 20),
+		rot: (i * 47) % 360,
+		delay: (i % 4) * 40,
+		colour: CONFETTI[i % CONFETTI.length],
+	};
+});
+
+function Burst() {
 	return (
-		<KitModal title={people.length === 1 ? "Birthday today" : `${people.length} birthdays today`} onClose={onClose}>
+		<div className="k-bday-burst" aria-hidden="true">
+			<span className="k-bday-pop">🎉</span>
+			{PIECES.map((p, i) => (
+				<i key={i} style={{ "--dx": `${p.dx}px`, "--dy": `${p.dy}px`, "--r": `${p.rot}deg`, "--d": `${p.delay}ms`, background: `rgb(var(--${p.colour}))` }} />
+			))}
+		</div>
+	);
+}
+
+function Birthdays({ people, title, onClose }) {
+	return (
+		<KitModal title={title || (people.length === 1 ? "Birthday today" : `${people.length} birthdays today`)} onClose={onClose}>
+			<Burst />
 			<div>
 				{people.map((e) => (
 					<button type="button" className="k-list-row" key={e.name} style={{ width: "100%", textAlign: "left" }}
@@ -290,10 +330,14 @@ export default function Home() {
 	const day = todayIso();
 	const bdays = useMemo(() => birthdaysOn(s.employees, day, company), [s.employees, day, company]);
 	const [bdayOpen, setBdayOpen] = useState(false);
+	/* The dev server's preview: a real person off the list, the title saying
+	   it is a preview, and nothing remembered — a real birthday wins. */
+	const preview = !bdays.length && PREVIEW ? (s.employees || []).filter((e) => e.status === "Active").slice(0, 1) : [];
 	/* Opened by itself once the people are in, not while the page is empty. */
 	useEffect(() => {
+		if (preview.length) { setBdayOpen(true); return; }
 		if (bdays.length && !seenOn(day)) { setBdayOpen(true); markSeen(day); }
-	}, [bdays.length, day]);
+	}, [bdays.length, day, preview.length]);
 
 	if (!s.connState) return <Skeleton />;
 
@@ -311,7 +355,9 @@ export default function Home() {
 			<KitIcon name="cake" size={16} stroke={2} />{bdays.length === 1 ? "1 birthday today" : `${bdays.length} birthdays today`}
 		</button>
 	) : null;
-	const bdayPop = bdayOpen ? <Birthdays people={bdays} onClose={() => setBdayOpen(false)} /> : null;
+	const bdayPop = !bdayOpen ? null : preview.length
+		? <Birthdays people={preview} title="Birthday preview" onClose={() => setBdayOpen(false)} />
+		: <Birthdays people={bdays} onClose={() => setBdayOpen(false)} />;
 
 	if (layout === 2) {
 		const band = typeBand(s.employees, s.seps || [], company, now);

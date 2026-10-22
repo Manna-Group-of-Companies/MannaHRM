@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, fireEvent, render, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 
-import Home from "@/features/dashboard/Home";
+import Home, { PIECES, previewAsked } from "@/features/dashboard/Home";
 import { store, set, getState, resetStore } from "@/store";
 import { storedLayout } from "@/lib/homelayout";
 import { loadedState } from "./fixture";
@@ -65,6 +65,9 @@ describe("the front page", () => {
 		const dialog = document.querySelector('.k-modal[role="dialog"]');
 		expect(dialog.getAttribute("aria-label")).toBe("Birthday today");
 		expect(dialog.textContent).toContain(who.employee_name);
+		/* The popper and its confetti, hidden from a screen reader. */
+		expect(dialog.querySelector('.k-bday-burst[aria-hidden="true"] .k-bday-pop').textContent).toBe("🎉");
+		expect(dialog.querySelectorAll(".k-bday-burst i")).toHaveLength(PIECES.length);
 		await act(async () => { within(dialog).getAllByRole("button", { name: "Close" }).at(-1).click(); });
 		expect(document.querySelector('.k-modal[role="dialog"]')).toBeNull();
 		first.unmount();
@@ -74,6 +77,13 @@ describe("the front page", () => {
 		expect(document.querySelector('.k-modal[role="dialog"]')).toBeNull();
 		await act(async () => { within(again.container).getByRole("button", { name: "1 birthday today" }).click(); });
 		expect(document.querySelector('.k-modal[role="dialog"]').textContent).toContain(who.employee_name);
+	});
+
+	it("previews the birthday pop-up only on the dev server, and only when asked", () => {
+		expect(previewAsked("?birthday=test", true)).toBe(true);
+		expect(previewAsked("?birthday=test", false)).toBe(false);
+		expect(previewAsked("", true)).toBe(false);
+		expect(previewAsked("?birthday=yes", true)).toBe(false);
 	});
 
 	it("says what is waiting, with the button to it", async () => {
