@@ -24,6 +24,7 @@
 import { DAYS, LEFT, RIGHT, ROW_HEIGHTS, STYLES } from "@/data/registerlayout";
 import { LEGEND, daysIn } from "@/lib/register";
 import { MONTHS } from "@/lib/format";
+import { settleFormulas } from "@/lib/xlsxsettle";
 
 const ORIGINAL_DAYS = 30;
 /* The orange a weekly off is drawn in, as in the original. */
@@ -576,7 +577,8 @@ export function addRegisterSheet(wb, rows, opts) {
 	});
 	MONTHS.forEach((m, i) => { ws.getCell(`D${legendTop + 1 + i}`).value = m; });
 
-	return ws;
+	/* Last, once every cell a formula reads is written. */
+	return settleFormulas(ws);
 }
 
 /**

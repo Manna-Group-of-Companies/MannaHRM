@@ -35,11 +35,11 @@ describe("the bank and cash columns", () => {
 		const rows = [slip("A1", 30000, { bankPercent: 50 }), slip("A2", 30000, { bankAmount: 10000 }), slip("A3", 30000)];
 		const ws = (await registerWorkbook(rows, { ym: "2026-09", company: "C", paymentSplit: true, bankCap: 20000 })).getWorksheet("Wages Register");
 		expect(ws.getCell("CV2").value).toBe(20000);
-		expect(ws.getCell("CW6").value).toEqual({ formula: "MIN(MAX(0,CR6),ROUND(BL6*50%,2))" });
-		expect(ws.getCell("CV6").value).toEqual({ formula: "MAX(0,MAX(0,CR6)-CW6)" });
-		expect(ws.getCell("CW7").value).toEqual({ formula: "IF(BE7>0,MIN(MAX(0,CR7),ROUND(BL7*MAX(0,BE7-10000)/BE7,2)),MAX(0,MAX(0,CR7)-10000))" });
-		expect(ws.getCell("CV8").value).toEqual({ formula: "MIN(MAX(0,CR8),$CV$2)" });
-		expect(ws.getCell("CW8").value).toEqual({ formula: "MAX(0,CR8-CV8)" });
+		expect(ws.getCell("CW6").value).toMatchObject({ formula: "MIN(MAX(0,CR6),ROUND(BL6*50%,2))" });
+		expect(ws.getCell("CV6").value).toMatchObject({ formula: "MAX(0,MAX(0,CR6)-CW6)" });
+		expect(ws.getCell("CW7").value).toMatchObject({ formula: "IF(BE7>0,MIN(MAX(0,CR7),ROUND(BL7*MAX(0,BE7-10000)/BE7,2)),MAX(0,MAX(0,CR7)-10000))" });
+		expect(ws.getCell("CV8").value).toMatchObject({ formula: "MIN(MAX(0,CR8),$CV$2)" });
+		expect(ws.getCell("CW8").value).toMatchObject({ formula: "MAX(0,CR8-CV8)" });
 	});
 
 	it("lay Diff Cash out as HR's sheet — Net Payable, Paid by Bank, and Diff to be paid by Cash in yellow — one row a person", async () => {
@@ -62,13 +62,13 @@ describe("the bank and cash columns", () => {
 	it("show the actual salary as Net Payable on Diff Cash only, the payroll net by bank, and the rest as cash", async () => {
 		const paul = slip("MRP-293", 18322, { base: 21000, cashPay: 8000, actualSalary: 29000 });
 		const diff = (await registerWorkbook([paul], { ym: "2026-09", company: "C", paymentSplit: true, bankCap: 20000 })).getWorksheet("Wages Register");
-		expect(diff.getCell("CU6").value).toEqual({ formula: "ROUND(29000*IF(BE6>0,MIN(1,BL6/BE6),1),2)" });
-		expect(diff.getCell("CV6").value).toEqual({ formula: "MIN(MAX(0,CR6),CU6)" });
-		expect(diff.getCell("CW6").value).toEqual({ formula: "MAX(0,CU6-CV6)" });
+		expect(diff.getCell("CU6").value).toMatchObject({ formula: "ROUND(29000*IF(BE6>0,MIN(1,BL6/BE6),1),2)" });
+		expect(diff.getCell("CV6").value).toMatchObject({ formula: "MIN(MAX(0,CR6),CU6)" });
+		expect(diff.getCell("CW6").value).toMatchObject({ formula: "MAX(0,CU6-CV6)" });
 		/* Cash-1 keeps the payroll net, and its cash is the Cash field. */
 		const cash1 = (await registerWorkbook([paul], { ym: "2026-09", company: "C", paymentSplit: true, cashTab: true, bankCap: 20000 })).getWorksheet("Wages Register");
-		expect(cash1.getCell("CU6").value).toEqual({ formula: "CR6" });
-		expect(cash1.getCell("CW6").value).toEqual({ formula: "ROUND(8000*IF(BE6>0,MIN(1,BL6/BE6),1),2)" });
+		expect(cash1.getCell("CU6").value).toMatchObject({ formula: "CR6" });
+		expect(cash1.getCell("CW6").value).toMatchObject({ formula: "ROUND(8000*IF(BE6>0,MIN(1,BL6/BE6),1),2)" });
 	});
 
 	it("leave the actual salary off Cash-1", async () => {
@@ -82,7 +82,7 @@ describe("the bank and cash columns", () => {
 		expect(ws.getCell("BW6").value).toBe(150);
 		expect(ws.getCell("BW7").value).toBe(150);
 		expect(ws.getCell("CR6").value).toBe(30000);
-		expect(ws.getCell("CU6").value).toEqual({ formula: "CR6" });
+		expect(ws.getCell("CU6").value).toMatchObject({ formula: "CR6" });
 	});
 });
 
@@ -132,10 +132,10 @@ describe("MRPPL Cash-1, by each person's own salary structure", () => {
 		const ws = (await registerWorkbook(cash.rows, { ym: "2026-09", company: MR, paymentSplit: true, cashTab: true, bankCap: 20000 })).getWorksheet("Wages Register");
 		expect(ws.getCell("CW5").value).toBe("Cash take-home (₹)");
 		expect(ws.getCell("CV2").value).toBe(null);
-		expect(ws.getCell("CV6").value).toEqual({ formula: "0" });
-		expect(ws.getCell("CW7").value).toEqual({ formula: "MIN(MAX(0,CR7),ROUND(BL7*50%,2))" });
-		expect(ws.getCell("CW8").value).toEqual({ formula: "IF(BE8>0,MIN(MAX(0,CR8),ROUND(BL8*MAX(0,BE8-15000)/BE8,2)),MAX(0,MAX(0,CR8)-15000))" });
-		expect(ws.getCell("CW6").value).toEqual({ formula: "MAX(0,CR6-CV6)" });
+		expect(ws.getCell("CV6").value).toMatchObject({ formula: "0" });
+		expect(ws.getCell("CW7").value).toMatchObject({ formula: "MIN(MAX(0,CR7),ROUND(BL7*50%,2))" });
+		expect(ws.getCell("CW8").value).toMatchObject({ formula: "IF(BE8>0,MIN(MAX(0,CR8),ROUND(BL8*MAX(0,BE8-15000)/BE8,2)),MAX(0,MAX(0,CR8)-15000))" });
+		expect(ws.getCell("CW6").value).toMatchObject({ formula: "MAX(0,CR6-CV6)" });
 	});
 
 	it("keeps the cash at the sheet's own figure — ₹29,000 with ₹21,000 by bank is ₹8,000 cash, and PF and ESI come out of the bank part", async () => {
@@ -143,8 +143,8 @@ describe("MRPPL Cash-1, by each person's own salary structure", () => {
 		const ws = (await registerWorkbook([paul], { ym: "2026-09", company: MR, paymentSplit: true, cashTab: true, bankCap: 20000 })).getWorksheet("Wages Register");
 		expect(ws.getCell("BE6").value).toBe(29000);
 		/* A full month: BL (salary due) is 29,000, so the cash is 29,000 × 8,000 / 29,000. */
-		expect(ws.getCell("CW6").value).toEqual({ formula: "IF(BE6>0,MIN(MAX(0,CR6),ROUND(BL6*MAX(0,BE6-21000)/BE6,2)),MAX(0,MAX(0,CR6)-21000))" });
-		expect(ws.getCell("CV6").value).toEqual({ formula: "MAX(0,MAX(0,CR6)-CW6)" });
+		expect(ws.getCell("CW6").value).toMatchObject({ formula: "IF(BE6>0,MIN(MAX(0,CR6),ROUND(BL6*MAX(0,BE6-21000)/BE6,2)),MAX(0,MAX(0,CR6)-21000))" });
+		expect(ws.getCell("CV6").value).toMatchObject({ formula: "MAX(0,MAX(0,CR6)-CW6)" });
 	});
 
 	it("shows the Cash field from the salary assignment on Cash-1, beside a net that all goes by bank", async () => {
@@ -153,9 +153,9 @@ describe("MRPPL Cash-1, by each person's own salary structure", () => {
 		const parts = payrollDesignParts([{ company: MR, preview: true, rows: [paul] }], { bankCap: 20000 });
 		expect(parts.find((x) => x.sheet === "MRPPL Cash-1").rows.map((r) => r.code)).toEqual(["MRP-293"]);
 		const ws = (await registerWorkbook([paul], { ym: "2026-09", company: MR, paymentSplit: true, cashTab: true, bankCap: 20000 })).getWorksheet("Wages Register");
-		expect(ws.getCell("CV6").value).toEqual({ formula: "MAX(0,CR6)" });
+		expect(ws.getCell("CV6").value).toMatchObject({ formula: "MAX(0,CR6)" });
 		/* ₹8,000 on a full month, cut like the salary for days not worked. */
-		expect(ws.getCell("CW6").value).toEqual({ formula: "ROUND(8000*IF(BE6>0,MIN(1,BL6/BE6),1),2)" });
+		expect(ws.getCell("CW6").value).toMatchObject({ formula: "ROUND(8000*IF(BE6>0,MIN(1,BL6/BE6),1),2)" });
 	});
 
 	it("leaves the wage, ESI and net on Cash-1 at the full Salary Slip figures", async () => {
