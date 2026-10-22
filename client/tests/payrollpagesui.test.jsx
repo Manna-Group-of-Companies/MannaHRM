@@ -37,6 +37,19 @@ vi.mock("@/api/client", async (importOriginal) => {
 	};
 });
 
+/* The run's three steps are api/payroll.js's own, each tested there; here only
+   which of them a page takes, and when. */
+vi.mock("@/api/payroll", async (importOriginal) => ({
+	...(await importOriginal()),
+	startSalaryProcess: (company, start, end) => {
+		calls.push(["start", company, start, end]);
+		if (site.refuseRun) return Promise.reject(new Error("Manna Rubber has no Payroll Payable Account"));
+		return Promise.resolve("PE-NEW");
+	},
+	createSalarySlips: (name) => { calls.push(["slips", name]); return Promise.resolve({}); },
+	submitSalarySlips: (name) => { calls.push(["payslips", name]); return Promise.resolve({}); },
+}));
+
 import { pageFor } from "@/routes/registry";
 import SalarySetup from "@/features/payroll/SalarySetup";
 import AdvancesLoans from "@/features/payroll/AdvancesLoans";
@@ -89,34 +102,16 @@ describe("the module", () => {
 });
 
 describe("Salary Setup", () => {
-	it("says who has no structure and that there are no structures yet", async () => {
+	it("says who has no structure", async () => {
 		const v = await draw(SalarySetup);
-		expect(v.container.textContent).toContain("none yet");
 		expect(v.container.textContent).toMatch(/Still to set up/);
-		expect(v.container.textContent).toContain("Make a salary structure above first.");
 	});
 
-	it("makes a structure only after a confirm, with HR's own rates, and submits it", async () => {
+	it("has no hand-made structure and no ticking people one by one — the salary sheet does both", async () => {
 		const v = await draw(SalarySetup);
-		await type(v, "#su-name", "Staff Monthly");
-		await type(v, "#su-earnings-v0", "50");
-		await click(button(v, "Make the structure"));
-		expect(calls.length).toBe(0);
-		await click(button(v, "Yes, make Staff Monthly"));
-		await act(async () => {});
-		expect(calls[0][0]).toBe("created+submitted");
-		expect(calls[0][1]).toBe("Salary Structure");
-		expect(calls[0][2]).toMatchObject({ name: "Staff Monthly", company: "Manna Rubber", is_active: "Yes",
-			earnings: [{ salary_component: "Basic", amount_based_on_formula: 1, formula: "base * 0.5" }] });
-		expect(v.container.textContent).toContain("Staff Monthly is made");
-	});
-
-	it("will not make a structure with a rate missing, and says which", async () => {
-		const v = await draw(SalarySetup);
-		await type(v, "#su-name", "Staff");
-		await click(button(v, "Make the structure"));
-		expect(v.container.textContent).toContain("Type the percentage for Basic");
-		expect(calls.length).toBe(0);
+		expect(v.container.textContent).not.toMatch(/1\. Salary structure|2\. Give people their salary/);
+		expect(button(v, "Make the structure")).toBeUndefined();
+		expect(v.container.querySelector("#su-name")).toBeNull();
 	});
 
 	it("saves an uploaded sheet only after a confirm: a structure for each PF and ESI pair, the salary, and the bank and cash split", async () => {
@@ -186,52 +181,6 @@ describe("Salary Setup", () => {
 		await click(button(v, "Yes, save 1"));
 		await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
 		expect(v.container.textContent).toContain("Read back from the site and different: Anand Raghavan has no Salary PF 12 no ESI - Manna Rubber on the site");
-	});
-
-	it("gives ticked people a structure and a base pay, one document each", async () => {
-		site["Salary Structure"] = [{ name: "Staff Monthly", company: "Manna Rubber", docstatus: 1 }];
-		const v = await draw(SalarySetup);
-		await type(v, "#su-struct", "Staff Monthly");
-		await type(v, "#su-from", "2026-09-01");
-		await act(async () => { fireEvent.click(v.container.querySelector("[aria-label='Tick Anand Raghavan']")); });
-		await act(async () => { fireEvent.click(v.container.querySelector("[aria-label='Tick Priya Menon']")); });
-		await type(v, "#su-bulk", "20000");
-		await click(button(v, "Fill"));
-		await type(v, "#su-base-HR-EMP-00002", "25000");
-		await click(startsWith(v, "Give the structure to"));
-		expect(calls.length).toBe(0);
-		await click(startsWith(v, "Yes, give it to 2"));
-		await act(async () => {});
-		const made = calls.filter((c) => c[1] === "Salary Structure Assignment").map((c) => c[2]);
-		expect(made).toEqual([
-			{ employee: "HR-EMP-00001", salary_structure: "Staff Monthly", from_date: "2026-09-01", base: 20000, company: "Manna Rubber" },
-			{ employee: "HR-EMP-00002", salary_structure: "Staff Monthly", from_date: "2026-09-01", base: 25000, company: "Manna Rubber" },
-		]);
-	});
-
-	it("asks for a base pay before it makes anything", async () => {
-		site["Salary Structure"] = [{ name: "S", company: "Manna Rubber", docstatus: 1 }];
-		const v = await draw(SalarySetup);
-		await type(v, "#su-struct", "S");
-		await act(async () => { fireEvent.click(v.container.querySelector("[aria-label='Tick Anand Raghavan']")); });
-		await click(startsWith(v, "Give the structure to"));
-		expect(v.container.textContent).toContain("Type a base pay for Anand Raghavan");
-		expect(calls.length).toBe(0);
-	});
-
-	it("says which person the site refused and still does the rest", async () => {
-		site["Salary Structure"] = [{ name: "S", company: "Manna Rubber", docstatus: 1 }];
-		site.refuse = (doc) => doc.employee === "HR-EMP-00001";
-		const v = await draw(SalarySetup);
-		await type(v, "#su-struct", "S");
-		for (const n of ["Anand Raghavan", "Priya Menon"]) await act(async () => { fireEvent.click(v.container.querySelector(`[aria-label='Tick ${n}']`)); });
-		await type(v, "#su-bulk", "100");
-		await click(button(v, "Fill"));
-		await click(startsWith(v, "Give the structure to"));
-		await click(startsWith(v, "Yes, give it to 2"));
-		await act(async () => {});
-		expect(calls.filter((c) => c[1] === "Salary Structure Assignment")).toHaveLength(2);
-		expect(v.container.textContent).toContain("Anand Raghavan — refused");
 	});
 
 	it("shows who already has one", async () => {
@@ -367,5 +316,78 @@ describe("Bank Transfer", () => {
 		expect(text.join("\n")).toContain("GSTIN/Tax ID: 32ABC");
 		expect(text.join("\n")).toContain("Anand Raghavan");
 		expect(text.find((l) => l.includes("TOTAL"))).toContain("18500");
+	});
+});
+
+describe("Bank Transfer moves the month along", () => {
+	const ENTRY = { name: "PE-1", company: "Manna Rubber", start_date: START, end_date: END, docstatus: 1, creation: "2026-10-01" };
+	const DRAFT = { ...SLIP, docstatus: 0 };
+	const transferred = (v) => button(v, "Transferred");
+
+	it("works out a month that is over as soon as it is opened: the run, then its slips", async () => {
+		await draw(BankSheet);
+		await act(async () => {});
+		expect(calls).toEqual([["start", "Manna Rubber", START, END], ["slips", "PE-NEW"]]);
+	});
+
+	it("submits a run already made but not yet run, rather than making a second one", async () => {
+		site["Payroll Entry"] = [{ ...ENTRY, docstatus: 0 }];
+		await draw(BankSheet);
+		await act(async () => {});
+		expect(calls).toEqual([["slips", "PE-1"]]);
+	});
+
+	it("says a refusal and does not try again on the same visit", async () => {
+		site.refuseRun = true;
+		const v = await draw(BankSheet);
+		await act(async () => {});
+		await act(async () => {});
+		expect(calls.filter((c) => c[0] === "start")).toHaveLength(1);
+		expect(v.container.textContent).toContain("could not be worked out: Manna Rubber has no Payroll Payable Account");
+	});
+
+	it("works out nothing with all companies in the top bar, and says to pick one", async () => {
+		act(() => set({ company: "" }));
+		const v = await draw(BankSheet);
+		expect(calls).toEqual([]);
+		expect(v.container.textContent).toContain("Pick a company in the top bar");
+	});
+
+	it("works out nothing for a login kept from changing pay", async () => {
+		act(() => set({ user: "hitechrubber@mannarubber.com" }));
+		await draw(BankSheet);
+		await act(async () => {});
+		expect(calls).toEqual([]);
+	});
+
+	it("offers Transferred on draft slips, asks first, and only then makes the payslips through the run", async () => {
+		site["Payroll Entry"] = [ENTRY];
+		site["Salary Slip"] = [DRAFT];
+		const v = await draw(BankSheet);
+		expect(calls).toEqual([]);
+		await click(transferred(v));
+		expect(calls).toEqual([]);
+		expect(v.container.textContent).toContain("₹10,500 to 1 person");
+		await click(button(v, "Yes, transferred"));
+		expect(calls).toEqual([["payslips", "PE-1"]]);
+		expect(v.container.textContent).toContain("marked transferred");
+	});
+
+	it("lets Cancel take the question back without making anything", async () => {
+		site["Payroll Entry"] = [ENTRY];
+		site["Salary Slip"] = [DRAFT];
+		const v = await draw(BankSheet);
+		await click(transferred(v));
+		await click(button(v, "Cancel"));
+		expect(calls).toEqual([]);
+		expect(transferred(v)).toBeTruthy();
+	});
+
+	it("has no Transferred once the payslips are made, and says they are", async () => {
+		site["Payroll Entry"] = [ENTRY];
+		site["Salary Slip"] = [SLIP];
+		const v = await draw(BankSheet);
+		expect(transferred(v)).toBeUndefined();
+		expect(v.container.textContent).toContain("the payslips are made");
 	});
 });

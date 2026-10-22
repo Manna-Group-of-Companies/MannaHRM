@@ -70,9 +70,6 @@ import CompanyChart from "@/features/employees/CompanyChart";
 import Increments from "@/features/payroll/Increments";
 import AdvancesLoans from "@/features/payroll/AdvancesLoans";
 import Payslips from "@/features/payroll/Payslips";
-import EmployeePayroll from "@/features/payroll/EmployeePayroll";
-import PayslipDetail from "@/features/payroll/PayslipDetail";
-import PayrollSettings from "@/features/payroll/PayrollSettings";
 import BankSheet from "@/features/payroll/BankSheet";
 import Adhoc from "@/features/payroll/Adhoc";
 import FrappePayroll from "@/features/payroll/FrappePayroll";
@@ -239,11 +236,10 @@ const TABS = {
 	   Bank Transfer. The older tabs are hidden, not deleted. 5 Oct 2026:
 	   Increments, January's raises from HR's Excel sheet. */
 	/* The run stays first — Payroll opens on its own page. The HRDashboard
-	   reference's Employee Payroll beside it (21 October 2026), which opens the
-	   run and pays nobody (D14), and its Payroll Settings, read and not written
-	   (D6), after ours. */
-	payroll: [["overview", "Payroll"], ["employees", "Employee Payroll"], ["setup", "Salary Setup"], ...managedTabs("payroll"), ["increments", "Increments"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
-		["transfer", "Bank Transfer"], ["settings", "Payroll Settings"], ["adhoc", "Adhoc Payments/Deductions"], ["process", "Salary Process"],
+	   reference's Employee Payroll, its Payroll Detail and its Payroll Settings
+	   joined on 21 October 2026 and were removed on 22 October, asked for by HR. */
+	payroll: [["overview", "Payroll"], ["setup", "Salary Setup"], ...managedTabs("payroll"), ["increments", "Increments"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
+		["transfer", "Bank Transfer"], ["adhoc", "Adhoc Payments/Deductions"], ["process", "Salary Process"],
 		["sheet", "Salary Sheet"], ["payslip", "Salary Payslip"], ["register", "Salary Register"],
 		["bank", "Bank Transfer"], ["frappe", "Frappe Payroll"], ["fnf", "Final Settlement"],
 		["itdec", "IT Declarations"], ["bonus", "Bonus Working Report"], ["ptax", "Prof. Tax Statement"], ["all", "All"]],
@@ -332,7 +328,7 @@ const PAGES = {
 		availed: report("leave", "availed"), monthly: LeaveMonthly,
 		all: moduleAll("leave", "Leave"),
 		...blueprintPages("leave") },
-	payroll: { employees: EmployeePayroll, slip: PayslipDetail, settings: PayrollSettings,
+	payroll: {
 		overview: PayrollRun, setup: SalarySetup, increments: Increments, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
 		itdec: ITDeclarations, bank: BankTransfer, bonus: BonusReport, payslip: Payslip,
 		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
@@ -412,7 +408,7 @@ export function fullPage(s) {
 /* `attendance/mine` (21 Oct 2026): My Attendance, for a login an Employee is
    linked to (D3) — none of today's are — so it is opened from Team Attendance's
    own button rather than offered on every login's menu. */
-const OFF_MENU = { employees: ["new", "import", "upload", "chart", "profile"], documents: ["folder"], news: ["item", "new", "edit"], attendance: ["mine"], leave: ["mine"], payroll: ["slip"], recruitment: ["job", "applicant", "new"], checklist: ["todo", "list", "template"], reports: REPORT_PAGES, help: ["faq", "privacy", "shortcuts", "contact"] };
+const OFF_MENU = { employees: ["new", "import", "upload", "chart", "profile"], documents: ["folder"], news: ["item", "new", "edit"], attendance: ["mine"], leave: ["mine"], recruitment: ["job", "applicant", "new"], checklist: ["todo", "list", "template"], reports: REPORT_PAGES, help: ["faq", "privacy", "shortcuts", "contact"] };
 
 /** What the breadcrumb calls an off-menu page. These have no tab to be named
     by, and before 10 Oct 2026 every one of them read "Overview" up there. */
@@ -424,7 +420,6 @@ const OFF_MENU_TITLE = {
 	"employees/profile": "Employee Profile",
 	"attendance/mine": "My Attendance",
 	"leave/mine": "My Time Off",
-	"payroll/slip": "Payroll Detail",
 	"recruitment/job": "Job",
 	"recruitment/applicant": "Applicant",
 	"recruitment/new": "Post a new job",

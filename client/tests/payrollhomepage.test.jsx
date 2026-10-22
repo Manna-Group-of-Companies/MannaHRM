@@ -61,9 +61,17 @@ describe("Payroll opens on its own page", () => {
 		/* Increments joined on 5 Oct 2026, beside Salary Setup: January's raises.
 		   Actual Salary on 14 Oct 2026, beside it too: kept apart from payroll. */
 		const shown = MODULES.payroll.tabs.map((t) => t[0]).filter((k) => !hiddenUnder({}, "payroll", k));
-		/* Employee Payroll and Payroll Settings, the HRDashboard reference's,
-		   joined on 21 Oct 2026 — the run is still first. */
-		expect(shown).toEqual(["overview", "employees", "setup", "actualsalary", "increments", "advances", "slips", "transfer", "settings"]);
+		/* Employee Payroll and Payroll Settings joined on 21 Oct 2026 and left
+		   on 22 Oct, asked for by HR. */
+		expect(shown).toEqual(["overview", "setup", "actualsalary", "increments", "advances", "slips", "transfer"]);
+	});
+
+	it("no longer has Employee Payroll, Payroll Detail or Payroll Settings, and their old addresses open Payroll", () => {
+		const keys = MODULES.payroll.tabs.map((t) => t[0]);
+		for (const k of ["employees", "slip", "settings"]) {
+			expect(keys, k).not.toContain(k);
+			expect(pageFor("payroll", k), k).toBe(pageFor("payroll", "overview"));
+		}
 	});
 
 	it("still has every other page, hidden and not deleted, at its own address", () => {

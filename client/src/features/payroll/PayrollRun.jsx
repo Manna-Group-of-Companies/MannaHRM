@@ -26,6 +26,7 @@ import { payRows } from "@/features/payroll/shared";
 import SheetTable, { money } from "@/features/payroll/SheetTable";
 import { Desk, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 import { salaryLocked } from "@/data/menus";
+import { navigate } from "@/routes/router";
 
 /* PAYROLL → PAYROLL. Ours, 2 October 2026 — the one page payroll is run from.
 
@@ -46,9 +47,9 @@ import { salaryLocked } from "@/data/menus";
    the site holds (lib/registerpreview.js). Not this page and not hrms — which
    is why the file and the message both say it is not to be paid from.
 
-   **The one step that stays on the desk is the last: submitting the slips.**
-   That books the pay to the ledger, and it is deliberately somebody opening the
-   run on the site and pressing Submit (api/client.js, apiSubmitDraft). */
+   **The last step is not on this page: submitting the slips.** That books the
+   pay to the ledger, and since 22 October 2026 it is Transferred on Bank
+   Transfer, pressed once the bank has been paid (features/payroll/BankSheet.jsx). */
 
 const rupees = (v) => "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
@@ -554,10 +555,8 @@ export default function PayrollRun() {
 					) : (
 						<button type="button" className="embtn pri" onClick={() => setConfirm("slips")}>Create salary slips</button>
 					))}
-					{run === "slips" && (
-						<Desk className="embtn pri" href={site && deskUrl(site, "Payroll Entry", entry.name)} label="Submit the salary slips in Frappe">
-							Submit the slips in Frappe
-						</Desk>
+					{run === "slips" && entry && (
+						<button type="button" className="embtn pri" onClick={() => navigate("payroll", "transfer")}>Bank Transfer</button>
 					)}
 					{entry && run !== "slips" && (
 						<Desk className="embtn" href={site && deskUrl(site, "Payroll Entry", entry.name)} label="Open the salary run in Frappe">

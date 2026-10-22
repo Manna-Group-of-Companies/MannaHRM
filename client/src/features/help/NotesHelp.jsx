@@ -161,7 +161,7 @@ export const FAQ = [
 	["Somebody’s punches are missing. What do I do?", "Open Attendance → Employee Attendance Regularization and correct the person’s day there. A correction writes the missing punch; the day is worked out again from the punches."],
 	["How do people ask for leave?", "Time Off → Apply Leave raises the request as a draft. The approver decides it on Dashboard → Approvals."],
 	["Where are the attendance reports?", "Report, in the top bar: every attendance report is a box there. Employee Attendance Regularization also has Download report, for Excel or PDF."],
-	["How is a month paid?", "Payroll → Payroll runs the month step by step: the salary slips, then the bank sheet. Employee Payroll shows each slip and its status."],
+	["How is a month paid?", "Payroll → Payroll runs the month step by step: the salary slips, then the bank sheet. Payslips shows each slip and its status."],
 	["Why can I not see a page?", "Each login sees its own menu. Ask HR if a page you need is missing."],
 	["Is anything deleted when I deactivate somebody?", "No. Deactivate sets the status to Inactive and hides their details until they are activated again."],
 ];

@@ -119,8 +119,6 @@ const initial = {
 	attEmp: "",
 	/** Team Time Off: every leave application from the start of last year (api/leavelist.js). */
 	lvAll: { state: "", rows: [] },
-	/** Payroll Detail: whose slip, and which month (`{emp, ym}`). Employee Payroll sets it. */
-	payView: null,
 	/** Recruitment: every opening and applicant (api/jobs.js), and the job and applicant open. */
 	rec: { state: "", jobs: [], apps: [], criteria: false, detail: false, err: "" },
 	recJob: "",

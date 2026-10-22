@@ -435,7 +435,9 @@ export async function apiDecide(label, name, status) {
     slip books nothing and can be deleted by cancelling the entry. The step
     that pays — submitting the slips, which books the salary to the ledger —
     is Finalize, and it stays on the desk with the other submits that decide
-    somebody's pay. `savedocs` with the whole document, the way the desk's own
+    somebody's pay — except Transferred on Bank Transfer (22 October 2026),
+    which submits them through the entry's own `submit_salary_slips`
+    (api/payroll.js), never through here. `savedocs` with the whole document, the way the desk's own
     Submit button sends it, so hrms's own checks run: the employees, the
     accounts, an overlapping run. Throws what the site said.
 
