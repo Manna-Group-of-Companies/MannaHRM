@@ -123,6 +123,54 @@ export function punchGaps(f) {
 	return out;
 }
 
+/* ---------------------------------------------------------------------------
+   The app login, made with the Employee (22 October 2026, asked for by HR):
+   when somebody punches on the phone, Create Employee takes a login and a
+   password there and then, rather than leaving a login to be made on the desk
+   and joined up by tools/setup_phone_punch.py afterwards.
+
+   **The password is never part of the form `f`.** That object is the Employee
+   draft and the import sheet's columns; the login and password are the page's
+   own and go to the site's User, nowhere else. An empty password is an
+   answer: no login now, the old way.
+   --------------------------------------------------------------------------- */
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** The login to offer: the email the matching tool would have joined on. */
+export const appLoginDefault = (f) => String(f.company_email || f.personal_email || "").trim();
+
+/** Whether this form makes a login: the phone is how they punch, and a
+    password was typed. */
+export const makesAppLogin = (f, login) => punchesOnApp(f.custom_punch_method) && typed(login?.password);
+
+/** What is wrong with the login and password, or "". Only once a password is
+    typed — before that there is nothing to check. The site has the last word
+    on how strong a password must be. */
+export function appLoginProblem(f, login) {
+	if (!makesAppLogin(f, login)) return "";
+	if (!EMAIL.test(String(login.email || "").trim())) return "The app login has to be an email address.";
+	if (String(login.password).length < 8) return "The app password needs at least 8 characters.";
+	return "";
+}
+
+/** The User a phone login is. The Employee role is all the app needs; the
+    site's own `create_user_permission` on the Employee then keeps the login to
+    that one record. No welcome email: the password was just given to them. */
+export function appUserDoc(emp, login) {
+	const [first, ...rest] = String(emp.employee_name || emp.first_name || login.email).trim().split(/\s+/);
+	return {
+		email: String(login.email).trim().toLowerCase(),
+		first_name: first,
+		last_name: rest.join(" ") || undefined,
+		enabled: 1,
+		user_type: "System User",
+		send_welcome_email: 0,
+		new_password: login.password,
+		roles: [{ role: "Employee" }],
+	};
+}
+
 /** The dates that cannot all be true at once.
 
     Only impossibilities are listed, never anything merely unusual. A joining
