@@ -166,13 +166,29 @@ export const FAQ = [
 	["Is anything deleted when I deactivate somebody?", "No. Deactivate sets the status to Inactive and hides their details until they are activated again."],
 ];
 
-/** The shortcuts this app has — and only those. */
+/** The shortcuts this app has — and only those. `?`, `g` and `n` since
+    21 October 2026: data/shortcuts.js binds them, and a test holds this list
+    to it. A `g` key goes nowhere a login is not shown. */
 export const SHORTCUTS = [
 	[["/"], "Search people, pages and actions"],
+	[["?"], "Open keyboard shortcuts"],
 	[["Ctrl", "K"], "Go to any page by name"],
 	[["↑", "↓"], "Move through the search results"],
 	[["Enter"], "Open the highlighted result"],
 	[["Esc"], "Close a window or menu"],
+	[["g", "d"], "Go to dashboard"],
+	[["g", "e"], "Go to employees"],
+	[["g", "t"], "Go to time off"],
+	[["g", "a"], "Go to attendance"],
+	[["g", "p"], "Go to payroll"],
+	[["g", "r"], "Go to recruitment"],
+	[["g", "o"], "Go to documents"],
+	[["g", "n"], "Go to news"],
+	[["g", "x"], "Go to reports"],
+	[["g", "c"], "Go to checklist"],
+	[["g", "s"], "Go to settings"],
+	[["g", "h"], "Go to help center"],
+	[["n"], "New employee, news post or job, on that page"],
 ];
 
 function Crumbs({ title }) {

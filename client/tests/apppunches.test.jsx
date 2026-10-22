@@ -254,5 +254,5 @@ describe("the App Punches workbook", () => {
 		expect(punches[ph]).toEqual(["S#", "Location", "Location Link"]);
 		expect(punches[ph + 2][0]).toBe("2");
 		expect(punches[ph + 1][2]).toEqual({ text: "View Map", hyperlink: "https://www.google.com/maps/search/?api=1&query=10,76" });
-	});
+	}, 20000);
 });

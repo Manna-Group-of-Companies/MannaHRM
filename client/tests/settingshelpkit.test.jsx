@@ -218,7 +218,8 @@ describe("Help", () => {
 	});
 
 	it("lists only the shortcuts this app has", () => {
-		expect(SHORTCUTS.map((k) => k[0].join("+"))).toEqual(["/", "Ctrl+K", "↑+↓", "Enter", "Esc"]);
+		expect(SHORTCUTS.map((k) => k[0].join("+"))).toEqual(["/", "?", "Ctrl+K", "↑+↓", "Enter", "Esc",
+			"g+d", "g+e", "g+t", "g+a", "g+p", "g+r", "g+o", "g+n", "g+x", "g+c", "g+s", "g+h", "n"]);
 	});
 
 	it("sends a support request to IT by email", async () => {
