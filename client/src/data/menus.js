@@ -51,9 +51,9 @@ export const USER_MENUS = {
 	   Employees module is still USER_ONLY's four. */
 	/* Settings gained the HRDashboard reference's sections on 21 October 2026,
 	   ahead of this login's own three; Manage Shift joined them from
-	   Attendance the same day. */
+	   Attendance the same day. App users on 22 October, beside Permission. */
 	"hr@mannarubber.com": { onboard: ["overview"], settings: ["company", "offices", "departments", "titles", "schedules", "shifts", "calendar",
-		"permission", "password", "notifications", "overview", "coverage", "security"] },
+		"permission", "appusers", "password", "notifications", "overview", "coverage", "security"] },
 };
 
 /* Who may change which pages everybody is shown — Settings → Security, asked

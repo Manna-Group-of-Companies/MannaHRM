@@ -540,6 +540,11 @@
 .k-set-nav{background:rgb(var(--card));border-radius:18px;padding:10px;box-shadow:var(--sh-raise);display:flex;flex-direction:column;gap:2px;position:sticky;top:96px}
 .k-set-nav button{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;font-weight:600;color:rgb(var(--ink-2));text-align:left;transition:background .15s,color .15s}
 .k-set-nav button:hover{background:rgb(var(--wash));color:rgb(var(--ink))}
+.k-au-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:0 0 14px}
+.k-au-tiles>*{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border-radius:12px;background:rgb(var(--wash));text-align:left;color:rgb(var(--ink-2))}
+.k-au-tiles b{font-size:20px;color:rgb(var(--ink))}
+.k-au-tiles button.k-on{background:rgb(var(--brand-soft));color:rgb(var(--accent))}
+.k-au-tiles button.k-on b{color:rgb(var(--accent))}
 .k-set-nav button.k-on{background:rgb(var(--brand-soft));color:rgb(var(--accent))}
 .k-perm-grid{display:grid;grid-template-columns:1fr 80px 80px;align-items:center}
 .k-perm-grid>*{padding:10px 8px;border-bottom:1px solid rgb(var(--line))}

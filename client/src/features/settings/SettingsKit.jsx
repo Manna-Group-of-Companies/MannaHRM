@@ -26,7 +26,7 @@ import { KitModal, ModalFoot, toast } from "@/components/kit/overlay";
 
 const ICON = {
 	company: "building", offices: "pin", departments: "layers", titles: "brief", schedules: "clock",
-	shifts: "timer", calendar: "calendar", permission: "shield", password: "lock", notifications: "bell", overview: "check", coverage: "chart", security: "eye",
+	shifts: "timer", calendar: "calendar", permission: "shield", appusers: "phone", password: "lock", notifications: "bell", overview: "check", coverage: "chart", security: "eye",
 };
 const why = (e) => String(e?.message || e || "The site would not do that.").slice(0, 240);
 

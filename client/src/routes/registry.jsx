@@ -92,6 +92,7 @@ import Settings from "@/features/settings/Settings";
 import Coverage from "@/features/settings/Coverage";
 import Security from "@/features/settings/Security";
 import { CompanyInfo, Departments, NotificationSettings, Offices, Password, Permission, Schedules, Titles, framed } from "@/features/settings/SettingsKit";
+import AppUsers from "@/features/settings/AppUsers";
 import Reports from "@/features/reports/Reports";
 import { ATT_TILES, REPORT_PAGES, REPORT_TILES } from "@/data/reportpages";
 import { Help, Notifications } from "@/features/help/NotesHelp";
@@ -266,9 +267,10 @@ const TABS = {
 	/* The HRDashboard reference's Settings first (21 October 2026), then ours.
 	   Manage Shift moved here from Attendance the same day, asked for by HR:
 	   making shifts is setting up, beside the reference's Work schedules. And
-	   Calendar from Employees, also asked for: the holiday lists are setup too. */
+	   Calendar from Employees, also asked for: the holiday lists are setup too.
+	   App users on 22 October, beside Permission: who may use the phone app. */
 	settings: [["company", "Company info"], ["offices", "Offices"], ["departments", "Departments"], ["titles", "Job titles"],
-		["schedules", "Work schedules"], ["shifts", "Manage Shift"], ["calendar", "Calendar"], ["permission", "Permission"], ["password", "Change password"], ["notifications", "Notifications"],
+		["schedules", "Work schedules"], ["shifts", "Manage Shift"], ["calendar", "Calendar"], ["permission", "Permission"], ["appusers", "App users"], ["password", "Change password"], ["notifications", "Notifications"],
 		["overview", "Setup readiness"], ["coverage", "Module coverage"], ["security", "Security"]],
 };
 
@@ -349,7 +351,7 @@ const PAGES = {
 	news: { overview: News, item: News, new: News, edit: News },
 	settings: { overview: framed(Settings), coverage: framed(Coverage), security: framed(Security),
 		company: CompanyInfo, offices: Offices, departments: Departments, titles: Titles, schedules: Schedules, shifts: framed(Shifts), calendar: framed(Calendar),
-		permission: Permission, password: Password, notifications: NotificationSettings },
+		permission: Permission, appusers: AppUsers, password: Password, notifications: NotificationSettings },
 };
 /* A page opened from another page rather than from a menu.
 
