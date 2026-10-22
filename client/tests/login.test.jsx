@@ -14,23 +14,25 @@ import { PRIVACY, TERMS } from "@/data/policies";
    --------------------------------------------------------------------------- */
 
 const draw = () => render(<Provider store={store}><Login /></Provider>);
-const type = (label, v) => fireEvent.change(screen.getByLabelText(label), { target: { value: v } });
+/* By the start of the label: a required one ends in the reference's "*". */
+const field = (label) => screen.getByLabelText(new RegExp(`^${label}`));
+const type = (label, v) => fireEvent.change(field(label), { target: { value: v } });
 const refused = (status) => Object.assign(new Error(String(status)), { status });
 
-beforeEach(() => resetStore());
-afterEach(() => vi.restoreAllMocks());
+beforeEach(() => { resetStore(); localStorage.clear(); });
+afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
 
 describe("the sign-in page", () => {
 	it("is the reference's form, without the parts this site cannot back", () => {
 		draw();
 		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Login first to your account");
-		expect(screen.getByLabelText("Email Address").type).toBe("text");
-		expect(screen.getByLabelText("Password").type).toBe("password");
+		expect(field("Email Address").type).toBe("text");
+		expect(field("Password").type).toBe("password");
+		expect(field("Email Address").getAttribute("aria-required")).toBe("true");
 		expect(screen.getByRole("button", { name: "Login" }).disabled).toBe(true);
 		expect(screen.getByRole("button", { name: "Forgot password" })).toBeTruthy();
-		/* No Remember me (a session is the site's cookie), no sign-up, and no
-		   Google or Apple: the site has no Social Login Key. */
-		for (const gone of [/remember me/i, /create account/i, /google/i, /apple/i]) {
+		/* No sign-up, and no Google or Apple: the site has no Social Login Key. */
+		for (const gone of [/create account/i, /google/i, /apple/i]) {
 			expect(document.body.textContent).not.toMatch(gone);
 		}
 	});
@@ -57,9 +59,33 @@ describe("the sign-in page", () => {
 		expect(getState().user).toBeFalsy();
 	});
 
+	it("remembers who signed in with Remember me ticked, and forgets them unticked", async () => {
+		vi.spyOn(http, "post").mockResolvedValue({ data: {} });
+		vi.spyOn(http, "get").mockResolvedValue({ data: { message: "hr@mannarubber.com" } });
+		const first = draw();
+		expect(screen.getByRole("checkbox", { name: "Remember me" }).checked).toBe(false);
+		type("Email Address", " hr@mannarubber.com ");
+		type("Password", "secret");
+		fireEvent.click(screen.getByRole("checkbox", { name: "Remember me" }));
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Login" })); });
+		first.unmount();
+
+		const again = draw();
+		expect(field("Email Address").value).toBe("hr@mannarubber.com");
+		expect(screen.getByRole("checkbox", { name: "Remember me" }).checked).toBe(true);
+		expect(field("Password").value).toBe("");
+		fireEvent.click(screen.getByRole("checkbox", { name: "Remember me" }));
+		type("Password", "secret");
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Login" })); });
+		again.unmount();
+
+		draw();
+		expect(field("Email Address").value).toBe("");
+	});
+
 	it("shows and hides the password with the eye", () => {
 		draw();
-		const box = screen.getByLabelText("Password");
+		const box = field("Password");
 		fireEvent.click(screen.getByRole("button", { name: "Show password" }));
 		expect(box.type).toBe("text");
 		fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
@@ -71,7 +97,7 @@ describe("the sign-in page", () => {
 		draw();
 		type("Email Address", "anita@mannarubber.com");
 		fireEvent.click(screen.getByRole("button", { name: "Forgot password" }));
-		expect(screen.getByLabelText("Email Address").value).toBe("anita@mannarubber.com");
+		expect(field("Email Address").value).toBe("anita@mannarubber.com");
 		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Send reset link" })); });
 		expect(post.mock.calls[0][0]).toBe("/api/method/frappe.core.doctype.user.user.reset_password");
 		expect(post.mock.calls[0][1]).toEqual({ user: "anita@mannarubber.com" });

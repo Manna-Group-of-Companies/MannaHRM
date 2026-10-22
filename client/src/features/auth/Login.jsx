@@ -6,11 +6,12 @@
  *  Drawn as the HRDashboard reference's sign-in page (21 October 2026): the
  *  art panel on the left, the form on the right, only the form on a phone.
  *  Only the look moved — the same `login()` call, an email or a user id, the
- *  same messages. What the reference has and this does not, on purpose:
- *  Remember me (a Frappe session is a cookie the site keeps; there is nothing
- *  here to remember), Create account (sign-up is off), and Google and Apple —
- *  the site has no Social Login Key, and a signed-out visitor cannot ask it
- *  for one, so they would be buttons to nowhere.
+ *  same messages. Remember me remembers *who*: the email or user id, in this
+ *  browser, filled in next time. Staying signed in is the site's session
+ *  cookie, which no page decides. What the reference has and this does not, on
+ *  purpose: Create account (sign-up is off), and Google and Apple — the site
+ *  has no Social Login Key, and a signed-out visitor cannot ask it for one, so
+ *  they would be buttons to nowhere.
  */
 
 import { useState } from "react";
@@ -20,6 +21,16 @@ import mannaLogo from "@/assets/manna-logo.png";
 import KitIcon from "@/components/kit/KitIcon";
 import { KitModal } from "@/components/kit/overlay";
 import { PRIVACY, TERMS } from "@/data/policies";
+
+/* Who signed in last with Remember me ticked, in this browser only — a
+   private window, or storage switched off, simply remembers nobody. */
+const REMEMBER = "loginRemember";
+function remembered() {
+	try { return localStorage.getItem(REMEMBER) || ""; } catch { return ""; }
+}
+function remember(usr, on) {
+	try { if (on) localStorage.setItem(REMEMBER, usr); else localStorage.removeItem(REMEMBER); } catch { /* not kept */ }
+}
 
 /* The art panel's cards say what the app does. The reference's carry a
    headcount and a named person checking in; before sign-in there is no data to
@@ -36,7 +47,9 @@ function Art() {
 					<div style={{ marginTop: 8, fontWeight: 600 }}>Leave request</div>
 				</div>
 				<div className="k-art-card" style={{ left: "30%", top: "58%", animationDelay: "-4s", display: "flex", gap: 10, alignItems: "center" }}>
-					<span className="k-icon-sq"><KitIcon name="clock" size={18} stroke={2} /></span>
+					{/* A bare icon, like the first card's: the art cards stay white in
+					    dark mode, and a themed tile on one turns dark. */}
+					<KitIcon name="clock" size={20} stroke={2} />
 					<div><b style={{ fontSize: 14 }}>Checked in</b>at the gate</div>
 				</div>
 			</div>
@@ -132,8 +145,8 @@ function Forgot({ usr, onBack }) {
 					{err ? <Err>{err}</Err> : null}
 					<form onSubmit={submit} noValidate>
 						<div className="k-field">
-							<label htmlFor="fp-user">Email Address</label>
-							<input id="fp-user" className="k-inp" type="text" autoComplete="username" autoFocus value={who}
+							<label htmlFor="fp-user">Email Address <span className="k-req" aria-hidden="true">*</span></label>
+							<input id="fp-user" className="k-inp" type="text" autoComplete="username" autoFocus value={who} aria-required="true"
 								onChange={(e) => setWho(e.target.value)} disabled={busy} />
 						</div>
 						<button type="submit" className="k-btn k-btn-ink k-btn-big" style={{ width: "100%", justifyContent: "center" }}
@@ -148,7 +161,8 @@ function Forgot({ usr, onBack }) {
 }
 
 export default function Login() {
-	const [usr, setUsr] = useState("");
+	const [usr, setUsr] = useState(remembered);
+	const [keep, setKeep] = useState(() => Boolean(remembered()));
 	const [pwd, setPwd] = useState("");
 	const [show, setShow] = useState(false);
 	const [busy, setBusy] = useState(false);
@@ -162,6 +176,7 @@ export default function Login() {
 		setErr("");
 		try {
 			const user = await login(usr.trim(), pwd);
+			remember(usr.trim(), keep);
 			setPwd("");
 			set({ user: user === "Guest" ? "" : user });
 		} catch (ex) {
@@ -188,15 +203,15 @@ export default function Login() {
 								{err ? <Err>{err}</Err> : null}
 								<form onSubmit={submit} noValidate>
 									<div className="k-field">
-										<label htmlFor="li-user">Email Address</label>
+										<label htmlFor="li-user">Email Address <span className="k-req" aria-hidden="true">*</span></label>
 										{/* `text`, not `email`: a user id is a sign-in too. */}
-										<input id="li-user" className="k-inp" type="text" autoComplete="username" autoFocus value={usr}
+										<input id="li-user" className="k-inp" type="text" autoComplete="username" autoFocus value={usr} aria-required="true"
 											onChange={(e) => setUsr(e.target.value)} disabled={busy} />
 									</div>
 									<div className="k-field">
-										<label htmlFor="li-pass">Password</label>
+										<label htmlFor="li-pass">Password <span className="k-req" aria-hidden="true">*</span></label>
 										<div className="k-pw">
-											<input id="li-pass" className="k-inp" type={show ? "text" : "password"} autoComplete="current-password"
+											<input id="li-pass" className="k-inp" type={show ? "text" : "password"} autoComplete="current-password" aria-required="true"
 												value={pwd} onChange={(e) => setPwd(e.target.value)} disabled={busy} />
 											<button type="button" aria-label={show ? "Hide password" : "Show password"} aria-pressed={show}
 												onClick={() => setShow(!show)}>
@@ -204,7 +219,11 @@ export default function Login() {
 											</button>
 										</div>
 									</div>
-									<div className="k-auth-row" style={{ justifyContent: "flex-end" }}>
+									<div className="k-auth-row">
+										<label className="k-chk-l" style={{ padding: 0 }}>
+											<input type="checkbox" className="k-chk" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
+											Remember me
+										</label>
 										<button type="button" className="k-link" onClick={() => { setErr(""); setForgot(true); }}>Forgot password</button>
 									</div>
 									<button type="submit" className="k-btn k-btn-ink k-btn-big" style={{ width: "100%", justifyContent: "center" }}
