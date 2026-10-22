@@ -3864,6 +3864,9 @@
   .daypop label { @apply flex flex-col gap-[.25rem] text-fine text-ink-2; }
   .daypop .dpgrid { @apply grid gap-[.8rem]; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
   .daypop .rtime { @apply w-full text-read py-[.35rem]; }
+  .daypop .dpfield { @apply relative; }
+  .daypop .dpclear { @apply absolute top-0 right-0 text-fine text-accent bg-transparent border-0 p-0 cursor-pointer underline; }
+  .daypop .dpclear:disabled { @apply text-ink-3 cursor-default no-underline; }
   .daypop .dpreason input { @apply text-read bg-card border border-line rounded px-[.5rem] py-[.35rem] w-full; }
   /* **The pencil pins to the right edge.** Eleven columns is wider than any
      window this is read in, so the one control on the row would otherwise sit

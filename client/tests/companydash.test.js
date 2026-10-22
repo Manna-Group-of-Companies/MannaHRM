@@ -109,7 +109,7 @@ describe("create employee: company and punch method", () => {
 	});
 });
 
-import { editPlan } from "@/lib/punchedit";
+import { editPlan, nextDay, supersededBy } from "@/lib/punchedit";
 import { dayPunches } from "@/lib/roster";
 
 describe("editing a day's punches on Attendance Regularization", () => {
@@ -138,8 +138,39 @@ describe("editing a day's punches on Attendance Regularization", () => {
 		expect(p.skip.map((c) => c.name)).toEqual(["c4"]);
 	});
 
-	it("an out before the in is refused rather than guessed across midnight", () => {
-		expect(editPlan(D, day, { in: "22:00", out: "06:00" }).ok).toBe(false);
+	it("an out at or before the in is the next morning — a night shift, kept on the day it started", () => {
+		const p = editPlan(D, day, { in: "20:00", out: "08:00" });
+		expect(p).toMatchObject({ ok: true, overnight: true, requestedIn: D + " 20:00:00", requestedOut: "2026-09-11 08:00:00" });
+		expect(p.add).toEqual([{ log_type: "IN", time: D + " 20:00:00" }, { log_type: "OUT", time: "2026-09-11 08:00:00" }]);
+		/* Every IN before 20:00 and every OUT on the day itself would still decide it. */
+		expect(p.skip.map((c) => c.name)).toEqual(["c1", "c3", "c2", "c4"]);
+		expect(editPlan(D, day, { in: "00:00", out: "00:00" }).requestedOut).toBe("2026-09-11 00:00:00");
+	});
+
+	it("an approved night shift sets aside every OUT on its first day, and none for an ordinary day", () => {
+		expect(supersededBy(day, D + " 20:00:00", "2026-09-11 08:00:00").map((c) => c.name)).toEqual(["c1", "c2", "c3", "c4"]);
+		expect(supersededBy(day, D + " 08:05:00", D + " 17:40:00")).toEqual([]);
+	});
+
+	it("crosses a month and a year end to the right next day", () => {
+		expect([nextDay("2026-09-30"), nextDay("2026-12-31"), nextDay("2028-02-28")]).toEqual(["2026-10-01", "2027-01-01", "2028-02-29"]);
+	});
+
+	it("clearing a time sets that side's punches aside and writes none", () => {
+		const p = editPlan(D, day, { in: "", out: "17:40" });
+		expect(p).toMatchObject({ ok: true, add: [], requestedIn: "", cleared: { in: true, out: false } });
+		expect(p.skip.map((c) => c.name)).toEqual(["c1", "c3"]);
+	});
+
+	it("clearing both leaves the day with no live punch", () => {
+		const p = editPlan(D, day, { in: "", out: "" });
+		expect(p).toMatchObject({ ok: true, add: [], cleared: { in: true, out: true } });
+		expect(p.skip.map((c) => c.name).sort()).toEqual(["c1", "c2", "c3", "c4"]);
+	});
+
+	it("clearing a side that has no punch changes nothing", () => {
+		const onlyIn = [day[0]];
+		expect(editPlan(D, onlyIn, { in: "08:05", out: "" })).toMatchObject({ ok: false, why: "Nothing changed." });
 	});
 
 	it("an unchanged row writes nothing", () => {

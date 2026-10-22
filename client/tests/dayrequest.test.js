@@ -103,10 +103,38 @@ describe("saving a changed time changes it now", () => {
 		expect(res.msg).not.toContain("Already on the site");
 	});
 
-	it("refuses to remove a time", async () => {
+	it("clears a time: sets its punches aside with a comment on each, and writes no punch and no correction", async () => {
 		const res = await saveDayEdit(EMP, DAY, { in: "", out: "", reason: "Was not here" });
-		expect(res.ok).toBe(false);
-		expect(calls.made).toHaveLength(0);
+		expect(res.ok).toBe(true);
+		expect(calls.wrote).toEqual([["Employee Checkin", "EMP-CKIN-1", { skip_auto_attendance: 1 }]]);
+		expect(calls.made).toEqual([["Comment", expect.objectContaining({
+			reference_doctype: "Employee Checkin", reference_name: "EMP-CKIN-1",
+			content: "Cleared from 10-Sep-2026 on Attendance Regularization by hr@example.invalid: Was not here",
+		})]]);
+		expect(res.msg).toBe("10-Sep-2026: Time In cleared. Set aside, kept on record: IN 08:02.");
+	});
+
+	it("clears one side and changes the other in the same save", async () => {
+		const OUT = { name: "EMP-CKIN-2", time: "2026-09-10 17:30:00", log_type: "OUT", skip_auto_attendance: 0 };
+		lists = (label) => (label === "Employee Checkin" ? [MACHINE_IN, OUT] : []);
+		const res = await saveDayEdit(EMP, DAY, { in: "09:00", out: "", reason: "" });
+		expect(res.ok).toBe(true);
+		expect(calls.made[0][1]).toMatchObject({ requested_in: "2026-09-10 09:00:00", requested_out: null });
+		expect(calls.wrote).toContainEqual(["Employee Checkin", "EMP-CKIN-2", { skip_auto_attendance: 1 }]);
+		expect(res.msg).toContain("Time Out cleared");
+	});
+
+	it("saves a night shift's Time Out on the next morning, and sets aside the day's own OUT", async () => {
+		const OUT = { name: "EMP-CKIN-2", time: "2026-09-10 17:30:00", log_type: "OUT", skip_auto_attendance: 0 };
+		lists = (label) => (label === "Employee Checkin" ? [MACHINE_IN, OUT] : []);
+		const res = await saveDayEdit(EMP, DAY, { in: "20:00", out: "08:00", reason: "Night shift" });
+		expect(res.ok).toBe(true);
+		expect(calls.made[0][1]).toMatchObject({ requested_in: "2026-09-10 20:00:00", requested_out: "2026-09-11 08:00:00" });
+		expect(calls.made).toContainEqual(["Employee Checkin", expect.objectContaining({ time: "2026-09-11 08:00:00", log_type: "OUT" })]);
+		expect(calls.wrote).toEqual(expect.arrayContaining([
+			["Employee Checkin", "EMP-CKIN-1", { skip_auto_attendance: 1 }],
+			["Employee Checkin", "EMP-CKIN-2", { skip_auto_attendance: 1 }],
+		]));
 	});
 
 	it("saves without a reason, and records who changed it in its place", async () => {
