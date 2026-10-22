@@ -121,6 +121,28 @@ describe("Settings", () => {
 		expect(document.querySelector("#dp-name")).toBeNull();
 	});
 
+	/* 22 October 2026, asked for by HR: one record a company, one row a name. */
+	it("lists each department once, its people summed across the companies that have it", async () => {
+		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "settings", subtab: "departments",
+			departments: [{ name: "All Departments" }, { name: "Accounts - MR", disabled: 0 }, { name: "Accounts - MP", disabled: 0 },
+				{ name: "Stores - MP", disabled: 1 }],
+			employees: [
+				{ name: "E1", status: "Active", department: "Accounts - MR" },
+				{ name: "E2", status: "Active", department: "Accounts - MP" },
+				{ name: "E3", status: "Left", department: "Accounts - MP" },
+				{ name: "E4", status: "Active", department: "Stores - MP" },
+			] }));
+		const view = draw(<Departments />);
+		const rows = [...view.container.querySelectorAll("tbody tr")];
+		expect(rows).toHaveLength(2);
+		expect(rows[0].querySelector("b").textContent).toBe("Accounts");
+		expect(rows[0].textContent).toContain("in 2 companies");
+		expect(rows[0].querySelector('[data-label="People"]').textContent).toBe("2");
+		expect(rows[1].querySelector("b").textContent).toBe("Stores");
+		expect(rows[1].textContent).toContain("Disabled");
+		expect(view.container.textContent).not.toContain("All Departments");
+	});
+
 	it("shows the site's refusal of a department and keeps the form open", async () => {
 		vi.spyOn(http, "post").mockImplementation(() => Promise.reject({ response: { data: { _server_messages: JSON.stringify([JSON.stringify({ message: "Department Quality - MR already exists" })]) } } }));
 		await act(async () => set({ ...loadedState(), user: HR, admin: true, section: "settings", subtab: "departments" }));

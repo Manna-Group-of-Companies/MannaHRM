@@ -142,10 +142,33 @@ export function Offices() {
 	return <SettingsFrame><div className="k-card"><WorkLocations title="Offices" /></div></SettingsFrame>;
 }
 
-function CountList({ title, rows, field, label = (x) => x, dt, act }) {
+/* `group`, given, folds records into one row by what it returns — a department
+   is one record per company on this site, "Accounts - MRPPL" and "Accounts -
+   MT", and six rows of Accounts is a list nobody can read (22 October 2026,
+   asked for by HR). People are summed across them; a row is Disabled only
+   when every record in it is; a record `group` returns nothing for is left
+   out. */
+function CountList({ title, rows, field, label = (x) => x, dt, act, group }) {
 	const s = useApp();
 	const active = (s.employees || []).filter((e) => e.status === "Active");
-	const list = rows.map((r) => ({ name: r.name || r, n: active.filter((e) => e[field] === (r.name || r)).length, off: Number(r.disabled) === 1 }))
+	const one = (r) => ({ name: r.name || r, n: active.filter((e) => e[field] === (r.name || r)).length, off: Number(r.disabled) === 1, count: 1 });
+	const folded = () => {
+		const by = new Map();
+		for (const r of rows) {
+			const k = group(r.name || r);
+			if (!k) continue;
+			const g = by.get(k) || { name: k, n: 0, off: true, count: 0 };
+			g.count += 1;
+			g.off = g.off && Number(r.disabled) === 1;
+			by.set(k, g);
+		}
+		for (const e of active) {
+			const g = e[field] ? by.get(group(e[field])) : null;
+			if (g) g.n += 1;
+		}
+		return [...by.values()];
+	};
+	const list = (group ? folded() : rows.map(one))
 		.sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
 	const href = deskLink(s, dt);
 	return (
@@ -158,7 +181,10 @@ function CountList({ title, rows, field, label = (x) => x, dt, act }) {
 							<tbody>
 								{list.map((r) => (
 									<tr key={r.name}>
-										<td className="k-title-cell"><b>{label(r.name)}</b></td>
+										<td className="k-title-cell">
+											<b>{label(r.name)}</b>
+											{r.count > 1 ? <small style={{ display: "block", color: "rgb(var(--ink-3))" }}>in {r.count} companies</small> : null}
+										</td>
 										<td data-label="People" className="k-num">{r.n}</td>
 										<td data-label="">{r.off ? <Pill status="Closed">Disabled</Pill> : null}</td>
 									</tr>
@@ -221,6 +247,10 @@ function DeptForm({ onClose }) {
 	);
 }
 
+/* A department by its own name, whichever company's record it is; the tree's
+   root is nobody's department. */
+const deptOnce = (name) => (name === "All Departments" ? "" : tidyDept(name));
+
 export const Departments = () => {
 	const s = useApp();
 	const [adding, setAdding] = useState(false);
@@ -231,7 +261,7 @@ export const Departments = () => {
 	);
 	return (
 		<>
-			<CountList title="Departments" rows={s.departments || []} field="department" label={tidyDept} dt="Department" act={add} />
+			<CountList title="Departments" rows={s.departments || []} field="department" dt="Department" act={add} group={deptOnce} />
 			{adding ? <DeptForm onClose={() => setAdding(false)} /> : null}
 		</>
 	);
