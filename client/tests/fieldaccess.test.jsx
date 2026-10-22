@@ -117,7 +117,7 @@ describe("Employee Profile", () => {
 		doctype: "Employee", docstatus: 0 };
 	const draw = () => render(<Provider store={store}><EmployeeProfile /></Provider>);
 	const edit = (v) => act(() => {
-		[...v.container.querySelectorAll(".proico button")].find((b) => b.textContent.trim() === "✎").click();
+		v.container.querySelector('.proico button[aria-label="Edit this record"]').click();
 	});
 
 	beforeEach(() => {

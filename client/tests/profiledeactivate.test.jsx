@@ -126,7 +126,7 @@ describe("Deactivate on the profile", () => {
 
 	it("is_not_offered_while_the_record_is_being_edited", async () => {
 		const v = draw();
-		await click(button(v, "✎ Edit"));
+		await click(button(v, "Edit"));
 		expect(button(v, "Deactivate")).toBeUndefined();
 	});
 });

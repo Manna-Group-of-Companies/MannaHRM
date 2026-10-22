@@ -6600,10 +6600,36 @@ kbd {
 }
 .proview > .prohead .proava { width: 6rem; height: 6rem; font-size: 1.875rem; border: 0; }
 .proview > .prohead .prowho { width: 100%; align-items: center; }
-.proview > .prohead .proname { flex-direction: column; gap: .75rem; }
-.proview > .prohead .proname b { font-family: theme(fontFamily.body); font-size: 1.1875rem; font-weight: 700; }
-.proview > .prohead .proacts { margin-left: 0; justify-content: center; }
-.proview > .prohead .prochips { justify-content: center; }
+.proview > .prohead .proname { flex-direction: column; gap: .4rem; }
+.proview > .prohead .proname b { font-family: theme(fontFamily.body); font-size: 1.1875rem; font-weight: 700; line-height: 1.3; }
+/* The code and the title under the name, as the reference has the title. */
+.proview > .prohead .prosub { color: rgb(var(--ink-2)); font-size: .875rem; }
+.proview > .prohead .proacts { margin: .5rem 0 0; justify-content: center; gap: .5rem; }
+.proview > .prohead .prodeact { gap: .5rem; }
+/* Deactivate is a line button in the warning's colour: it is the one that
+   takes somebody's details off every screen. */
+.proview > .prohead .prodanger { color: rgb(var(--bad)); }
+.proview > .prohead .prodanger:hover { background: rgb(var(--bad-wash)); }
+/* The facts as labelled rows, label left and value right — the reference's
+   card list — rather than a wrap of capitals. */
+.proview > .prohead .prochips {
+  flex-direction: column;
+  align-items: stretch;
+  gap: .6rem;
+  width: 100%;
+  margin-top: .5rem;
+  padding-top: .875rem;
+  border-top: 1px solid rgb(var(--line));
+  text-align: left;
+  font-size: .84rem;
+}
+.proview > .prohead .prochip { display: flex; justify-content: space-between; gap: 1rem; color: rgb(var(--ink)); }
+.proview > .prohead .prochip b { font-family: theme(fontFamily.body); font-weight: 500; color: rgb(var(--ink-2)); white-space: nowrap; }
+.proview > .prohead .prochip > span { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.proview > .prohead .prochip.off > span { color: rgb(var(--ink-3)); font-weight: 500; }
+.proview > .prohead .prokeys:not(.lvform) .profield { flex-direction: row; justify-content: space-between; gap: 1rem; }
+.proview > .prohead .prokeys:not(.lvform) .profield .k { font-size: .84rem; }
+.proview > .prohead .prokeys:not(.lvform) .profield .v { font-size: .84rem; font-weight: 600; text-align: right; }
 .proview > .prohead .prokeys {
   width: 100%;
   margin-top: .5rem;
@@ -6618,16 +6644,19 @@ kbd {
 .procol .probody-grid { grid-template-columns: minmax(0, 1fr); gap: 1.125rem; margin-top: 0; }
 .procol .protabs {
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
   gap: 0 .25rem;
   padding: .5rem 1.125rem 0;
   border: 0;
   border-bottom: 1px solid rgb(var(--line));
   border-radius: 0;
   background: transparent;
-  overflow: visible;
 }
 .procol .protab {
+  flex: 0 0 auto;
+  white-space: nowrap;
   min-height: 0;
   margin-bottom: -1px;
   padding: .875rem .625rem;
@@ -6651,6 +6680,18 @@ kbd {
 .procol .procard { border-color: rgb(var(--line)); border-radius: 16px; }
 .procol .procard > header { border-bottom: 0; background: transparent; }
 .procol .procard > header h3 { font-size: 1rem; font-weight: 700; }
+/* The section's buttons as the reference's round icon buttons. */
+.procol .proico { gap: .25rem; }
+.procol .proico button, .procol .proico a {
+  width: 2rem; height: 2rem; border-radius: 999px;
+  display: inline-grid; place-items: center; color: rgb(var(--ink-2));
+}
+.procol .proico button:hover:not([disabled]), .procol .proico a:hover { background: rgb(var(--wash)); color: rgb(var(--ink)); }
+/* Label over value, the value the weight of the reference's. */
+.procol .profields { gap: 1.1rem 1.5rem; }
+.procol .profield .k { font-size: .8125rem; }
+.procol .profield .v { font-size: .875rem; font-weight: 600; }
+.procol .profield .v.off, .procol .profield .v.gone, .procol .profield .v.muted { font-weight: 400; }
 
 /* ---------------------------------------------------------------------------
    Responsive.

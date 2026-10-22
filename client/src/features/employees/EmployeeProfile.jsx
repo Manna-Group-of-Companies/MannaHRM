@@ -251,16 +251,16 @@ function Card({ title, children, onRefresh, editing, onEdit, deskHref }) {
 				<span className="proico">
 					{!editing && onEdit && (
 						<button title="Edit this record" aria-label="Edit this record" onClick={onEdit}>
-							✎
+							<KitIcon name="edit" size={16} stroke={2} />
 						</button>
 					)}
 					<button title="Read this record from the site again" aria-label="Reload this record"
 						onClick={onRefresh} disabled={editing}>
-						↻
+						<KitIcon name="refresh" size={16} stroke={2} />
 					</button>
 					<Desk className="" href={deskHref} label="Open on the site"
 						title="Open this record on the ERPNext site — the whole form, including what this page does not draw.">
-						↗
+						<KitIcon name="link" size={16} stroke={2} />
 					</Desk>
 				</span>
 			</header>
@@ -934,7 +934,7 @@ function Photo({ doc, pic, onPick }) {
 		<Avatar className="proava" name={doc.employee_name} image={doc.image}>
 			<label className={"pen" + (pic.busy ? " busy" : "")}
 				title={pic.busy ? "Uploading…" : `${verb} — saved to the site as soon as it is picked.`}>
-				<span aria-hidden="true">{pic.busy ? "…" : "✎"}</span>
+				<span aria-hidden="true">{pic.busy ? "…" : <KitIcon name="edit" size={14} stroke={2.2} />}</span>
 				<input type="file" accept="image/*" disabled={pic.busy} aria-label={verb}
 					onChange={(e) => {
 						const f = e.target.files?.[0];
@@ -963,32 +963,33 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto,
 
 			<div className="prowho">
 				<div className="proname">
-					<b>
-						{doc.employee_number ? doc.employee_number + " - " : ""}
-						{doc.employee_name || doc.name}
-					</b>
+					<b>{doc.employee_name || doc.name}</b>
+					<small className="prosub">{[doc.employee_number, doc.designation].filter(Boolean).join(" · ") || "—"}</small>
+					<span className={`k-pill ${on ? "k-p-green" : "k-p-grey"}`}>{doc.status || "—"}</span>
 					<span className="proacts">
-						<button className="embtn" title="Read this record from the site again"
-							aria-label="Reload this record" onClick={onRefresh}>↻</button>
-						<button className="embtn" title="Print this profile" aria-label="Print"
-							onClick={() => window.print()}>🖨</button>
 						{/* The same edit mode the pencils open, reachable from the top —
 						    somebody who came here to change a phone number should not
 						    have to find the card it is on first. */}
 						{!editing && onEdit && (
-							<button className="embtn" title="Edit this record" onClick={onEdit}>✎ Edit</button>
+							<button className="k-btn k-btn-ink k-btn-sm" title="Edit this record" onClick={onEdit}>
+								<KitIcon name="edit" size={14} stroke={2} />Edit
+							</button>
 						)}
+						<button className="k-btn k-btn-line k-btn-sm" title="Read this record from the site again"
+							aria-label="Reload this record" onClick={onRefresh}><KitIcon name="refresh" size={16} stroke={2} /></button>
+						<button className="k-btn k-btn-line k-btn-sm" title="Print this profile" aria-label="Print"
+							onClick={() => window.print()}><KitIcon name="print" size={16} stroke={2} /></button>
 						{/* Asked twice, because the next thing that happens is the
 						    person's details going off every screen here. */}
 						{!editing && on && deact && (deact.ask ? (
 							<span className="prodeact" role="group" aria-label="Confirm deactivation">
-								<button className="embtn bad" disabled={deact.busy} onClick={deact.onYes}>
+								<button className="k-btn k-btn-danger k-btn-sm" disabled={deact.busy} onClick={deact.onYes}>
 									{deact.busy ? "Deactivating…" : "Yes, deactivate"}
 								</button>
-								<button className="embtn" disabled={deact.busy} onClick={deact.onNo}>Cancel</button>
+								<button className="k-btn k-btn-line k-btn-sm" disabled={deact.busy} onClick={deact.onNo}>Cancel</button>
 							</span>
 						) : (
-							<button className="embtn bad" onClick={deact.onAsk}
+							<button className="k-btn k-btn-line k-btn-sm prodanger" onClick={deact.onAsk}
 								title="Set this person's status to Inactive. Their details are hidden until they are activated again.">
 								Deactivate
 							</button>
@@ -996,8 +997,8 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto,
 						{/* Who changed what lives on the Version doctype, which nothing
 						    here reads — but it is also the timeline at the foot of the
 						    record on the site, which is where this goes. */}
-						<Desk href={deskHref} title="Who changed what, on the ERPNext site — the timeline at the foot of the record, which nothing here reads.">
-							History
+						<Desk className="k-btn k-btn-line k-btn-sm" href={deskHref} title="Who changed what, on the ERPNext site — the timeline at the foot of the record, which nothing here reads.">
+							<KitIcon name="clock" size={14} stroke={2} />History
 						</Desk>
 					</span>
 				</div>
@@ -1009,27 +1010,22 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto,
 				)}
 
 				<div className="prochips">
-					<span className="prostat">
-						<i className={"sdot " + (on ? "on" : "off")} />
-						{doc.status || "—"}
-					</span>
 					{PROFILE_CHIPS.filter(shownRow).map((c) => {
 						const v = chip(c);
 						return (
 							<span className={"prochip" + (v ? "" : " off")} key={c[0]}>
-								<b>{c[0]}</b> {v || "—"}
+								<b>{c[0]}</b><span>{v || "—"}</span>
 							</span>
 						);
 					})}
-					<span className={"prochip" + (doc.designation ? "" : " off")}>
-						{(doc.designation || "—").toUpperCase()}
-					</span>
 					<span className={"prochip" + (doc.department ? "" : " off")}>
-						{tidyDept(doc.department).toUpperCase()}
+						<b>Department</b><span>{tidyDept(doc.department) || "—"}</span>
 					</span>
 					{/* Blank for everybody in Factor HR too — a field nobody there has
 					    ever filled, rather than a gap in the migration. */}
-					<span className={"prochip" + (doc.branch ? "" : " off")}>{doc.branch || "—"}</span>
+					<span className={"prochip" + (doc.branch ? "" : " off")}>
+						<b>Branch</b><span>{doc.branch || "—"}</span>
+					</span>
 				</div>
 
 				<div className={"prokeys" + (editing ? " lvform" : "")}>
