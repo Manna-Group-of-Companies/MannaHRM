@@ -62,6 +62,7 @@ import MyTimeOff from "@/features/leave/MyTimeOff";
 import PayrollRun from "@/features/payroll/PayrollRun";
 import SalarySetup from "@/features/payroll/SalarySetup";
 import ActualSalary from "@/features/payroll/ActualSalary";
+import FestivalBonus from "@/features/payroll/FestivalBonus";
 import EmployeeImport from "@/features/employees/EmployeeImport";
 import HierarchyChart from "@/features/employees/HierarchyChart";
 import Directory from "@/features/employees/Directory";
@@ -334,7 +335,7 @@ const PAGES = {
 		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
 		...managedPages("payroll"), ...blueprintPages("payroll"),
 		/* The list, with HR's sheet uploaded above it (14 Oct 2026). */
-		actualsalary: ActualSalary },
+		actualsalary: ActualSalary, festivalbonus: FestivalBonus },
 	loans: { overview: LoanApplication, register: LoanRegister,
 		projection: LoanProjection, all: moduleAll("loans", "Loans"),
 		...managedPages("loans"), ...blueprintPages("loans") },

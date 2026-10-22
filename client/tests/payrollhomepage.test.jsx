@@ -63,7 +63,8 @@ describe("Payroll opens on its own page", () => {
 		const shown = MODULES.payroll.tabs.map((t) => t[0]).filter((k) => !hiddenUnder({}, "payroll", k));
 		/* Employee Payroll and Payroll Settings joined on 21 Oct 2026 and left
 		   on 22 Oct, asked for by HR. */
-		expect(shown).toEqual(["overview", "setup", "actualsalary", "increments", "advances", "slips", "transfer"]);
+		/* Festival Bonus on 22 Oct, beside Actual Salary: paid apart from the salary. */
+		expect(shown).toEqual(["overview", "setup", "actualsalary", "festivalbonus", "increments", "advances", "slips", "transfer"]);
 	});
 
 	it("no longer has Employee Payroll, Payroll Detail or Payroll Settings, and their old addresses open Payroll", () => {

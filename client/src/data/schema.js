@@ -979,6 +979,80 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Employee Festival Bonus": {
+		name: "Employee Festival Bonus",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 0,
+		autoname: "naming_series:",
+		title: "employee_name",
+		fields: [
+			{
+				name: "naming_series",
+				label: "Series",
+				kind: "select",
+				choices: [
+					"HR-FBON-.YYYY.-"
+				],
+				def: "HR-FBON-.YYYY.-"
+			},
+			{
+				name: "employee",
+				label: "Employee",
+				kind: "link",
+				link: "Employee",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "employee_name",
+				label: "Employee Name",
+				kind: "readonly",
+				from: "employee.employee_name",
+				list: 1
+			},
+			{
+				name: "company",
+				label: "Company",
+				kind: "readonly",
+				link: "Company",
+				from: "employee.company"
+			},
+			{
+				name: "festival",
+				label: "Festival",
+				kind: "text",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "bonus_date",
+				label: "Bonus Date",
+				kind: "date",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "amount",
+				label: "Bonus Amount (₹)",
+				kind: "currency",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "notes",
+				label: "Notes",
+				kind: "long"
+			},
+			{
+				name: "entered_by",
+				label: "Entered By",
+				kind: "readonly",
+				link: "User"
+			}
+		]
+	},
 	"Employee Letter": {
 		name: "Employee Letter",
 		module: "Manna HR",
