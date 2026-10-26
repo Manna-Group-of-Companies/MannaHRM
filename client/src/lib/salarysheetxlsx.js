@@ -12,6 +12,7 @@
 
 import { HEAD_FILL, ZEBRA_FILL } from "@/lib/fills";
 import { periodLabel } from "@/lib/salarysheet";
+import { settleFormulas } from "@/lib/xlsxsettle";
 
 const FONT = "Calibri";
 const INK = "FF1F2937";
@@ -166,6 +167,7 @@ export async function salarySheetWorkbook(sheet, opts) {
 	);
 
 	cols.forEach((c, i) => { ws.getColumn(i + 1).width = c.w; });
+	settleFormulas(ws);
 
 	if (loans.length) {
 		const ls = wb.addWorksheet("Loans & Advances", { views: [{ state: "frozen", ySplit: 3, showGridLines: false }] });

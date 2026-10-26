@@ -1,5 +1,5 @@
-import { apiCreate, apiDeleteFile, apiUpload, apiWrite } from "@/api/client";
-import { employeeDoc } from "@/lib/newemp";
+import { apiCreate, apiDeleteFile, apiUpload, apiWrite, listAll } from "@/api/client";
+import { appUserDoc, employeeDoc } from "@/lib/newemp";
 
 /* ---------------------------------------------------------------------------
    Creating one Employee, from the three-step wizard.
@@ -38,6 +38,38 @@ export async function createEmployee(f, extra = {}, locked = new Set()) {
 	const doc = { ...extra, ...employeeDoc(f) };
 	for (const k of locked) delete doc[k];
 	return apiCreate("Employee", doc);
+}
+
+/**
+ * The phone app's login for an Employee just made: a User with the Employee
+ * role and the password typed, then `Employee.user_id` pointing at it — the
+ * join the app signs in through (docs/APP_USERS.md).
+ *
+ * A login that already exists is linked and **its password left alone**: it
+ * may be somebody's website login, and a form that silently reset it would
+ * lock them out of something they were using. Never throws — the Employee
+ * exists by now, so a refusal is a sentence on the done screen.
+ *
+ * @returns {Promise<{ok: boolean, login: string, existed?: boolean, linked?: boolean, error?: string}>}
+ */
+export async function createAppLogin(emp, login) {
+	const doc = appUserDoc(emp, login);
+	let existed = false;
+	try {
+		existed = (await listAll("User", ["name"], [["name", "=", doc.email]], 1)).length > 0;
+	} catch {
+		/* Unknown: try to make it, and let the site say if it is already there. */
+	}
+	if (!existed) {
+		try {
+			await apiCreate("User", doc);
+		} catch (e) {
+			return { ok: false, login: doc.email, error: e.message || String(e) };
+		}
+	}
+	const w = await apiWrite("Employee", emp.name, { user_id: doc.email });
+	if (!w.ok) return { ok: false, login: doc.email, existed, linked: false, error: `the login was ${existed ? "found" : "made"}, but not linked to ${emp.name}: ${w.error}` };
+	return { ok: true, login: doc.email, existed, linked: true };
 }
 
 /* ---------------------------------------------------------------------------

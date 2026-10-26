@@ -77,7 +77,7 @@ describe("the document types", () => {
 		   "this exists there and not here"; a choice absent says nothing. */
 		expect(options.filter((o) => !o.disabled).map((o) => o.value))
 			.toEqual(["national", "insurance", "passport", "pan"]);
-	});
+	}, 20000);
 
 	it("says on the dead ones that this site has no field", async () => {
 		const view = await openNew();

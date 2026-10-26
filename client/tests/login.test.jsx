@@ -1,49 +1,126 @@
-import { describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 
 import Login from "@/features/auth/Login";
-import { store } from "@/store";
+import { http } from "@/api/client";
+import { store, getState, resetStore } from "@/store";
+import { PRIVACY, TERMS } from "@/data/policies";
 
-/* The sign-in page's eye on the password box (17 October 2026). */
-
-const signedIn = [];
-vi.mock("@/api/client", async (importOriginal) => ({
-	...(await importOriginal()),
-	login: async (u, p) => { signedIn.push([u, p]); return u; },
-}));
+/* ---------------------------------------------------------------------------
+   The sign-in page as the HRDashboard reference draws it (21 October 2026).
+   The look is the reference's; the call, the accepted ids and the messages
+   are the ones it always had.
+   --------------------------------------------------------------------------- */
 
 const draw = () => render(<Provider store={store}><Login /></Provider>);
+/* By the start of the label: a required one ends in the reference's "*". */
+const field = (label) => screen.getByLabelText(new RegExp(`^${label}`));
+const type = (label, v) => fireEvent.change(field(label), { target: { value: v } });
+const refused = (status) => Object.assign(new Error(String(status)), { status });
 
-describe("the password box", () => {
-	it("hides the password until the eye is pressed, and hides it again on a second press", () => {
-		const view = draw();
-		const box = view.getByLabelText("Password");
-		expect(box.type).toBe("password");
-		fireEvent.change(box, { target: { value: "Secret@2026" } });
-		fireEvent.click(view.getByLabelText("Show password"));
+beforeEach(() => { resetStore(); localStorage.clear(); });
+afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
+
+describe("the sign-in page", () => {
+	it("is the reference's form, without the parts this site cannot back", () => {
+		draw();
+		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Login first to your account");
+		expect(field("Email Address").type).toBe("text");
+		expect(field("Password").type).toBe("password");
+		expect(field("Email Address").getAttribute("aria-required")).toBe("true");
+		expect(screen.getByRole("button", { name: "Login" }).disabled).toBe(true);
+		expect(screen.getByRole("button", { name: "Forgot password" })).toBeTruthy();
+		/* No sign-up, and no Google or Apple: the site has no Social Login Key. */
+		for (const gone of [/create account/i, /google/i, /apple/i]) {
+			expect(document.body.textContent).not.toMatch(gone);
+		}
+	});
+
+	it("signs in with the same call, a user id as well as an email, trimmed", async () => {
+		const post = vi.spyOn(http, "post").mockResolvedValue({ data: {} });
+		vi.spyOn(http, "get").mockResolvedValue({ data: { message: "hr@mannarubber.com" } });
+		draw();
+		type("Email Address", "  hr  ");
+		type("Password", "secret");
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Login" })); });
+		expect(post.mock.calls[0][0]).toBe("/api/method/login");
+		expect(post.mock.calls[0][1]).toEqual({ usr: "hr", pwd: "secret" });
+		expect(getState().user).toBe("hr@mannarubber.com");
+	});
+
+	it("shows a wrong password in the red error box, in the words it always used", async () => {
+		vi.spyOn(http, "post").mockRejectedValue(refused(401));
+		draw();
+		type("Email Address", "hr@mannarubber.com");
+		type("Password", "wrong");
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Login" })); });
+		expect(document.querySelector(".k-auth-err[role=alert]").textContent).toBe("Wrong user or password.");
+		expect(getState().user).toBeFalsy();
+	});
+
+	it("remembers who signed in with Remember me ticked, and forgets them unticked", async () => {
+		vi.spyOn(http, "post").mockResolvedValue({ data: {} });
+		vi.spyOn(http, "get").mockResolvedValue({ data: { message: "hr@mannarubber.com" } });
+		const first = draw();
+		expect(screen.getByRole("checkbox", { name: "Remember me" }).checked).toBe(false);
+		type("Email Address", " hr@mannarubber.com ");
+		type("Password", "secret");
+		fireEvent.click(screen.getByRole("checkbox", { name: "Remember me" }));
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Login" })); });
+		first.unmount();
+
+		const again = draw();
+		expect(field("Email Address").value).toBe("hr@mannarubber.com");
+		expect(screen.getByRole("checkbox", { name: "Remember me" }).checked).toBe(true);
+		expect(field("Password").value).toBe("");
+		fireEvent.click(screen.getByRole("checkbox", { name: "Remember me" }));
+		type("Password", "secret");
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Login" })); });
+		again.unmount();
+
+		draw();
+		expect(field("Email Address").value).toBe("");
+	});
+
+	it("shows and hides the password with the eye", () => {
+		draw();
+		const box = field("Password");
+		fireEvent.click(screen.getByRole("button", { name: "Show password" }));
 		expect(box.type).toBe("text");
-		expect(box.value).toBe("Secret@2026");
-		fireEvent.click(view.getByLabelText("Hide password"));
+		fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
 		expect(box.type).toBe("password");
 	});
 
-	it("does not sign in when the eye is pressed — it is not the form's button", () => {
-		signedIn.length = 0;
-		const view = draw();
-		fireEvent.change(view.getByLabelText("Email / user id"), { target: { value: "hr@mannarubber.com" } });
-		fireEvent.change(view.getByLabelText("Password"), { target: { value: "x" } });
-		fireEvent.click(view.getByLabelText("Show password"));
-		expect(signedIn).toEqual([]);
+	it("asks the site to mail its own reset link for Forgot password", async () => {
+		const post = vi.spyOn(http, "post").mockResolvedValue({ data: {} });
+		draw();
+		type("Email Address", "anita@mannarubber.com");
+		fireEvent.click(screen.getByRole("button", { name: "Forgot password" }));
+		expect(field("Email Address").value).toBe("anita@mannarubber.com");
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Send reset link" })); });
+		expect(post.mock.calls[0][0]).toBe("/api/method/frappe.core.doctype.user.user.reset_password");
+		expect(post.mock.calls[0][1]).toEqual({ user: "anita@mannarubber.com" });
+		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Check your email");
 	});
 
-	it("signs in with what was typed whether it is shown or hidden", async () => {
-		signedIn.length = 0;
-		const view = draw();
-		fireEvent.change(view.getByLabelText("Email / user id"), { target: { value: "hr@mannarubber.com" } });
-		fireEvent.change(view.getByLabelText("Password"), { target: { value: "Secret@2026" } });
-		fireEvent.click(view.getByLabelText("Show password"));
-		await act(async () => { fireEvent.click(view.getByRole("button", { name: "Sign in" })); });
-		expect(signedIn).toEqual([["hr@mannarubber.com", "Secret@2026"]]);
+	it("says so when the site knows nobody by that name", async () => {
+		vi.spyOn(http, "post").mockRejectedValue(refused(404));
+		draw();
+		fireEvent.click(screen.getByRole("button", { name: "Forgot password" }));
+		type("Email Address", "nobody@example.com");
+		await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Send reset link" })); });
+		expect(document.querySelector(".k-auth-err").textContent).toBe("No account with that email or user id.");
+	});
+
+	it("opens Terms and Privacy from the footer, each marked a draft", () => {
+		draw();
+		fireEvent.click(screen.getByRole("button", { name: "Terms & Conditions" }));
+		expect(document.body.textContent).toContain(TERMS[0][0]);
+		expect(document.body.textContent).toContain("Draft — HR to review");
+		const closes = screen.getAllByRole("button", { name: "Close" });
+		fireEvent.click(closes[closes.length - 1]);
+		fireEvent.click(screen.getByRole("button", { name: "Privacy Policy" }));
+		expect(document.body.textContent).toContain(PRIVACY[0][0]);
 	});
 });

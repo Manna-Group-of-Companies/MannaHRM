@@ -24,16 +24,14 @@ import { download, toCsv } from "@/lib/csv";
 import { Empty, Note, Scroll } from "@/components/ui";
 import ExportButtons from "@/components/ExportButtons";
 
-/** The rows for a range, once the read for exactly that range is in. */
-function useRange(from, to) {
-	const s = useApp();
-	useEffect(() => {
-		void loadShiftWindows();
-		if (from && to && to >= from) void loadDda(from, to, "");
-	}, [from, to]);
+/** The rows for a range off the store, once the read for exactly that range
+    — and that one person, when `emp` is given — is in. Pure over `s`, so the
+    Download report dialog and Team and Employee Attendance build the same rows
+    these pages draw. */
+export function rangeRowsFrom(s, from, to, emp = "") {
 	const d = s.ddaData;
-	const ready = d.key === `${from}|${to}|` && d.state === "ok";
-	const people = active(s);
+	const ready = d.key === `${from}|${to}|${emp}` && d.state === "ok";
+	const people = emp ? [s.byName[emp]].filter(Boolean) : active(s);
 	const { rows } = ready
 		? dailyRows({
 			people, from, to, attendance: d.attendance, punches: d.punches, leave: d.leave, overtime: d.overtime,
@@ -44,8 +42,25 @@ function useRange(from, to) {
 			windows: s.shiftWindows, today: todayIso(), limit: 20000,
 		})
 		: { rows: [] };
-	return { ready, rows, people, err: d.key === `${from}|${to}|` ? d.err : "", company: s.company };
+	return { ready, rows, people, err: d.key === `${from}|${to}|${emp}` ? d.err : "", company: s.company };
 }
+
+/** The rows for a range, read when the range changes. */
+function useRange(from, to) {
+	const s = useApp();
+	useEffect(() => {
+		void loadShiftWindows();
+		if (from && to && to >= from) void loadDda(from, to, "");
+	}, [from, to]);
+	return rangeRowsFrom(s, from, to);
+}
+
+/** One table as `lib/export.js` takes it, off the columns the page draws. */
+const sheetOf = (title, sub, cols, rows) => ({
+	title, sub,
+	head: cols.map((c) => c[0]),
+	rows: rows.map((r) => cols.map((c) => { const v = c[1](r); return v == null ? "" : v; })),
+});
 
 /** CSV, Excel and PDF of one table, off the one column list the table draws. */
 function Csv({ name, cols, rows, title, sub }) {
@@ -113,6 +128,10 @@ const OT_SUM = WHO.concat([
 	["Total OT", (r) => hm(r.min), "mono"],
 ]);
 
+/** The OT Report's file: every day with overtime in the range. */
+export const otSheet = (rows, from, to) =>
+	sheetOf("OT Report", `${dmy(from)} to ${dmy(to)}`, OT_COLS, rows.filter((r) => r.otMin > 0));
+
 export function OtReport() {
 	const [from, setFrom] = useState(monthStart());
 	const [to, setTo] = useState(todayIso());
@@ -163,23 +182,18 @@ function weekStart(iso) {
 	return ymd(d);
 }
 
-export function WeeklyReport() {
-	/* The date typed is kept as typed; the week is worked out from it, so the
-	   box never changes under somebody's fingers. */
-	const [pick, setPick] = useState(todayIso());
+/** The seven days, Sunday first, of the week holding `pick`. */
+export function weekDays(pick) {
 	const start = weekStart(pick);
-	const days = Array.from({ length: 7 }, (_, i) => {
+	return Array.from({ length: 7 }, (_, i) => {
 		const d = new Date(start + "T00:00:00");
 		d.setDate(d.getDate() + i);
 		return ymd(d);
 	});
-	const { ready, rows, people, err } = useRange(days[0], days[6]);
-	const move = (n) => {
-		const d = new Date(start + "T00:00:00");
-		d.setDate(d.getDate() + n * 7);
-		setPick(ymd(d));
-	};
+}
 
+/** One line per person for the week: each day's row and the week's counts. */
+function weeklyList(rows, people) {
 	const byEmp = new Map(people.map((e) => [e.name, { emp: e, days: {}, p: 0, a: 0, l: 0, min: 0, ot: 0 }]));
 	for (const r of rows) {
 		const g = byEmp.get(r.emp.name);
@@ -192,13 +206,36 @@ export function WeeklyReport() {
 		g.min += r.ms / 60000;
 		g.ot += r.otMin;
 	}
-	const list = [...byEmp.values()].sort((a, b) => (a.emp.employee_name || "").localeCompare(b.emp.employee_name || ""));
+	return [...byEmp.values()].sort((a, b) => (a.emp.employee_name || "").localeCompare(b.emp.employee_name || ""));
+}
 
-	const csvCols = [["Emp Code", (g) => g.emp.employee_number || g.emp.name], ["Name", (g) => g.emp.employee_name || ""]]
+/** The Weekly Report's columns: who, the seven days, and the week's totals. */
+function weeklyCols(days) {
+	return [["Emp Code", (g) => g.emp.employee_number || g.emp.name], ["Name", (g) => g.emp.employee_name || ""]]
 		.concat(days.map((iso) => [`${DAY[new Date(iso + "T00:00:00").getDay()].slice(0, 3)} ${dmy(iso)}`,
 			(g) => { const r = g.days[iso]; return r ? `${r.status}${r.in ? ` ${r.in}-${r.out || ""}` : ""}` : ""; }]))
 		.concat([["Present", (g) => g.p], ["Absent", (g) => g.a], ["Leave", (g) => g.l],
 			["Hours", (g) => hm(Math.round(g.min))], ["OT", (g) => hm(g.ot)]]);
+}
+
+/** The Weekly Report's file. */
+export const weeklySheet = (rows, people, days) =>
+	sheetOf("Weekly Report", `${dmy(days[0])} to ${dmy(days[6])}`, weeklyCols(days), weeklyList(rows, people));
+
+export function WeeklyReport() {
+	/* The date typed is kept as typed; the week is worked out from it, so the
+	   box never changes under somebody's fingers. */
+	const [pick, setPick] = useState(todayIso());
+	const start = weekStart(pick);
+	const days = weekDays(pick);
+	const { ready, rows, people, err } = useRange(days[0], days[6]);
+	const move = (n) => {
+		const d = new Date(start + "T00:00:00");
+		d.setDate(d.getDate() + n * 7);
+		setPick(ymd(d));
+	};
+	const list = weeklyList(rows, people);
+	const csvCols = weeklyCols(days);
 
 	return (
 		<>
@@ -264,6 +301,10 @@ const ABSENT_COLS = WHO.concat([
 	["Status", (r) => r.status],
 	["Machine Code", (r) => r.emp.attendance_device_id || "", "mono"],
 ]);
+
+/** The Absent Report's file: whoever the site or the rule calls Absent. */
+export const absentSheet = (rows, day) =>
+	sheetOf("Absent Report", dmy(day), ABSENT_COLS, rows.filter((r) => r.status === "Absent"));
 
 export function AbsentReport() {
 	const [day, setDay] = useState(isoAgo(0));

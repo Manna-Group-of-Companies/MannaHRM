@@ -7,9 +7,9 @@ import { REPORTS, askText, reportFor, reportInput, specSheet } from "@/data/repo
 import ReportsHub, { reportTables } from "@/features/reports/ReportsHub";
 import { FACTOHR_MENU } from "@/data/factohr";
 import { isHidden } from "@/data/sections";
-import { pathFor } from "@/routes/router";
 import { store, set, getState, resetStore } from "@/store";
 import { loadedState } from "./fixture";
+import { ATT_REPORTS } from "@/features/attendance/reportrun";
 
 /* ---------------------------------------------------------------------------
    Reports as Excel and PDF files.
@@ -160,9 +160,12 @@ describe("the Reports page", () => {
 		expect(container.textContent).not.toContain("Form 16");
 	});
 
-	it("sends their Overtime Report to the OT Report, which reads Employee Overtime", async () => {
-		const { getByText } = await draw();
-		expect(getByText("Overtime Report →").getAttribute("href")).toBe(pathFor("attendance", "ot"));
+	/* Since 21 October 2026 the OT Report is a file from Attendance's Download
+	   report rather than a page, so it is offered there and not linked here. */
+	it("offers their Overtime Report as the OT Report file, which reads Employee Overtime", async () => {
+		const { queryByText } = await draw();
+		expect(queryByText("Overtime Report →")).toBeNull();
+		expect(ATT_REPORTS.find((r) => r[0] === "ot")[1]).toBe("OT Report");
 	});
 
 	it("downloads every report as one workbook from Download all", async () => {

@@ -7,8 +7,9 @@
    whole reason a restyle is one file and not four hundred edits: the stylesheet
    names roles.
 
-   One palette ships — Manna, a deep indigo on cool slate since 6 October 2026,
-   the logo's orange before that — in two modes, light and dark. Five others
+   One palette ships — Manna, in the HRDashboard kit's green and navy on cool
+   neutrals since 20 October 2026, a deep indigo before that and the logo's
+   orange before that — in two modes, light and dark. Five others
    shipped alongside it until 5 September 2026 on a second `data-theme` axis;
    the note at the top of `themes.css` records what they were and how to bring
    the axis back.
@@ -70,6 +71,10 @@ export default {
         brand: {
           DEFAULT: "rgb(var(--brand) / <alpha-value>)",
           dark: "rgb(var(--brand-dark) / <alpha-value>)",
+          /* The text on a `dark` fill. Not white in every mode since
+             21 October 2026: the reference's dark-mode button is near-white
+             with dark text on it. */
+          on: "rgb(var(--on-brand) / <alpha-value>)",
           deep: "rgb(var(--brand-deep) / <alpha-value>)",
           soft: "rgb(var(--brand-soft) / <alpha-value>)",
           tint: "rgb(var(--brand-tint) / <alpha-value>)",
@@ -128,6 +133,9 @@ export default {
           2: "rgb(var(--ink-2) / <alpha-value>)",
           3: "rgb(var(--ink-3) / <alpha-value>)",
         },
+        /* The reference's lightest grey, for a chevron, a sort arrow or an
+           empty star — **never for text**: it is 2.5:1 on white. */
+        faint: "rgb(var(--faint) / <alpha-value>)",
         accent: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
           wash: "rgb(var(--accent-wash) / <alpha-value>)",
@@ -187,7 +195,12 @@ export default {
            had no user left, and it was the one pairing in this palette that
            missed AA at 4.43:1. As a dot it clears 1.4.11's 3:1 easily, which is
            the bar a dot actually has to meet. */
-        info: "rgb(var(--info) / <alpha-value>)",
+        info: {
+          DEFAULT: "rgb(var(--info) / <alpha-value>)",
+          /* The reference's blue notice: its text, and the notice. */
+          ink: "rgb(var(--info-ink) / <alpha-value>)",
+          wash: "rgb(var(--info-wash) / <alpha-value>)",
+        },
         /* The empty half of a coverage bar. */
         track: "rgb(var(--track) / <alpha-value>)",
         /* The connection dots in the top bar. They sit on dark chrome, so they
@@ -205,13 +218,14 @@ export default {
          palette here owns. Pointing the default at `line` means the handful of
          such places follow the theme like everything else. */
       borderColor: { DEFAULT: "rgb(var(--line))" },
-      /* Rounder since 29 September 2026: a control at 8px and a card at 14px
-         read as soft and approachable, where 6 and 12 read as a spreadsheet. */
+      /* The HRDashboard reference's (21 October 2026): 12px on a control —
+         a button, a field, the Dashboard button — and 18px on a card. `sm` is
+         its small button and a menu row, `md` a figure tile. */
       borderRadius: {
-        DEFAULT: "8px",
-        sm: "6px",
-        md: "10px",
-        lg: "14px",
+        DEFAULT: "12px",
+        sm: "10px",
+        md: "16px",
+        lg: "18px",
       },
       boxShadow: {
         /* Four steps and no more. A screen that needs a fifth is a screen with
@@ -298,8 +312,8 @@ export default {
          sentence has to look like something typed. */
       fontFamily: {
         display: ['"Plus Jakarta Sans"', '"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
-        body: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
-        mono: ['"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        body: ['"Plus Jakarta Sans"', '"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
+        mono: ['"Plus Jakarta Sans"', '"Inter"', "-apple-system", '"Segoe UI"', "Roboto", "sans-serif"],
         code: ['"JetBrains Mono"', "ui-monospace", "Menlo", "Consolas", "monospace"],
       },
     },

@@ -10,7 +10,9 @@ import { periodLabel } from "@/lib/salarysheet";
 
 const INR = "[>=10000000]##\\,##\\,##\\,##0.00;[>=100000]##\\,##\\,##0.00;##,##0.00";
 
-export async function bankSheetWorkbook(sheet, { ym, company = "", info = null, address = "" }) {
+/* `title` and `amountHead` (22 October 2026) are a festival bonus's: the same
+   sheet for the bank, headed with the festival and its amount called Bonus. */
+export async function bankSheetWorkbook(sheet, { ym, company = "", info = null, address = "", title = "", amountHead = "" }) {
 	const ExcelJS = (await import("exceljs")).default;
 	const wb = new ExcelJS.Workbook();
 	wb.creator = "Manna HR";
@@ -25,10 +27,10 @@ export async function bankSheetWorkbook(sheet, { ym, company = "", info = null, 
 	line((info && info.name) || company || "All companies", { name: "Calibri", size: 14, bold: true });
 	const sub = [address, info && info.registration && `Reg: ${info.registration}`, info && info.tax_id && `GSTIN/Tax ID: ${info.tax_id}`].filter(Boolean).join("   ");
 	if (sub) line(sub, { name: "Calibri", size: 10, color: { argb: "FF6B7280" } });
-	line(`BANK TRANSFER — ${periodLabel(ym).toUpperCase()}`, { name: "Calibri", size: 12, bold: true });
+	line(title || `BANK TRANSFER — ${periodLabel(ym).toUpperCase()}`, { name: "Calibri", size: 12, bold: true });
 	ws.addRow([]);
 
-	const head = ws.addRow(bankColumns);
+	const head = ws.addRow(amountHead ? [...bankColumns.slice(0, -1), amountHead] : bankColumns);
 	head.eachCell((c) => {
 		c.font = { name: "Calibri", bold: true, color: { argb: "FFFFFFFF" } };
 		c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEAD_FILL } };
@@ -57,7 +59,7 @@ export async function bankSheetXlsx(sheet, opts) {
 	const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 	const a = document.createElement("a");
 	a.href = URL.createObjectURL(blob);
-	a.download = `bank-transfer-${(opts.company || "group").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${opts.ym}.xlsx`;
+	a.download = opts.filename || `bank-transfer-${(opts.company || "group").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${opts.ym}.xlsx`;
 	document.body.appendChild(a);
 	a.click();
 	a.remove();

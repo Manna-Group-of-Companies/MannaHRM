@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { useApp } from "@/store";
+import { useApp, set } from "@/store";
 import { loadPayroll, payKey } from "@/api/payroll";
 import { loadCompanyInfo } from "@/api/salarysheet";
 import { periodOf } from "@/lib/payroll";
@@ -25,6 +25,10 @@ export default function Payslips() {
 	const [ym, setYm] = useState(lastMonth);
 	const [info, setInfo] = useState(null);
 	const [find, setFind] = useState("");
+	/* The header's Payslip link: the signed-in person's own code, once. */
+	useEffect(() => {
+		if (s.slipFind) { setFind(s.slipFind); set({ slipFind: "" }); }
+	}, [s.slipFind]);
 	const [which, setWhich] = useState("");
 
 	const [start, end] = periodOf(ym).iso;

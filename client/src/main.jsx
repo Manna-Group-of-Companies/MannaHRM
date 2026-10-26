@@ -6,6 +6,10 @@ import App from "./App";
 import Boundary from "@/components/Boundary";
 import { applyMode, storedMode } from "@/lib/mode";
 import "@/styles/index.css";
+/* The HRDashboard reference's own rules, every class prefixed `k-` so they
+   cannot reach a page not yet converted (scripts/portkit.mjs). After
+   index.css, as the reference's sheet came after its reset. */
+import "@/styles/kit.css";
 
 /* **Before the first paint, and this line is the whole reason it is here.**
 

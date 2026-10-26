@@ -2,7 +2,9 @@ import { useState } from "react";
 import { set, useApp } from "@/store";
 import AssignShift from "@/features/attendance/AssignShift";
 import { dmy, fmt, tidyDept } from "@/lib/format";
-import { Desk, Empty, Gap, Scroll, Tile, Tiles } from "@/components/ui";
+import { Desk, Empty, Gap, Tile, Tiles } from "@/components/ui";
+import KitIcon from "@/components/kit/KitIcon";
+import { EmptyState, Seg } from "@/components/kit/ui";
 import { deskNew, deskUrl } from "@/lib/desk";
 import { active, scoped } from "@/lib/scope";
 import ShiftWizard, { openShiftWizard } from "@/features/attendance/ShiftWizard";
@@ -103,8 +105,8 @@ function WorkPattern({ s }) {
 			</div>
 
 			{all.length ? (
-				<Scroll>
-					<table>
+				<div className="k-tbl-wrap">
+					<table className="k-rt">
 						<thead>
 							<tr>
 								<th>Employee</th><th>Department</th><th>Shift</th><th>From</th><th>To</th>
@@ -128,10 +130,10 @@ function WorkPattern({ s }) {
 										</td>
 										<td>{r.status || "—"}</td>
 										<td className="act">
-											<Desk className="fhact on" label="Edit"
+											<Desk className="k-btn k-btn-line k-btn-sm" label={`Edit the assignment of ${r.employee_name || r.employee} on the site`}
 												href={s.site && deskUrl(s.site, "Shift Assignment", r.name)}
 												title="Open this assignment on the ERPNext site.">
-												<svg viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16Z" /></svg>
+												<KitIcon name="edit" size={14} stroke={2} />
 											</Desk>
 										</td>
 									</tr>
@@ -139,15 +141,15 @@ function WorkPattern({ s }) {
 							})}
 						</tbody>
 					</table>
-				</Scroll>
+				</div>
 			) : (
 				<Empty title="Nobody is rostered">
 					<code>Shift Assignment</code> is empty for everybody in scope.
 				</Empty>
 			)}
 
-			<div className="fhfoot">
-				<span className="cnt">
+			<div className="k-muted" style={{ fontSize: 13, marginTop: 12 }}>
+				<span>
 					{rows.length
 						? `Showing ${fmt(shown.length)} of ${fmt(rows.length)} assignments`
 						: q ? `Nothing matches “${s.shq}”, out of ${fmt(all.length)}.` : ""}
@@ -157,10 +159,11 @@ function WorkPattern({ s }) {
 	);
 }
 
-/* Their screen, redrawn — the same shell as Category Type, because it is the
-   same product drawing the same kind of master. Show, Search and the sort
-   arrows act on this table; Add and ✎ open the shift form, which saves to the
-   site. */
+/* Settings → Manage Shift, drawn as Work schedules is (21 October 2026, asked
+   for by HR): one card, a row a shift — the clock, its name, how many people
+   fall back to it — and Edit beside it. Search, the page size and the
+   Shift / Work Pattern switch act on the list as before; New shift and Edit
+   open the shift form, which saves to the site. */
 function ShiftPattern({ s }) {
 	const pattern = s.shMaster === "pattern";
 	/* Assign shift (16 October 2026): several people at once. */
@@ -189,134 +192,90 @@ function ShiftPattern({ s }) {
 	}
 
 	return (
-		<div className="fhcat">
-			<header>
-				<h3 className="caps">SHIFT &amp; WORK PATTERN</h3>
-				<span className="right">
+		<div className="k-card">
+			<div className="k-sec-h">
+				<h3>Manage Shift</h3>
+				<span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
 					{s.shiftTypes.length ? (
-						<button type="button" className="embtn pri" onClick={() => setAssigning(true)}>
-							Assign shift
+						<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => setAssigning(true)}>
+							<KitIcon name="users" size={14} stroke={2} />Assign shift
 						</button>
 					) : null}
-					{/* Add makes whichever master is being shown — the two halves of this
-					    screen are two doctypes, and one + that always made a Shift Type
-					    would be wrong half the time. A Shift Type is made here, in their
-					    form; a Shift Assignment is still made on the desk. */}
+					{/* New makes whichever master is being shown — the two halves of
+					    this page are two doctypes. A Shift Type is made here, in the
+					    shift form; a Shift Assignment is still made on the desk. */}
 					{pattern ? (
-						<Desk className="embtn pri" label="Add"
+						<Desk className="k-btn k-btn-ink k-btn-sm" label="Roster on the site"
 							href={s.site && deskNew(s.site, "Shift Assignment")}
-							title="Roster somebody on the ERPNext site — a dated Shift Assignment, which is what a punch is actually measured against.">+</Desk>
+							title="A dated Shift Assignment on the ERPNext site — what a punch is actually measured against.">
+							<KitIcon name="plus" size={14} stroke={2} />Roster on the site
+						</Desk>
 					) : (
-						<button type="button" className="embtn pri" aria-label="Add"
-							title="New shift — Factor HR's form, saved to the ERPNext site as a Shift Type. Nothing generates attendance until these exist — a shift is what a punch is measured against."
-							onClick={() => openShiftWizard()}>+</button>
+						<button type="button" className="k-btn k-btn-ink k-btn-sm" aria-label="New shift"
+							onClick={() => openShiftWizard()}>
+							<KitIcon name="plus" size={14} stroke={2} />New shift
+						</button>
 					)}
 				</span>
-			</header>
-
-			<div className="bar3">
-				<label className="lbl">
-					Show
-					<select aria-label="Entries per page" value={per}
-						onChange={(e) => set({ shper: Number(e.target.value) })}>
-						{[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
-					</select>
-					entries
-				</label>
-				{/* The middle control is the whole reason the title has an "&" in it:
-				    one screen, two masters, and only the first of them has been seen. */}
-				{/* The middle control is the whole reason the title has an "&" in it:
-				    one screen, two masters. Theirs has never been opened, so the second
-				    half is ours — the roster, which is the same question asked our way. */}
-				<label className="lbl mid">
-					<select value={s.shMaster} aria-label="Master"
-						title="Their Work Pattern has never been screenshotted open, so what is under it here is ours: the Shift Assignment rows — who is measured against which shift, between which dates."
-						onChange={(e) => set({ shMaster: e.target.value, shq: "" })}>
-						<option value="shift">Shift</option>
-						<option value="pattern">Work Pattern</option>
-					</select>
-				</label>
-				<label className="lbl right">
-					Search:
-					<input type="search" value={s.shq} aria-label="Search shifts"
-						onChange={(e) => set({ shq: e.target.value })} />
-				</label>
 			</div>
 
-			{/* The read that fills the table is part of the load in `api/load.js`, so
-			    it has answered by the time anybody is here: an empty list is the site
-			    saying it holds none, not a read that has not happened. The cause is not
-			    asserted — `hrms` being absent is the likely one and a session that may
-			    not read the doctype is another, and the two are not distinguishable
-			    from here. */}
-			{pattern ? <WorkPattern s={s} /> : !s.shiftTypes.length ? (
-				<Empty title="This site holds no shifts" />
-			) : (
-			<>
-			<Scroll>
-				<table>
-					<thead>
-						<tr>
-							{(coCol ? ["NAME", "COMPANY", "EMPLOYEE COUNT", "ACTION"]
-								: ["NAME", "EMPLOYEE COUNT", "ACTION"]).map((h) => (
-								<th key={h} className={h === "NAME" || h === "COMPANY" ? undefined : "num"}>
-									{h} <span className="sort">⇵</span>
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{rows.map((r) => (
-							<tr key={r.name}>
-								<td><span className="fhname">{r.name}</span></td>
-								{coCol ? (
-									<td className={r.company ? undefined : "muted"}
-										title={r.company ? undefined : "No company set — any company may use this shift."}>
-										{r.company || "any"}
-									</td>
-								) : null}
-								{/* Their CATEGORY COUNT and IS DEFAULT columns are not drawn: a
-								    category is not how anybody is put on a shift here, and no
-								    field on Shift Type says one of them is the default. A column
-								    of dashes would read as data nobody has filled in. */}
-								<td className={"num" + (byShift[r.name] ? "" : " zero")}
-									title="Active employees whose own record names this as their default shift. A fallback, not a roster — Work Pattern is the roster.">
-									{fmt(byShift[r.name] || 0)}
-								</td>
-								<td className="act">
-									{/* ✎ opens Factor HR's own three-step shift form — photographed
-									    4 Sep 2026 — over this document, so the window and its
-									    tolerances are read and shown in their layout rather than
-									    the desk's. See ShiftWizard.jsx.
-
-									    Delete is the site's own, and is deliberately not one click
-									    from here: a shift removed under a roster is a day nobody is
-									    measured against. */}
-									<button className="fhact on" aria-label="Edit"
-										title="Factor HR's shift form — a name and a kind, then the window and its tolerances, then grace timings. Save changes this Shift Type on the ERPNext site."
-										onClick={() => openShiftWizard(r.name)}>
-										<svg viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16Z" /></svg>
-									</button>
-									<Desk className="fhact on" label="Delete"
-										href={s.site && deskUrl(s.site, "Shift Type", r.name)}
-										title="Open this Shift Type on the ERPNext site, where Menu → Delete removes it.">
-										<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
-									</Desk>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</Scroll>
-
-			<div className="fhfoot">
-				<span className="cnt">
-					{q && !matched.length
-						? `Nothing matches “${s.shq}”, out of ${fmt(s.shiftTypes.length)} on this site.`
-						: `Showing ${fmt(rows.length)} of ${fmt(matched.length)} shifts` + (q ? " matching." : " on this site.")}
+			<div className="k-card-h" style={{ margin: "0 0 4px" }}>
+				<Seg label="Shifts or roster" value={pattern ? "pattern" : "shift"}
+					options={[["shift", "Shifts"], ["pattern", "Work Pattern"]]}
+					onChange={(v) => set({ shMaster: v, shq: "" })} />
+				<span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+					<div className="k-inp-ic" style={{ minWidth: 220 }}>
+						<KitIcon name="search" size={18} stroke={2} />
+						<input className="k-inp" type="search" placeholder="Search" value={s.shq} aria-label="Search shifts"
+							onChange={(e) => set({ shq: e.target.value })} />
+					</div>
+					<select className="k-sel" aria-label="Entries per page" value={per} style={{ width: "auto" }}
+						onChange={(e) => set({ shper: Number(e.target.value) })}>
+						{[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n} a page</option>)}
+					</select>
 				</span>
 			</div>
-			</>
+
+			{/* The read that fills the list is part of the load in `api/load.js`, so
+			    it has answered by the time anybody is here: an empty list is the site
+			    saying it holds none, not a read that has not happened. */}
+			{pattern ? <WorkPattern s={s} /> : !s.shiftTypes.length ? (
+				<EmptyState icon="clock" title="No shifts yet" sub="" />
+			) : (
+				<>
+					{rows.map((r) => (
+						<div className="k-list-row" key={r.name}>
+							<span className="k-icon-sq"><KitIcon name="clock" size={18} stroke={2} /></span>
+							{/* Active people whose own record names this as their default
+							    shift: a fallback, not a roster — Work Pattern is the roster. */}
+							<div className="k-grow">
+								<b>{r.name}</b>
+								<small>
+									{fmt(byShift[r.name] || 0)} people on it by default
+									{coCol ? ` · ${r.company || "any company"}` : ""}
+								</small>
+							</div>
+							<button type="button" className="k-btn k-btn-line k-btn-sm" aria-label={`Edit ${r.name}`}
+								onClick={() => openShiftWizard(r.name)}>
+								<KitIcon name="edit" size={14} stroke={2} />Edit
+							</button>
+							{/* Delete is the site's own, and is deliberately not one click
+							    from here: a shift removed under a roster is a day nobody is
+							    measured against. */}
+							<Desk className="k-btn k-btn-line k-btn-sm" label={`Delete ${r.name} on the site`}
+								href={s.site && deskUrl(s.site, "Shift Type", r.name)}
+								title="Open this Shift Type on the ERPNext site, where Menu → Delete removes it.">
+								<KitIcon name="trash" size={14} stroke={2} />
+							</Desk>
+						</div>
+					))}
+					{q && !matched.length ? <EmptyState icon="search" title={`Nothing matches “${s.shq}”`} sub="" /> : null}
+					<p className="k-muted" style={{ fontSize: 13, margin: "12px 0 0" }}>
+						{q && !matched.length
+							? `Out of ${fmt(s.shiftTypes.length)} on this site.`
+							: `Showing ${fmt(rows.length)} of ${fmt(matched.length)} shifts` + (q ? " matching." : " on this site.")}
+					</p>
+				</>
 			)}
 
 			{s.shw.open ? (
@@ -332,12 +291,7 @@ export default function Shifts() {
 
 	return (
 		<>
-			<div className="mt-[.8rem]">
-				<ShiftPattern s={s} />
-			</div>
-
-			<div className="mt-[1rem]">
-			</div>
+			<ShiftPattern s={s} />
 		</>
 	);
 }

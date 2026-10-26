@@ -8,6 +8,7 @@ import { CT_BLANK, CT_DLG_BLANK } from "@/data/categorytype";
 import { EXP_BLANK } from "@/data/employees";
 import { CAL_NEW_BLANK } from "@/data/masters";
 import { storedRail } from "@/lib/rail";
+import { storedLayout } from "@/lib/homelayout";
 import { storedMode } from "@/lib/mode";
 
 /* ---------------------------------------------------------------------------
@@ -95,6 +96,41 @@ const initial = {
 	/** Whether `user` is an admin, as the site answered it — see `isAdmin` in
 	    api/client.js and USER_ONLY in data/menus.js. `null` until it answers. */
 	admin: null,
+	/** The signed-in person as their User record names them — `{first_name,
+	    full_name, user_image}` — for the account button. `null` until it
+	    answers, and the button shows the login meanwhile (api/client.js whoIs). */
+	me: null,
+	/** Documents: the folder `/documents/folder` shows (a File name). */
+	docFolder: "",
+	/** News: the post `/news/item` and `/news/edit` show. */
+	newsId: "",
+	/** Payslips: what the find box starts with — the header's Payslip link
+	    puts the signed-in person's own code here. Read once and cleared. */
+	slipFind: "",
+	/** The reference's toast at the foot of the screen (components/kit/overlay). */
+	kitToast: null,
+	/** The front page (features/dashboard/Home.jsx): which of the reference's two
+	    layouts, remembered per browser (lib/homelayout.js); the figures only it
+	    reads, per company (api/home.js); and attendance by month for its chart. */
+	homeLayout: storedLayout(),
+	home: null,
+	homeAtt: null,
+	/** Employee Attendance: whose days it shows. Team Attendance sets it. */
+	attEmp: "",
+	/** Team Time Off: every leave application from the start of last year (api/leavelist.js). */
+	lvAll: { state: "", rows: [] },
+	/** Recruitment: every opening and applicant (api/jobs.js), and the job and applicant open. */
+	rec: { state: "", jobs: [], apps: [], criteria: false, detail: false, err: "" },
+	recJob: "",
+	recApp: "",
+	/** Checklist: the signed-in person's to-dos, onboarding and separations, and what is open. */
+	todos: { state: "", rows: [] },
+	boarding: { state: "", Onboarding: [], Offboarding: [] },
+	chkTodo: "",
+	chkList: null,
+	chkTpl: null,
+	/** Notifications: the site's Notification Log for this login. */
+	notes: { state: "", rows: [] },
 	/** Settings → Security's rules as the site holds them — the same object
 	    data/sections.js is obeying, here so a menu redraws when they change.
 	    See api/pagerules.js. The state is "" before a sign-in, then "loading",
@@ -607,7 +643,7 @@ const initial = {
 
 	   All of this went with the page on 4 September 2026 and came back with it
 	   the same day; `empSel` never left, because four other screens read it. */
-	empview: "grid",
+	empview: "list",
 	/* Active, not All (3 October 2026): a deactivated person is off the cards
 	   until somebody asks for InActive on the status filter. */
 	empstatus: "Active",
@@ -620,6 +656,9 @@ const initial = {
 	empfilters: false,
 	empdept: "",
 	empdesig: "",
+	/** The reference's Filter drawer adds two more: company and employment type. */
+	empco: [],
+	emptype: [],
 	empdev: "",
 	/* Whether the master is drawing everybody or the first EMP_SHOWN of them.
 	   Here rather than in the component so that opening a person and coming

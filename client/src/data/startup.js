@@ -21,7 +21,7 @@
 export const QUICK_LINKS = [
 	["Attendance Regularization", "attendance", "overview"],
 	["Attendance Submission (summary)", "attendance", "submit"],
-	["Calendar", "employees", "calendar"],
+	["Calendar", "settings", "calendar"],
 	["Create Trouble Ticket", null, null,
 		"Factor HR's own support desk, for raising tickets with factoHR. It goes with the product."],
 	["Document Entry", "onboard", "documents"],

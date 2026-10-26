@@ -4,10 +4,12 @@ import { Provider } from "react-redux";
 
 import { allowedFor, landingFor, sectionFor, tabsFor } from "@/data/menus";
 import { MODULES } from "@/routes/registry";
+import { isHidden } from "@/data/sections";
 import SubNav from "@/layout/SubNav";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 import { OtReport, WeeklyReport, AbsentReport } from "@/features/attendance/RangeReports";
+import { reportsFor } from "@/features/attendance/DownloadReport";
 
 const MRP = "mannarubber.products@mannarubber.com";
 
@@ -38,10 +40,26 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 		expect(allowedFor("leave", MRP)).toBeNull();
 	});
 
-	it("the strip draws eight tabs for that login", async () => {
-		set({ ...loadedState(), user: MRP, section: "attendance", subtab: "inout" });
+	/* Since 21 October 2026 the five reports on that menu are files from
+	   Download report rather than pages on the strip (data/sections.js). */
+	/* 21 October 2026, asked for by HR: Manage Shift moved to Settings, where
+	   this login keeps it, the site calling it an admin; Monthly Basic is a box
+	   on Reports. So the register is its one Attendance page, and one page
+	   draws no strip. */
+	it("is the register alone, Monthly Basic on Reports and Manage Shift in Settings, and the dialog offers its five reports", async () => {
+		set({ ...loadedState(), user: MRP, section: "attendance", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link").map((a) => a.textContent)).toHaveLength(8);
+		expect(screen.queryAllByRole("link")).toHaveLength(0);
+		expect(allowedFor("attendance", MRP, true)).toContain("monthly");
+		expect(sectionFor("settings", true, MRP)).toBe(true);
+		expect(tabsFor("settings", MODULES.settings.tabs, MRP, true).map((t) => t[0])).toContain("shifts");
+		expect(reportsFor(MRP, true).map((r) => r[0]).sort()).toEqual(["absent", "daily", "inout", "ot", "weekly"]);
+	});
+
+	it("finds Manage Shift under Settings and not under Attendance, for HR as well", () => {
+		expect(isHidden("attendance", "shifts")).toBe(true);
+		expect(MODULES.settings.pages.shifts).toBeTruthy();
+		expect(tabsFor("settings", MODULES.settings.tabs, "hr@mannarubber.com", true).map((t) => t[0])).toContain("shifts");
 	});
 
 	it.each([["OT", OtReport], ["Weekly", WeeklyReport], ["Absent", AbsentReport]])("%s report draws", async (_, C) => {
@@ -55,10 +73,10 @@ describe.each([MRP, "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com
 	"the company login %s's Employees module", (login) => {
 	beforeEach(() => resetStore());
 
-	it("is Employee Master, Calendar, Employee Profile and New Joining even when the site calls it an admin", () => {
+	it("is Employee Master, Calendar and New Joining even when the site calls it an admin", () => {
 		for (const admin of [true, null, false]) {
 			expect(tabsFor("employees", MODULES.employees.tabs, login, admin).map((t) => t[0]))
-				.toEqual(["overview", "calendar", "profile", "joining"]);
+				.toEqual(["overview", "calendar", "joining"]);
 		}
 	});
 
@@ -66,10 +84,17 @@ describe.each([MRP, "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com
 		expect(landingFor("employees", "detail", login, true)).toBe("overview");
 	});
 
-	it("draws four tabs on the strip", async () => {
+	it("opens Employee Profile from a person, though it is not on the strip", () => {
+		expect(landingFor("employees", "profile", login, true)).toBe("profile");
+	});
+
+	it("draws no strip over Employee Master, New Joining being Reports → Onboarding and Calendar Settings → Calendar", async () => {
+		expect(isHidden("employees", "joining")).toBe(true);
+		expect(isHidden("employees", "calendar")).toBe(true);
+		expect(tabsFor("settings", MODULES.settings.tabs, login, true).map((t) => t[0])).toContain("calendar");
 		set({ ...loadedState(), user: login, admin: true, section: "employees", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link")).toHaveLength(4);
+		expect(screen.queryAllByRole("link")).toHaveLength(0);
 	});
 });
 
@@ -105,22 +130,27 @@ describe("Add New Employee", () => {
 
 	it("adds no tab to the strip", () => {
 		expect(tabsFor("employees", MODULES.employees.tabs, MRP, false).map((t) => t[0]))
-			.toEqual(["overview", "calendar", "profile", "joining"]);
+			.toEqual(["overview", "calendar", "joining"]);
 	});
 });
 
 describe("a login that is not an admin", () => {
 	beforeEach(() => resetStore());
 
-	it("is shown Employee Master, Calendar, Employee Profile and New Joining, and nothing else", () => {
+	it("is shown Employee Master, Calendar and New Joining, and may still open Employee Profile", () => {
 		expect(tabsFor("employees", MODULES.employees.tabs, "someone@mannarubber.com", false).map((t) => t[0]))
-			.toEqual(["overview", "calendar", "profile", "joining"]);
+			.toEqual(["overview", "calendar", "joining"]);
+		expect(landingFor("employees", "profile", "someone@mannarubber.com", false)).toBe("profile");
 		for (const k of allowedFor("employees", "", false)) expect(MODULES.employees.pages[k]).toBeTruthy();
 	});
 
-	it("has no other module on the rail, and an admin or an unanswered check keeps them all", () => {
+	/* Settings since 21 October 2026, holding Calendar alone, when Calendar
+	   moved there from Employees. */
+	it("has no other module on the rail but Settings with Calendar in it, and an admin or an unanswered check keeps them all", () => {
 		expect(sectionFor("employees", false)).toBe(true);
-		expect(["dashboard", "attendance", "leave", "settings"].some((k) => sectionFor(k, false))).toBe(false);
+		expect(["dashboard", "attendance", "leave"].some((k) => sectionFor(k, false))).toBe(false);
+		expect(sectionFor("settings", false)).toBe(true);
+		expect(tabsFor("settings", MODULES.settings.tabs, "someone@mannarubber.com", false).map((t) => t[0])).toEqual(["calendar"]);
 		expect(sectionFor("attendance", true)).toBe(true);
 		expect(sectionFor("attendance", null)).toBe(true);
 	});
@@ -153,10 +183,10 @@ describe("a login that is not an admin", () => {
 		expect(landingFor("employees", "calendar", "", false)).toBe("calendar");
 	});
 
-	it("draws four tabs on the strip", async () => {
+	it("draws no strip over Employee Master, its one page there", async () => {
 		set({ ...loadedState(), user: "someone@mannarubber.com", admin: false, section: "employees", subtab: "overview" });
 		await act(async () => { render(<Provider store={store}><SubNav /></Provider>); });
-		expect(screen.getAllByRole("link")).toHaveLength(4);
+		expect(screen.queryAllByRole("link")).toHaveLength(0);
 	});
 });
 
@@ -277,5 +307,15 @@ describe("who may edit the Calendar", () => {
 	it.each(["mannarubber.products@mannarubber.com", "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com",
 		"mannatyreretreads@mannarubber.com", "it@mannarubber.com", "", null])("is not %s, even when the site would let it write", (u) => {
 		expect(calEditor(u)).toBe(false);
+	});
+});
+
+describe("Employee Profile", () => {
+	it("is on no login's strip, and opens for each of them from Employee Master", () => {
+		expect(MODULES.employees.tabs.some((t) => t[0] === "profile")).toBe(false);
+		expect(MODULES.employees.pages.profile).toBeTruthy();
+		for (const [login, admin] of [["it@mannarubber.com", true], [MRP, true], ["someone@mannarubber.com", false]]) {
+			expect(landingFor("employees", "profile", login, admin)).toBe("profile");
+		}
 	});
 });

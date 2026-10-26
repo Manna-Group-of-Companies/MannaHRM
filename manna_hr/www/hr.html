@@ -6,14 +6,22 @@
 <title>Manna HR</title>
 <!-- Without this Chrome asks for /favicon.ico on every page load and logs the
      404 as a console error, which buries the errors somebody is actually
-     looking for. SVG rather than .ico: one file, sharp at every size, and the
-     mark is two shapes and a letter. -->
+     looking for. The Manna M (14 October 2026): SVG for every browser that
+     takes one, a PNG for the ones that do not, and the home-screen icons a
+     phone asks for when the site is saved to it. -->
 <link rel="icon" href="/assets/manna_hr/hr/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/manna_hr/hr/favicon-32.png" sizes="32x32" type="image/png">
+<!-- Not the conventional /apple-touch-icon.png: anything starting /app is
+     forwarded to the ERPNext desk, by the dev proxy and by the Cloudflare
+     Worker, and came back 404. -->
+<link rel="apple-touch-icon" href="/assets/manna_hr/hr/manna-touch-icon.png">
+<link rel="manifest" href="/assets/manna_hr/hr/manifest.webmanifest">
+<meta name="theme-color" content="#F46A21">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-  <script type="module" crossorigin src="/assets/manna_hr/hr/assets/index-Cl8s7T09.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/manna_hr/hr/assets/index-lK-4Xs8T.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+  <script type="module" crossorigin src="/assets/manna_hr/hr/assets/index-CqhGtOxH.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/manna_hr/hr/assets/index-Tpts900E.css">
 </head>
 <body>
 <div id="root"></div>

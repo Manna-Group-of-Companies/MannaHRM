@@ -60,6 +60,13 @@ import { periodLabel } from "@/lib/salarysheet";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 
+/* **Thirty seconds a case, and five for the sheet to be built.** These cases
+   build a workbook in the page, which takes a second on its own; with the
+   whole suite running beside them, two timed out on 21 October 2026 with no
+   code changed and passed alone. The cases assert exactly what they did; only
+   the waiting is longer — see mount.test.js for the same call. */
+vi.setConfig({ testTimeout: 30_000 });
+
 const YM = lastMonth();
 const [START, END] = periodOf(YM).iso;
 const CO = { default_payroll_payable_account: "Payroll Payable - MR", cost_center: "Main - MR", default_currency: "INR" };
@@ -247,13 +254,12 @@ describe("step 3 — the salary run", () => {
 		expect(calls.find((c) => c[0] === "submit")).toEqual(["submit", "Payroll Entry", "HR-PRUN-1"]);
 	});
 
-	it("leaves submitting the slips — the step that pays — to Frappe", async () => {
+	it("leaves submitting the slips — the step that pays — to Transferred on Bank Transfer", async () => {
 		site.entries = [{ name: "HR-PRUN-1", docstatus: 1, company: "Manna Rubber", creation: "2026-09-01" }];
 		site.slips = [{ name: "SAL-1", employee: "HR-EMP-00001", employee_name: "Anand Raghavan", docstatus: 0, gross_pay: 13000, total_deduction: 500, net_pay: 12500, payment_days: 30 }];
 		const v = await draw();
-		const a = [...v.container.querySelectorAll("a")].find((x) => x.textContent === "Submit the slips in Frappe");
-		expect(a.getAttribute("href")).toBe("https://erp.example.invalid/app/payroll-entry/HR-PRUN-1");
-		expect([...v.container.querySelectorAll("button")].some((b) => /submit the slips/i.test(b.textContent))).toBe(false);
+		expect(button(v, "Bank Transfer")).toBeTruthy();
+		expect([...v.container.querySelectorAll("button")].some((b) => /submit the slips|transferred/i.test(b.textContent))).toBe(false);
 	});
 
 	it("never writes a Salary Slip", async () => {
@@ -300,7 +306,7 @@ describe("step 4 — the sheet", () => {
 
 	/* Waits for the register to be built and the page to say so. */
 	const made1 = () => act(async () => {
-		await vi.waitFor(() => { if (!made.length) throw new Error("not made yet"); });
+		await vi.waitFor(() => { if (!made.length) throw new Error("not made yet"); }, { timeout: 5000 });
 	});
 	const people = () => {
 		site.employees = [

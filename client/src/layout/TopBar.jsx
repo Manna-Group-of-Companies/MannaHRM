@@ -1,63 +1,39 @@
-/** The bar over every page: where you are, what you are looking for, which
- *  company, and the three controls that belong to the person rather than to the
- *  page — what is waiting, settings, and who is signed in.
+/** The bar over every page, as the HRDashboard reference draws it
+ *  (21 October 2026): the menu button on a narrow screen, the search that
+ *  finds people, pages and actions (press "/"), the company picker (D19), the
+ *  header's links, what is waiting, and who is signed in.
  *
- *  **Nothing here reads the site.** The bell counts rows the first load already
- *  fetched, and the two menus are built on `.empdrop` / `.emmenu` so they close
- *  with every other menu in the app — see the document handler in App.jsx,
- *  which has to be told about `tbnotif` and `tbme` or they stay open behind the
- *  next click.
+ *  **Nothing here reads the site.** The search looks through the employee list
+ *  the first load already holds, and the pages list is GoTo's — the same one
+ *  Ctrl+K offers, read through the same menus. The two menus are built on
+ *  `.empdrop` / `.emmenu` so they close with every other menu in the app — see
+ *  the document handler in App.jsx, which closes `tbnotif` and `tbme`.
  */
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp, set } from "@/store";
 import { logout } from "@/api/client";
-import { MODULES, offMenuTitle } from "@/routes/registry";
-import { blueprintsFor } from "@/data/blueprints";
-import { modeLabel, nextMode, saveMode } from "@/lib/mode";
-import { initials } from "@/lib/format";
 import Link from "@/routes/Link";
-
-/* One flat icon set, drawn at 24 and stroked. Inline rather than a font or a
-   package: five glyphs is five paths, and a webfont is a request that has to
-   land before the header stops looking broken. */
-const ICON = {
-	menu: "M4 6h16M4 12h16M4 18h16",
-	find: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14M20 20l-4-4",
-	bell: "M18 16V11a6 6 0 1 0-12 0v5l-2 2h16zM10 21h4",
-	gear: "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z",
-	out: "M15 12H4M8 8l-4 4 4 4M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5",
-	go: "M5 12h14M12 5l7 7-7 7",
-};
-
-/* The appearance control's three states, drawn in the same stroke as the
-   rest of the bar. They were emoji — and 🖥 has no glyph in Windows' own
-   font at this size, so on the machines HR actually uses the button was a
-   grey box. */
-const MODE_GLYPH = {
-	system: "M3 5h18v11H3zM8 20h8M12 16v4",
-	light: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
-	dark: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z",
-};
-
-const Glyph = ({ d }) => (
-	<svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-		<path d={d} />
-	</svg>
-);
+import { navigate } from "@/routes/router";
+import { destinations, rank } from "@/layout/GoTo";
+import { headerLinks, shown } from "@/data/nav";
+import { employeesLocked } from "@/data/menus";
+import { paletteFor, saveMode } from "@/lib/mode";
+import { openEmployee } from "@/features/employees/openEmployee";
+import KitIcon from "@/components/kit/KitIcon";
+import KitAvatar from "@/components/kit/KitAvatar";
+import { NoteBell } from "@/features/help/NotesHelp";
 
 /** Everything waiting on somebody, newest first.
  *
  *  Two queues have documents behind them on this site — attendance corrections
- *  and open leave applications — and the other five are field lists, so they
- *  are counted as zero rather than guessed at. A bell that invents a number is
- *  a bell nobody trusts the second time. */
-function pending(s) {
+ *  and open leave applications — so those are what is counted. A count that
+ *  invents a number is one nobody trusts the second time. */
+export function pending(s) {
 	const rows = [];
 	for (const r of s.approvals.attendance || []) {
 		rows.push({
 			id: "att:" + (r.name || r.employee),
-			section: "dashboard",
-			subtab: "approvals",
 			what: "Attendance correction",
 			who: (s.byName[r.employee] || {}).employee_name || r.employee_name || r.employee || "—",
 			when: String(r.creation || r.attendance_date || ""),
@@ -66,8 +42,6 @@ function pending(s) {
 	for (const r of s.approvals.leave || []) {
 		rows.push({
 			id: "lv:" + (r.name || r.employee),
-			section: "dashboard",
-			subtab: "approvals",
 			what: `Leave — ${r.leave_type || "request"}`,
 			who: r.employee_name || (s.byName[r.employee] || {}).employee_name || r.employee || "—",
 			when: String(r.creation || r.posting_date || r.from_date || ""),
@@ -76,69 +50,178 @@ function pending(s) {
 	return rows.sort((a, b) => b.when.localeCompare(a.when));
 }
 
+/** The search's answers, in the reference's groups and at its counts: four
+    people, five pages, three actions. A person matches on name, code,
+    designation or department; a page on its name or its module's. */
+export function searchResults(s, typed, actions) {
+	const q = typed.trim().toLowerCase();
+	if (!q) return [];
+	const people = (s.employees || [])
+		.filter((e) => [e.employee_name, e.name, e.employee_number, e.designation, e.department]
+			.join(" ").toLowerCase().includes(q))
+		.slice(0, 4)
+		.map((e) => ({
+			group: "People", id: "emp:" + e.name, name: e.employee_name || e.name,
+			sub: [e.designation, e.department].filter(Boolean).join(" · "),
+			run: () => openEmployee(e.name),
+		}));
+	const pages = rank(destinations(s.user, s.admin), q).slice(0, 5).map((d) => ({
+		group: "Pages", id: "page:" + d.id, label: d.label, sub: d.top ? "" : d.module,
+		run: () => navigate(d.section, d.subtab),
+	}));
+	const acts = actions.filter((a) => a.label.toLowerCase().includes(q)).slice(0, 3)
+		.map((a) => ({ group: "Actions", id: "act:" + a.label, label: a.label, icon: a.icon, run: a.run }));
+	return [...people, ...pages, ...acts];
+}
+
+/** The part of a login before the @, as a name to put beside the avatar:
+    these logins are addresses, and the reference shows a first name there. */
+/** What the account button calls somebody: the first name on their User
+    record, else the part of the login before the @ — never a sample name. */
+export const firstName = (user, me) => {
+	if (me?.first_name) return me.first_name;
+	const local = String(user || "").split("@")[0];
+	return local ? local[0].toUpperCase() + local.slice(1) : "";
+};
+
+/** The signed-in person's own Employee code, for the header's Payslip link;
+    "" for a login no Employee carries, which opens everybody's. */
+export const ownCode = (employees, user) =>
+	(employees || []).find((e) => e.user_id && e.user_id === user)?.name || "";
+
 export default function TopBar() {
 	const s = useApp();
-	const { companies, company, q, user, section, subtab, drawer, tbnotif, tbme, mode } = s;
-
-	const mod = MODULES[section];
-	/* A page reached from a control rather than from the strip is not on
-	   `tabs`, so the header used to call all 106 blueprints "Overview" — which
-	   is both wrong and the same word on 106 different pages. Their own menu
-	   title is the answer, and it is the title the reader clicked. */
-	const page = (mod?.tabs || []).find((t) => t[0] === subtab)
-		|| (blueprintsFor(section).find((b) => b.slug === subtab)
-			? [subtab, blueprintsFor(section).find((b) => b.slug === subtab).title]
-			: null);
-	const waiting = pending(s);
+	const { companies, company, user, drawer, tbnotif, tbme, mode, section, subtab } = s;
+	const [typed, setTyped] = useState("");
+	const [at, setAt] = useState(0);
+	const [focused, setFocused] = useState(false);
+	const box = useRef(null);
 
 	const signOut = async () => {
 		await logout();
 		set({ user: "", tbme: false });
 	};
 
+	/* The reference's actions, as far as this app has them. Each is offered
+	   only to a login that could do it from the menu. */
+	const actions = useMemo(() => {
+		const out = [];
+		if (shown("employees", user, s.admin) && !employeesLocked(user)) {
+			out.push({ label: "Add employee", icon: "plus", run: () => navigate("employees", "new") });
+		}
+		if (shown("leave", user, s.admin)) {
+			out.push({ label: "Request time off", icon: "clock", run: () => navigate("leave", "overview") });
+		}
+		out.push({ label: "Go to a page", icon: "arrow", run: () => set({ palette: true }) });
+		out.push({
+			label: "Switch light / dark mode", icon: "sun",
+			run: () => set({ mode: saveMode(paletteFor(mode) === "dark" ? "light" : "dark") }),
+		});
+		out.push({ label: "Sign out", icon: "logout", run: signOut });
+		return out;
+	}, [user, s.admin, mode]);
+
+	const results = searchResults(s, typed, actions);
+	const showing = focused && typed.trim() !== "";
+	const waiting = pending(s);
+
+	/* "/" goes to the search from anywhere, as in the reference — unless
+	   somebody is typing in a box already, a dialog is open, or a modifier is
+	   held (Ctrl+/ is the browser's and the editors'). */
+	useEffect(() => {
+		const onKey = (e) => {
+			if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+			const t = e.target;
+			if (t?.closest?.("input, textarea, select, [contenteditable='true'], .modal, .goto")) return;
+			e.preventDefault();
+			box.current?.focus();
+		};
+		document.addEventListener("keydown", onKey);
+		return () => document.removeEventListener("keydown", onKey);
+	}, []);
+
+	const clear = () => {
+		setTyped("");
+		setAt(0);
+		box.current?.blur();
+	};
+	const run = (r) => {
+		clear();
+		r.run();
+	};
+	const onKeyDown = (e) => {
+		if (e.key === "Escape") { e.preventDefault(); clear(); }
+		else if (e.key === "ArrowDown") { e.preventDefault(); setAt((i) => Math.min(results.length - 1, i + 1)); }
+		else if (e.key === "ArrowUp") { e.preventDefault(); setAt((i) => Math.max(0, i - 1)); }
+		else if (e.key === "Enter" && results[at]) { e.preventDefault(); run(results[at]); }
+	};
+
+	let lastGroup = "";
 	return (
 		<header className="topbar">
-			{/* Only ever visible on a narrow window, where the rail is icons and
-			    this is the way to its labels. It opens the rail *over* the page —
-			    a different key from how wide the rail is on a desktop, because at
-			    this width those are different things. */}
+			{/* Only drawn at 880px and under, where the side menu is a drawer. */}
 			<button
 				type="button"
-				className="tbrail"
-				aria-label={drawer ? "Close the menu" : "Menu"}
+				className="tbrail icon-btn"
+				aria-label={drawer ? "Close the menu" : "Open menu"}
 				title={drawer ? "Close the menu" : "Menu"}
 				aria-expanded={drawer}
 				onClick={() => set({ drawer: !drawer })}
 			>
-				<Glyph d={ICON.menu} />
+				<KitIcon name="list" size={22} stroke={2} />
 			</button>
 
-			{/* A breadcrumb rather than two stacked lines since 6 October 2026:
-			    the module, a separator, the page — read left to right as a path,
-			    which is what it is. The separator is decoration and is hidden
-			    from a screen reader, which hears "Attendance, Daily Detail". */}
-			<span className="tbwhere">
-				<b>{mod?.label || "Dashboard"}</b>
-				<i aria-hidden="true">/</i>
-				<span>{page ? page[1] : offMenuTitle(section, subtab) || "Overview"}</span>
-			</span>
-
-			{/* The search the employee screens read. `type="search"` rather than
-			    text, so a phone offers the right keyboard and the browser its own
-			    clear control — ours is beside it for the browsers that draw none. */}
 			<div className="tbfind">
-				<Glyph d={ICON.find} />
+				<KitIcon name="search" size={20} stroke={2} />
 				<input
+					ref={box}
 					type="search"
-					placeholder="Search name, code, machine code, designation…"
-					aria-label="Search"
-					value={q}
-					onChange={(e) => set({ q: e.target.value })}
+					placeholder="Search anything…"
+					autoComplete="off"
+					aria-label="Search people, pages or actions"
+					role="combobox"
+					aria-expanded={showing}
+					aria-controls="tbres"
+					aria-activedescendant={showing && results[at] ? "tbres-" + at : undefined}
+					value={typed}
+					onChange={(e) => { setTyped(e.target.value); setAt(0); }}
+					onKeyDown={onKeyDown}
+					onFocus={() => setFocused(true)}
+					/* Late enough that a click on a result lands before the list goes. */
+					onBlur={() => setTimeout(() => setFocused(false), 150)}
 				/>
-				{q ? (
-					<button type="button" className="clear" aria-label="Clear the search"
-						title="Clear the search" onClick={() => set({ q: "" })}>×</button>
-				) : null}
+				<span className="kbd" aria-hidden="true">/</span>
+				<div className={"search-res" + (showing ? " show" : "")} id="tbres" role="listbox">
+					{showing && results.length === 0 ? (
+						<div className="empty-res">Nothing matches “{typed.trim()}”.</div>
+					) : null}
+					{showing ? results.map((r, i) => {
+						const head = r.group !== lastGroup ? <div className="sr-g" key={"g:" + r.group}>{r.group}</div> : null;
+						lastGroup = r.group;
+						return [
+							head,
+							<button
+								key={r.id}
+								id={"tbres-" + i}
+								type="button"
+								role="option"
+								aria-selected={i === at}
+								className={i === at ? "hi" : undefined}
+								onMouseDown={(e) => e.preventDefault()}
+								onMouseMove={() => { if (i !== at) setAt(i); }}
+								onClick={() => run(r)}
+							>
+								{r.group === "People"
+									? <KitAvatar name={r.name} />
+									: <span className="sr-ic"><KitIcon name={r.icon || "arrow"} size={16} stroke={2} /></span>}
+								<span className="sr-t">
+									<b>{r.group === "People" ? r.name : r.label}</b>
+									{r.sub ? <small>{r.sub}</small> : null}
+								</span>
+							</button>,
+						];
+					}) : null}
+				</div>
 			</div>
 
 			<select
@@ -154,47 +237,27 @@ export default function TopBar() {
 				))}
 			</select>
 
+			<nav className="toplinks" aria-label="Shortcuts">
+				{headerLinks(user, s.admin).map((l) => {
+					const on = !l.near && l.section === section && (l.subtab === "overview" || l.subtab === subtab);
+					return (
+						<Link key={l.label} section={l.section} subtab={l.subtab}
+							className={on ? "on" : undefined} aria-current={on ? "page" : undefined}
+							onClick={l.mine ? () => set({ slipFind: ownCode(s.employees, user) }) : undefined}>
+							{l.label}
+						</Link>
+					);
+				})}
+			</nav>
+
 			<div className="tbacts">
-				{/* Go to any page — layout/GoTo.jsx. The shortcut is printed on
-				    the button, because a shortcut nobody is told about is one
-				    nobody uses. */}
-				<button
-					type="button"
-					className="tbgo"
-					title="Go to any page (Ctrl+K)"
-					aria-label="Go to a page"
-					onClick={(e) => { e.stopPropagation(); set({ palette: true, tbnotif: false, tbme: false }); }}
-				>
-					<Glyph d={ICON.go} />
-					<span className="lab">Go to page</span>
-					<kbd>Ctrl K</kbd>
-				</button>
-				{/* **One button, three states.** system → light → dark → system.
-
-				    Three radio buttons for a thing most people press once is three
-				    times the toolbar for the same answer, and the cycle starts at
-				    `system` so the first press goes to light — which is what
-				    somebody pressing it in a lit room wants.
-
-				    `system` is a real answer rather than the absence of one: it
-				    keeps following the machine, so an app opened at nine in a bright
-				    office is dark by seven without anybody asking. lib/mode.js. */}
-				<button
-					type="button"
-					className="tbicon tbmode"
-					aria-label={`Appearance: ${modeLabel(mode)}. Switch to ${modeLabel(nextMode(mode))}`}
-					title={`Appearance: ${modeLabel(mode)} — click for ${modeLabel(nextMode(mode))}`}
-					onClick={() => set({ mode: saveMode(nextMode(mode)) })}
-				>
-					<Glyph d={MODE_GLYPH[mode] || MODE_GLYPH.light} />
-				</button>
-
-				{/* The bell and the gear both lead off a user's menu (data/menus.js
-				    USER_ONLY), so a login that is not an admin is not offered them. */}
+				{/* What is waiting. The reference's envelope and red dot; the count is
+				    the menu's heading and the button's name. Only for a login that
+				    can act on it (data/menus.js USER_ONLY). */}
 				{s.admin !== false && <span className="empdrop">
 					<button
 						type="button"
-						className="tbicon"
+						className="tbicon icon-btn"
 						aria-haspopup="menu"
 						aria-expanded={tbnotif}
 						aria-label={waiting.length ? `${waiting.length} waiting` : "Nothing waiting"}
@@ -203,8 +266,8 @@ export default function TopBar() {
 						   the menu in the same click that opened it. */
 						onClick={(e) => { e.stopPropagation(); set({ tbnotif: !tbnotif, tbme: false }); }}
 					>
-						<Glyph d={ICON.bell} />
-						{waiting.length ? <span className="n">{waiting.length > 99 ? "99+" : waiting.length}</span> : null}
+						<KitIcon name="mail" size={22} stroke={1.8} />
+						{waiting.length ? <span className="dot-n" aria-hidden="true" /> : null}
 					</button>
 					<div className="emmenu end tbmenu" role="menu" aria-label="Waiting on somebody" hidden={!tbnotif}>
 						<h4>
@@ -217,29 +280,31 @@ export default function TopBar() {
 							waiting.slice(0, 6).map((r) => (
 								<Link
 									key={r.id}
-									section={r.section}
-									subtab={r.subtab}
+									section="dashboard"
+									subtab="approvals"
 									role="menuitem"
 									className="tbnote"
 									onClick={() => set({ tbnotif: false })}
 								>
-									<b>{r.what}</b>
-									<span>{r.who}</span>
+									<KitAvatar name={r.who} />
+									<span className="tbnote-t">
+										<b>{r.what}</b>
+										<span>{r.who}</span>
+									</span>
 								</Link>
 							))
 						)}
 						{waiting.length > 6 ? (
 							<Link section="dashboard" subtab="approvals" role="menuitem"
 								className="tbnote foot" onClick={() => set({ tbnotif: false })}>
-								<b>All {waiting.length} in Approvals →</b>
+								<b>All {waiting.length} in Approvals</b>
 							</Link>
 						) : null}
 					</div>
 				</span>}
 
-				{s.admin !== false && <Link section="settings" className="tbicon" aria-label="Settings" title="Settings">
-					<Glyph d={ICON.gear} />
-				</Link>}
+				{/* The reference's bell: the site's own notifications for this login. */}
+				{s.admin !== false ? <NoteBell /> : null}
 
 				<span className="empdrop">
 					<button
@@ -247,27 +312,28 @@ export default function TopBar() {
 						className="tbme"
 						aria-haspopup="menu"
 						aria-expanded={tbme}
+						aria-label="Account menu"
 						title={user || "Not signed in"}
 						onClick={(e) => { e.stopPropagation(); set({ tbme: !tbme, tbnotif: false }); }}
 					>
-						<span className="tbava" aria-hidden="true">{initials(user || "?")}</span>
-						<span className="who">
-							<b>{user || "Not signed in"}</b>
-							<span>{company || "All companies"}</span>
-						</span>
-						<b className="cx" aria-hidden="true">▾</b>
+						<KitAvatar name={s.me?.full_name || user || "?"} src={s.me?.user_image || ""} className="tbava" />
+						<span className="nm">{firstName(user, s.me)}</span>
+						<KitIcon name="chev" size={16} stroke={2} className="cx" />
 					</button>
-					<div className="emmenu end tbmenu" role="menu" aria-label="This account" hidden={!tbme}>
-						<h4>{user || "Not signed in"}</h4>
+					<div className="emmenu end tbmenu tbmemenu" role="menu" aria-label="This account" hidden={!tbme}>
+						<h4>{s.me?.full_name || user || "Not signed in"}</h4>
 						<Link section="employees" subtab="profile" role="menuitem" className="tbnote"
 							onClick={() => set({ tbme: false })}>
-							<b>Employee profile</b>
+							<KitIcon name="user" size={16} stroke={2} />
+							<b>My profile</b>
 						</Link>
 						{s.admin !== false && <Link section="settings" role="menuitem" className="tbnote"
 							onClick={() => set({ tbme: false })}>
+							<KitIcon name="gear" size={16} stroke={2} />
 							<b>Settings</b>
 						</Link>}
-						<button type="button" role="menuitem" className="tbnote foot" onClick={signOut}>
+						<button type="button" role="menuitem" className="tbnote foot danger" onClick={signOut}>
+							<KitIcon name="logout" size={16} stroke={2} />
 							<b>Sign out</b>
 						</button>
 					</div>

@@ -19,7 +19,12 @@ import { correctionSummary, localStamp, writeCorrection } from "@/features/appro
    What that gives up is a second pair of eyes on somebody's wages. What it
    keeps is the trail: the correction, who saved it and when, the reason, the
    punch marked REG-<user>, and the machine's punch set aside rather than
-   deleted. */
+   deleted.
+
+   **Clearing a time** (22 October 2026, asked for by HR) sets that side's
+   punches aside the same way and writes none. A correction carries times, not
+   the absence of one — the site refuses one with neither — so a cleared side
+   leaves its trail as a comment on each punch it set aside: who, when, why. */
 
 const REG_FIELDS = ["name", "status", "owner"];
 
@@ -58,14 +63,45 @@ export async function saveDayEdit(emp, day, next) {
 
 	const plan = editPlan(day, punches, next);
 	if (!plan.ok) return { ok: false, msg: plan.why };
-	/* A correction carries times, not the absence of one: an empty Punch In reads
-	   as "not asked about", so saving it could never remove anything. */
-	const cleared = (side) => plan.skip.some((c) => (c.log_type === "OUT") === (side === "OUT"))
-		&& !(side === "OUT" ? plan.requestedOut : plan.requestedIn);
-	if (cleared("IN") || cleared("OUT")) {
-		return { ok: false, msg: "A correction can change a time but not remove one. Removing a punch is done on the desk." };
+	const said = [];
+	if (plan.requestedIn || plan.requestedOut) {
+		const r = await saveTimes(emp, day, plan, reason, open, dt, user);
+		if (!r.ok) return r;
+		said.push(r.msg);
 	}
+	if (plan.cleared.in || plan.cleared.out) said.push(await clearSides(emp, day, plan, reason, user));
+	return { ok: true, msg: said.join(" ") };
+}
 
+/** The punches of each cleared side, set aside and each given a comment.
+    @returns {Promise<string>} what happened, as the page says it */
+async function clearSides(emp, day, plan, reason, user) {
+	const sides = plan.skip.filter((c) => (c.log_type === "OUT" ? plan.cleared.out : plan.cleared.in));
+	const done = [];
+	const stuck = [];
+	for (const c of sides) {
+		const p = `${c.log_type === "OUT" ? "OUT" : "IN"} ${String(c.time).slice(11, 16)}`;
+		const w = await apiWrite("Employee Checkin", c.name, { skip_auto_attendance: 1 });
+		if (!w.ok) { stuck.push(`${p} (${w.error})`); continue; }
+		done.push(p);
+		/* The trail. A comment that does not land leaves the punch set aside and
+		   the change in the punch's own history, so it is not worth failing on. */
+		await apiCreate("Comment", {
+			comment_type: "Comment", reference_doctype: "Employee Checkin", reference_name: c.name,
+			content: `Cleared from ${dmy(day)} on Attendance Regularization by ${user || "the dashboard"}: ${reason}`,
+		}).catch(() => null);
+	}
+	const marked = await listAll("Attendance", ["name", "status"],
+		[["employee", "=", emp.name], ["attendance_date", "=", day], ["docstatus", "=", 1]]).catch(() => []);
+	const which = [plan.cleared.in && "Time In", plan.cleared.out && "Time Out"].filter(Boolean).join(" and ");
+	return `${dmy(day)}: ${which} cleared.`
+		+ (done.length ? ` Set aside, kept on record: ${done.join(", ")}.` : "")
+		+ (stuck.length ? ` Could not set aside ${stuck.join("; ")} — mark it Skip Auto Attendance on the desk.` : "")
+		+ (marked.length ? ` ${marked[0].name} already marks the day ${marked[0].status || "decided"}, and the shift job will not rebuild it until that row is cancelled on the desk.` : "");
+}
+
+/** The new times: an Approved correction, then the punches. */
+async function saveTimes(emp, day, plan, reason, open, dt, user) {
 	const times = {
 		requested_in: plan.requestedIn || null,
 		requested_out: plan.requestedOut || null,

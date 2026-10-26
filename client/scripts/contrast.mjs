@@ -96,7 +96,7 @@ const SURFACES = ["card", "page", "wash", "rule", "need"];
 
 /** Text that must be readable on any of them. AA body text: 4.5:1. */
 const TEXT = ["ink", "ink-2", "ink-3", "accent", "brand-deep",
-	"live", "bad", "skip", "part", "bad-deep"];
+	"live", "bad", "skip", "part", "bad-deep", "info-ink"];
 
 /** A status colour on its own wash — a chip, a coverage tag, a refusal notice. */
 const ON_WASH = [
@@ -104,6 +104,9 @@ const ON_WASH = [
 	["part", "part-wash"], ["accent", "accent-wash"],
 	["brand-deep", "brand-soft"], ["accent", "brand-soft"],
 	["bad-deep", "bad-wash"], ["bad-deep", "bad-faint"],
+	["info-ink", "info-wash"],
+	/* The seven avatar pairs: initials are text on their disc. */
+	...[1, 2, 3, 4, 5, 6, 7].map((n) => [`av${n}-ink`, `av${n}`]),
 ];
 
 /** Every fill this app puts white text on.
@@ -116,7 +119,14 @@ const ON_WASH = [
 
     `brand-deep` stays: it is the hover of one primary button and keeps a
     mid-tone in both modes. */
-const WHITE_ON = ["brand-dark", "live-dark", "char", "nav", "nav-2", "bad-fill", "rest"];
+const WHITE_ON = ["live-dark", "char", "nav", "nav-2", "bad-fill", "rest"];
+
+/** A fill and the text the palette puts on it, where that text is a role of
+    its own rather than white. The primary button left WHITE_ON on 21 October
+    2026: the HRDashboard reference draws it near-white with dark text in dark
+    mode, so its text is `on-brand`, white in light mode and near-black in
+    dark. */
+const ON_FILL = [["on-brand", "brand-dark"]];
 
 /** Non-text, WCAG 1.4.11: 3:1. Only things that carry meaning — the edge of a
     control somebody has to find, the rail's current-page marker, the status
@@ -179,6 +189,7 @@ for (const name of names) {
 	for (const t of TEXT) for (const s of SURFACES) check(t, s, 4.5, "body text");
 	for (const [t, w] of ON_WASH) check(t, w, 4.5, "status text on its wash");
 	for (const f of WHITE_ON) check("white", f, 4.5, "white on a filled control");
+	for (const [t, f] of ON_FILL) check(t, f, 4.5, "text on a filled control");
 	for (const [a, b] of NON_TEXT) check(a, b, 3, "non-text, 1.4.11");
 	for (const [a, b] of ON_CHROME) check(a, b, 4.5, "text on chrome");
 

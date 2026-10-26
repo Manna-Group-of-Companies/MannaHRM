@@ -12,8 +12,25 @@ export const SECTIONS = [
   {key:"leave",     label:"Leave",     cov:"part", icon:"M3 5h18v16H3zM3 9h18M8 3v4M16 3v4"},
   {key:"payroll",   label:"Payroll",   cov:"part", icon:"M6 4h9a4 4 0 0 1 0 8H6M6 8h12M9 12l5 8"},
   {key:"loans",     label:"Loans",     cov:"none", hidden:true, icon:"M4 8h16v11H4zM8 8V6a4 4 0 0 1 8 0v2M12 12v3"},
+  /* The HRDashboard reference's Recruitment (21 Oct 2026): jobs, applicants and
+     the pipeline, on hrms's Job Opening and Job Applicant. No Factor HR item. */
+  /* The HRDashboard reference's Checklist (21 Oct 2026): the to-do list, and
+     onboarding and offboarding as checklists, on ToDo and hrms's boarding
+     records. On Board, beside it in the menu, is a different job. */
+  {key:"checklist", label:"Checklist", cov:"live", icon:"M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"},
+  {key:"recruitment", label:"Recruitment", cov:"live", icon:"M3 7h18v13H3zM8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"},
   {key:"reports",   label:"Reports",   cov:"live", icon:"M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"},
   {key:"survey",    label:"Survey",    cov:"none", hidden:true, icon:"M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"},
+  /* The HRDashboard reference's two top-bar pages, 21 Oct 2026: on the site's
+     own File folders and Manna Announcement. Not on the side menu — the
+     reference reaches them from the top bar — and with no Factor HR item. */
+  {key:"documents", label:"Documents", cov:"live", icon:"M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"},
+  {key:"news",      label:"News",      cov:"live", icon:"M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V9h4M12 8h6M12 12h6M12 16h4"},
+  /* The HRDashboard reference's Notifications and Help center (21 Oct 2026):
+     the bell on the top bar and Help Center at the foot of the menu reach
+     them, so neither is a group of its own. */
+  {key:"notifications", label:"Notifications", cov:"live", icon:"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"},
+  {key:"help",      label:"Help Center", cov:"live", icon:"M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"},
   {key:"settings",  label:"Settings",  cov:"part", icon:"M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z"},
 ];
 
@@ -43,9 +60,29 @@ export const VISIBLE_SECTIONS = SECTIONS.filter((s) => !s.hidden);
    screens — modelled on another system's — stay as hidden code. Attendance →
    All 5 Oct 2026, asked for by IT, the same way as Employees → All. */
 export const HIDDEN_PAGES = {
-	employees: ["salary", "changes", "detail", "cattypes", "ctc", "directory", "weekoff", "orgchart", "letters", "all"],
-	attendance: ["submit", "statutory", "all"],
-	leave: ["availed", "pending"],
+	/* Directory shown again 21 Oct 2026 (D15), as the HRDashboard reference's.
+	   Organization Chart was too, and went again the same day, asked for by
+	   HR: the Hierarchy Chart is the org chart, and took the name. New Joining
+	   left with it — it is Reports → Onboarding now (features/reports/Reports.jsx). */
+	/* Calendar too, 21 Oct 2026, asked for by HR: it is Settings → Calendar now. */
+	employees: ["salary", "changes", "detail", "cattypes", "ctc", "weekoff", "letters", "all", "joining", "orgchart", "calendar"],
+	/* The eleven reports, off the menu on 21 Oct 2026: the HRDashboard
+	   reference has no report pages under Attendance, so they are files from the
+	   Download report dialog (features/attendance/reportrun.js). Their pages and
+	   tests stay; Settings → Security can show any of them again. */
+	attendance: ["submit", "statutory", "all", "inout", "daily", "summary", "present", "absent", "msp",
+		"iocount", "shiftrep", "headcount", "ot", "weekly",
+		/* Work Locations, 21 Oct 2026, asked for by HR: added and changed on
+		   Attendance Settings → Location now. Team Attendance and Employee
+		   Attendance the same day, also asked for, and Manage Shift, which is
+		   Settings → Manage Shift now. Monthly Basic Attendance too: it is a
+		   box on Reports, like the other ten. */
+		"locations", "team", "employee", "shifts", "monthly"],
+	/* Team Time Off and Time Off Settings, 21 Oct 2026, asked for by HR, and
+	   Leave → All the same day, also asked for. */
+	leave: ["availed", "pending", "team", "settings", "all"],
+	/* Checklist's To-do list, 21 Oct 2026, asked for by HR. */
+	checklist: ["todos"],
 	payroll: ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],
 };
 

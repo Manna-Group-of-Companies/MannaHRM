@@ -214,6 +214,22 @@ export async function whoami() {
 	}
 }
 
+/** The signed-in person as the site names them — first name, full name and
+    photograph off their own User record — for the account button. Null on any
+    failure: the button then shows the login, never somebody else's name. */
+export async function whoIs(user) {
+	if (!user) return null;
+	try {
+		const r = await http.get("/api/method/frappe.client.get_value", {
+			params: { doctype: "User", filters: JSON.stringify({ name: user }), fieldname: JSON.stringify(["first_name", "full_name", "user_image"]) },
+		});
+		const m = r.data?.message;
+		return m && typeof m === "object" ? { first_name: m.first_name || "", full_name: m.full_name || "", user_image: m.user_image || "" } : null;
+	} catch {
+		return null;
+	}
+}
+
 /** Whether the signed-in person may `perm` a document, in the site's own words.
 
     For drawing controls only — a button hidden here is a courtesy, and the
@@ -419,7 +435,9 @@ export async function apiDecide(label, name, status) {
     slip books nothing and can be deleted by cancelling the entry. The step
     that pays — submitting the slips, which books the salary to the ledger —
     is Finalize, and it stays on the desk with the other submits that decide
-    somebody's pay. `savedocs` with the whole document, the way the desk's own
+    somebody's pay — except Transferred on Bank Transfer (22 October 2026),
+    which submits them through the entry's own `submit_salary_slips`
+    (api/payroll.js), never through here. `savedocs` with the whole document, the way the desk's own
     Submit button sends it, so hrms's own checks run: the employees, the
     accounts, an overlapping run. Throws what the site said.
 

@@ -1,13 +1,15 @@
+import { useState } from "react";
+
 import { patch, set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { load } from "@/api/load";
 import { scoped, uniq } from "@/lib/scope";
-import { NEW_EMP_BLANK, isBlank, missing, problemsOf } from "@/lib/newemp";
+import { NEW_EMP_BLANK, appLoginDefault, appLoginProblem, isBlank, makesAppLogin, missing, problemsOf } from "@/lib/newemp";
 import { Desk } from "@/components/ui";
 import OnMachine from "@/components/OnMachine";
 import MachineNumber from "@/components/MachineNumber";
 import { deskUrl } from "@/lib/desk";
-import { createEmployee } from "@/api/employee";
+import { createAppLogin, createEmployee } from "@/api/employee";
 import { accessFor, lockedFields } from "@/lib/fieldaccess";
 import { markCandidate } from "@/api/candidate";
 import { giveNewJoinerLeave } from "@/api/monthlyleave";
@@ -16,7 +18,7 @@ import { LEAVE_TYPE_NAME, policyTitle } from "@/lib/monthlyleave";
 import { loadCandidates } from "@/api/load";
 import { openEmployee } from "@/features/employees/openEmployee";
 import {
-	ED_STATUSES, PUNCH_METHODS, NEW_EMP_COPIED, NEW_EMP_HINT, NEW_EMP_NOFIELD, NEW_EMP_STEPS,
+	ED_STATUSES, PUNCH_METHODS, NEW_EMP_COPIED, NEW_EMP_HINT, NEW_EMP_NOFIELD, NEW_EMP_STEPS, punchesOnApp,
 } from "@/data/employees";
 
 /* Factor HR's Create Employee, the wizard their Add New Employee opens.
@@ -213,7 +215,14 @@ function Field({ row, opts, value, onChange, readOnly }) {
 
 export default function CreateEmployee() {
 	const s = useApp();
-	const { step, f, busy, done, err, from, fromName, extra, marked, leave: gave } = s.newemp;
+	const { step, f, busy, done, err, from, fromName, extra, marked, leave: gave, app } = s.newemp;
+	/* The app login and password are this page's own and never `f`: see
+	   lib/newemp.js. Kept here, not in the store, so a password is never in
+	   anything that outlives the page. The login follows the email boxes until
+	   somebody types over it. */
+	const [loginDraft, setLoginDraft] = useState({ email: "", password: "", typed: false });
+	const login = { email: loginDraft.typed ? loginDraft.email : appLoginDefault(f), password: loginDraft.password };
+	const loginProblem = appLoginProblem(f, login);
 	const all = scoped(s);
 	const opts = optionsFor(s, all, f);
 	const { gaps, bad } = problemsOf(f, s.employees, s.leaveTypes);
@@ -228,7 +237,7 @@ export default function CreateEmployee() {
 		patch("newemp", { step: Math.max(0, Math.min(NEW_EMP_STEPS.length - 1, i)) });
 
 	const blank = isBlank(f);
-	const reset = () => set({ newemp: NEW_EMP_BLANK() });
+	const reset = () => { set({ newemp: NEW_EMP_BLANK() }); setLoginDraft({ email: "", password: "", typed: false }); };
 	const leave = () => go({ section: "employees", subtab: "overview" });
 
 	async function create() {
@@ -255,8 +264,16 @@ export default function CreateEmployee() {
 				patch("newemp", { busy: "giving leave" });
 				leave = await giveNewJoinerLeave(doc, perMonth, todayIso(), f.leave_type || LEAVE_TYPE_NAME);
 			}
+			/* The app login last, for the same reason as the leave: the person
+			   exists, so a refusal is said rather than thrown. */
+			let appLogin = null;
+			if (doc?.name && makesAppLogin(f, login)) {
+				patch("newemp", { busy: "making the app login" });
+				appLogin = await createAppLogin(doc, login);
+				setLoginDraft((d) => ({ ...d, password: "" }));
+			}
 			patch("newemp", {
-				busy: "", done: doc, marked: mark,
+				busy: "", done: doc, marked: mark, app: appLogin,
 				leave: { ...leave, perMonth, type: f.leave_type || LEAVE_TYPE_NAME },
 			});
 			/* The directory behind this page is a list read at startup, and the
@@ -319,10 +336,13 @@ export default function CreateEmployee() {
 							Punches on <b>{done.custom_punch_method}</b>.
 							{done.custom_punch_method !== "Mobile App" && done.attendance_device_id
 								? <> Enrol finger number <b>{done.attendance_device_id}</b> on the machine.</> : null}
-							{done.custom_punch_method !== "Fingerprint Machine"
-								? <> For the phone app, create their ERPNext login with
-									{" "}<b>{done.company_email || done.personal_email}</b> and link it to this record
-									(<code>tools/setup_phone_punch.py --apply</code>).</> : null}
+							{done.custom_punch_method !== "Fingerprint Machine" ? (
+								app?.ok
+									? <> App login <b>{app.login}</b> {app.existed ? "was already on the site and is now linked — its password was not changed" : "is made and linked"}.</>
+									: app
+										? <> The app login <b>{app.login}</b> was not made: {app.error}</>
+										: <> No app login was made: no app password was typed.</>
+							) : null}
 						</p>
 					) : null}
 					{done.custom_punch_method !== "Mobile App" && done.attendance_device_id
@@ -430,6 +450,24 @@ export default function CreateEmployee() {
 							    punches on a machine. The number is the one field on this form
 							    that can be wrong in a way nobody sees: free here and already
 							    somebody's at the gate. */}
+							{rows.some((r) => r[0] === "custom_punch_method") && punchesOnApp(f.custom_punch_method) ? (
+								<div className="wizform wizlogin">
+									<div className="lvf wizf" style={{ "--w": 8 }}>
+										<label className="lab" htmlFor="ne-app-login">App login</label>
+										<span className="ctl">
+											<input id="ne-app-login" type="email" autoComplete="off" value={login.email}
+												onChange={(e) => setLoginDraft({ ...loginDraft, email: e.target.value, typed: true })} />
+										</span>
+									</div>
+									<div className="lvf wizf" style={{ "--w": 8 }}>
+										<label className="lab" htmlFor="ne-app-password">App password</label>
+										<span className="ctl">
+											<input id="ne-app-password" type="password" autoComplete="new-password" value={loginDraft.password}
+												onChange={(e) => setLoginDraft({ ...loginDraft, password: e.target.value })} />
+										</span>
+									</div>
+								</div>
+							) : null}
 							{rows.some((r) => r[0] === "attendance_device_id") && f.custom_punch_method !== "Mobile App" ? (
 								<MachineNumber value={f.attendance_device_id} employees={all}
 									onPick={(n) => setF("attendance_device_id", n)} />
@@ -441,12 +479,12 @@ export default function CreateEmployee() {
 					    the two steps it is about are the two nobody sees until they get
 					    there. */}
 
-					{bad.length > 0 && (
+					{bad.length > 0 || loginProblem ? (
 						<div className="gap">
 							<b>Check this before creating.</b>
-							<ul className="wizlist">{bad.map((m) => <li key={m}>{m}</li>)}</ul>
+							<ul className="wizlist">{bad.concat(loginProblem ? [loginProblem] : []).map((m) => <li key={m}>{m}</li>)}</ul>
 						</div>
-					)}
+					) : null}
 
 					{err && (
 						<div className="gap">
@@ -480,14 +518,14 @@ export default function CreateEmployee() {
 								Use the site&rsquo;s form
 							</Desk>
 							<button className="btn tpl"
-								disabled={Boolean(busy) || gaps.length > 0 || bad.length > 0}
+								disabled={Boolean(busy) || gaps.length > 0 || bad.length > 0 || Boolean(loginProblem)}
 								title={gaps.length
 									? `Still needed: ${gaps.join(", ")}`
 									: bad.length
 										? "Fix what is listed above first."
 										: "Create this Employee on the site, as you and under your own ERPNext roles."}
 								onClick={() => void create()}>
-								{busy === "giving leave" ? "Giving leave…" : busy ? "Creating…" : "Create Employee"}
+								{busy === "giving leave" ? "Giving leave…" : busy === "making the app login" ? "Making the app login…" : busy ? "Creating…" : "Create Employee"}
 							</button>
 						</>
 					) : (

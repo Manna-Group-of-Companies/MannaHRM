@@ -126,7 +126,7 @@ export const FACTOHR_MENU = [
 	["employees", "Setup", "Categories",
 		"List of Reason", "Maintain list of reasons for leaving", null],
 	["employees", "Setup", "Categories",
-		"Calendar", "Define calendar", ["employees", "calendar"]],
+		"Calendar", "Define calendar", ["settings", "calendar"]],
 
 	["attendance", "Transaction", "Online Attendance",
 		"Online Attendance", "Mark online attendance of time in and time out", null],
@@ -191,7 +191,7 @@ export const FACTOHR_MENU = [
 	["attendance", "Setup", "Manage Attendance Policy",
 		"Assign Work Schedule", "Assign work schedule to employee as well as category", null],
 	["attendance", "Setup", "Manage Attendance Policy",
-		"Manage Shift", "Define types of shifts available in system with begin and end timings", ["attendance", "shifts"]],
+		"Manage Shift", "Define types of shifts available in system with begin and end timings", ["settings", "shifts"]],
 
 	["leave", "Transaction", "Apply Leave",
 		"Apply Leave", "Prepare leave application", ["leave", "overview"]],

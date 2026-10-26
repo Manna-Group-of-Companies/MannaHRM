@@ -46,7 +46,7 @@ describe("a company login on Employees", () => {
 	it("gets no Add New Employee and no import on Employee Master, and keeps the export", async () => {
 		const view = await draw(EmployeeMaster, COMPANY);
 		const t = texts(view).join(" | ");
-		expect(t).not.toContain("Add New Employee");
+		expect(t).not.toContain("Add new profile");
 		expect(t).not.toContain("Import From Onboarding");
 		expect(t).toContain("Export Employees Data");
 	});
@@ -55,7 +55,7 @@ describe("a company login on Employees", () => {
 		const view = await draw(EmployeeProfile, COMPANY);
 		expect(view.container.querySelector(".prohead")).not.toBeNull();
 		const t = texts(view).join(" | ");
-		expect(t).not.toContain("✎ Edit");
+		expect(texts(view)).not.toContain("Edit");
 		expect(t).not.toContain("Deactivate");
 		expect(view.container.querySelector('[aria-label="Edit this record"]')).toBeNull();
 		expect(view.container.querySelector('.proava input[type="file"]')).toBeNull();
@@ -63,8 +63,8 @@ describe("a company login on Employees", () => {
 
 	it("leaves HR's own login every control it had", async () => {
 		const view = await draw(EmployeeProfile, "hr@mannarubber.com");
-		expect(texts(view).join(" | ")).toContain("✎ Edit");
+		expect(texts(view)).toContain("Edit");
 		const master = await draw(EmployeeMaster, "hr@mannarubber.com");
-		expect(texts(master).join(" | ")).toContain("Add New Employee");
+		expect(texts(master).join(" | ")).toContain("Add new profile");
 	});
 });

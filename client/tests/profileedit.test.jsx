@@ -75,7 +75,7 @@ const text = (v) => v.container.textContent;
 
 /** The ✎ on the first card of the pane. */
 const pencil = (v) =>
-	[...v.container.querySelectorAll(".proico button")].find((b) => b.textContent.trim() === "✎");
+	v.container.querySelector('.proico button[aria-label="Edit this record"]') ?? undefined;
 
 const startEditing = (v) => act(() => { pencil(v).click(); });
 

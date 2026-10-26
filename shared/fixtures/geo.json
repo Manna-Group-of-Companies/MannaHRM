@@ -1,0 +1,87 @@
+{
+  "rule": "Distance arithmetic for geofenced punches",
+  "implementations": [
+    "manna_hr/geo.py :: metres_between, is_real_coordinate",
+    "client/src/lib/geo.js :: metresBetween, isRealCoordinate"
+  ],
+  "why": "The arithmetic is trivial and the error directions are not. What is shared here is only what is pure in both copies: how far apart two points are, and whether a coordinate is worth comparing against at all. The verdict itself — inside, outside, no_location, not_checked — is deliberately not here, because on the server it lives in checkin.py beside a live database and cannot be exercised without a bench. When that changes, add it.",
+  "distances": [
+    {
+      "name": "a point measured against itself is zero metres away",
+      "why": "The floor of the formula. A copy that returned anything else here would be wrong everywhere.",
+      "from": [9.9312, 76.2673],
+      "to": [9.9312, 76.2673],
+      "metres": 0.0,
+      "tolerance": 0.001
+    },
+    {
+      "name": "a tenth of a degree of latitude is about eleven kilometres",
+      "why": "A degree of latitude is ~111 km everywhere on earth, so this pins the answer to a figure that does not come from any of the three implementations.",
+      "from": [9.9312, 76.2673],
+      "to": [10.0312, 76.2673],
+      "metres": 11119.5,
+      "tolerance": 30.0
+    },
+    {
+      "name": "a tenth of a degree of longitude is shorter than a tenth of latitude",
+      "why": "Meridians converge. At Kerala's latitude the difference is about 1.5%, which is small enough that a flat-earth copy would pass every other case here and fail this one.",
+      "from": [9.9312, 76.2673],
+      "to": [9.9312, 76.3673],
+      "metres": 10951.0,
+      "tolerance": 40.0
+    },
+    {
+      "name": "a hundred metres is a hundred metres",
+      "why": "The scale a radius is actually set at. A rounding error that does not matter over a kilometre decides whether somebody is refused at a gate.",
+      "from": [9.9312, 76.2673],
+      "to": [9.93210, 76.2673],
+      "metres": 100.1,
+      "tolerance": 2.0
+    },
+    {
+      "name": "two ends of the earth do not break the formula",
+      "why": "Rounding can push the haversine term a hair above 1 for antipodal points, and asin of that is NaN — which propagates silently through every comparison downstream instead of raising.",
+      "from": [0.0, 0.0],
+      "to": [0.0, 180.0],
+      "metres": 20015086.0,
+      "tolerance": 1000.0
+    }
+  ],
+  "coordinates": [
+    {
+      "name": "a coordinate that was never captured is not a place",
+      "why": "(0, 0) is in the Atlantic and is what an unset Float field reads as. Treating it as a place measures a punch against the Gulf of Guinea instead of refusing it honestly.",
+      "lat": 0,
+      "lng": 0,
+      "then": false
+    },
+    {
+      "name": "a zero on one axis alone is still a place",
+      "why": "The equator and the Greenwich meridian are real. A rule that refused either would refuse it for everybody standing on one.",
+      "lat": 0,
+      "lng": 76.2673,
+      "then": true
+    },
+    {
+      "name": "a latitude off the map is not a place",
+      "why": "Beyond 90 the arithmetic still returns a number, and the number is meaningless.",
+      "lat": 91,
+      "lng": 0,
+      "then": false
+    },
+    {
+      "name": "a longitude off the map is not a place",
+      "why": "Same again, at the other axis, where a wrapped value looks plausible.",
+      "lat": 0,
+      "lng": 181,
+      "then": false
+    },
+    {
+      "name": "a real coordinate is a place",
+      "why": "The ordinary case, so that a copy which refused everything would fail rather than pass every negative test.",
+      "lat": 9.9312,
+      "lng": 76.2673,
+      "then": true
+    }
+  ]
+}

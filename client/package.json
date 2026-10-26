@@ -18,6 +18,7 @@
     "contrast": "node scripts/contrast.mjs",
     "smoke": "node scripts/smoke.mjs",
     "shots": "node scripts/shots.mjs",
+    "refshots": "node scripts/refshots.mjs",
     "demo": "node demo/run.mjs"
   },
   "dependencies": {

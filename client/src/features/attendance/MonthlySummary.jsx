@@ -5,7 +5,8 @@ import { monthlySummaryRows } from "@/lib/monthlysummary";
 import { useEffect } from "react";
 import { scoped } from "@/lib/scope";
 import { fmt, nowStamp, tidyDept, todayIso, ymd } from "@/lib/format";
-import { monthlySummaryXlsx } from "@/lib/xlsx";
+import { MS_COLS, monthlySummaryXlsx, msCells } from "@/lib/xlsx";
+import { sheetsPdf } from "@/lib/export";
 import { Empty, Scroll } from "@/components/ui";
 
 /* Monthly Summary Attendance — Factor HR's own report, one row per person per
@@ -76,6 +77,29 @@ async function msExport(s) {
 	} catch (e) {
 		patch("msum", { msg: `Could not build the spreadsheet: ${e && e.message ? e.message : e}` });
 	}
+}
+
+/** Monthly Summary as a file for a range, from the Download report dialog:
+    the page's range set to it and read, then its Excel — or the same columns
+    and cells as a PDF. */
+export async function msDownload(from, till, kind) {
+	patch("msum", { from, till, emp: "" });
+	await msGenerate(true);
+	const s = getState();
+	if (kind !== "PDF") {
+		await msExport(s);
+		return getState().msum.msg || "Done.";
+	}
+	const rows = msRows(s);
+	if (!rows.length) return "Nobody matches these criteria, so there is nothing to export.";
+	const name = `monthly-summary-attendance-${from}-to-${till}.pdf`;
+	await sheetsPdf([{
+		title: "Monthly Summary Attendance Report",
+		sub: `${s.company || "All companies"} · ${from} to ${till}`,
+		head: MS_COLS.map((c) => c[0]),
+		rows: rows.map(msCells),
+	}], name);
+	return `Downloaded ${name} · ${rows.length} people.`;
 }
 
 export default function MonthlySummary() {

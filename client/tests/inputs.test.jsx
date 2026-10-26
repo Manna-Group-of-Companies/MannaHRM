@@ -48,6 +48,8 @@ const KEYSTROKE = {
 	time: "09:30",
 	email: "someone@example.invalid",
 	tel: "9000000000",
+	/* Settings → Change password (21 October 2026). */
+	password: "secret-word-1",
 	search: "raghav",
 	text: "raghav",
 	"": "raghav",
@@ -116,6 +118,7 @@ function describeBox(el) {
    Pages absent from this table draw none, which is most of them. */
 const DEAD_CONTROLS = {
 	"employees/calendar": { empty: 2, loaded: 1 },
+	"settings/calendar": { empty: 2, loaded: 1 },
 	"employees/detail": { empty: 13, loaded: 13 },
 	"employees/import": { empty: 1, loaded: 0 },
 	"employees/new": { empty: 1, loaded: 1 },

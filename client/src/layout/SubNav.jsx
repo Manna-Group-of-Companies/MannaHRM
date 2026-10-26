@@ -6,6 +6,7 @@ import { MODULES, fullPage, offMenu } from "@/routes/registry";
 import Link from "@/routes/Link";
 import { tabsFor } from "@/data/menus";
 import { isHidden } from "@/data/sections";
+import { OWN_NAV, inRail } from "@/data/nav";
 
 export default function SubNav() {
 	const s = useApp();
@@ -36,7 +37,13 @@ export default function SubNav() {
 		});
 	}, [section, subtab]);
 
-	if (full || tabs.length === 0) return <div className="subbar" />;
+	/* One page is no strip: a single tab switches nothing, and the reference
+	   draws none over Documents or News (21 October 2026). */
+	if (full || tabs.length < 2 || OWN_NAV.includes(section)) return <div className="subbar" />;
+	/* Since 21 October 2026 the side menu lists the pages of every module its
+	   groups hold, so on a desktop with the menu open this strip is only
+	   wanted for the modules it does not — Reports and Settings. `data-inrail`
+	   says which; index.css decides where that hides it. */
 	/* `aria-current="page"`, not `aria-selected`, and a `<nav>` rather than a
 	   tablist. Factor HR draws this strip as tabs and so do we, but what it
 	   does is move between the pages of a module — the same job the rail does
@@ -45,7 +52,7 @@ export default function SubNav() {
 	   panes, and would describe the two halves of the same navigation in two
 	   different words. */
 	return (
-		<nav className="subbar" ref={bar} aria-label="Pages in this module">
+		<nav className="subbar" ref={bar} aria-label="Pages in this module" data-inrail={inRail(section) ? "" : undefined}>
 			{tabs.map((t) => (
 				<Link
 					key={t[0]}

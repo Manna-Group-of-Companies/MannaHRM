@@ -265,7 +265,7 @@ const PAGES = [
 	["dashboard", "/dashboard", "Factor HR's Start Up, panel for panel"],
 	["employees", "/employees", "Employee Master"],
 	["employee-profile", "/employees/profile", "one person's record"],
-	["hierarchy", "/employees/hierarchy", "Hierarchy Chart — the head office and the companies under it"],
+	["hierarchy", "/employees/hierarchy", "Org Chart — the head office and the companies under it"],
 	["company-chart", "/employees/chart", "one company's flow chart — levels as boxes, arrows between"],
 	["attendance", "/attendance", "the correction queue"],
 	["attendance-inout", "/attendance/inout", "In / Out activity"],
@@ -290,9 +290,39 @@ const PAGES = [
 	["reports", "/reports", "All Reports — every one on Factor HR's Reports menu"],
 	["blueprint", "/attendance/manage-attendance-policy", "a blueprint — the biggest unbuilt item"],
 	["refused", "/attendance/online-attendance", "the one item that will not be built"],
-	["locations", "/attendance/locations", "Work Locations — new, edit, delete"],
+	["locations", "/attendance/settings", "Attendance Settings → Location — locations added and changed here",
+		(p) => p.getByRole("tab", { name: "Location", exact: true }).click()],
 	["lettertypes", "/onboard/lettertypes", "Letter Types, managed here"],
+	["settings-shifts", "/settings/shifts", "Settings → Manage Shift — shifts made and assigned here"],
 	["notices", "/dashboard/notices", "Announcements & CEO Speak — the composer"],
+	/* The shell's own states (21 October 2026), which have no address: the
+	   fourth item is something to do first. A function rather than a button's
+	   name, because most of these are a click on a control that has no words
+	   on it. A state a width does not have — the drawer's button on a desktop,
+	   the collapse control on a phone — is photographed as the page. */
+	["shell-search", "/dashboard", "the search, typed into", async (page) => {
+		await page.locator(".tbfind input").fill("daily");
+	}],
+	["shell-waiting", "/dashboard", "what is waiting, under its button", async (page) => {
+		await page.locator('.tbicon[aria-label$="waiting"]').click();
+	}],
+	["shell-account", "/dashboard", "the account menu", async (page) => {
+		await page.locator(".tbme").click();
+	}],
+	["shell-drawer", "/attendance/daily", "the side menu as a drawer", async (page) => {
+		const burger = page.locator(".tbrail");
+		if (await burger.isVisible()) await burger.click();
+	}],
+	/* Last: it is remembered, and every page after it would be photographed
+	   collapsed. Undone after the picture — see `undo` below. */
+	["shell-slim", "/attendance/daily", "the side menu collapsed", async (page) => {
+		/* By width, not by `isVisible`: at 880px and under the button is in the
+		   shut drawer, off the left of the screen, and Playwright still calls
+		   that visible. Collapsing is a desktop's control. */
+		if (page.viewportSize().width > 880) await page.locator(".railtoggle").click();
+	}, async (page) => {
+		await page.evaluate(() => localStorage.removeItem("manna.rail"));
+	}],
 ];
 
 /** Three real devices rather than three round numbers: a desk monitor, a
@@ -324,7 +354,7 @@ const SIZES = [
     Read off themes.css by hand, deliberately: a checker that computed the
     expected value the same way the page does would agree with the page about
     anything. */
-const BRAND = { dark: "129 140 248", light: "79 70 229" };
+const BRAND = { dark: "26 174 95", light: "25 170 93" };
 
 /** Which palette each device pass is photographed in.
 
@@ -397,7 +427,7 @@ async function main() {
 		const oops = [];
 		page.on("pageerror", (e) => oops.push(String(e)));
 
-		for (const [slug, route, what, press] of PAGES) {
+		for (const [slug, route, what, press, undo] of PAGES) {
 			/* `domcontentloaded`, never `networkidle`. Vite's dev server holds an
 			   HMR socket open and pings it, so a network-idle wait against a dev
 			   build can sit there until the timeout on every single page. What
@@ -408,7 +438,10 @@ async function main() {
 			/* The page strip and the first panel, so a shot is never of a
 			   half-drawn screen. */
 			await page.waitForTimeout(350);
-			if (press) {
+			if (typeof press === "function") {
+				await press(page);
+				await page.waitForTimeout(350);
+			} else if (press) {
 				await page.getByRole("button", { name: press, exact: true }).click();
 				await page.waitForTimeout(200);
 			}
@@ -419,6 +452,7 @@ async function main() {
 			   page with every page after it unphotographed. */
 			await page.screenshot({ path: file, fullPage: device === "desktop", timeout: 90000 });
 			process.stdout.write(`  ${file}  — ${what}\n`);
+			if (undo) await undo(page);
 
 			/* A page that threw is a page whose screenshot is a lie: the
 			   boundary draws a card saying something went wrong, which

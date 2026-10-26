@@ -126,7 +126,7 @@ describe("Deactivate on the profile", () => {
 
 	it("is_not_offered_while_the_record_is_being_edited", async () => {
 		const v = draw();
-		await click(button(v, "✎ Edit"));
+		await click(button(v, "Edit"));
 		expect(button(v, "Deactivate")).toBeUndefined();
 	});
 });
@@ -177,7 +177,9 @@ describe("somebody who is not active", () => {
 
 		let v;
 		await act(async () => { v = render(<Provider store={store}><EmployeeMaster /></Provider>); });
-		const names = () => [...v.container.querySelectorAll("article.ecard")].map((a) => a.textContent);
+		/* A row of the table or a card, whichever view is drawn (21 October 2026:
+		   the reference's table is the default now). */
+		const names = () => [...v.container.querySelectorAll("[data-emp], article.ecard")].map((a) => a.textContent);
 		expect(names().some((t) => t.includes(gone.employee_name))).toBe(false);
 
 		await act(async () => { set({ empstatus: "Inactive" }); });

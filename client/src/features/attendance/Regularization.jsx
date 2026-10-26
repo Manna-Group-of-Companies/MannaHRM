@@ -9,9 +9,10 @@ import { spliceShift, spliceText } from "@/lib/shiftsplice";
 import { MON, clock, dayOf, dmy, fmt, thisMonth, tidyDept, todayIso } from "@/lib/format";
 import { REGISTER_CODE, ROSTER_STATES, daysOf, minutesText, monthRegister, monthRoster, spanHours } from "@/lib/roster";
 import { loadRegGrid, loadRegMonth, loadShiftWindows, shiftLabel } from "@/api/attendance";
-import { editPlan } from "@/lib/punchedit";
+import { editPlan, nextDay } from "@/lib/punchedit";
 import { Desk, Modal, Note, Scroll } from "@/components/ui";
 import { deskUrl } from "@/lib/desk";
+import DownloadReport from "@/features/attendance/DownloadReport";
 
 /* Factor HR's Attendance Regularization screen, photographed 28 Aug 2026:
    the title, then one bar — Attendance Cycle, the status dot, Search Employee,
@@ -399,7 +400,8 @@ function DayPopup({ pick, onClose, onDone }) {
 	const dirty = c.any;
 	/* Only the shape is checked here — whether the times make a day. The punches
 	   themselves are read again on Save. */
-	const why = c.times ? editPlan(pick.iso, [], f).why : "";
+	const shape = c.times ? editPlan(pick.iso, [], f) : null;
+	const why = shape ? shape.why : "";
 	const otBad = otBadText(f.ot);
 	const focus = pick.focus || "in";
 
@@ -421,13 +423,22 @@ function DayPopup({ pick, onClose, onDone }) {
 		else setMsg(res.msg);
 	}
 
-	const field = (key, label, extra = {}) => (
-		<label>
-			<span>{label}</span>
-			<input type="time" className="rtime" aria-label={label} value={f[key]} disabled={busy}
-				ref={focus === key ? clicked : null} onClick={openClock}
-				onChange={(e) => setF({ ...f, [key]: e.target.value })} {...extra} />
-		</label>
+	/* Clear, beside Time In and Time Out (22 October 2026): an emptied time box
+	   reads 00:00 in some browsers, which is a time and not a clear. */
+	const field = (key, label, extra = {}, clear = false) => (
+		<div className="dpfield">
+			<label>
+				<span>{label}</span>
+				<input type="time" className="rtime" aria-label={label} value={f[key]} disabled={busy}
+					ref={focus === key ? clicked : null} onClick={openClock}
+					onChange={(e) => setF({ ...f, [key]: e.target.value })} {...extra} />
+			</label>
+			{/* Outside the label, or the label would name the button, not the box. */}
+			{clear && f[key] ? (
+				<button type="button" className="dpclear" disabled={busy} aria-label={`Clear ${label}`}
+					onClick={() => setF({ ...f, [key]: "" })}>Clear</button>
+			) : null}
+		</div>
 	);
 
 	return (
@@ -446,8 +457,8 @@ function DayPopup({ pick, onClose, onDone }) {
 						{pick.ar ? ` · correction ${pick.ar.status}` : ""}
 					</p>
 					<div className="dpgrid">
-						{field("in", "Time In")}
-						{field("out", "Time Out")}
+						{field("in", "Time In", {}, true)}
+						{field("out", "Time Out", {}, true)}
 						{/* Overtime HR grants for this day — the only OT the reports show. */}
 						{field("ot", "OT hours", { className: "rtime rot", step: "1", title: "OT as hours:minutes:seconds, up to 16:00:00" })}
 					</div>
@@ -460,6 +471,7 @@ function DayPopup({ pick, onClose, onDone }) {
 					    sentence beside it read as "Save does nothing" (17 September 2026). */}
 					{!dirty && !busy ? <p className="rnote" role="status">Pick a new time to turn Save on.</p> : null}
 					{why && why !== "Nothing changed." ? <p className="rnote bad">{why}</p> : null}
+					{shape && shape.overnight ? <p className="rnote" role="status">Time Out {f.out} is on {dmy(nextDay(pick.iso))}.</p> : null}
 					{otBad ? <p className="rnote bad">OT is hours, minutes and seconds up to 16:00:00, e.g. 01:30:00.</p> : null}
 					{msg ? <p className="rnote bad" role="alert">{msg}</p> : null}
 				</div>
@@ -838,7 +850,13 @@ export default function Regularization() {
 	return (
 		<>
 			<div className="fhscreen">
-				<div className="fhtitle">Attendance Regularization</div>
+				<div className="fhtitle" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+					Attendance Regularization
+					{/* The eleven reports, as files (21 October 2026) — here as well as on
+					    Team Attendance, because this is the one Attendance page every
+					    login with Attendance has. */}
+					<span style={{ marginLeft: "auto" }}><DownloadReport /></span>
+				</div>
 				<RegBar s={s} cyc={cyc} />
 				{/* No "Waiting for approval" box here since 29 September 2026. A
 				    correction raised from the phone app is decided on Dashboard →

@@ -97,9 +97,8 @@ describe("the chrome", () => {
 		);
 		/* Named rather than counted: a sign-in form that renders two boxes is not
 		   the same as one that renders the two boxes somebody can sign in with. */
-		expect(getByLabelText(/email \/ user id/i)).toBeInTheDocument();
-		/* Exact: the eye beside it is "Show password" (17 October 2026). */
-		expect(getByLabelText(/^password$/i)).toBeInTheDocument();
-		expect(getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+		expect(getByLabelText(/^Email Address/)).toBeInTheDocument();
+		expect(getByLabelText(/^Password/)).toBeInTheDocument();
+		expect(getByRole("button", { name: "Login" })).toBeInTheDocument();
 	});
 });

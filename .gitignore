@@ -57,5 +57,8 @@ manna_hr/public/**/*.map
 *.bundle
 _claude/
 Claude outputs/
+# The HRDashboard reference's pictures, made by `npm run refshots` from the
+# committed reference file: several hundred PNGs, regenerated rather than kept.
+docs/design/reference-shots/
 # package.ps1 -Auto writes one into its zip; one lying in the bridge folder is a key.
 bridge/autoinstall.toml

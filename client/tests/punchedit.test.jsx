@@ -44,6 +44,31 @@ describe("Attendance Regularization: clicking a time opens a popup with Save in 
 		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
+	it("Clear empties a time rather than leaving 00:00, and Save takes it with no error", async () => {
+		monthOf([{ name: "c1", time: "2026-09-01 08:05:00", log_type: "IN" }, { name: "c2", time: "2026-09-01 17:30:00", log_type: "OUT" }]);
+		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });
+		fireEvent.click(screen.getByRole("button", { name: "Time In, 01-Sep-2026" }));
+		const popup = within(screen.getByRole("dialog"));
+		fireEvent.click(popup.getByRole("button", { name: "Clear Time In" }));
+		fireEvent.click(popup.getByRole("button", { name: "Clear Time Out" }));
+		expect(popup.getByLabelText("Time In").value).toBe("");
+		expect(popup.getByLabelText("Time Out").value).toBe("");
+		expect(popup.queryByRole("button", { name: "Clear Time In" })).toBeNull();
+		expect(popup.getByRole("button", { name: "Save" })).not.toBeDisabled();
+		expect(popup.queryByText(/not after Time In/)).toBeNull();
+	});
+
+	it("takes a Time Out before the Time In as the next morning, and says so", async () => {
+		monthOf([{ name: "c1", time: "2026-09-01 08:05:00", log_type: "IN" }, { name: "c2", time: "2026-09-01 17:30:00", log_type: "OUT" }]);
+		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });
+		fireEvent.click(screen.getByRole("button", { name: "Time In, 01-Sep-2026" }));
+		const popup = within(screen.getByRole("dialog"));
+		fireEvent.change(popup.getByLabelText("Time In"), { target: { value: "20:00" } });
+		fireEvent.change(popup.getByLabelText("Time Out"), { target: { value: "08:00" } });
+		expect(popup.getByRole("status").textContent).toBe("Time Out 08:00 is on 02-Sep-2026.");
+		expect(popup.getByRole("button", { name: "Save" })).not.toBeDisabled();
+	});
+
 	it("a day with no punch-out offers one to add, and the popup opens on Time Out", async () => {
 		monthOf([{ name: "c1", time: "2026-09-01 08:05:00", log_type: "IN" }]);
 		await act(async () => { render(<Provider store={store}><Regularization /></Provider>); });

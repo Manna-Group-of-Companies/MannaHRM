@@ -13,9 +13,9 @@
       one month, and hrms's `fill_employee_details` to pick the people.
    2. Create Salary Slips — here. Submits the entry; hrms makes a draft slip
       per person (in the background, past thirty people). Nothing is paid.
-   3. Finalize — on the desk, against the entry: Submit Salary Slip, which
-      books the pay. See apiSubmitDraft in api/client.js for why the line is
-      drawn there.
+   3. Finalize — Transferred, on Bank Transfer (22 October 2026, asked for by
+      HR): hrms's own Submit Salary Slip on the entry, once the bank has been
+      paid. It books the pay; until 22 October it was done only on the desk.
    --------------------------------------------------------------------------- */
 
 import { api, apiCreate, apiDocMethod, apiSubmitDraft, apiWrite, getDoc, listAll } from "@/api/client";
@@ -122,3 +122,14 @@ export async function startSalaryProcess(company, start, end, posting) {
 
 /** Step 2: submit the entry, which makes the draft slips. */
 export const createSalarySlips = (name) => apiSubmitDraft("Payroll Entry", name);
+
+/** Step 3: submit the entry's draft slips — the payslips — through hrms's own
+    `submit_salary_slips`, the desk's Submit Salary Slip button, so its checks
+    and its ledger entry are the site's. Past thirty slips hrms does it in the
+    background, so the slips may still read Draft for a while after this. */
+export async function submitSalarySlips(name) {
+	const entry = await getDoc("Payroll Entry", name);
+	if (!entry) throw new Error(`${name} could not be read from the site.`);
+	if (Number(entry.docstatus) !== 1) throw new Error(`${name} has not made its salary slips yet.`);
+	return apiDocMethod("Payroll Entry", name, "submit_salary_slips");
+}

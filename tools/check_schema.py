@@ -51,6 +51,7 @@ EXPECTED = [
 	"Letter Type", "Manna HR Settings", "Work Location",
 	"Employee Overtime",
 	"Employee Actual Salary",
+	"Employee Festival Bonus",
 ]
 
 #: Doctypes that must arrive **only** with `bench install-app`, never as a

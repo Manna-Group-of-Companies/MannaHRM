@@ -19,7 +19,9 @@
 /* Asked for on 17 September 2026: the four company logins' Employees module is
    Employee Master, Calendar, Employee Profile and New Joining, and nothing else
    there — whether or not the site calls them admin. Their other modules are
-   left to the rules below. */
+   left to the rules below. On 21 Oct 2026 Employee Profile went off the strip
+   (opened from a person) and New Joining into Reports → Onboarding; both stay
+   named here, so a login's own menu still lets the address through. */
 const COMPANY_EMPLOYEES = ["overview", "calendar", "profile", "joining"];
 
 /* Asked for on 16 October 2026: the four company logins never change a
@@ -47,7 +49,11 @@ export const USER_MENUS = {
 	   below), and of it, Onboarding alone — Letters, Documents and Assets are
 	   still built and still at their addresses, just not on its strip. Its
 	   Employees module is still USER_ONLY's four. */
-	"hr@mannarubber.com": { onboard: ["overview"], settings: ["overview", "coverage", "security"] },
+	/* Settings gained the HRDashboard reference's sections on 21 October 2026,
+	   ahead of this login's own three; Manage Shift joined them from
+	   Attendance the same day. App users on 22 October, beside Permission. */
+	"hr@mannarubber.com": { onboard: ["overview"], settings: ["company", "offices", "departments", "titles", "schedules", "shifts", "calendar",
+		"permission", "appusers", "password", "notifications", "overview", "coverage", "security"] },
 };
 
 /* Who may change which pages everybody is shown — Settings → Security, asked
@@ -77,8 +83,12 @@ export const PAGES_ONLY_FOR = {
    `isAdmin` in api/client.js — and is `null` until it arrives, which draws the
    whole menu rather than moving an admin off a bookmarked page while the check
    is still in flight. Still a menu: what a user may read is their roles. */
+/* Calendar moved to Settings on 21 October 2026, asked for by HR, so a login
+   that is not an admin is shown Settings with Calendar alone in it, and keeps
+   the page it was given on 17 September. */
 export const USER_ONLY = {
 	employees: ["overview", "calendar", "profile", "joining"],
+	settings: ["calendar"],
 };
 
 /* What everybody who is shown a module sees of it, when neither rule above
