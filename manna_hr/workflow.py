@@ -219,6 +219,8 @@ def _ensure_masters():
 	filesystem lists them, and a workflow that installs before its states is a
 	workflow that fails on a link.
 	"""
+	import frappe
+
 	for state, style, _edit in STATES:
 		if not frappe.db.exists("Workflow State", state):
 			frappe.get_doc({
