@@ -32,6 +32,11 @@ website_route_rules = [
 	{"from_route": "/hr/<path:app_path>", "to_route": "hr"},
 ]
 
+# **The fingerprint machines push here** — ADMS, at `/iclock/cdata` and
+# `/iclock/getrequest`, paths fixed by the firmware. A renderer rather than a
+# route rule, because a route rule can only name a page; see adms_site.py.
+page_renderer = ["manna_hr.adms_site.AdmsRenderer"]
+
 # ---------------------------------------------------------------- documents ---
 
 doc_events = {
@@ -273,6 +278,9 @@ scheduler_events = {
 		# the order holds — see manna_hr/leaverules_site.py, and
 		# absencerule_site.py for why not on the Attendance hook.
 		"manna_hr.leaverules_site.run",
+		# A machine punch waiting on an Attendance Device ID, a registered
+		# serial or a record HR has since fixed — delivered once it can be.
+		"manna_hr.adms_site.retry_waiting",
 	],
 	"daily": [
 		# `Employee Document.status` is stored so the expiry watch can be a list

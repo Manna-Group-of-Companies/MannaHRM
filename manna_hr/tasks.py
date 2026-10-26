@@ -1,7 +1,7 @@
 """Scheduled jobs.
 
 Both of these exist to make a silent failure loud. Attendance goes wrong quietly
-— a dead bridge and an empty factory produce identical data — and the cost is
+— a machine that stopped pushing and an empty factory produce identical data — and the cost is
 only discovered when payroll runs, by which time a month is in dispute.
 """
 
@@ -76,7 +76,7 @@ def _already_regularized(employee, on_date):
 def alert_on_silent_devices():
 	"""Devices that used to report punches and have stopped.
 
-	The bridge is a process on a shelf in a factory. When it dies it does so
+	A fingerprint machine pushes over the factory's internet. When that stops it does so
 	without telling anybody, and its silence is indistinguishable from a shift
 	that nobody worked. This is the only thing that tells them apart.
 
@@ -151,7 +151,8 @@ def alert_on_silent_devices():
 		+ "\n".join(lines)
 		+ "\n\n"
 		+ _(
-			"Either the machine is off, or the bridge on that site has stopped. "
+			"Either the machine is off, has lost its network connection, or its "
+			"Cloud Server Setting no longer points at this site. "
 			"Until it is fixed, everybody punching there looks absent."
 		),
 	)
