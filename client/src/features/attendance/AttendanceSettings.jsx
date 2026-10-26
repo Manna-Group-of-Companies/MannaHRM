@@ -150,9 +150,17 @@ export function WorkLocations({ title = "Check-in locations" }) {
 				<div className="k-grid2" style={{ marginTop: 16 }}>
 					{locs.map((o) => (
 						<div className="k-sec" style={{ margin: 0 }} key={o.name}>
-							<div className="k-map">
-								<span className="k-pin"><KitIcon name="pin" size={30} stroke={2.2} /></span>
-							</div>
+							{/* The place itself, from Google Maps' keyless embed; the pin
+							    stands in for a location with no coordinates yet. */}
+							{o.latitude && o.longitude ? (
+								<iframe className="k-map" title={`Map of ${o.location_name || o.name}`} loading="lazy"
+									referrerPolicy="no-referrer-when-downgrade" style={{ border: 0, width: "100%", display: "block" }}
+									src={`https://maps.google.com/maps?q=${Number(o.latitude)},${Number(o.longitude)}&z=16&output=embed`} />
+							) : (
+								<div className="k-map">
+									<span className="k-pin"><KitIcon name="pin" size={30} stroke={2.2} /></span>
+								</div>
+							)}
 							<div className="k-sec-h" style={{ margin: "14px 0 4px" }}>
 								<h3>{o.location_name || o.name}</h3>
 								{Number(o.is_active) === 0 ? <span className="k-pill k-p-grey k-nodot">Not in use</span> : null}
