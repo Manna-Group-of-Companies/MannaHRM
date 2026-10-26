@@ -19,6 +19,12 @@ dynamic = ["version"]
 # possible (Application Control policies have refused it here before).
 dependencies = ["google-api-python-client", "google-auth"]
 
+# What Frappe Cloud reads to pick a bench for this app. The live site runs
+# Frappe 16 with HRMS 16 (Oct 2026).
+[tool.bench.frappe-dependencies]
+frappe = ">=16.0.0,<17.0.0"
+hrms = ">=16.0.0,<17.0.0"
+
 [build-system]
 requires = ["flit_core >=3.4,<4"]
 build-backend = "flit_core.buildapi"
