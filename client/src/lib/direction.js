@@ -25,7 +25,7 @@
    punch is evidence and is never rewritten (lib/punchedit.js); `pressed`
    keeps it for a screen that wants to show it.
 
-   The same rule is in the admin app (`admin/lib/core/day.dart`); a machine
+   The same rule is in the phone app's HR side (`app/lib/core/day.dart`); a machine
    added to one is added to the other.
    --------------------------------------------------------------------------- */
 

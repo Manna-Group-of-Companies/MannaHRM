@@ -44,8 +44,10 @@ describe("what the schema carries", () => {
 		// machine to do from a page that cannot reach one; the bridge does it.
 		// Employee Actual Salary on 14 October — a person's actual salary, kept
 		// apart from payroll so that nothing on a slip reads it.
-		expect(Object.keys(SCHEMA)).toHaveLength(27);
-		expect(RECORD_DOCTYPES).toHaveLength(21);
+		// Attendance Device Punch on 19 October — every punch a machine pushes
+		// over ADMS, stored before the machine is told OK.
+		expect(Object.keys(SCHEMA)).toHaveLength(28);
+		expect(RECORD_DOCTYPES).toHaveLength(22);
 	});
 
 	it("keeps child tables and Singles out of the record list", () => {

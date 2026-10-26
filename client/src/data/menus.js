@@ -56,6 +56,16 @@ export const USER_MENUS = {
    this list only decides who is shown the page. */
 export const PAGE_ADMINS = ["hr@mannarubber.com"];
 
+/* Leave applications are the administrator's alone to see and decide (asked
+   for 19 October 2026): the phone app (app/) sends each one to this login —
+   `kLeaveApprover` in app/lib/core/constants.dart, pinned to this list by
+   tests/leaveadmin.test.jsx — and every other login is shown no open leave:
+   not the Approvals tab, not the Start Up panels, not the top bar. Approving
+   one submits it, and hrms marks the days On Leave by itself. Still a menu:
+   the site's roles are what refuse (docs/OPEN_QUESTIONS.md). */
+export const LEAVE_ADMINS = PAGE_ADMINS;
+export const leaveAdmin = (user) => LEAVE_ADMINS.includes(String(user || "").trim().toLowerCase());
+
 /* Pages only the logins named are shown, whatever their menu says. */
 export const PAGES_ONLY_FOR = {
 	settings: { security: PAGE_ADMINS },

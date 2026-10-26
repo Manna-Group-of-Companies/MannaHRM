@@ -82,9 +82,8 @@ exists — a private bench is not a preference here.
 | `bridge/console.py`, `console.html` | The gate PC's console, on `127.0.0.1` only: machines, who is on them, the punch log, attendance, and a new employee on the site and the machine at once. Calls the tools below rather than repeating their rules |
 | `bridge/machine.py`, `push_users.py`, `employee_tools.py` | The only code that writes to a machine: run by hand from the Machine Tools menu, dry run first, never the log. `employee_tools.py create` also writes the Employee, site first |
 | `bridge/INSTALL.bat`, `install.sh` | Put a bridge on a new PC: Python, the key, the machines, a service. `package.ps1` builds the zip that carries it — never zip the folder, it holds a key |
-| `app/` | The phone app. Punch in, punch out, the month, and the correction — see `app/README.md` |
+| `app/` | Manna HR, the one phone app (21 October 2026: the admin app merged into it). An employee gets punch, month, leave, payslip; an HR login also gets everybody's day, employees, leave requests and reports, which only read — see `app/README.md` |
 | `desktop/` | Manna Attendance, the gate PC's Windows program (Flutter): eSSL's screens, each one a question to `bridge/console.py`, which holds the rules. Ships in the bridge's zip as `app\` — see `desktop/README.md` |
-| `admin/` | Manna HR Admin, HR's phone app (Flutter): one day for everybody — punches, absents, leave. Reads only, as the signed-in HR login — see `admin/README.md` |
 | `docs/` | Runbook, schema, migration, open questions |
 
 The repo root **is** the Frappe app root, so `bench get-app` works against it
@@ -107,9 +106,8 @@ python tools/check_schema.py              # the site, against what the code assu
 cd client && npm test                     # 2,675 tests, jsdom
 cd client && npm run contrast             # both palettes, every pairing, AA
 cd client && npm run shots                # the app in a real browser, light and dark
-cd app && flutter test                    # 50 tests, no site and no handset
+cd app && flutter test                    # 118 tests, no site and no handset
 cd desktop && flutter test                # 21 tests, no console, no machine, no site
-cd admin && flutter test                  # 24 tests, no site and no phone
 ```
 
 The Python ones cover `rules.py`, `geo.py`, the approval workflow's tables, the

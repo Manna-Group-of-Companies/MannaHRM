@@ -14,6 +14,13 @@ npm run contrast       # the palette, every pairing, AA
 npm run shots          # the app in Chrome, photographed — needs `npm run dev` up
 ```
 
+**Signing in fails with "Request failed with status code 500"?** Look at the
+dev server's console. `self-signed certificate in certificate chain` there
+means the PC's network inspects HTTPS — on the IT PC it is Cloudflare Gateway
+(17 October 2026), whose certificate Windows trusts and Node does not. Start
+with `npm run dev:gateway` instead, which tells Node (24 or later) to trust
+what Windows trusts. Do not turn certificate checks off to get round it.
+
 `npm run shots` is the check jsdom cannot make: it renders every module *signed
 in* against a stubbed site, at three widths, and fails if a page throws, the
 document scrolls sideways, or `--brand` resolves to something other than the

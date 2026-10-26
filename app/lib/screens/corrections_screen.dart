@@ -4,6 +4,7 @@ import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/screens/correction_sheet.dart';
 import 'package:manna_hr_app/services/api.dart';
+import 'package:manna_hr_app/ui/brand.dart';
 
 /// Every correction this person has asked for, at every status.
 ///
@@ -49,18 +50,18 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
     switch (status) {
       case 'Approved':
       case 'Completed':
-        return const Color(0xFF0EA372);
+        return kGood;
       case 'Rejected':
-        return const Color(0xFFDC2626);
+        return kBad;
       default:
-        return const Color(0xFFC77A0B);
+        return kWarn;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My corrections')),
+      appBar: brandBar('My Corrections'),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -68,25 +69,14 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
-                  if (_error.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFFECACA)),
-                      ),
-                      child: Text(_error,
-                          style: const TextStyle(color: Color(0xFF991B1B))),
-                    ),
+                  if (_error.isNotEmpty) Note(_error),
                   if (_rows.isEmpty && _error.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 60),
                       child: Center(
                         child: Text('You have not asked for any.',
                             style: TextStyle(
-                                color: Colors.black.withValues(alpha: .55))),
+                                color: kInk2)),
                       ),
                     ),
                   ..._rows.map((r) {

@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { getState, set, useApp } from "@/store";
+import { leaveAdmin } from "@/data/menus";
 import { load } from "@/api/load";
 import { exportLog, logDecision, otherRows, qExport, qFilter, qTemplate, queueOf, reqId }
 	from "@/features/approvals/queue";
@@ -370,12 +372,20 @@ function Dialogs({ t, shown }) {
 
 export default function Approvals() {
 	const s = useApp();
-	const t = queueOf(s.apptab);
+	/* Leave is the administrator's queue alone (19 October 2026, data/menus.js
+	   leaveAdmin): no tab for anybody else, and a remembered Leave tab opens
+	   on the next queue instead. */
+	const queues = APPROVALS.filter((x) => x.k !== "leave" || leaveAdmin(s.user));
+	const onLeaveTab = s.apptab === "leave" && !queues.some((x) => x.k === "leave");
+	useEffect(() => {
+		if (onLeaveTab) set({ apptab: queues[0].k, appsel: new Set(), appmsg: "", appq: "" });
+	}, [onLeaveTab]);
+	const t = queueOf(onLeaveTab ? queues[0].k : s.apptab);
 	const A = s.approvals;
 
 	const tabs = (
 		<div className="tabs" role="tablist" aria-label="Approval queues">
-			{APPROVALS.map((x) => {
+			{queues.map((x) => {
 				const n = (A[x.k] || []).length;
 				return (
 					<button

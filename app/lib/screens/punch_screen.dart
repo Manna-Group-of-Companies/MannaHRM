@@ -6,25 +6,13 @@ import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
-import 'package:manna_hr_app/screens/calendar_screen.dart';
 import 'package:manna_hr_app/screens/correction_sheet.dart';
-import 'package:manna_hr_app/screens/corrections_screen.dart';
-import 'package:manna_hr_app/screens/login_screen.dart';
 import 'package:manna_hr_app/services/address.dart';
 import 'package:manna_hr_app/services/api.dart';
 import 'package:manna_hr_app/services/device.dart';
 import 'package:manna_hr_app/services/location.dart';
 import 'package:manna_hr_app/services/photo.dart';
-
-/// The first letter of a name, for the avatar — or `?`.
-///
-/// `?? '?'` guarded null and not the empty string, and `.characters.first` on
-/// an empty string is a `StateError`: an Employee saved with a blank name took
-/// the whole punch screen down with it, button included.
-String initialOf(Object? name) {
-  final s = '${name ?? ''}'.trim();
-  return s.isEmpty ? '?' : s.characters.first.toUpperCase();
-}
+import 'package:manna_hr_app/ui/brand.dart';
 
 /// Punch in, punch out.
 ///
@@ -34,7 +22,12 @@ String initialOf(Object? name) {
 /// disagree the first time somebody punches at a fingerprint machine and then
 /// opens this.
 class PunchScreen extends StatefulWidget {
-  const PunchScreen({super.key});
+  const PunchScreen({super.key, this.direction});
+
+  /// `IN` or `OUT` when the person pressed one of the two buttons on a home
+  /// screen — their word for which way this punch goes, as the key on a gate
+  /// machine is. Left out, it is read off the day's punches.
+  final String? direction;
 
   @override
   State<PunchScreen> createState() => _PunchScreenState();
@@ -58,13 +51,8 @@ class _PunchScreenState extends State<PunchScreen> {
   /// rather than once a second for as long as the screen is open.
   String _triedFor = '';
 
-  /// True only when the site *answered* that no Employee carries this user.
-  /// A read that failed is not that answer, and must not draw the card that
-  /// sends somebody to HR.
-  bool _linkMissing = false;
-
   String get _iso => isoDay(ServerClock.I.now());
-  String get _next => nextLogType(_today);
+  String get _next => widget.direction ?? nextLogType(_today);
 
   @override
   void initState() {
@@ -75,9 +63,8 @@ class _PunchScreenState extends State<PunchScreen> {
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final day = _iso;
-      if (_loadedFor.isNotEmpty && _loadedFor != day && _triedFor != day &&
-          !_loading && !_busy) {
-        _load(quiet: true);
+      if (_loadedFor.isNotEmpty && _loadedFor != day && _triedFor != day && !_loading && !_busy) {
+        _load();
       }
       setState(() {});
     });
@@ -89,14 +76,8 @@ class _PunchScreenState extends State<PunchScreen> {
     super.dispose();
   }
 
-  /// [quiet] keeps what is on screen while the site is asked again — after a
-  /// punch, the list growing by one row is the confirmation, and blanking the
-  /// whole screen to a spinner first hides the very thing that just happened.
-  Future<void> _load({bool quiet = false}) async {
-    setState(() {
-      if (!quiet) _loading = true;
-      _error = '';
-    });
+  Future<void> _load() async {
+    setState(() => _error = '');
     final day = _iso;
     _triedFor = day;
     // A new day starts empty rather than carrying yesterday's punches forward
@@ -105,10 +86,7 @@ class _PunchScreenState extends State<PunchScreen> {
     // an empty list offers IN, the punch that cannot make a day worse.
     if (_loadedFor.isNotEmpty && _loadedFor != day) _today = const [];
     try {
-      if (Session.I.employee == null) {
-        final found = await Api.resolveEmployee();
-        _linkMissing = found == null;
-      }
+      if (Session.I.employee == null) await Api.resolveEmployee();
       final punches = await Api.punchesOn(day);
       if (!mounted) return;
       setState(() {
@@ -122,8 +100,8 @@ class _PunchScreenState extends State<PunchScreen> {
     }
   }
 
-  void _say(String m) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(m), duration: const Duration(seconds: 4)));
+  void _say(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m), duration: const Duration(seconds: 4)));
 
   Future<void> _punch() async {
     final direction = _next;
@@ -182,16 +160,21 @@ class _PunchScreenState extends State<PunchScreen> {
         device: device,
       );
       if (!mounted) return;
-      final at = clockOf(stampOf(ServerClock.I.now()));
+      final now = ServerClock.I.now();
       final photoNote = photoUrl != null
           ? ''
           : snap.problem.isNotEmpty
-              ? ' — ${snap.problem}'
-              : ' — the photo did not upload, so HR will see this punch without one.';
-      _say(direction == kLogIn
-          ? 'Punched in at $at ✓$photoNote'
-          : 'Punched out at $at ✓$photoNote');
-      await _load(quiet: true);
+              ? snap.problem
+              : 'The photo did not upload, so HR will see this punch without one.';
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => PunchDoneScreen(
+          direction: direction,
+          at: clockOf(stampOf(now)),
+          iso: isoDay(now),
+          where: address.isNotEmpty ? address : (fix.has ? 'Location sent' : fix.problem),
+          note: photoNote,
+        ),
+      ));
     } catch (e) {
       if (!mounted) return;
       await _refusedWithCorrection(humanError(e));
@@ -216,12 +199,12 @@ class _PunchScreenState extends State<PunchScreen> {
         title: const Text('Not recorded'),
         content: Text('$message\n\nAsk for a correction for today instead?'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Not now')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Not now')),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Ask for a correction')),
+            style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ask for a correction'),
+          ),
         ],
       ),
     );
@@ -237,227 +220,110 @@ class _PunchScreenState extends State<PunchScreen> {
     if (made && mounted) _say('Sent for approval ✓');
   }
 
-  Future<void> _signOut() async {
-    await Api.logout();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (_) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final emp = Session.I.employee;
+    final isIn = _next == kLogIn;
+    final word = isIn ? 'Punch In' : 'Punch Out';
+    final linked = Session.I.employee != null;
+    final enabled = linked && !_busy && !_loading;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manna HR'),
-        actions: [
-          IconButton(
-            tooltip: 'My month',
-            icon: const Icon(Icons.calendar_month),
-            onPressed: () async {
-              await Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const CalendarScreen()));
-              if (mounted) _load();
-            },
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'corrections') {
-                await Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const CorrectionsScreen()));
-              }
-              if (v == 'refresh') await _load();
-              if (v == 'signout') await _signOut();
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'corrections', child: Text('My corrections')),
-              PopupMenuItem(value: 'refresh', child: Text('Refresh')),
-              PopupMenuItem(value: 'signout', child: Text('Sign out')),
-            ],
-          ),
-        ],
-      ),
+      appBar: brandBar(_loading ? 'Punch' : word),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 28, 16, 32),
           children: [
-            if (emp != null)
-              _whoCard(emp)
-            else if (_linkMissing)
-              _noEmployeeCard(),
-            const SizedBox(height: 6),
-            _clockCard(),
-            const SizedBox(height: 10),
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 36),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else ...[
-              _punchButton(enabled: emp != null),
-              const SizedBox(height: 10),
-              _locationLine(),
-              const SizedBox(height: 14),
-              _todayCard(),
-            ],
-            if (_error.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFECACA)),
-                ),
-                child: Text(_error,
-                    style: const TextStyle(color: Color(0xFF991B1B))),
-              ),
-            ],
-            // At the foot, small, and out of the way of the one control that
-            // matters. A mark over the punch button would be a logo somebody
-            // has to look past every morning.
-            const SizedBox(height: 28),
             Center(
-              child: Image.asset('assets/manna_logo.png',
-                  height: 26, fit: BoxFit.contain),
+              child: GestureDetector(
+                onTap: enabled ? _punch : null,
+                child: Container(
+                  width: 190,
+                  height: 190,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: (isIn ? kGreen : kWarn).withValues(alpha: .14),
+                  ),
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 136,
+                    height: 136,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      // Out is amber with navy on it: white on a pale amber
+                      // is the one pairing here that fails contrast.
+                      gradient: isIn
+                          ? kPunchGradient
+                          : const LinearGradient(colors: [kWarn, Color(0xFFE0A93A)]),
+                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18, offset: Offset(0, 8))],
+                    ),
+                    child: _busy || _loading
+                        ? Center(
+                            child: SizedBox(
+                                width: 40, height: 40, child: CircularProgressIndicator(color: isIn ? Colors.white : kPage)))
+                        : Icon(Icons.fingerprint, color: isIn ? Colors.white : kPage, size: 78),
+                  ),
+                ),
+              ),
             ),
+            const SizedBox(height: 16),
+            Text(_busy ? 'Sending…' : 'Tap to $word',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: kInk)),
+            const SizedBox(height: 22),
+            if (!linked && !_loading)
+              const Note(
+                'Your login is not linked to an employee record, so there is nobody to punch for. '
+                'Ask HR to set your user on your Employee record.',
+                kind: NoteKind.warn,
+              ),
+            _detailsCard(),
+            const SizedBox(height: 16),
+            if (_error.isNotEmpty) Note(_error),
+            FilledButton(
+              style: isIn ? null : FilledButton.styleFrom(backgroundColor: kWarn, foregroundColor: kPage),
+              onPressed: enabled ? _punch : null,
+              child: Text(word),
+            ),
+            const SizedBox(height: 18),
+            _todayCard(),
           ],
         ),
       ),
     );
   }
 
-  Widget _whoCard(Map<String, dynamic> emp) {
-    final bits = [
-      '${emp['employee_number'] ?? ''}',
-      '${emp['designation'] ?? ''}',
-      '${emp['company'] ?? ''}',
-    ].where((s) => s.isNotEmpty).join(' · ');
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFEA580C),
-          child: Text(
-            initialOf(emp['employee_name']),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        title: Text('${emp['employee_name'] ?? ''}',
-            style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text([
-          bits,
-          if ('${emp['default_shift'] ?? ''}'.isNotEmpty)
-            'Shift: ${emp['default_shift']}'
-          else
-            'No shift on your record — ask HR',
-        ].join('\n')),
-        isThreeLine: true,
-      ),
-    );
-  }
-
-  /// Signed in, and nothing to punch against.
-  ///
-  /// A real state, and one worth naming rather than drawing as an empty month:
-  /// the link between a Frappe user and an employee is `user_id` on the
-  /// Employee record, and only HR can set it.
-  Widget _noEmployeeCard() {
-    return Card(
-      color: const Color(0xFFFFF7ED),
-      child: const Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('No employee record is linked to this login',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            SizedBox(height: 8),
-            Text(
-              'You are signed in, but nothing here knows who you are on the '
-              'attendance side, so there is nobody to punch for. Ask HR to put '
-              'your user id on your Employee record — the field is User ID.',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _clockCard() {
+  Widget _detailsCard() {
     final now = ServerClock.I.now();
     final skew = ServerClock.I.skew;
     final drifted = skew.abs() > const Duration(minutes: 1);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  '${now.hour.toString().padLeft(2, '0')}:'
-                  '${now.minute.toString().padLeft(2, '0')}:'
-                  '${now.second.toString().padLeft(2, '0')}',
-                  style: const TextStyle(
-                      fontSize: 34, fontWeight: FontWeight.w700, height: 1),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  ServerClock.I.synced ? 'site time' : 'phone time',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black.withValues(alpha: .5)),
-                ),
-              ],
+    final hms = '${now.hour.toString().padLeft(2, '0')}:'
+        '${now.minute.toString().padLeft(2, '0')}:'
+        '${now.second.toString().padLeft(2, '0')}';
+    return Panel(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InfoRow(icon: Icons.location_on_outlined, label: 'Location', value: _locationText()),
+        const Divider(height: 1, color: kLine),
+        InfoRow(
+          icon: Icons.access_time_rounded,
+          label: ServerClock.I.synced ? 'Time · site clock' : 'Time · phone clock',
+          value: hms,
+        ),
+        const Divider(height: 1, color: kLine),
+        InfoRow(icon: Icons.calendar_today_outlined, label: 'Date', value: dmy(_iso)),
+        // Said out loud because it is a real failure on these machines: a
+        // device running eight minutes fast makes everybody at that gate late.
+        // The punch is stamped by the site either way.
+        if (drifted)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              'This phone is ${skew.inMinutes.abs()} min ${skew.isNegative ? 'ahead of' : 'behind'} the site. '
+              'Your punch is stamped by the site, not by the phone.',
+              style: const TextStyle(fontSize: 12.5, color: kWarn),
             ),
-            const SizedBox(height: 4),
-            Text(dmy(_iso),
-                style: TextStyle(color: Colors.black.withValues(alpha: .6))),
-            if (drifted) ...[
-              const SizedBox(height: 8),
-              // Said out loud because it is a real failure on these machines:
-              // a device running eight minutes fast makes everybody at that
-              // gate late. The punch is stamped by the site either way.
-              Text(
-                'This phone is ${skew.inMinutes.abs()} min '
-                '${skew.isNegative ? 'ahead of' : 'behind'} the site. Your punch '
-                'is stamped by the site, not by the phone.',
-                style: const TextStyle(fontSize: 12.5, color: Color(0xFF92400E)),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _punchButton({required bool enabled}) {
-    final isIn = _next == kLogIn;
-    return SizedBox(
-      height: 96,
-      child: FilledButton.icon(
-        style: FilledButton.styleFrom(
-          backgroundColor: isIn ? const Color(0xFF0EA372) : const Color(0xFFB45309),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        ),
-        onPressed: enabled && !_busy ? _punch : null,
-        icon: _busy
-            ? const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : Icon(isIn ? Icons.login : Icons.logout, size: 30),
-        label: Text(
-          isIn ? 'Punch in' : 'Punch out',
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-        ),
-      ),
+          ),
+      ]),
     );
   }
 
@@ -466,106 +332,129 @@ class _PunchScreenState extends State<PunchScreen> {
   /// No distance to a work location: the 1 km fence is off (29 September
   /// 2026), and a line saying somebody is "outside the fence" would warn them
   /// off a punch nothing refuses.
-  Widget _locationLine() {
+  String _locationText() {
     final fix = _fix;
-    final reading = _locationReading();
+    if (fix == null) return 'Taken with a photo when you punch';
+    if (!fix.has) return fix.problem;
     // A fix can carry a coordinate *and* a caveat — the last place the phone
-    // knew, when no fresh one came in time. The reading alone would present an
-    // old position as where somebody is standing.
-    if (fix == null || !fix.has || fix.problem.isEmpty) return reading;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      reading,
-      const SizedBox(height: 3),
-      Text(fix.problem,
-          style: const TextStyle(fontSize: 12.5, color: Color(0xFF92400E))),
-    ]);
-  }
-
-  Widget _locationReading() {
-    final fix = _fix;
-    final style = TextStyle(fontSize: 12.5, color: Colors.black.withValues(alpha: .6));
-
-    if (fix == null) {
-      return Text('A photo and your location are taken when you punch, and sent with it.',
-          style: style);
-    }
-    if (!fix.has) {
-      return Text(fix.problem, style: const TextStyle(fontSize: 12.5, color: Color(0xFF92400E)));
-    }
-    return Text(
-      'Location sent${fix.isCoarse ? ' · the fix is only good to about ${fix.accuracy!.round()} m' : ''}.',
-      style: style,
-    );
+    // knew, when no fresh one came in time.
+    final coarse = fix.isCoarse ? ' · good to about ${fix.accuracy!.round()} m' : '';
+    return fix.problem.isEmpty ? 'Location sent$coarse' : '${fix.problem}$coarse';
   }
 
   Widget _todayCard() {
     final pair = dayPunches(_today);
     final hours = spanHours(pair.inAt, pair.outAt);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Text('Today', style: TextStyle(fontWeight: FontWeight.w700)),
-              const Spacer(),
-              if (hours.isNotEmpty)
-                Text('$hours worked',
-                    style: TextStyle(color: Colors.black.withValues(alpha: .6))),
-            ]),
-            const SizedBox(height: 10),
-            if (_today.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text('No punch yet today.',
-                    style: TextStyle(color: Colors.black.withValues(alpha: .6))),
-              )
-            else
-              // Every punch, not a pair. A gate that double-reads puts four rows
-              // on a day, and a screen that showed two of them would look like
-              // the machine was fine.
-              ...(_today.map((p) => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      '${p['log_type']}'.toUpperCase() == kLogOut
-                          ? Icons.logout
-                          : Icons.login,
-                      color: '${p['log_type']}'.toUpperCase() == kLogOut
-                          ? const Color(0xFFB45309)
-                          : const Color(0xFF0EA372),
-                    ),
-                    title: Text(clockOf(p['time']),
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      [
-                        '${p['log_type'] ?? ''}'.isEmpty
-                            ? 'no direction recorded'
-                            : '${p['log_type']}',
-                        if ('${p['device_id'] ?? ''}'.isNotEmpty) '${p['device_id']}',
-                      ].join(' · '),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ))),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                icon: const Icon(Icons.edit_calendar_outlined, size: 18),
-                label: const Text('Something missing? Ask for a correction'),
-                onPressed: () async {
-                  final made = await showCorrectionSheet(
-                    context,
-                    iso: _iso,
-                    seedIn: seedFrom(pair.inAt),
-                    seedOut: seedFrom(pair.outAt),
-                  );
-                  if (made && mounted) _say('Sent for approval ✓');
-                },
+    return Panel(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('Today', style: TextStyle(fontWeight: FontWeight.w700, color: kInk)),
+          const Spacer(),
+          if (hours.isNotEmpty) Text('$hours worked', style: const TextStyle(color: kInk2)),
+        ]),
+        const SizedBox(height: 6),
+        if (_today.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('No punch yet today.', style: TextStyle(color: kInk2)),
+          )
+        else
+          // Every punch, not a pair. A gate that double-reads puts four rows
+          // on a day, and a screen that showed two of them would look like
+          // the machine was fine.
+          ..._today.map((p) {
+            final out = '${p['log_type']}'.toUpperCase() == kLogOut;
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(out ? Icons.logout : Icons.login,
+                  color: out ? kWarn : kGood),
+              title: Text(clockOf(p['time']), style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                [
+                  '${p['log_type'] ?? ''}'.isEmpty ? 'no direction recorded' : '${p['log_type']}',
+                  if ('${p['device_id'] ?? ''}'.isNotEmpty) '${p['device_id']}',
+                ].join(' · '),
+                style: const TextStyle(fontSize: 12),
               ),
-            ),
-          ],
+            );
+          }),
+        TextButton.icon(
+          icon: const Icon(Icons.edit_calendar_outlined, size: 18),
+          label: const Text('Something missing? Ask for a correction'),
+          onPressed: () async {
+            final made = await showCorrectionSheet(
+              context,
+              iso: _iso,
+              seedIn: seedFrom(pair.inAt),
+              seedOut: seedFrom(pair.outAt),
+            );
+            if (made && mounted) _say('Sent for approval ✓');
+          },
         ),
+      ]),
+    );
+  }
+}
+
+/// The punch landed. Drawn only once the site has said so — the insert came
+/// back 2xx — never on the press.
+class PunchDoneScreen extends StatelessWidget {
+  const PunchDoneScreen({
+    super.key,
+    required this.direction,
+    required this.at,
+    required this.iso,
+    required this.where,
+    this.note = '',
+  });
+
+  final String direction;
+  final String at;
+  final String iso;
+  final String where;
+
+  /// What went with the punch and is worth saying — a photo that did not
+  /// upload.
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIn = direction == kLogIn;
+    return Scaffold(
+      appBar: brandBar(isIn ? 'Punch In' : 'Punch Out'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 40, 16, 24),
+        children: [
+          Center(
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: kGreen),
+              child: const Icon(Icons.check_rounded, color: Colors.white, size: 76),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(isIn ? 'Punched in successfully' : 'Punched out successfully',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: kGood)),
+          const SizedBox(height: 28),
+          Panel(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Column(children: [
+              InfoRow(icon: Icons.access_time_rounded, label: 'Time', value: at),
+              const Divider(height: 1, color: kLine),
+              InfoRow(icon: Icons.calendar_today_outlined, label: 'Date', value: dmy(iso)),
+              const Divider(height: 1, color: kLine),
+              InfoRow(icon: Icons.location_on_outlined, label: 'Location', value: where),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          if (note.isNotEmpty) Note(note, kind: NoteKind.warn),
+          const SizedBox(height: 10),
+          FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
+        ],
       ),
     );
   }

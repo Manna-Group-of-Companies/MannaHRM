@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:manna_hr_app/screens/correction_sheet.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
-import 'package:manna_hr_app/screens/punch_screen.dart' show initialOf;
+import 'package:manna_hr_app/ui/brand.dart' show initialsOf;
 
 /// The screens open, and the one control that can quietly lose somebody's day
 /// is refused before it is pressed.
@@ -126,9 +126,11 @@ void main() {
   test('an employee with a blank name still gets an avatar, not a crash', () {
     // `.characters.first` on an empty string is a StateError, and it took the
     // whole punch screen down — button included — for one blank field.
-    expect(initialOf(''), '?');
-    expect(initialOf('   '), '?');
-    expect(initialOf(null), '?');
-    expect(initialOf('ebin joy'), 'E');
+    expect(initialsOf(''), '?');
+    expect(initialsOf('   '), '?');
+    expect(initialsOf(null), '?');
+    expect(initialsOf('ebin'), 'E');
+    expect(initialsOf('ebin joy'), 'EJ');
+    expect(initialsOf('  rahul  kumar  singh '), 'RS');
   });
 }

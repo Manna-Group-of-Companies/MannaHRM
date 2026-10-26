@@ -26,6 +26,18 @@ const String kRegularizationDoctype = 'Employee Attendance Regularization';
 /// the wrong word leaves a request that no queue selects for.
 const String kOpenStatus = 'Pending Approval';
 
+/// Leave, applied for from the app (19 October 2026) — hrms's own doctype.
+/// Raised as a draft with status [kLeaveOpen]; approving it on the dashboard
+/// submits it, and hrms then marks the days On Leave by itself.
+const String kLeaveDoctype = 'Leave Application';
+const String kLeaveOpen = 'Open';
+
+/// Who decides leave asked for from the app: the administrator, and nobody
+/// else (asked for 19 October 2026). The dashboard shows the leave queue to
+/// this login alone — `PAGE_ADMINS` in client/src/data/menus.js, which a
+/// client test pins to this value.
+const String kLeaveApprover = 'hr@mannarubber.com';
+
 /// What this app calls itself on a punch.
 ///
 /// **It must not start with the site's trusted device prefix** (`BIO-` by
@@ -66,3 +78,13 @@ const int kPunchOutUntilMinute = 21 * 60 + 30;
 /// How long a page of a list read may be. Frappe's own default is 20, which
 /// would silently return two thirds of a month.
 const int kListPageLength = 500;
+
+/// A punch-out after midnight belongs to the night shift that started the day
+/// before (CLAUDE.md §5), so HR's day view reads this far into the next one and
+/// places each punch by its shift's start. Past noon nobody is still leaving
+/// yesterday's shift.
+const int kNextDayHours = 14;
+
+/// What the sign-in screen and Settings → About say. pubspec.yaml's `version`
+/// is the store's; keep the two together.
+const String kAppVersion = '2.0.0';

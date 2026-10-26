@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:manna_hr_app/core/auth_store.dart';
 import 'package:manna_hr_app/core/constants.dart';
 import 'package:manna_hr_app/core/errors.dart';
+import 'package:manna_hr_app/core/leave_rules.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -160,6 +161,75 @@ class Api {
     }
   }
 
+  /// Whether this login is HR: somebody the site lets create an Employee — the
+  /// same test the website's menus use (`client/src/api/client.js` isAdmin).
+  /// **A menu, not the security** (see `core/landing.dart`). A site that will
+  /// not answer is "no": the employee's side is the one that cannot show
+  /// anybody else's day.
+  static Future<bool> isAdmin() async {
+    try {
+      final r = await Session.I.dio.get('/api/method/frappe.client.has_permission',
+          queryParameters: {'doctype': 'Employee', 'docname': '', 'perm_type': 'create'});
+      final m = (r.data is Map) ? r.data['message'] : null;
+      Session.I.isAdmin = m is Map && m['has_permission'] == true;
+    } catch (_) {
+      Session.I.isAdmin = false;
+    }
+    return Session.I.isAdmin;
+  }
+
+  /// The signed-in user's own name, for a login with no Employee record — an
+  /// HR account. Falls back to what was typed.
+  static Future<String> fullName() async {
+    try {
+      final r = await Session.I.dio.get('/api/method/frappe.client.get_value', queryParameters: {
+        'doctype': 'User',
+        'fieldname': 'full_name',
+        'filters': jsonEncode({'name': Session.I.user}),
+      });
+      final m = (r.data is Map) ? r.data['message'] : null;
+      final n = m is Map ? '${m['full_name'] ?? ''}' : '';
+      if (n.isNotEmpty) return n;
+    } catch (_) {
+      // The address is still a name worth showing.
+    }
+    return Session.I.user.isNotEmpty ? Session.I.user : Session.I.email;
+  }
+
+  /// Frappe's own "forgot password": the site emails a reset link to the
+  /// login's address. A guest call, so it works from the sign-in screen.
+  static Future<void> resetPassword({required String siteUrl, required String user}) async {
+    if (user.trim().isEmpty) throw const Refused('Type your email first.');
+    Session.I.init(url: siteUrl);
+    final r = await Session.I.dio.post(
+      '/api/method/frappe.core.doctype.user.user.reset_password',
+      data: {'user': user.trim()},
+      options: Session.noRetry.copyWith(contentType: Headers.formUrlEncodedContentType),
+    );
+    final msg = (r.data is Map) ? '${r.data['message'] ?? ''}' : '';
+    if ((r.statusCode ?? 0) >= 300 || msg == 'not found') {
+      throw Refused(frappeMessage(r.data) ?? 'The site does not know that login.');
+    }
+  }
+
+  /// Change this login's password on the site, then sign in again with it —
+  /// Frappe starts a fresh session on a change, and the stored password is
+  /// what every silent re-login sends (`core/auth_store.dart`).
+  static Future<void> changePassword({required String current, required String next}) async {
+    if (current.isEmpty || next.isEmpty) throw const Refused('Type both passwords.');
+    final r = await Session.I.dio.post(
+      '/api/method/frappe.core.doctype.user.user.update_password',
+      data: {'old_password': current, 'new_password': next, 'logout_all_sessions': 0},
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    if ((r.statusCode ?? 0) >= 300) {
+      throw Refused(frappeMessage(r.data) ?? 'The site refused the new password.');
+    }
+    final email = Session.I.email;
+    await AuthStore.saveLogin(siteUrl: Session.I.siteUrl, email: email, password: next);
+    await _passwordLogin(email, next);
+  }
+
   static Future<void> logout() async {
     Session.I.reauthenticate = null;
     try {
@@ -292,8 +362,12 @@ class Api {
   /// nobody asked for. Each carries its own failure, because "nobody punched"
   /// and "the punches could not be read" are opposite findings on a screen
   /// about whether somebody was paid.
-  static Future<MonthData> month(String ym) async {
-    final emp = Session.I.employeeId;
+  ///
+  /// [who] is an Employee record, for HR reading somebody else's month; left
+  /// out, it is this login's own.
+  static Future<MonthData> month(String ym, {Map<String, dynamic>? who}) async {
+    final person = who ?? Session.I.employee;
+    final emp = '${person?['name'] ?? ''}';
     if (emp.isEmpty) return MonthData.empty();
 
     // `-01` and `-31` rather than the real last day: a `<=` against `-31`
@@ -353,7 +427,7 @@ class Api {
       punches: results[0] ?? const [],
       leave: results[1] ?? const [],
       corrections: results[2] ?? const [],
-      holidays: await _holidays(),
+      holidays: await _holidays(person),
       error: refused.isEmpty
           ? ''
           : 'The site would not answer for ${refused.join(', ')}.',
@@ -368,10 +442,10 @@ class Api {
   /// **A month read without it calls every Sunday an absence.** So a site that
   /// names neither is worth saying out loud rather than drawing, which is what
   /// the empty list lets the calendar do.
-  static Future<List<Map<String, dynamic>>> _holidays() async {
-    var listName = '${Session.I.employee?['holiday_list'] ?? ''}';
+  static Future<List<Map<String, dynamic>>> _holidays(Map<String, dynamic>? person) async {
+    var listName = '${person?['holiday_list'] ?? ''}';
     if (listName.isEmpty) {
-      final company = '${Session.I.employee?['company'] ?? ''}';
+      final company = '${person?['company'] ?? ''}';
       if (company.isEmpty) return const [];
       final rows = await _read(
         'Company',
@@ -420,6 +494,46 @@ class Api {
       orderBy: 'attendance_date desc',
     );
     return (rows ?? const []).take(limit).toList();
+  }
+
+  /// One whole Employee record — the profile. The list read behind
+  /// [resolveEmployee] is narrow on purpose; this is the one place every
+  /// field is wanted. An employee may read their own; HR may read anybody's.
+  static Future<Map<String, dynamic>> employeeRecord(String id) async {
+    final r = await Session.I.dio.get('${_res('Employee')}/${Uri.encodeComponent(id)}');
+    final doc = (r.data is Map) ? r.data['data'] : null;
+    if (doc is Map) return doc.cast<String, dynamic>();
+    throw Refused(frappeMessage(r.data) ?? 'The site would not show that record.');
+  }
+
+  /// Submitted salary slips, newest first. A draft is HR's working copy and
+  /// not yet anybody's pay, so it is not shown to the person it is for.
+  static Future<List<Map<String, dynamic>>> salarySlips({String? employee, int limit = 24}) async {
+    final emp = employee ?? Session.I.employeeId;
+    if (emp.isEmpty) return const [];
+    final rows = await _read(
+      'Salary Slip',
+      ['name', 'start_date', 'end_date', 'posting_date', 'gross_pay', 'total_deduction', 'net_pay',
+        'rounded_total', 'payment_days', 'status'],
+      ['name', 'start_date', 'end_date', 'net_pay'],
+      filters: [
+        ['employee', '=', emp],
+        ['docstatus', '=', 1],
+      ],
+      orderBy: 'start_date desc',
+    );
+    if (rows == null) {
+      throw const Refused('The site would not show the payslips. Pull down to try again.');
+    }
+    return rows.take(limit).toList();
+  }
+
+  /// One salary slip, with its earnings and deductions.
+  static Future<Map<String, dynamic>> salarySlip(String name) async {
+    final r = await Session.I.dio.get('${_res('Salary Slip')}/${Uri.encodeComponent(name)}');
+    final doc = (r.data is Map) ? r.data['data'] : null;
+    if (doc is Map) return doc.cast<String, dynamic>();
+    throw Refused(frappeMessage(r.data) ?? 'The site would not show that payslip.');
   }
 
   // ----------------------------------------------------------------- writes --
@@ -563,6 +677,90 @@ class Api {
     if (!ok) {
       throw Refused(frappeMessage(r.data) ??
           'The site refused the request and said nothing about why.');
+    }
+  }
+
+  // ------------------------------------------------------------------ leave --
+
+  /// The kinds of leave this person may ask for, with what is left of each —
+  /// hrms's own `get_leave_details`, the call the desk's Leave Application
+  /// form makes, so the number is the one the site will measure against.
+  static Future<List<LeaveKind>> leaveKinds({String? employee}) async {
+    final emp = employee ?? Session.I.employeeId;
+    if (emp.isEmpty) return const [];
+    final r = await Session.I.dio.get(
+      '/api/method/hrms.hr.doctype.leave_application.leave_application.get_leave_details',
+      queryParameters: {
+        'employee': emp,
+        'date': stampOf(ServerClock.I.now()).substring(0, 10),
+      },
+    );
+    final msg = (r.data is Map) ? r.data['message'] : null;
+    if (msg is! Map) {
+      throw Refused(frappeMessage(r.data) ??
+          'The site would not say which leave you have. Pull down to try again.');
+    }
+    return kindsFrom(msg.cast<String, dynamic>());
+  }
+
+  /// Every leave application this person has made, newest first, decided
+  /// ones included — "what happened to the one I sent" is the question.
+  static Future<List<Map<String, dynamic>>> myLeave({int limit = 50, String? employee}) async {
+    final emp = employee ?? Session.I.employeeId;
+    if (emp.isEmpty) return const [];
+    final rows = await _read(
+      kLeaveDoctype,
+      ['name', 'leave_type', 'from_date', 'to_date', 'half_day', 'total_leave_days',
+        'description', 'status', 'docstatus', 'creation'],
+      ['name', 'leave_type', 'from_date', 'to_date', 'status', 'docstatus'],
+      filters: [
+        ['employee', '=', emp]
+      ],
+      orderBy: 'from_date desc',
+    );
+    if (rows == null) {
+      throw const Refused('The site would not show your leave. Pull down to try again.');
+    }
+    return rows.take(limit).toList();
+  }
+
+  /// Ask for leave. **A request, never leave**: a draft Leave Application,
+  /// Open, to the administrator. Approving it on the dashboard submits it, and
+  /// hrms then books the balance and marks the days On Leave by itself — which
+  /// is the "automatic" half, and none of it happens on this phone.
+  static Future<void> applyLeave({
+    required String type,
+    required String from,
+    required String to,
+    required bool halfDay,
+    required String reason,
+  }) async {
+    final emp = Session.I.employeeId;
+    if (emp.isEmpty) {
+      throw const Refused(
+          'Your login is not linked to an employee record. Ask HR to set your '
+          'user on your Employee record.');
+    }
+    final problem = leaveProblem(type: type, from: from, to: to, halfDay: halfDay, reason: reason);
+    if (problem != null) throw Refused(problem);
+
+    final doc = leaveDoc(
+      employee: emp,
+      company: '${Session.I.employee?['company'] ?? ''}',
+      type: type,
+      from: from,
+      to: to,
+      halfDay: halfDay,
+      reason: reason,
+      today: stampOf(ServerClock.I.now()).substring(0, 10),
+    );
+    final r = await Session.I.dio.post(_res(kLeaveDoctype), data: doc);
+    final ok = (r.statusCode ?? 0) >= 200 && (r.statusCode ?? 0) < 300;
+    if (!ok) {
+      // hrms's own sentence: the balance, an overlap, a date outside the
+      // allocation — each is something the person can act on.
+      throw Refused(frappeMessage(r.data) ??
+          'The site refused the leave and said nothing about why.');
     }
   }
 }

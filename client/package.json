@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:gateway": "node --use-system-ca node_modules/vite/bin/vite.js",
     "build": "vite build",
     "build:cloudflare": "vite build --mode cloudflare",
     "preview": "vite preview",

@@ -272,6 +272,88 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Attendance Device Punch": {
+		name: "Attendance Device Punch",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 0,
+		autoname: "hash",
+		title: "",
+		fields: [
+			{
+				name: "punched_at",
+				label: "Punched At",
+				kind: "readonly",
+				reqd: 1,
+				hint: "By the machine's own clock, which nothing here corrects.",
+				list: 1
+			},
+			{
+				name: "device_user_id",
+				label: "User ID on Machine",
+				kind: "readonly",
+				reqd: 1,
+				hint: "Matched against Employee.attendance_device_id.",
+				list: 1
+			},
+			{
+				name: "device_id",
+				label: "Device ID",
+				kind: "readonly",
+				reqd: 1,
+				hint: "The machine's Device ID, or SN: and the serial while the serial is on no Attendance Device."
+			},
+			{
+				name: "attendance_device",
+				label: "Attendance Device",
+				kind: "readonly",
+				link: "Attendance Device"
+			},
+			{
+				name: "serial_number",
+				label: "Serial Number",
+				kind: "readonly",
+				reqd: 1
+			},
+			{
+				name: "status_code",
+				label: "Status Code",
+				kind: "readonly",
+				hint: "The machine's in/out key, as sent. Not used as a direction."
+			},
+			{
+				name: "state",
+				label: "State",
+				kind: "readonly",
+				choices: [
+					"Pending",
+					"Delivered",
+					"Waiting"
+				],
+				def: "Pending",
+				list: 1
+			},
+			{
+				name: "employee",
+				label: "Employee",
+				kind: "readonly",
+				link: "Employee",
+				list: 1
+			},
+			{
+				name: "employee_checkin",
+				label: "Employee Checkin",
+				kind: "readonly",
+				link: "Employee Checkin"
+			},
+			{
+				name: "reason",
+				label: "Why It Is Waiting",
+				kind: "readonly"
+			}
+		]
+	},
 	"Attendance Device User": {
 		name: "Attendance Device User",
 		module: "Manna HR",

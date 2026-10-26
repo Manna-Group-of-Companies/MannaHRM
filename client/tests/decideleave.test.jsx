@@ -55,7 +55,8 @@ beforeEach(() => {
 	comments = () => Promise.resolve();
 	resetStore();
 	set(loadedState());
-	set({ user: "hr@example.invalid" });
+	/* The administrator: leave is theirs alone to decide (19 October 2026). */
+	set({ user: "hr@mannarubber.com" });
 });
 
 describe("deciding a leave application", () => {

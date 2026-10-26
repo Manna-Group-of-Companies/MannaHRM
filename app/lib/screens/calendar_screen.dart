@@ -2,18 +2,15 @@ import 'package:flutter/material.dart';
 
 import 'package:manna_hr_app/app.dart' show kStatusColour;
 import 'package:manna_hr_app/core/errors.dart';
+import 'package:manna_hr_app/core/money.dart' show kMonthNames;
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/roster.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/screens/correction_sheet.dart';
 import 'package:manna_hr_app/services/api.dart';
+import 'package:manna_hr_app/ui/brand.dart';
 
-const List<String> _monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-/// My month.
+/// One person's month.
 ///
 /// The screen that answers *"what happened to my 19th of August"* — which is a
 /// different question from "am I in right now", and is the reason this is a
@@ -25,11 +22,18 @@ const List<String> _monthNames = [
 /// bytes, with `manna_hr/rules.py` and the dashboard. What is decided here is
 /// only how it is drawn.
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key, this.openDay});
+  const CalendarScreen({super.key, this.openDay, this.who, this.bare = false});
 
   /// Opens this day's sheet as soon as the month lands. Set when somebody
   /// arrives here from a punch that was refused.
   final String? openDay;
+
+  /// An Employee record, for HR reading somebody else's month. A correction is
+  /// asked for by the person it is for, so none is offered here then.
+  final Map<String, dynamic>? who;
+
+  /// Without its own app bar — a tab inside another page.
+  final bool bare;
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -44,7 +48,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   List<RosterDay> _rows = const [];
   bool _autoOpened = false;
 
+  bool get _own => widget.who == null;
   String get _ym => '$_year-${_month.toString().padLeft(2, '0')}';
+  String get _today => isoDay(ServerClock.I.now());
 
   @override
   void initState() {
@@ -61,7 +67,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _error = '';
     });
     try {
-      final data = await Api.month(_ym);
+      final data = await Api.month(_ym, who: widget.who);
       if (!mounted) return;
       setState(() {
         _data = data;
@@ -73,7 +79,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           corrections: data.corrections,
           // The site's today, not the phone's. A phone set forward by a day
           // would mark today absent.
-          today: isoDay(ServerClock.I.now()),
+          today: _today,
         );
       });
     } catch (e) {
@@ -108,80 +114,85 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My attendance'),
-        actions: [
-          IconButton(
-            tooltip: 'Reload from the site',
-            icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _load,
+    final body = RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+        children: [
+          if (_error.isNotEmpty) Note(_error),
+          if (_data.error.isNotEmpty) Note(_data.error),
+          if (!_loading && _data.noHolidayList)
+            Note(
+              _own
+                  ? 'No holiday list on your record or your company, so nothing here knows which days are '
+                      'Sundays. Every one of them reads as a day nobody punched on. That is HR\'s to fix, and it '
+                      'is worth telling them.'
+                  : 'No holiday list on this record or its company, so every Sunday reads as a day nobody '
+                      'punched on.',
+              kind: NoteKind.warn,
+            ),
+          Panel(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
+            child: Column(children: [
+              _monthBar(),
+              _weekHeader(),
+              if (_loading)
+                const Padding(padding: EdgeInsets.symmetric(vertical: 60), child: CircularProgressIndicator())
+              else
+                _grid(),
+            ]),
           ),
+          if (!_loading) ...[
+            const SizedBox(height: 14),
+            _counts(),
+            if (_ym == _today.substring(0, 7)) ..._todayBlock(),
+            const SizedBox(height: 16),
+            _key(),
+          ],
         ],
       ),
-      body: Column(children: [
-        _monthBar(),
-        if (_loading)
-          const Expanded(child: Center(child: CircularProgressIndicator()))
-        else
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-              children: [
-                if (_error.isNotEmpty) _warning(_error),
-                if (_data.error.isNotEmpty) _warning(_data.error),
-                if (_data.noHolidayList)
-                  _warning(
-                    'No holiday list on your record or your company, so nothing '
-                    'here knows which days are Sundays. Every one of them reads '
-                    'as a day nobody punched on. That is HR\'s to fix, and it is '
-                    'worth telling them.',
-                  ),
-                _weekHeader(),
-                _grid(),
-                const SizedBox(height: 12),
-                _key(),
-              ],
-            ),
-          ),
+    );
+    if (widget.bare) return body;
+    return Scaffold(
+      appBar: brandBar(_own ? 'Attendance' : '${widget.who?['employee_name'] ?? 'Attendance'}', actions: [
+        IconButton(
+          tooltip: 'Reload from the site',
+          icon: const Icon(Icons.refresh),
+          onPressed: _loading ? null : _load,
+        ),
       ]),
+      body: body,
     );
   }
 
-  Widget _monthBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Row(
+  Widget _monthBar() => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
+            tooltip: 'Previous month',
             icon: const Icon(Icons.chevron_left),
             onPressed: _loading ? null : () => _shiftMonth(-1),
           ),
-          Text('${_monthNames[_month - 1]} $_year',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text('${kMonthNames[_month - 1]} $_year',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: kInk)),
           IconButton(
+            tooltip: 'Next month',
             icon: const Icon(Icons.chevron_right),
             onPressed: _loading ? null : () => _shiftMonth(1),
           ),
         ],
-      ),
-    );
-  }
+      );
 
   Widget _weekHeader() {
-    const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return Row(
       children: labels
           .map((d) => Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(d,
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black.withValues(alpha: .5))),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 6, top: 2),
+                  child: Text(d,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kInk2)),
                 ),
               ))
           .toList(),
@@ -206,13 +217,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _cell(RosterDay r) {
-    final colour = kStatusColour[r.status] ?? const Color(0xFFCBD2DC);
+    final colour = kStatusColour[r.status] ?? kFaint;
     // `unmarked` is drawn as an outline rather than a fill: a day that has not
     // happened yet and a day that was worked must not read as two shades of the
     // same thing.
     final filled = r.status != DayStatus.unmarked;
     final day = int.parse(r.iso.substring(8, 10));
+    final isToday = r.iso == _today;
     return InkWell(
+      borderRadius: BorderRadius.circular(10),
       onTap: () => _openDay(r),
       child: Container(
         margin: const EdgeInsets.all(3),
@@ -220,29 +233,68 @@ class _CalendarScreenState extends State<CalendarScreen> {
           color: filled ? colour : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: filled ? Colors.transparent : const Color(0xFFE5E7EB)),
+            color: isToday ? kInk : (filled ? Colors.transparent : kLine),
+            width: isToday ? 2 : 1,
+          ),
         ),
         child: Stack(children: [
           Center(
-            child: Text(
-              '$day',
-              style: TextStyle(
-                color: filled ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: Text('$day',
+                style: TextStyle(color: filled ? kPage : kInk, fontWeight: FontWeight.w700)),
           ),
           // A day carrying a correction is flagged, whatever its colour: it is
           // the day somebody already knows about and is waiting on.
           if (r.correction != null)
-            const Positioned(
-              right: 3,
-              top: 3,
-              child: Icon(Icons.flag, size: 11, color: Colors.white),
-            ),
+            const Positioned(right: 3, top: 3, child: Icon(Icons.flag, size: 11, color: kPage)),
         ]),
       ),
     );
+  }
+
+  Widget _counts() {
+    final c = countStates(_rows);
+    Widget stat(String label, int n, IconData icon, Color colour) => Panel(
+          padding: const EdgeInsets.all(12),
+          child: Row(children: [
+            IconBadge(icon, color: colour, size: 36),
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: const TextStyle(fontSize: 12, color: kInk2)),
+              Text('$n', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: kInk)),
+            ]),
+          ]),
+        );
+    return TileGrid([
+      stat('Present', c[DayStatus.present] ?? 0, Icons.how_to_reg_rounded, kStatusColour[DayStatus.present]!),
+      stat('Absent', c[DayStatus.absent] ?? 0, Icons.person_off_rounded, kStatusColour[DayStatus.absent]!),
+      stat('On leave', c[DayStatus.onLeave] ?? 0, Icons.beach_access_rounded, kStatusColour[DayStatus.onLeave]!),
+      stat('Holiday / off', (c[DayStatus.holiday] ?? 0) + (c[DayStatus.weeklyOff] ?? 0), Icons.weekend_rounded,
+          kStatusColour[DayStatus.holiday]!),
+    ]);
+  }
+
+  List<Widget> _todayBlock() {
+    final r = _rows.where((d) => d.iso == _today).firstOrNull;
+    if (r == null) return const [];
+    Widget half(String label, String value, IconData icon, Color colour) => Panel(
+          padding: const EdgeInsets.all(12),
+          child: Row(children: [
+            IconBadge(icon, color: colour, size: 36),
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: const TextStyle(fontSize: 12, color: kInk2)),
+              Text(value.isEmpty ? '—' : value,
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: kInk)),
+            ]),
+          ]),
+        );
+    return [
+      SectionTitle(_own ? "Today's Attendance" : 'Today'),
+      TileGrid([
+        half('Punch in', clockOf(r.inAt), Icons.login_rounded, kTileGreen),
+        half('Punch out', clockOf(r.outAt), Icons.logout_rounded, kTileBlue),
+      ]),
+    ];
   }
 
   Widget _key() {
@@ -258,10 +310,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Container(
               width: 12,
               height: 12,
-              decoration: BoxDecoration(
-                color: kStatusColour[s],
-                borderRadius: BorderRadius.circular(3),
-              ),
+              decoration: BoxDecoration(color: kStatusColour[s], borderRadius: BorderRadius.circular(3)),
             ),
             const SizedBox(width: 5),
             // The word as well as the colour, always. Eight states over
@@ -274,20 +323,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _warning(String text) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF7ED),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFED7AA)),
-        ),
-        child: Text(text, style: const TextStyle(fontSize: 12.5)),
-      );
-
   Future<void> _openDay(RosterDay r) async {
     final correction = r.correction;
-    final isFuture = r.iso.compareTo(isoDay(ServerClock.I.now())) > 0;
+    final isFuture = r.iso.compareTo(_today) > 0;
 
     await showModalBottomSheet(
       context: context,
@@ -296,24 +334,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
       // default sheet on a small phone, and a Column that does not fit paints
       // yellow-and-black stripes over the one row somebody opened it to read.
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (sheetCtx) => SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Row(children: [
               Container(
                 width: 12,
                 height: 12,
-                decoration: BoxDecoration(
-                  color: kStatusColour[r.status],
-                  borderRadius: BorderRadius.circular(3),
-                ),
+                decoration: BoxDecoration(color: kStatusColour[r.status], borderRadius: BorderRadius.circular(3)),
               ),
               const SizedBox(width: 8),
-              Text(dmy(r.iso),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(dmy(r.iso), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               const SizedBox(width: 8),
-              Text(r.label, style: TextStyle(color: Colors.black.withValues(alpha: .6))),
+              Text(r.label, style: const TextStyle(color: kInk2)),
             ]),
             const SizedBox(height: 16),
             Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
@@ -342,27 +377,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF4F5F7),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                decoration: BoxDecoration(color: kRaised, borderRadius: BorderRadius.circular(10)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Correction: ${correction['status']}',
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text('Correction: ${correction['status']}', style: const TextStyle(fontWeight: FontWeight.w700)),
                     if ('${correction['reason'] ?? ''}'.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: Text('${correction['reason']}',
-                            style: const TextStyle(fontSize: 12.5)),
+                        child: Text('${correction['reason']}', style: const TextStyle(fontSize: 12.5)),
                       ),
                     // A decided request is not edited in place: changing it
                     // would rewrite what was answered and leave the decision
                     // attached to different numbers. Raising another one is the
                     // way, and the old one stays as the record of what was
                     // asked.
-                    if ('${correction['status']}' != 'Pending Approval')
+                    if (_own && '${correction['status']}' != 'Pending Approval')
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: TextButton(
@@ -376,7 +406,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ],
                 ),
               )
-            else if (!isFuture)
+            else if (_own && !isFuture)
               FilledButton.icon(
                 onPressed: () {
                   Navigator.pop(sheetCtx);
@@ -385,9 +415,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 icon: const Icon(Icons.edit_calendar_outlined),
                 label: const Text('Ask for a correction'),
               )
-            else
-              Text('Nothing has happened on this day yet.',
-                  style: TextStyle(color: Colors.black.withValues(alpha: .6))),
+            else if (isFuture)
+              const Text('Nothing has happened on this day yet.', style: TextStyle(color: kInk2)),
           ]),
         ),
       ),
@@ -395,10 +424,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _stat(String label, String value) => Column(children: [
-        Text(label, style: TextStyle(color: Colors.black.withValues(alpha: .55))),
+        Text(label, style: const TextStyle(color: kInk2)),
         const SizedBox(height: 2),
-        Text(value.isEmpty ? '—' : value,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        Text(value.isEmpty ? '—' : value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
       ]);
 
   Future<void> _ask(RosterDay r) async {
@@ -409,8 +437,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       seedOut: seedFrom(r.outAt),
     );
     if (!made || !mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sent for approval ✓')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sent for approval ✓')));
     _load();
   }
 }

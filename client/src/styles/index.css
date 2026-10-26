@@ -559,6 +559,21 @@
   .loginbox h1 { @apply font-display text-head font-bold text-center; }
   .loginbox p.muted { @apply text-fine text-center -mt-[.5rem]; }
   .loginbox .lvf input { min-height: 2.35rem; }
+  /* The password's eye: inside the box, at its right end, with room left for
+     it so the last characters are never under it. */
+  .pwdbox input { @apply flex-1 w-full; padding-right: 2.6rem; }
+  .pwdeye {
+    @apply absolute inline-flex items-center justify-center rounded border-0 bg-transparent text-ink-3 cursor-pointer;
+    /* Centred with margins, not `transform`: a pressed button's own style sets
+       `transform`, which replaced the centring for the instant the mouse was
+       down — the eye dropped half its height, the release landed on the box
+       beside it, and no click ever reached it. */
+    right: .3rem; top: 0; bottom: 0; margin: auto 0; width: 2rem; height: 2rem;
+    z-index: 2;
+  }
+  .pwdeye:hover:not([disabled]), .pwdeye[aria-pressed="true"] { @apply text-accent; }
+  .pwdeye:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 1px; }
+  .pwdeye svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .loginbox .btn { @apply w-full mt-[.2rem]; }
 
   .topbar .signout {
@@ -6006,6 +6021,34 @@ tbody tr:hover { background: rgb(var(--brand-soft) / .45); }
    the fifth would sit alone at half width; it takes the row instead. */
 @media (max-width: 420px) {
   .paypage .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* Payroll → Payroll on a tablet or a laptop beside the sidebar (22 October
+   2026). Between the phone rules above and a wide screen, the flex rows
+   wrapped wherever they ran out of room: the add form left "Add to <month>"
+   alone on a second line, and Check it and pay left two of its three Excel
+   buttons under the address box at whatever width they happened to have.
+   Here each row breaks in a chosen place instead — the person on a line of
+   their own, then what, amount and the button; the address on a line of its
+   own, then the three downloads sharing the next line equally. */
+@media (min-width: 641px) and (max-width: 1279px) {
+  .paypage .prform .who { flex-basis: 100%; }
+  .paypage .prform .embtn { flex: 1 1 12rem; }
+  .paypage .praddr input.wide { flex-basis: 100%; }
+  .paypage .praddr .embtn { flex: 1 1 11rem; }
+}
+/* The five figures at the top: at these widths five across squeezed "People
+   to pay" onto two lines in every tile. Three over two instead, the second
+   row's two tiles sharing the width so neither sits alone. */
+@media (min-width: 641px) and (max-width: 1199px) {
+  .prun > .tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .prun > .tiles > .tile { grid-column: span 2; }
+  .prun > .tiles > .tile:nth-child(n + 4) { grid-column: span 3; }
+}
+/* A wide monitor: the page keeps its width, but a form row stretched across
+   1,500 pixels puts the amount box a head-turn away from the name. */
+@media (min-width: 1440px) {
+  .paypage .prform, .paypage .praddr { max-width: 64rem; }
 }
 
 /* ---------------------------------------------------------------------------

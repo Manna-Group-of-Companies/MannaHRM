@@ -47,6 +47,12 @@ class Session {
   /// nothing to punch against. See `Api.resolveEmployee`.
   Map<String, dynamic>? employee;
 
+  /// Whether the site lets this login create an Employee — HR. Asked on every
+  /// sign-in and every start (`Api.isAdmin`), so a login whose HR role was
+  /// taken away stops seeing everybody's day. **A menu, not the security**:
+  /// what each read returns is the site's roles, whatever this says.
+  bool isAdmin = false;
+
   String get employeeId => '${employee?['name'] ?? ''}';
   String get employeeName => '${employee?['employee_name'] ?? email}';
 
@@ -75,6 +81,7 @@ class Session {
     csrfToken = '';
     user = '';
     employee = null;
+    isAdmin = false;
   }
 
   static const _authPaths = ['/api/method/login', '/api/method/logout'];

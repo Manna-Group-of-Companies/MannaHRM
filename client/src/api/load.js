@@ -7,6 +7,7 @@ import { lastOfMonth, todayIso } from "@/lib/format";
 import { LEAVE_TYPE_NAME } from "@/lib/monthlyleave";
 import { credited } from "@/lib/sundayleave";
 import { byMachine } from "@/lib/direction";
+import { leaveAdmin } from "@/data/menus";
 
 export const EMP_FIELDS_MIN = [
 	"name", "employee_name", "employee_number", "company", "department", "designation",
@@ -183,12 +184,15 @@ export async function load() {
 			listAll("Department", ["name", "disabled"]).catch(() => listAll("Department", ["name"])),
 			listAll("Designation", ["name"]),
 			pendingRegularizations(),
-			listAll("Leave Application",
+			/* Open leave is the administrator's alone to see (19 October 2026,
+			   data/menus.js leaveAdmin). Read here or not at all, so the queue,
+			   the Start Up panels and the top bar agree for every other login. */
+			leaveAdmin(getState().user) ? listAll("Leave Application",
 				["name", "employee", "employee_name", "company", "leave_type", "from_date", "to_date",
 					"half_day", "half_day_date", "total_leave_days", "leave_balance", "leave_approver",
 					"leave_approver_name", "posting_date", "status", "description", "creation", "owner",
 					"modified", "modified_by"],
-				[["status", "=", "Open"]]).catch(() => []),
+				[["status", "=", "Open"]]).catch(() => []) : Promise.resolve([]),
 			listAll("Letter Type", ["name", "category", "is_active", "fields_used"])
 				.catch(() => []),
 			/* Which of the two lists answered is carried out with the rows, not

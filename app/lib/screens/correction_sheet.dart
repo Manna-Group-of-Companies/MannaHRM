@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/services/api.dart';
+import 'package:manna_hr_app/ui/brand.dart';
 
 /// Asking for the punch a day is missing.
 ///
@@ -187,7 +188,7 @@ class _CorrectionFormState extends State<_CorrectionForm> {
             Text(
               'Leave one empty where only the other is missing.',
               style: TextStyle(
-                  fontSize: 12, color: Colors.black.withValues(alpha: .55)),
+                  fontSize: 12, color: kInk2),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -206,7 +207,7 @@ class _CorrectionFormState extends State<_CorrectionForm> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F5F7),
+                color: kRaised,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Text(
@@ -219,7 +220,7 @@ class _CorrectionFormState extends State<_CorrectionForm> {
             if (problem != null || _error.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(_error.isNotEmpty ? _error : problem!,
-                  style: const TextStyle(color: Color(0xFF991B1B))),
+                  style: const TextStyle(color: kBad)),
             ],
             const SizedBox(height: 16),
             FilledButton(
@@ -231,7 +232,7 @@ class _CorrectionFormState extends State<_CorrectionForm> {
                         height: 18,
                         width: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
+                            strokeWidth: 2, color: kOnPrimary))
                     : const Text('Send for approval'),
               ),
             ),

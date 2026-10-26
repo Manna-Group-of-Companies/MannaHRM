@@ -47,6 +47,9 @@ export const NEVER_WRITE = {
 	"Attendance Device User": "Read off the machine by the bridge. A row made here would claim "
 		+ "somebody can punch at a gate that has never seen their finger — enrol them on the machine "
 		+ "instead, and link them by filling Attendance Device ID on their Employee record.",
+	"Attendance Device Punch": "A punch exactly as a machine pushed it, and the last copy of it once "
+		+ "the machine was told OK. One that is waiting is delivered by itself once its reason is "
+		+ "fixed — usually by filling Attendance Device ID on the Employee.",
 };
 
 /**

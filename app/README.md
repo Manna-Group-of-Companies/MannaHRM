@@ -1,36 +1,85 @@
 # Manna HR — the phone app
 
-Punch in, punch out, the month behind them, and the correction that fixes a day
-the machines missed. Four screens, and every one of them writes straight to the
-ERPNext site as the person signed in.
+**One app for everybody** (21 October 2026 — Manna HR Admin merged into it).
+Everybody signs in with the same ERPNext login they use on the website, and
+what opens depends on who they are:
+
+| Login | Opens on |
+|---|---|
+| An employee | **their own side** — Home (today, punch in/out, recent activity), Attendance (the month), Leave (history, balance, apply), More (profile, payslip, corrections, settings) |
+| HR (**HR User** / **HR Manager** — the site lets it create an Employee) | **HR's side** — Home (counts), Employees, Leave Requests, Reports, and the drawer. When the login's User ID is on an Employee record, the same home and drawer also carry **everything an employee has**: Punch In / Punch Out, My Attendance, Apply Leave, My Leave, My Payslip, My Profile, My Corrections. One menu, no choosing a side (21 October 2026) |
+
+Which side opens is `lib/core/landing.dart`, and it is **a menu, not the
+security**: every read on HR's side returns whatever the login's roles let it
+read on the site. The HR check is asked again on every start, so a login whose
+HR role is taken away stops seeing everybody's day.
 
 ```
 lib/core/punch_rules.dart   which way the next punch goes, the working window, a day's pair
 lib/core/roster.dart        one person's month — the status priority order
+lib/core/day.dart           one day, for everybody — HR's side (was admin/lib/core/day.dart)
+lib/core/landing.dart       which side a login opens on
+lib/core/leave_rules.dart   a leave request, and the balance
+lib/core/money.dart         rupees, Indian grouping
 lib/core/geo.dart           haversine, ported from manna_hr/geo.py
 lib/core/server_clock.dart  the site's clock, learned off every response's Date header
 lib/core/session.dart       the one connection, and the silent re-login behind it
-lib/services/api.dart       every read and write, in one file
-lib/screens/               login · punch · calendar · corrections · the correction sheet
+lib/services/api.dart       sign-in, and every read and write of the employee's own
+lib/services/admin_api.dart HR's reads — nothing but reads
+lib/ui/brand.dart           the Manna orange and the pieces every screen is built from
+lib/screens/                sign in · role · employee shell · punch · month · leave · profile · payslip · settings
+lib/screens/admin/          HR shell · home · day · employees · leave requests · reports
 ```
 
 ```bash
 flutter pub get
-flutter test          # 48 tests, no site and no phone needed
+flutter test          # 118 tests, no site and no phone needed
 flutter run           # a device or an emulator
 flutter build apk --release
 ```
 
----
+The APK is `com.mannagroup.manna_hr_app`, version 2.0.0, so it installs over
+the employee app already on people's phones. **Uninstall Manna HR Admin**
+(`com.mannagroup.manna_hr_admin`) from HR's phones; nothing replaces it but
+this.
+
+## Colour
+
+The Manna orange: `#C2410C` and `#9A3412`, the two shades white text clears AA
+on (the logo's own `#EF6C29` does not). A **day** is never drawn in the brand
+colour — the month and HR's day use the dashboard's status key, so the phone and
+the website agree about what green means.
+
+## HR's side only reads
+
+No punch for anybody else, no correction, no Attendance, no leave decision.
+What HR's side writes is HR's own — their punch, leave request and correction,
+through the same screens an employee uses. A day that is wrong
+is corrected on the website, and leave is approved there by `kLeaveApprover`,
+where the approval rules are — a phone that could do it too would be a second
+set of rules (CLAUDE.md §1). Employees → a person opens their record with their
+month, leave and payslips, all read under the HR login's own permissions.
+
+HR's day follows the same order as the website (`client/src/lib/rules.js`) and
+an employee's own month (`core/roster.dart`): a punch beats a leave record;
+approved leave is time off; then a holiday or weekly off on the person's own
+calendar; a leave nobody has decided is not time off; otherwise absent, or for
+today, not in yet. A night shift's punch-out after midnight counts towards the
+day the shift started.
 
 ## What it may write, and what it must not
 
-**It writes two doctypes and neither of them is `Attendance`.**
+**It writes three doctypes and none of them is `Attendance`** — all three from
+the employee's side, as the person they are for. HR's side writes nothing.
 
 | It writes | Which is |
 |---|---|
 | `Employee Checkin` | the punch |
 | `Employee Attendance Regularization` | a *request* for a punch that is missing |
+| `Leave Application` | a *request* for leave — an Open draft, never submitted |
+
+Settings → Change Password changes the login's own password through Frappe's
+`update_password`, and keeps the new one for the silent re-login.
 
 It also uploads one private `File` per punch: the photo taken at the press,
 carried on the checkin as `custom_photo` and shown on the dashboard's App
@@ -114,6 +163,8 @@ costs a flag on a report a human reads. So:
   refuses an out that is not after the in, and says why. A night worker's day
   belongs to the day it started, and that has to be settled on the site's Shift
   Type window before anybody is paid from it.
-- **No leave screen.** Applying for leave is on the dashboard and on the desk;
-  the calendar reads leave and draws it, and does not write it.
+- **Leave is asked for, never decided, from the phone.** Apply Leave raises an
+  Open draft to `kLeaveApprover`; approving it is on the dashboard.
+- **A payslip is read, not downloaded.** The screen shows the submitted slip's
+  own figures; the PDF is on the website.
 - **Android only.** iOS was not set up, matching the field-sales app next door.

@@ -144,6 +144,8 @@ export const NO_PAGE = [
 		+ "id turns its punches into mobile ones (CLAUDE.md §5), so it is not a page to edit casually."],
 	["Attendance Device User", "Hidden on request, 24 Sep 2026. Written by the bridge from each "
 		+ "machine's own user list; read on the desk."],
+	["Attendance Device Punch", "Written by ADMS (manna_hr/adms_site.py) as each machine pushes; "
+		+ "a waiting punch delivers by itself once its reason is fixed, so there is nothing to edit."],
 ];
 
 /* ---------------------------------------------------------------------------
