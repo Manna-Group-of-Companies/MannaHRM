@@ -27,8 +27,16 @@
    every write is refused for CSRF. `/files` and `/private` are the bytes behind
    a `File` row, followed by the browser itself. None of the dashboard's own
    pages is under any of these — they are `/employees/…`, `/attendance/…` — so
-   claiming them shadows nothing. */
-const SITE_PATHS = ["/api", "/app", "/desk", "/files", "/private"];
+   claiming them shadows nothing.
+
+   `/iclock` is the fingerprint machines (27 October 2026). Their firmware
+   speaks ADMS over plain HTTP with no way to choose HTTPS, and the site answers
+   HTTP with a redirect the machines do not follow — so they reach the site
+   through here, at `adms.mannarubber.com`, which Cloudflare lets through on
+   port 80. The site's answer goes back untouched: `OK` only once it has stored
+   the punches, and anything else makes the machine send them again, which is
+   the whole of what keeps a punch from being lost (CLAUDE.md §5). */
+const SITE_PATHS = ["/api", "/app", "/desk", "/files", "/private", "/iclock"];
 
 export const forSite = (pathname) =>
 	SITE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));

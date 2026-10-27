@@ -23,7 +23,7 @@
 		// hand index.html to a tab opened on `/private/files/…` — a navigation,
 		// so it counts as a page — instead of the file.
 		// Keep in step with SITE_PATHS in worker/index.js.
-		"run_worker_first": ["/api/*", "/app", "/app/*", "/desk", "/desk/*", "/files/*", "/private/*"]
+		"run_worker_first": ["/api/*", "/app", "/app/*", "/desk", "/desk/*", "/files/*", "/private/*", "/iclock", "/iclock/*"]
 	},
 
 	"vars": {

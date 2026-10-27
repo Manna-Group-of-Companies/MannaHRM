@@ -144,3 +144,33 @@ describe("the answer that comes back", () => {
 		expect(await res.text()).toBe('{"exc_type":"DataError"}');
 	});
 });
+
+describe("the fingerprint machines", () => {
+	test("a_machines_adms_calls_are_forwarded_to_the_site", () => {
+		for (const p of ["/iclock/cdata", "/iclock/getrequest", "/iclock"]) {
+			expect(forSite(p), p).toBe(true);
+		}
+		expect(forSite("/iclocks")).toBe(false);
+	});
+
+	test("a_machine_posting_punches_over_plain_http_reaches_the_site_over_https_with_the_body_and_serial", async () => {
+		answer({ body: "OK: 1" });
+		const res = await worker.fetch(
+			new Request("http://adms.mannarubber.com/iclock/cdata?SN=CGKK211561350&table=ATTLOG&Stamp=9", { method: "POST", body: "104\t2026-10-27 09:02:11\t0\t1\n" }),
+			{ ERP_URL: SITE, ASSETS: { fetch: vi.fn() } },
+		);
+		expect(sent.url).toBe(SITE + "/iclock/cdata?SN=CGKK211561350&table=ATTLOG&Stamp=9");
+		expect(sent.method).toBe("POST");
+		expect(await res.text()).toBe("OK: 1");
+	});
+
+	test("the_sites_refusal_goes_back_to_the_machine_unchanged_so_it_sends_the_punches_again", async () => {
+		answer({ status: 500, body: "ERROR: not stored\n" });
+		const res = await worker.fetch(
+			new Request("http://adms.mannarubber.com/iclock/cdata?SN=X&table=ATTLOG", { method: "POST", body: "1\t2026-10-27 09:00:00\t0\n" }),
+			{ ERP_URL: SITE, ASSETS: { fetch: vi.fn() } },
+		);
+		expect(res.status).toBe(500);
+		expect(await res.text()).not.toMatch(/^OK/);
+	});
+});
