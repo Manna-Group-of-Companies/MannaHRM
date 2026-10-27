@@ -69,6 +69,9 @@ export const PROFILE_TABS = [
 	   somebody edited `data/profile.js`, and nobody would know to. This pane is
 	   the whole document, so the answer to "where is that field" is never
 	   "nowhere". */
+	/* Ours: every app this person's login opens, switched (27 October 2026).
+	   Drawn for HR Manager and System Manager only — `accessAdmin`. */
+	["access", "Apps & access", "🔑"],
 	["all", "All Fields", "🗃"],
 ];
 

@@ -3,7 +3,7 @@ import { go } from "@/routes/router";
 import { loadEmployeeFiles, loadOnBoard } from "@/api/load";
 import { loadProfileLeave } from "@/api/profileleave";
 import { leavePlans } from "@/lib/monthlyleave";
-import { apiDeleteFile, apiUpload } from "@/api/client";
+import { apiCall, apiDeleteFile, apiUpload } from "@/api/client";
 import { forgetEmployeeDoc, useEmployeeDoc } from "@/features/employees/useEmployeeDoc";
 import { needsDetails, scoped } from "@/lib/scope";
 import { clock, dmy, filled, fmt, tidyDept, todayIso } from "@/lib/format";
@@ -23,6 +23,7 @@ import { LocCell } from "@/components/PunchMap";
 import { DATE_FIELD } from "@/data/employees";
 import { accessFor } from "@/lib/fieldaccess";
 import { employeesLocked } from "@/data/menus";
+import AppAccess from "@/features/employees/AppAccess";
 import { fieldLabel, PROFILE_CHECKS, PROFILE_CHIPS, PROFILE_FIRST_CHILD, PROFILE_HEAD, PROFILE_LONG, PROFILE_MAPPED, PROFILE_PANES, PROFILE_PLUMBING, PROFILE_TABS } from "@/data/profile";
 
 /* Factor HR's **Employee Profile** — the record page, screenshotted 29 Aug 2026.
@@ -1137,6 +1138,15 @@ export default function EmployeeProfile() {
 	   photograph. data/menus.js employeesLocked. */
 	const readOnly = employeesLocked(s.user);
 
+	/* Apps & access is drawn for HR Manager and System Manager only; the site
+	   says which, once per sign-in. Anything but a yes leaves the tab off. */
+	useEffect(() => {
+		if (!s.user || s.accessAdmin !== null) return;
+		apiCall("manna_hr.appaccess_site.can_manage")
+			.then((yes) => set({ accessAdmin: yes === true }))
+			.catch(() => set({ accessAdmin: false }));
+	}, [s.user, s.accessAdmin]);
+
 	const people = scoped(s)
 		.slice()
 		.sort((a, b) => (a.employee_name || "").localeCompare(b.employee_name || ""));
@@ -1394,7 +1404,7 @@ export default function EmployeeProfile() {
 
 			<div className="probody-grid">
 				<nav className="protabs" aria-label="Profile sections">
-					{PROFILE_TABS.map((t) => {
+					{PROFILE_TABS.filter((t) => t[0] !== "access" || s.accessAdmin === true).map((t) => {
 						const kids = t[3];
 						if (!kids) return <Tab t={t} tab={tab} assets={assetsMine} key={t[0]} />;
 
@@ -1467,6 +1477,12 @@ export default function EmployeeProfile() {
 					{tab === "assets" && (
 						<Card title="Assets" {...card}>
 							<AssetsPane s={s} emp={picked} />
+						</Card>
+					)}
+
+					{tab === "access" && s.accessAdmin === true && (
+						<Card title="Apps & access" {...card}>
+							<AppAccess emp={picked} />
 						</Card>
 					)}
 

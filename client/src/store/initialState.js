@@ -135,6 +135,9 @@ const initial = {
 	    page for that doctype opens its form once its rows are read, then
 	    clears this. */
 	openRecord: null,
+	/** Whether this login is shown Employee Profile → Apps & access: the
+	    site's answer (manna_hr.appaccess_site.can_manage), null until asked. */
+	accessAdmin: null,
 	/** Settings → Security's rules as the site holds them — the same object
 	    data/sections.js is obeying, here so a menu redraws when they change.
 	    See api/pagerules.js. The state is "" before a sign-in, then "loading",
