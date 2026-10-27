@@ -262,7 +262,13 @@ scheduler_events = {
 		# the morning's regularization queue is already built when HR opens it.
 		# Not hourly — a missed punch-out found at 6pm can still be fixed by the
 		# person who made it, and one found the next morning usually cannot.
-		"*/10 * * * *": ["manna_hr.tasks.flag_open_shifts"],
+		"*/10 * * * *": [
+			"manna_hr.tasks.flag_open_shifts",
+			# hrms marks no Attendance until a shift's last_sync_of_checkin
+			# passes it. The bridge moved it; machines now push here, so the site
+			# does — held at the quietest machine on the shift. adms.sync_point.
+			"manna_hr.adms_site.advance_shifts",
+		],
 	},
 	"hourly": [
 		# Approving a correction writes the punches; the shift job rebuilds the

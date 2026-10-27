@@ -261,3 +261,38 @@ def choose_employee(rows, company):
 	return None, "{0} carries this Attendance Device ID and is {1}".format(
 		rows[0]["name"], rows[0]["status"]
 	)
+
+
+# ------------------------------------------------------------ closing shifts ---
+
+#: How far back a machine counts as serving a shift: it delivered a punch on it
+#: within this many days. A machine retired last month holds nothing open.
+SERVES_DAYS = 14
+
+
+def sync_point(current, newest, serving_seen):
+	"""How far one shift's `last_sync_of_checkin` may move, or None to leave it.
+
+	**hrms marks no Attendance without this field**, and marks a shift only once
+	its end is before it — the bridge moved it (bridge/mannabridge/sink.py) and
+	nothing else on the site does. Moved to the shift's newest punch, never to
+	now: past now would close a shift while people are still on the floor.
+
+	**Held at the quietest machine that serves the shift** (`serving_seen`, each
+	machine's `last_seen`, None for one that has never pushed). A machine posts
+	each punch as it happens and is answered only once it is stored, so all it
+	held before its last contact is on the site; after that it may hold punches
+	nobody has seen. Closing past it marks somebody absent who came in — the
+	expensive mistake (CLAUDE.md §4). A machine that has never pushed holds the
+	shift altogether. Forward only.
+	"""
+	if not newest:
+		return None
+	limit = str(newest)[:19]
+	for seen in serving_seen or ():
+		if not seen:
+			return None
+		limit = min(limit, str(seen)[:19])
+	if current and str(current)[:19] >= limit:
+		return None
+	return limit

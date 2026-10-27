@@ -397,3 +397,45 @@ def new_on_machine():
 		) or ""
 		r["first_name"], r["last_name"] = adms.split_name(r["name_on_device"])
 	return rows
+
+
+# ------------------------------------------------------------ closing shifts ---
+
+
+def advance_shifts():
+	"""Every ten minutes: move each auto-attendance shift's `last_sync_of_checkin`.
+
+	What the bridge did after each pass, now that machines push here instead.
+	Without it hrms's hourly job generates no Attendance at all, and says
+	nothing. The rule — how far, and which machine holds it — is
+	`adms.sync_point`.
+	"""
+	since = add_to_date(now_datetime(), days=-adms.SERVES_DAYS)
+	seen = {
+		d.device_id: d.last_seen
+		for d in frappe.get_all(
+			"Attendance Device", filters={"is_active": 1}, fields=["device_id", "last_seen"]
+		)
+	}
+	for shift in frappe.get_all(
+		"Shift Type",
+		filters={"enable_auto_attendance": 1},
+		fields=["name", "last_sync_of_checkin"],
+	):
+		rows = frappe.db.sql(
+			"""select device_id, max(time) from `tabEmployee Checkin`
+			where shift = %s and time >= %s group by device_id""",
+			(shift.name, since),
+		)
+		if not rows:
+			continue
+		newest = max(str(t) for _d, t in rows)
+		# Only registered machines hold a shift: a phone punch is posted as it
+		# happens, and a device nobody registered cannot be asked when it last
+		# called.
+		serving = [seen[d] for d, _t in rows if d in seen]
+		up_to = adms.sync_point(shift.last_sync_of_checkin, newest, serving)
+		if up_to:
+			frappe.db.set_value("Shift Type", shift.name, "last_sync_of_checkin", up_to,
+			                    update_modified=False)
+	frappe.db.commit()

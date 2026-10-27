@@ -103,3 +103,25 @@ def test_two_active_holders_that_cannot_be_told_apart_wait_rather_than_pay_eithe
 def test_a_pin_held_only_by_somebody_who_left_waits_and_asks_nobody_to_make_them():
 	employee, reason = adms.choose_employee([{"name": "HR-EMP-9", "status": "Left", "company": "A"}], "A")
 	assert employee is None and "Left" in reason
+
+
+def test_a_shift_moves_to_its_newest_punch_never_to_now():
+	assert adms.sync_point("2026-10-26 17:31:55", "2026-10-27 09:02:11", ["2026-10-27 18:00:00"]) == "2026-10-27 09:02:11"
+
+
+def test_a_shift_is_held_at_the_quietest_machine_that_serves_it():
+	# Gate 2 last called at 08:00 and may hold the outs after it; closing past
+	# it would mark people absent who came in.
+	assert adms.sync_point("", "2026-10-27 18:30:00", ["2026-10-27 18:31:00", "2026-10-27 08:00:00"]) == "2026-10-27 08:00:00"
+
+
+def test_a_machine_that_has_never_pushed_holds_its_shifts_open():
+	assert adms.sync_point("", "2026-10-27 18:30:00", ["2026-10-27 18:31:00", None]) is None
+
+
+def test_the_sync_point_never_moves_back():
+	assert adms.sync_point("2026-10-27 12:00:00", "2026-10-27 11:00:00", []) is None
+
+
+def test_a_shift_with_no_punches_is_left_alone():
+	assert adms.sync_point("2026-10-26 17:31:55", None, []) is None
