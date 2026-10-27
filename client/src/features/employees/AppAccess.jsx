@@ -96,3 +96,30 @@ export default function AppAccess({ emp }) {
 		</div>
 	);
 }
+
+/** The Who card's Apps row: the names of the apps this login opens, from the
+    same answer the Apps & access tab draws. Empty for a login with none. */
+export function AppNames({ emp }) {
+	const [names, setNames] = useState(null);
+	useEffect(() => {
+		let dead = false;
+		setNames(null);
+		loadAccess(emp)
+			.then((d) => {
+				if (dead) return;
+				const on = (d?.apps || []).filter((a) => a.on && a.key !== "login");
+				setNames(d?.login ? on.map((a) => a.label) : []);
+			})
+			.catch(() => { if (!dead) setNames(undefined); });
+		return () => { dead = true; };
+	}, [emp]);
+	if (names === undefined) return null;
+	return (
+		<div className="profield long">
+			<span className="k">Apps</span>
+			<span className={names && names.length ? "v" : "v off"}>
+				{names === null ? "…" : names.length ? names.join(" · ") : "none"}
+			</span>
+		</div>
+	);
+}

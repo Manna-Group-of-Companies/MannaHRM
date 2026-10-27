@@ -73,3 +73,22 @@ describe("Apps & access", () => {
 		expect(view.queryAllByRole("button")).toHaveLength(0);
 	});
 });
+
+describe("the Who card's Apps row", () => {
+	it("names the apps the login opens, and not the login itself", async () => {
+		const { AppNames } = await import("@/features/employees/AppAccess");
+		let view;
+		await act(async () => { view = render(<Provider store={store}><AppNames emp="HR-EMP-1" /></Provider>); });
+		expect(view.container.textContent).toContain("Apps");
+		expect(view.container.textContent).toContain("ERPNext desk · CMMS");
+		expect(view.container.textContent).not.toContain("Login");
+	});
+
+	it("draws nothing when the site will not say", async () => {
+		answer = () => Promise.reject(new Error("Not permitted"));
+		const { AppNames } = await import("@/features/employees/AppAccess");
+		let view;
+		await act(async () => { view = render(<Provider store={store}><AppNames emp="HR-EMP-1" /></Provider>); });
+		expect(view.container.textContent).toBe("");
+	});
+});

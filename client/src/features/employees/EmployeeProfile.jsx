@@ -23,7 +23,7 @@ import { LocCell } from "@/components/PunchMap";
 import { DATE_FIELD } from "@/data/employees";
 import { accessFor } from "@/lib/fieldaccess";
 import { employeesLocked } from "@/data/menus";
-import AppAccess from "@/features/employees/AppAccess";
+import AppAccess, { AppNames } from "@/features/employees/AppAccess";
 import { fieldLabel, PROFILE_CHECKS, PROFILE_CHIPS, PROFILE_FIRST_CHILD, PROFILE_HEAD, PROFILE_LONG, PROFILE_MAPPED, PROFILE_PANES, PROFILE_PLUMBING, PROFILE_TABS } from "@/data/profile";
 
 /* Factor HR's **Employee Profile** — the record page, screenshotted 29 Aug 2026.
@@ -1455,6 +1455,9 @@ export default function EmployeeProfile() {
 								{g[1].filter(shownRow).map((row) => (
 									<Field doc={doc} row={row} nulls={nulls} edit={edit} key={row[0]} />
 								))}
+								{tab === "about" && g === pane.groups[0] && !editing && s.accessAdmin === true && (
+									<AppNames emp={picked} />
+								)}
 							</div>
 							{tab === "attendance" && g === pane.groups[0] && (
 								<TodayPunches s={s} emp={picked} />
