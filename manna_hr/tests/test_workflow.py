@@ -166,3 +166,22 @@ def test_nobody_may_edit_a_decided_correction_except_hr():
 	for state, _style, allow_edit in STATES:
 		if state in (STATUS_APPROVED, STATUS_REJECTED, STATUS_COMPLETED):
 			assert allow_edit == "HR Manager", f"{state} editable by {allow_edit!r}"
+
+
+def test_a_new_request_reaches_pending_through_submit_alone():
+	from manna_hr.workflow import STATUS_PENDING, path_from_draft
+	assert path_from_draft(STATUS_PENDING) == [STATUS_PENDING]
+
+
+def test_hrs_saved_time_reaches_approved_through_pending_never_around_it():
+	# Frappe refuses a new document in any state but the first. HR's Save asks
+	# for Approved, and is walked there one judged transition at a time.
+	from manna_hr.workflow import STATUS_APPROVED, STATUS_PENDING, path_from_draft
+	assert path_from_draft(STATUS_APPROVED) == [STATUS_PENDING, STATUS_APPROVED]
+
+
+def test_a_draft_needs_no_walk_and_an_unknown_state_has_no_path():
+	from manna_hr.workflow import STATUS_DRAFT, path_from_draft
+	assert path_from_draft(STATUS_DRAFT) == []
+	assert path_from_draft("") == []
+	assert path_from_draft("Initiated") is None

@@ -143,6 +143,28 @@ TRANSITIONS = [
 #: workflow is written, because a Workflow Transition holds a Link to `Role`
 #: and a missing one fails at insert with a message about a link, not about a
 #: role nobody created.
+def path_from_draft(wanted):
+	"""The states a new correction passes through to reach `wanted`, after Draft.
+
+	Frappe refuses a new document in any state but the workflow's first, so a
+	correction asked for as Pending Approval — the phone app's request — or as
+	Approved — HR saving a time — is inserted as Draft and walked here one
+	transition at a time, each judged against the person's roles like any
+	other. `[]` for Draft itself; None when no transition leads there.
+	"""
+	if not wanted or wanted == STATUS_DRAFT:
+		return []
+	paths = {STATUS_DRAFT: []}
+	queue = [STATUS_DRAFT]
+	while queue:
+		state = queue.pop(0)
+		for frm, _action, nxt, _role, _cond, _self in TRANSITIONS:
+			if frm == state and nxt not in paths:
+				paths[nxt] = paths[state] + [nxt]
+				queue.append(nxt)
+	return paths.get(wanted)
+
+
 def roles_used():
 	return sorted({role for _s, _a, _n, role, _c, _x in TRANSITIONS}
 		| {edit for _n, _s, edit in STATES if edit})

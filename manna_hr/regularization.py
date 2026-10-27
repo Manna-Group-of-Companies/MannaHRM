@@ -34,6 +34,10 @@ def on_update(doc, method=None):
 	"""Fire once, on the transition into Approved."""
 	if doc.status != STATUS_APPROVED:
 		return
+	if doc.flags.get("walked_on_insert"):
+		# A new correction walked to Approved in `after_insert`: the copy that
+		# made the step applied it. This is the inserting object, after the fact.
+		return
 
 	before = doc.get_doc_before_save()
 	if before and before.status == STATUS_APPROVED:
