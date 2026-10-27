@@ -45,6 +45,9 @@ doc_events = {
 	# two forms. See manna_hr/fieldaccess.py.
 	"Employee": {
 		"validate": "manna_hr.fieldaccess.validate_employee",
+		# Somebody new on a machine: their punches wait until HR makes them,
+		# and are theirs the moment the Employee is saved. See adms_site.py.
+		"on_update": "manna_hr.adms_site.on_employee_update",
 	},
 	"Employee Checkin": {
 		# `before_validate`, not `validate`: the server clock overwrites

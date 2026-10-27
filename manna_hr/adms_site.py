@@ -187,8 +187,7 @@ def record_users(serial, device, users):
 
 	**Nobody is made an Employee here.** A machine sends its whole user list on
 	first contact, and that list holds everybody who ever left without being
-	deleted from it; a placeholder per entry would be an Active payroll row
-	for each. An Employee is made when a pin *punches* — see `_deliver`.
+	deleted from it. HR hears about a pin when it *punches* — see `_ask_hr`.
 	"""
 	device_id = device.device_id if device else adms.unknown_device_id(serial)
 	for user in users:
@@ -299,24 +298,102 @@ def _employee_for(row):
 	employee, reason = adms.choose_employee(rows, device.company)
 	if employee or reason:
 		return employee, reason
-	return _placeholder(row, device), None
+	_ask_hr(row, device)
+	return None, adms.NEW_ON_MACHINE
 
 
-def _placeholder(row, device):
-	"""An Employee for a pin that punched and is on no record.
+#: Who is told that somebody new punched. Both may make an Employee.
+HR_ROLES = ("HR Manager", "HR User")
 
-	`Attendance Device.company` is required, so the company is never guessed.
+
+def _ask_hr(row, device):
+	"""Tell HR, once per pin per machine, that somebody new is punching.
+
+	The notification names the pin's `Attendance Device User`, so "once" is a
+	question the Notification Log already answers, and the dashboard opens
+	Onboarding from it. The punches wait; making the Employee delivers them.
 	"""
-	gender = adms.pick_gender(frappe.get_all("Gender", pluck="name"))
-	if not gender:
-		frappe.throw("the site has neither placeholder gender: {0}".format(
-			" / ".join(adms.PLACEHOLDER_GENDERS)))
-	name_on_device = frappe.db.get_value(
-		"Attendance Device User",
-		{"device_id": device.device_id, "device_user_id": row.device_user_id},
-		"name_on_device",
+	user_name = "{0}-{1}".format(device.device_id, row.device_user_id)
+	if not frappe.db.exists("Attendance Device User", user_name):
+		# A machine that has not sent its user list yet still gets its pin a
+		# record, so the notification has something to name.
+		frappe.get_doc({
+			"doctype": "Attendance Device User",
+			"device_id": device.device_id,
+			"attendance_device": device.name,
+			"device_user_id": row.device_user_id,
+			"first_seen": now_datetime(),
+			"on_device": 1,
+		}).insert(ignore_permissions=True)
+	if frappe.db.exists("Notification Log", {
+		"document_type": "Attendance Device User", "document_name": user_name,
+	}):
+		return
+
+	name = frappe.db.get_value("Attendance Device User", user_name, "name_on_device")
+	subject = "New on {0}: {1} (machine no. {2}) punched. Create the employee.".format(
+		frappe.db.get_value("Attendance Device", device.name, "device_name") or device.device_id,
+		name or "no name on the machine",
+		row.device_user_id,
 	)
-	doc = frappe.get_doc(adms.employee_doc(
-		row.device_user_id, name_on_device, device.company, row.punched_at, gender
-	)).insert(ignore_permissions=True)
-	return doc.name
+	users = frappe.get_all(
+		"Has Role", filters={"role": ["in", HR_ROLES], "parenttype": "User"}, pluck="parent"
+	)
+	for user in sorted(set(users) - {"Administrator", "Guest"}):
+		frappe.get_doc({
+			"doctype": "Notification Log",
+			"for_user": user,
+			"type": "Alert",
+			"subject": subject,
+			"document_type": "Attendance Device User",
+			"document_name": user_name,
+		}).insert(ignore_permissions=True)
+
+
+def on_employee_update(doc, method=None):
+	"""`Employee.on_update`: an Employee carrying a pin takes its waiting punches.
+
+	So Create Employee is the whole of HR's job — the person's punches are
+	theirs by the time the form says Created, not at the next hourly retry.
+	"""
+	pin = (doc.get("attendance_device_id") or "").strip()
+	if not pin or doc.get("status") != "Active":
+		return
+	for name in frappe.get_all(
+		"Attendance Device Punch",
+		filters={"state": "Waiting", "device_user_id": pin},
+		order_by="punched_at asc",
+		pluck="name",
+	):
+		_deliver(frappe.get_doc("Attendance Device Punch", name))
+
+
+@frappe.whitelist()
+def new_on_machine():
+	"""Everybody punching on a machine whom no Employee carries yet.
+
+	One row per machine and pin, for Onboarding's "New on the machine" list and
+	the Create Employee it opens.
+	"""
+	frappe.only_for(HR_ROLES + ("System Manager",))
+	punches = frappe.get_all(
+		"Attendance Device Punch",
+		filters={"state": "Waiting", "reason": adms.NEW_ON_MACHINE},
+		fields=["attendance_device", "device_user_id", "punched_at"],
+		limit_page_length=0,
+	)
+	rows = adms.new_people(punches)
+	for r in rows:
+		device = frappe.db.get_value(
+			"Attendance Device", r["attendance_device"],
+			["device_id", "device_name", "company"], as_dict=True,
+		) or {}
+		r["device_name"] = device.get("device_name") or device.get("device_id") or r["attendance_device"]
+		r["company"] = device.get("company")
+		r["name_on_device"] = frappe.db.get_value(
+			"Attendance Device User",
+			{"device_id": device.get("device_id"), "device_user_id": r["pin"]},
+			"name_on_device",
+		) or ""
+		r["first_name"], r["last_name"] = adms.split_name(r["name_on_device"])
+	return rows

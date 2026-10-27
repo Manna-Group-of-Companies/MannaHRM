@@ -52,6 +52,12 @@ const ago = (iso) => {
 	return dmy(String(iso).slice(0, 10));
 };
 const openDoc = (s, n) => {
+	/* Somebody new punched on a machine: HR makes them from Onboarding, which
+	   lists them with a Create Employee button — not the record on the desk. */
+	if (n.document_type === "Attendance Device User") {
+		navigate("onboard", "overview");
+		return;
+	}
 	if (n.document_type && n.document_name && s.site) {
 		window.open(`${s.site}/app/${n.document_type.toLowerCase().replace(/ /g, "-")}/${encodeURIComponent(n.document_name)}`, "_blank", "noreferrer");
 	}

@@ -59,21 +59,29 @@ def test_a_bodys_bad_bytes_do_not_lose_the_punches_around_them():
 	assert adms.parse_attlog(adms.decode(raw))[0]["device_user"] == "104"
 
 
-def test_a_placeholder_employee_says_it_needs_details():
-	doc = adms.employee_doc("563", "RAHUL KUMAR", "Manna Rubber", "2026-10-19 09:30:00", "Other")
-	assert doc["custom_needs_details"] == 1
-	assert doc["date_of_birth"] == adms.PLACEHOLDER_BIRTH
-	assert doc["date_of_joining"] == "2026-10-19"
-	assert (doc["first_name"], doc["last_name"]) == ("RAHUL", "KUMAR")
-	assert doc["attendance_device_id"] == "563"
+def test_the_machines_name_box_splits_into_first_and_last():
+	assert adms.split_name("RAHUL  KUMAR NAIR") == ("RAHUL", "KUMAR NAIR")
 
 
-def test_a_pin_with_no_name_on_the_machine_is_still_named_by_its_number():
-	assert adms.split_name("", "563") == ("Device user", "563")
+def test_a_pin_with_no_name_on_the_machine_leaves_the_name_for_hr_to_type():
+	assert adms.split_name("") == ("", "")
 
 
-def test_nobody_carrying_the_pin_allows_a_placeholder():
+def test_nobody_carrying_the_pin_asks_hr_rather_than_making_anybody():
 	assert adms.choose_employee([], "Manna Rubber") == (None, None)
+
+
+def test_a_new_persons_punches_are_one_row_per_machine_and_pin_from_the_first():
+	punches = [
+		{"attendance_device": "GATE1", "device_user_id": "245", "punched_at": "2026-10-27 18:01:00"},
+		{"attendance_device": "GATE1", "device_user_id": "245", "punched_at": "2026-10-27 08:58:00"},
+		{"attendance_device": "GATE2", "device_user_id": "245", "punched_at": "2026-10-27 09:30:00"},
+	]
+	rows = adms.new_people(punches)
+	assert [(r["attendance_device"], r["punches"], r["first"]) for r in rows] == [
+		("GATE1", 2, "2026-10-27 08:58:00"),
+		("GATE2", 1, "2026-10-27 09:30:00"),
+	]
 
 
 def test_the_one_active_holder_of_a_pin_is_paid():
@@ -92,6 +100,6 @@ def test_two_active_holders_that_cannot_be_told_apart_wait_rather_than_pay_eithe
 	assert employee is None and "HR-EMP-1" in reason
 
 
-def test_a_pin_held_only_by_somebody_who_left_waits_and_makes_no_placeholder():
+def test_a_pin_held_only_by_somebody_who_left_waits_and_asks_nobody_to_make_them():
 	employee, reason = adms.choose_employee([{"name": "HR-EMP-9", "status": "Left", "company": "A"}], "A")
 	assert employee is None and "Left" in reason

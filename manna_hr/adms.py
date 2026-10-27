@@ -30,7 +30,7 @@ UNKNOWN_PREFIX = "SN:"
 
 #: A first push is everything the machine has ever held — years of it. Older
 #: than this is acknowledged and not stored: the machine keeps its own copy,
-#: and storing it would make a placeholder Employee for every pin that left
+#: and storing it would ask HR to make an Employee for every pin that left
 #: long ago. Forty days is a payroll month and the week it is argued over.
 STORE_DAYS = 40
 
@@ -198,54 +198,40 @@ def option_block(serial, stamp, delay=10, error_delay=30, timezone="5.5"):
 	return "\n".join(lines) + "\n"
 
 
-# ------------------------------------------------------- placeholder people ---
+# ------------------------------------------------------------ new on machine ---
 
-#: Never a real birth date, and what the dashboard looks for to say "needs
-#: details" if the flag is lost. Same values as the bridge's `autoenrol.py`.
-PLACEHOLDER_BIRTH = "2000-01-01"
-PLACEHOLDER_GENDERS = ("Prefer not to say", "Other")
-NO_NAME = "Device user"
+#: Why a punch waits when no Employee carries its pin. Nobody is made an
+#: Employee from a machine any more (HR, 27 October 2026): HR is told once per
+#: pin per machine, and makes the person from Onboarding. The dashboard finds
+#: these punches by this text, so it is a constant and not a sentence to reword.
+NEW_ON_MACHINE = "New on the machine: no Employee has this Attendance Device ID"
 
 
-def split_name(name_on_device, device_user):
-	"""`(first_name, last_name)` from the machine's one name box."""
+def split_name(name_on_device):
+	"""`(first_name, last_name)` from the machine's one name box, blank if it is."""
 	words = str(name_on_device or "").split()
 	if not words:
-		return NO_NAME, str(device_user)
+		return "", ""
 	return words[0], " ".join(words[1:])
 
 
-def pick_gender(available):
-	have = set(available or ())
-	for g in PLACEHOLDER_GENDERS:
-		if g in have:
-			return g
-	return None
+def new_people(punches):
+	"""One row per machine and pin, from the punches waiting on NEW_ON_MACHINE.
 
-
-def employee_doc(device_user, name_on_device, company, first_punch, gender):
-	"""The Employee for a pin that punches and is on no record.
-
-	Joined on the day of the punch — the earliest date anybody can say they
-	were at work — and Active, because hrms refuses a checkin for anybody who
-	is not. The gender and birth date are placeholders and say so through
-	`custom_needs_details`.
+	`punches` are `{"attendance_device", "device_user_id", "punched_at"}`. The
+	first punch is the earliest date anybody can say the person was at work,
+	which is why Create Employee is offered it as the date of joining.
 	"""
-	first, last = split_name(name_on_device, device_user)
-	doc = {
-		"doctype": "Employee",
-		"first_name": first,
-		"gender": gender,
-		"date_of_birth": PLACEHOLDER_BIRTH,
-		"date_of_joining": str(first_punch)[:10],
-		"company": company,
-		"status": "Active",
-		"attendance_device_id": str(device_user),
-		"custom_needs_details": 1,
-	}
-	if last:
-		doc["last_name"] = last
-	return doc
+	rows = {}
+	for p in punches:
+		key = (p["attendance_device"], str(p["device_user_id"]))
+		at = str(p["punched_at"])[:19]
+		row = rows.setdefault(key, {"attendance_device": key[0], "pin": key[1],
+		                            "punches": 0, "first": at, "last": at})
+		row["punches"] += 1
+		row["first"] = min(row["first"], at)
+		row["last"] = max(row["last"], at)
+	return sorted(rows.values(), key=lambda r: r["first"])
 
 
 def choose_employee(rows, company):
@@ -253,7 +239,7 @@ def choose_employee(rows, company):
 
 	`rows` are `{"name", "status", "company"}`. Exactly one of the pair is set:
 	an employee to deliver to, or why the punch waits. An empty list is
-	`(None, None)` — nobody carries the pin, and a placeholder may be made.
+	`(None, None)` — nobody carries the pin, and HR is asked to make the person.
 
 	The same pin on two companies' machines is two people, so an Active match
 	at the machine's own company wins. Two Active matches that still cannot be

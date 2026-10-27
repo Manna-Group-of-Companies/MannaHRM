@@ -154,3 +154,27 @@ describe("Create Employee from a candidate", () => {
 		expect(view.container.querySelector('button[aria-label="Create Employee from msmsms"]')).toBeNull();
 	});
 });
+
+describe("New on the machine", () => {
+	const RAHUL = { attendance_device: "GATE1", pin: "245", punches: 2, first: "2026-10-27 08:58:00",
+		last: "2026-10-27 18:01:00", device_name: "MRP Gate 1", company: "Manna Rubber",
+		name_on_device: "RAHUL KUMAR", first_name: "RAHUL", last_name: "KUMAR" };
+
+	it("lists somebody punching whom no Employee carries, and Create Employee carries the machine number", async () => {
+		method = (m) => m === "manna_hr.adms_site.new_on_machine" ? Promise.resolve([RAHUL]) : Promise.reject(new Error(NOT_INSTALLED));
+		const view = await draw();
+		expect(view.container.textContent).toContain("New on the machine");
+		expect(view.container.textContent).toContain("RAHUL KUMAR");
+		await act(async () => { view.getByRole("button", { name: /machine no\. 245/i }).click(); });
+		const s = store.getState().app;
+		expect(s.newemp.f).toMatchObject({ attendance_device_id: "245", company: "Manna Rubber",
+			custom_punch_method: "Fingerprint Machine", first_name: "RAHUL", last_name: "KUMAR", date_of_joining: "2026-10-27" });
+		expect([s.section, s.subtab]).toEqual(["employees", "new"]);
+	});
+
+	it("draws nothing when nobody is waiting", async () => {
+		method = (m) => m === "manna_hr.adms_site.new_on_machine" ? Promise.resolve([]) : Promise.reject(new Error(NOT_INSTALLED));
+		const view = await draw();
+		expect(view.container.textContent).not.toContain("New on the machine");
+	});
+});

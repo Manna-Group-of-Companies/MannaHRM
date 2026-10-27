@@ -11,6 +11,7 @@ import { EXTRA_FIELDS, dateOrder, mapRow, missingQuestions, planImport, readResp
 import { DEFAULT_SHEET, GOOGLE_CLIENT_ID, loadGoogle, readGoogleSheet, sheetRef } from "@/lib/googlesheet";
 import { dmy, dmyTime, initials } from "@/lib/format";
 import { Empty } from "@/components/ui";
+import NewOnMachine from "./NewOnMachine";
 
 /* ---------------------------------------------------------------------------
    Onboarding — an employee's own entry point, a Google Form instead of the
@@ -381,6 +382,8 @@ export default function Onboarding() {
 					Some rows in the sheet could not be brought in: {sync.err}
 				</div>
 			) : null}
+
+			<NewOnMachine />
 
 			{s.candState === "loading" ? (
 				<Empty title="Reading the onboarding queue…" />
