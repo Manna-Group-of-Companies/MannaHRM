@@ -98,7 +98,7 @@ def test_nobody_is_a_condition_that_matches_nothing_not_an_empty_string():
 
 def test_a_list_becomes_an_in_clause_on_the_employee_column():
 	assert sql_condition((CLERK, FITTER)) == (
-		"`tabAttendance Regularization`.`employee` in "
+		"`tabEmployee Attendance Regularization`.`employee` in "
 		f"('{CLERK}', '{FITTER}')"
 	)
 
@@ -107,20 +107,14 @@ def test_an_apostrophe_in_a_name_cannot_end_the_clause():
 	# `reports_to` is a field somebody can edit, so these names are not beyond
 	# reach. An unescaped apostrophe here changes what a permission means.
 	assert sql_condition(("O'Brien",)) == (
-		"`tabAttendance Regularization`.`employee` in ('O''Brien')"
+		"`tabEmployee Attendance Regularization`.`employee` in ('O''Brien')"
 	)
 
 
 def test_a_backslash_in_a_name_cannot_escape_the_quoting():
 	assert sql_condition(("back\\slash",)) == (
-		"`tabAttendance Regularization`.`employee` in ('back\\\\slash')"
+		"`tabEmployee Attendance Regularization`.`employee` in ('back\\\\slash')"
 	)
-
-
-def test_the_table_the_clause_names_is_the_one_the_query_is_against():
-	# A condition naming the wrong table is a SQL error at read time, on every
-	# list, for everybody — which is at least loud.
-	assert sql_condition((CLERK,)).startswith("`tabAttendance Regularization`.")
 
 
 # ------------------------------------------------------------------ letters ---
@@ -185,3 +179,11 @@ def test_the_document_condition_names_the_document_table():
 	condition = sql_condition({BOSS}, table="`tabEmployee Document`")
 	assert "`tabEmployee Document`.`employee`" in condition
 	assert BOSS in condition
+
+
+def test_the_corrections_condition_names_our_table_and_never_the_sales_one():
+	# `Attendance Regularization` is the sales system's (CLAUDE.md §5). A
+	# condition naming it is an SQL error on every list of ours, and the phone
+	# app says "the site would not answer for corrections".
+	condition = sql_condition((CLERK,))
+	assert condition.startswith("`tabEmployee Attendance Regularization`.")

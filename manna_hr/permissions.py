@@ -99,7 +99,7 @@ def visible_employees(roles, employee, reports):
 	return tuple(sorted(allowed))
 
 
-def sql_condition(visible, table="`tabAttendance Regularization`"):
+def sql_condition(visible, table="`tabEmployee Attendance Regularization`"):
 	"""`visible_employees`' answer as an SQL fragment for Frappe to AND in.
 
 	Pure, and separate from the rule above so the rule can be read without SQL
