@@ -6,3 +6,4 @@ manna_hr.patches.install_statutory_fields
 manna_hr.patches.install_punch_photo
 manna_hr.patches.install_punch_info
 manna_hr.patches.install_needs_details
+manna_hr.patches.install_regularization_workflow #2026-10-27 the DocType was deleted by migrate as an orphan; put it and its workflow back

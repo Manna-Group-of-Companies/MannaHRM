@@ -7,7 +7,7 @@ from manna_hr.regularization import approver_type_for
 from manna_hr.workflow import STATUS_DRAFT, STATUS_PENDING
 
 
-class AttendanceRegularization(Document):
+class EmployeeAttendanceRegularization(Document):
 	def validate(self):
 		if not self.requested_in and not self.requested_out:
 			frappe.throw(_("Give at least one time to correct."))

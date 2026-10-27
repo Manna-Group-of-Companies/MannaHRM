@@ -16,7 +16,7 @@ from manna_hr.workflow import STATUS_DRAFT, STATUS_PENDING, ensure_workflow
 
 
 def execute():
-	frappe.reload_doc("manna_hr", "doctype", "attendance_regularization")
+	frappe.reload_doc("manna_hr", "doctype", "employee_attendance_regularization")
 	ensure_workflow()
 	ensure_notifications()
 	_settle_existing()

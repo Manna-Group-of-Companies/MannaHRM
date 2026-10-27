@@ -11,6 +11,7 @@ search, and saves a value the site cannot resolve — and nothing anywhere says 
 """
 
 import json
+import re
 import pathlib
 
 import pytest
@@ -72,6 +73,19 @@ def test_the_folder_and_the_name_agree(spec):
 	the doctype is a doctype whose `validate` never runs, and nothing says so."""
 	folder = next(p.parent.name for p, s in SPECS.items() if s is spec)
 	assert folder == spec["name"].lower().replace(" ", "_").replace("-", "_")
+
+
+@pytest.mark.parametrize("spec", CASES)
+def test_the_controller_class_is_the_doctype_name_without_spaces(spec):
+	"""Frappe loads `EmployeeAttendanceRegularization` from the controller, and
+	a module without that class is an orphan to `bench migrate`, which deletes
+	the DocType. That happened on the live site on 27 October 2026: the class was
+	still `AttendanceRegularization` from before the rename, and corrections
+	stopped answering for everybody."""
+	folder = next(p.parent for p, s in SPECS.items() if s is spec)
+	source = (folder / (folder.name + ".py")).read_text(encoding="utf-8")
+	cls = spec["name"].replace(" ", "").replace("-", "")
+	assert re.search(rf"^class {cls}\(", source, re.M), f"no class {cls} in {folder.name}.py"
 
 
 @pytest.mark.parametrize("spec", CASES)
