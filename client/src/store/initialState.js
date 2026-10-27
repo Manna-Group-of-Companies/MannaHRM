@@ -131,6 +131,10 @@ const initial = {
 	chkTpl: null,
 	/** Notifications: the site's Notification Log for this login. */
 	notes: { state: "", rows: [] },
+	/** A record a notification asked to open, `{doctype, name}`: the records
+	    page for that doctype opens its form once its rows are read, then
+	    clears this. */
+	openRecord: null,
 	/** Settings → Security's rules as the site holds them — the same object
 	    data/sections.js is obeying, here so a menu redraws when they change.
 	    See api/pagerules.js. The state is "" before a sign-in, then "loading",

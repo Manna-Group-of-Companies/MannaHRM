@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { listAll } from "@/api/client";
+import { set, useApp } from "@/store";
 import { read, remove } from "@/api/crud";
 import { download, toCsv } from "@/lib/csv";
 import { todayIso } from "@/lib/format";
@@ -71,6 +72,15 @@ export default function RecordList({ doctype, title, stack = false }) {
 	}
 
 	useEffect(() => { load(); /* eslint-disable-next-line */ }, [doctype]);
+
+	/* Opened from a notification: that record's form, as Edit opens it. */
+	const want = useApp().openRecord;
+	useEffect(() => {
+		if (!want || want.doctype !== doctype) return;
+		set({ openRecord: null });
+		void edit(want.name);
+		/* eslint-disable-next-line */
+	}, [want, doctype]);
 
 	if (!spec) return <Gap>This app does not install a doctype called <b>{doctype}</b>.</Gap>;
 

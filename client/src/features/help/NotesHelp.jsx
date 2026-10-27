@@ -10,6 +10,8 @@
 import { useEffect, useRef, useState } from "react";
 import { getState, set, useApp } from "@/store";
 import { navigate } from "@/routes/router";
+import { MANAGED } from "@/data/manage";
+import { isHidden } from "@/data/sections";
 import { apiCall, apiWrite, listAll } from "@/api/client";
 import { dmy } from "@/lib/format";
 import KitIcon from "@/components/kit/KitIcon";
@@ -51,17 +53,35 @@ const ago = (iso) => {
 	if (m < 1440) return `${Math.round(m / 60)} h ago`;
 	return dmy(String(iso).slice(0, 10));
 };
-const openDoc = (s, n) => {
+/** Where a notification's document is worked on in this app, by doctype.
+    A queue HR decides from opens on its Approvals tab; anything else with a
+    page of its own opens there with the record's form up (RecordList reads
+    `openRecord`). Only a doctype with no page here goes to the desk. */
+const QUEUES = { "Employee Attendance Regularization": "attendance", "Leave Application": "leave" };
+
+export function openDoc(s, n) {
 	/* Somebody new punched on a machine: HR makes them from Onboarding, which
 	   lists them with a Create Employee button — not the record on the desk. */
 	if (n.document_type === "Attendance Device User") {
 		navigate("onboard", "overview");
 		return;
 	}
+	const queue = QUEUES[n.document_type];
+	if (queue) {
+		set({ apptab: queue, appsel: new Set(), appmsg: "", appq: "" });
+		navigate("dashboard", "approvals");
+		return;
+	}
+	const page = MANAGED.find((m) => m[3] === n.document_type && !isHidden(m[0], m[1]));
+	if (page && n.document_name) {
+		set({ openRecord: { doctype: n.document_type, name: n.document_name } });
+		navigate(page[0], page[1]);
+		return;
+	}
 	if (n.document_type && n.document_name && s.site) {
 		window.open(`${s.site}/app/${n.document_type.toLowerCase().replace(/ /g, "-")}/${encodeURIComponent(n.document_name)}`, "_blank", "noreferrer");
 	}
-};
+}
 
 /* ---------------------------------------------------- the top bar's bell --- */
 
