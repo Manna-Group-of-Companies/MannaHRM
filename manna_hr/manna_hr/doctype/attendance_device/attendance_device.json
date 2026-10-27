@@ -16,6 +16,7 @@
   "port",
   "serial_number",
   "model",
+  "report_direction",
   "section_break_health",
   "last_seen",
   "last_punch_at",
@@ -95,6 +96,13 @@
    "default": "Identix K90+ID"
   },
   {
+   "default": "0",
+   "description": "Tick only once somebody has stood at this machine and seen its IN and OUT keys work. A machine never set up for them sends IN on every punch, which reads as a day nobody left.",
+   "fieldname": "report_direction",
+   "fieldtype": "Check",
+   "label": "Report Direction"
+  },
+  {
    "fieldname": "section_break_health",
    "fieldtype": "Section Break",
    "label": "Health"
@@ -139,7 +147,7 @@
    "link_fieldname": "attendance_device"
   }
  ],
- "modified": "2026-09-08 00:00:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Manna HR",
  "name": "Attendance Device",

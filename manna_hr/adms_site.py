@@ -30,7 +30,7 @@ import frappe
 from frappe.utils import add_to_date, get_datetime, now_datetime
 from werkzeug.wrappers import Response
 
-from manna_hr import adms
+from manna_hr import adms, rota, rota_site
 
 ROOT = "iclock"
 
@@ -128,7 +128,7 @@ def _device(serial):
 	return frappe.db.get_value(
 		"Attendance Device",
 		{"serial_number": serial, "is_active": 1},
-		["name", "device_id", "company", "last_seen"],
+		["name", "device_id", "company", "last_seen", "report_direction"],
 		as_dict=True,
 	)
 
@@ -253,15 +253,21 @@ def _deliver(row):
 			"Employee Checkin", {"employee": employee, "time": row.punched_at}, "name"
 		)
 		if not checkin:
+			# A direction only from a machine somebody has checked reports one
+			# (Attendance Device.report_direction). Otherwise none: the shift's
+			# pairing alternates IN/OUT from nothing and cannot recover from a
+			# confident wrong one (CLAUDE.md §5).
+			report = frappe.db.get_value("Attendance Device", {"serial_number": row.serial_number}, "report_direction")
+			log_type = rota.log_type_for(row.status_code, report)
+			if log_type:
+				_day_or_night(employee, row.punched_at, log_type)
 			doc = frappe.get_doc(
 				{
 					"doctype": "Employee Checkin",
 					"employee": employee,
 					"time": row.punched_at,
 					"device_id": row.device_id,
-					# No direction: see adms.py. The shift's pairing mode
-					# alternates IN/OUT from nothing and cannot recover from a
-					# confident wrong one.
+					**({"log_type": log_type} if log_type else {}),
 				}
 			).insert(ignore_permissions=True)
 			checkin = doc.name
@@ -273,6 +279,20 @@ def _deliver(row):
 		frappe.db.rollback(save_point="adms_deliver")
 		# Stored either way: the punch waits with what went wrong on it.
 		_wait(row, "Not delivered: {0}".format(exc)[:500])
+
+
+def _day_or_night(employee, punched_at, log_type):
+	"""The shift this punch starts, given before the checkin is inserted.
+
+	**Never holds up the punch.** The punch is the pay; its shift can be put
+	right after. A failure is rolled back on its own and logged.
+	"""
+	frappe.db.savepoint("adms_rota")
+	try:
+		rota_site.before_deliver(employee, punched_at, log_type)
+	except Exception:
+		frappe.db.rollback(save_point="adms_rota")
+		frappe.log_error(title="ADMS: day or night not decided for {0} at {1}".format(employee, punched_at))
 
 
 def _wait(row, reason):

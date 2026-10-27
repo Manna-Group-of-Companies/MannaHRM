@@ -246,6 +246,13 @@ export const SCHEMA = {
 				def: "Identix K90+ID"
 			},
 			{
+				name: "report_direction",
+				label: "Report Direction",
+				kind: "check",
+				def: "0",
+				hint: "Tick only once somebody has stood at this machine and seen its IN and OUT keys work. A machine never set up for them sends IN on every punch, which reads as a day nobody left."
+			},
+			{
 				name: "last_seen",
 				label: "Last Seen",
 				kind: "readonly",
