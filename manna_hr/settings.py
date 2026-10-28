@@ -37,8 +37,12 @@ def hr_settings():
 	Cached per request. Attendance validation reads this on every punch, and a
 	shift job importing a day of machine punches would otherwise fetch the same
 	Single a few thousand times.
+
+	`frappe.flags`, not `frappe.local.__dict__`: on Frappe 16 reading `__dict__`
+	off the local proxy raises, and it raised inside every Employee Checkin's
+	validate — every punch in the group refused from 26 October 2026.
 	"""
-	cached = frappe.local.__dict__.setdefault("_manna_hr_settings", None)
+	cached = frappe.flags.get("manna_hr_settings")
 	if cached is not None:
 		return cached
 
@@ -47,5 +51,5 @@ def hr_settings():
 		if doc.get(field) in (None, ""):
 			doc.set(field, fallback)
 
-	frappe.local._manna_hr_settings = doc
+	frappe.flags.manna_hr_settings = doc
 	return doc
