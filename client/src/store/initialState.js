@@ -257,8 +257,10 @@ const initial = {
 	calimp: false,
 
 	/* Factor HR's regularization screen is one person at a time, so who is
-	   picked is state rather than a scroll position. */
-	reg: { cycle: "", emp: "", q: "", cat: "", status: "", menu: false },
+	   picked is state rather than a scroll position. Opens on Active people
+	   (asked for 28 October 2026): somebody who left is a row of A nobody
+	   needs; the status dot still offers InActive and All. */
+	reg: { cycle: "", emp: "", q: "", cat: "", status: "Active", menu: false },
 
 	/** One person's month, behind Attendance Regularization — the punches, the
 	    leave and the corrections for whoever is picked, in whichever cycle.

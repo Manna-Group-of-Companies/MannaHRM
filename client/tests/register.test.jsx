@@ -105,10 +105,10 @@ describe("the page with nobody picked", () => {
 		expect(view.container.textContent).not.toContain("No Employee Selected");
 	});
 
-	it("has one row per employee in scope", () => {
+	it("opens on one row per active employee, leaving out anybody who has left", () => {
 		const view = draw();
 		const rows = view.container.querySelectorAll("table.rgrid tbody tr");
-		expect(rows.length).toBe(getState().employees.length);
+		expect(rows.length).toBe(getState().employees.filter((e) => e.status === "Active").length);
 	});
 
 	it("opens a person's month when their name is clicked", async () => {
