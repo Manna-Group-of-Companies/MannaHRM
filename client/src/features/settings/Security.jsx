@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useApp } from "@/store";
 import { MODULES } from "@/routes/registry";
 import { SECTIONS, canHide, hiddenByDefault, hiddenUnder } from "@/data/sections";
-import { PAGE_ADMINS, pageAllowed } from "@/data/menus";
+import { PAGE_ADMINS, SALARY_VIEW_ONLY, pageAllowed } from "@/data/menus";
 import { NO_FIELD, savePageRules } from "@/api/pagerules";
 import { Empty, Scroll } from "@/components/ui";
 import FieldAccess from "@/features/settings/FieldAccess";
 
-/* Settings → Security: which modules and pages every login is shown, set by
-   the one login allowed to (data/menus.js PAGE_ADMINS).
+/* Settings → Security: which modules and pages the four company logins are
+   shown (data/menus.js SALARY_VIEW_ONLY), set by the one login allowed to
+   (PAGE_ADMINS). Every other login keeps this build's defaults.
 
    **A menu, not a permission, and the page says so.** A hidden page is off the
    rail and the strip and its address lands elsewhere; the doctype behind it is
@@ -94,7 +95,7 @@ function Pages() {
 		const r = await savePageRules(draft);
 		setTouched(false);
 		setSave(r.ok
-			? { busy: false, msg: "Saved. Every login is shown these pages from their next page load.", err: "" }
+			? { busy: false, msg: "Saved. The company logins are shown these pages from their next page load.", err: "" }
 			: { busy: false, msg: "", err: r.error });
 	}
 
@@ -107,7 +108,7 @@ function Pages() {
 		<>
 			<div className="legend">
 				<b className="font-display">Page visibility</b>
-				<span>{hiddenCount} hidden · applies to every login</span>
+				<span>{hiddenCount} hidden · applies to {SALARY_VIEW_ONLY.join(", ")}</span>
 				<span className="right">
 					<button type="button" className="embtn" disabled={!dirty || save.busy}
 						onClick={() => { setTouched(false); setDraft(s.pageRules); }}>

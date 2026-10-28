@@ -71,11 +71,22 @@ describe("the rules", () => {
 		expect(parsePageRules('["leave"]')).toEqual({});
 	});
 
-	it("puts the site's rules in force for the menus and the router", async () => {
+	it("puts the site's rules in force for a company login's menus and router", async () => {
 		doc = { ...doc, page_visibility: '{"leave/balances": "hide"}' };
+		act(() => set({ user: "MannaTreads@gmail.com" }));
 		await act(async () => { await loadPageRules(); });
 		expect(isHidden("leave", "balances")).toBe(true);
 		expect(store.getState().app.pageRulesState).toBe("ok");
+	});
+
+	it("leaves every other login on this build's defaults, the page admin included", async () => {
+		doc = { ...doc, page_visibility: '{"leave/balances": "hide"}' };
+		for (const user of [ADMIN, "someone@mannarubber.com"]) {
+			act(() => set({ user }));
+			await act(async () => { await loadPageRules(); });
+			expect(isHidden("leave", "balances")).toBe(false);
+			expect(store.getState().app.pageRules).toEqual({ "leave/balances": "hide" });
+		}
 	});
 
 	it("reads a Single with the rules left out as no rules saved yet, because Frappe 16 omits an empty field", async () => {
@@ -125,7 +136,7 @@ describe("the Security page", () => {
 		await act(async () => { button(view, "Save").click(); });
 		expect(writes).toEqual([{ page_visibility: '{"leave/balances":"hide"}' }]);
 		expect(view.container.textContent).toContain("Saved.");
-		expect(isHidden("leave", "balances")).toBe(true);
+		expect(store.getState().app.pageRules).toEqual({ "leave/balances": "hide" });
 	});
 
 	it("stores nothing for a page switched back to what the code already does", async () => {

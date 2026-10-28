@@ -10,7 +10,8 @@
 import { apiWrite, getDoc } from "@/api/client";
 import { parsePageRules, setPageRules } from "@/data/sections";
 import { parseFieldAccess } from "@/lib/fieldaccess";
-import { set } from "@/store";
+import { getState, set } from "@/store";
+import { salaryLocked } from "@/data/menus";
 
 const DT = "Manna HR Settings";
 const FIELD = "page_visibility";
@@ -25,8 +26,11 @@ const noField = (f) => `The site's Manna HR Settings has no ${f} field yet, so a
 export const NO_FIELD = noField(FIELD);
 export const NO_ACCESS_FIELD = noField(ACCESS);
 
+/* The rules are the four company logins' menu alone (asked for 28 October
+   2026): every other login is drawn what this build ships with. The store
+   still carries them for the Security page, which edits them. */
 function apply(rules, state) {
-	setPageRules(rules);
+	setPageRules(salaryLocked(getState().user) ? rules : {});
 	set({ pageRules: rules, pageRulesState: state });
 	return state;
 }
