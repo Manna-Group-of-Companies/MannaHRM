@@ -94,6 +94,23 @@ def apply(doc):
 
 
 def _write_checkin(doc, when, log_type, device):
+	# A punch already at that very second — the machine's own, or an earlier
+	# correction's — is the punch being asked for. hrms refuses a second log at
+	# the same timestamp, which used to refuse the whole correction; the
+	# existing one is kept, given the direction asked for, and the rebuilt day
+	# reads it.
+	existing = frappe.db.get_value(
+		"Employee Checkin",
+		{"employee": doc.employee, "time": get_datetime(when)},
+		["name", "log_type"],
+		as_dict=True,
+	)
+	if existing:
+		if existing.log_type != log_type:
+			frappe.db.set_value("Employee Checkin", existing.name, "log_type", log_type)
+		frappe.db.set_value("Employee Checkin", existing.name, "skip_auto_attendance", 0)
+		return existing.name
+
 	checkin = frappe.get_doc(
 		{
 			"doctype": "Employee Checkin",
