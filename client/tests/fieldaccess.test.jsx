@@ -18,6 +18,7 @@ import { loadedState } from "./fixture";
 let doc;
 const writes = [];
 const created = [];
+let drops = false;
 
 vi.mock("@/api/client", async (importOriginal) => {
 	const actual = await importOriginal();
@@ -26,7 +27,7 @@ vi.mock("@/api/client", async (importOriginal) => {
 		getDoc: () => Promise.resolve(doc),
 		apiWrite: (dt, name, patch) => {
 			writes.push([dt, patch]);
-			if (dt === "Manna HR Settings") doc = { ...doc, ...patch };
+			if (dt === "Manna HR Settings" && !drops) doc = { ...doc, ...patch };
 			return Promise.resolve({ ok: true });
 		},
 		apiCreate: (dt, body) => { created.push(body); return Promise.resolve({ name: "HR-EMP-9" }); },
@@ -41,6 +42,7 @@ const RULES = { new: { middle_name: "hidden", last_name: "read" }, edit: { cell_
 
 beforeEach(() => {
 	writes.length = 0;
+	drops = false;
 	created.length = 0;
 	resetStore();
 	act(() => set(loadedState()));
@@ -184,10 +186,13 @@ describe("the Employee fields editor", () => {
 		expect(view.container.querySelector('[aria-label="Emp Code — Editing"]')).toBeNull();
 	});
 
-	it("will not save while the site has no field to keep it in", async () => {
+	it("says the rules were dropped when the site answers a save and keeps nothing", async () => {
 		doc = { name: "Manna HR Settings", page_visibility: null };
+		drops = true;
 		const { view, btn } = await draw();
+		const sw = view.container.querySelector('[aria-label="Emp Code — Editing"]');
+		await act(async () => { [...sw.querySelectorAll("button")].find((b) => b.textContent === "Read").click(); });
+		await act(async () => { btn("Save").click(); });
 		expect(view.container.textContent).toContain("no employee_field_access field");
-		expect(btn("Save").disabled).toBe(true);
 	});
 });

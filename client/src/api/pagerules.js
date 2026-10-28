@@ -31,10 +31,10 @@ function apply(rules, state) {
 	return state;
 }
 
-/* A Single answers every field it has, set or not — so a missing key is a
-   field the site does not have, and the one case where Save must not be
-   offered as if it would work. */
-const stateOf = (doc, field) => (!doc ? "unread" : field in doc ? "ok" : "nofield");
+/* Frappe 16 leaves a Single's empty fields out of its answer, so a missing key
+   is a rule nobody has saved yet, not a missing field. Whether the field
+   exists is told by the write instead: see afterWrite. */
+const stateOf = (doc) => (doc ? "ok" : "unread");
 
 function applyAccess(rules, state) {
 	set({ fieldAccess: rules, fieldAccessState: state });
@@ -46,11 +46,10 @@ function applyAccess(rules, state) {
 export async function loadPageRules() {
 	set({ pageRulesState: "loading", fieldAccessState: "loading" });
 	const doc = await getDoc(DT, DT);
-	const pages = stateOf(doc, FIELD);
-	const fields = stateOf(doc, ACCESS);
-	apply(pages === "ok" ? parsePageRules(doc[FIELD]) : {}, pages);
-	applyAccess(fields === "ok" ? parseFieldAccess(doc[ACCESS]) : {}, fields);
-	return { pages, fields };
+	const state = stateOf(doc);
+	apply(state === "ok" ? parsePageRules(doc[FIELD]) : {}, state);
+	applyAccess(state === "ok" ? parseFieldAccess(doc[ACCESS]) : {}, state);
+	return { pages: state, fields: state, doc };
 }
 
 /** Forget them, for the sign-out: the next person is drawn the defaults until
@@ -62,21 +61,26 @@ export const clearPageRules = () => { apply({}, ""); applyAccess({}, ""); };
     @returns {Promise<{ok: boolean, error?: string}>} */
 export async function savePageRules(rules) {
 	const clean = parsePageRules(rules);
-	const r = await apiWrite(DT, DT, { [FIELD]: JSON.stringify(clean) });
-	return afterWrite(r, "pages", NO_FIELD);
+	const value = JSON.stringify(clean);
+	const r = await apiWrite(DT, DT, { [FIELD]: value });
+	return afterWrite(r, FIELD, value, NO_FIELD);
 }
 
 /** Save the Employee field rules, the same way. */
 export async function saveFieldAccess(rules) {
 	const clean = parseFieldAccess(rules);
-	const r = await apiWrite(DT, DT, { [ACCESS]: JSON.stringify(clean) });
-	return afterWrite(r, "fields", NO_ACCESS_FIELD);
+	const value = JSON.stringify(clean);
+	const r = await apiWrite(DT, DT, { [ACCESS]: value });
+	return afterWrite(r, ACCESS, value, NO_ACCESS_FIELD);
 }
 
-async function afterWrite(r, which, missing) {
+/* Frappe drops a field it does not have and still answers 200, so what was
+   kept is read back: a non-empty value that comes back absent was dropped. */
+async function afterWrite(r, field, value, missing) {
 	if (!r.ok) return { ok: false, error: r.error || "The site refused the change." };
-	const state = (await loadPageRules())[which];
-	if (state === "nofield") return { ok: false, error: missing };
-	if (state !== "ok") return { ok: false, error: "Saved, but the site would not let this login read it back." };
+	const { pages, doc } = await loadPageRules();
+	if (pages !== "ok") return { ok: false, error: "Saved, but the site would not let this login read it back." };
+	const kept = doc[field] ?? "";
+	if (kept !== value && !(kept === "" && /^(\{\}|\[\])$/.test(value))) return { ok: false, error: missing };
 	return { ok: true };
 }

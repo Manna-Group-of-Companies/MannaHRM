@@ -17,6 +17,8 @@ import { loadedState } from "./fixture";
 
 let doc;
 let writes;
+/* A site whose Settings lack the field: Frappe answers 200 and keeps nothing. */
+let drops = false;
 
 vi.mock("@/api/client", async (importOriginal) => {
 	const actual = await importOriginal();
@@ -25,7 +27,7 @@ vi.mock("@/api/client", async (importOriginal) => {
 		getDoc: () => Promise.resolve(doc),
 		apiWrite: (dt, name, patch) => {
 			writes.push(patch);
-			doc = { ...doc, ...patch };
+			if (!drops) doc = { ...doc, ...patch };
 			return Promise.resolve({ ok: true });
 		},
 	};
@@ -38,6 +40,7 @@ beforeEach(() => {
 	act(() => set(loadedState()));
 	doc = { name: "Manna HR Settings", page_visibility: null };
 	writes = [];
+	drops = false;
 });
 afterEach(() => setPageRules({}));
 
@@ -75,10 +78,11 @@ describe("the rules", () => {
 		expect(store.getState().app.pageRulesState).toBe("ok");
 	});
 
-	it("says so when the site has no field to keep the rules in, since a save would be dropped", async () => {
+	it("reads a Single with the rules left out as no rules saved yet, because Frappe 16 omits an empty field", async () => {
 		doc = { name: "Manna HR Settings" };
 		await act(async () => { await loadPageRules(); });
-		expect(store.getState().app.pageRulesState).toBe("nofield");
+		expect(store.getState().app.pageRulesState).toBe("ok");
+		expect(isHidden("leave", "balances")).toBe(false);
 	});
 });
 
@@ -137,13 +141,14 @@ describe("the Security page", () => {
 		expect(view.container.querySelector('[aria-label="Settings → Security"]')).toBeNull();
 	});
 
-	it("will not save while the site has no field to keep it in", async () => {
+	it("says the rules were dropped when the site answers a save and keeps nothing", async () => {
 		doc = { name: "Manna HR Settings" };
+		drops = true;
 		const view = await draw(ADMIN);
-		expect(view.container.textContent).toContain("no page_visibility field");
 		const sw = view.container.querySelector('[aria-label="Leave → Leave Balance Report"]');
 		await act(async () => { [...sw.querySelectorAll("button")].find((b) => b.textContent === "Hidden").click(); });
-		expect(button(view, "Save").disabled).toBe(true);
+		await act(async () => { button(view, "Save").click(); });
+		expect(view.container.textContent).toContain("no page_visibility field");
 	});
 
 	it("changes nothing for anybody but the page admin", async () => {
