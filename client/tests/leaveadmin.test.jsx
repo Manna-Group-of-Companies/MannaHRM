@@ -47,7 +47,7 @@ describe("the Approvals page", () => {
 	});
 
 	it("shows no Leave queue to anybody else, and moves a remembered Leave tab to the next queue", async () => {
-		const view = await draw("mannatreads@mannarubber.com", "leave");
+		const view = await draw("mannatreads@gmail.com", "leave");
 		expect(tabNames(view)).not.toContain("Leave");
 		expect(getState().apptab).toBe("attendance");
 	});
@@ -65,7 +65,7 @@ describe("the page load", () => {
 
 	it("does not even ask for open leave for any other login", async () => {
 		axios.get.mockClear();
-		act(() => set({ user: "hitechrubber@mannarubber.com" }));
+		act(() => set({ user: "hitechrubber@gmail.com" }));
 		await load();
 		expect(leaveReads()).toEqual([]);
 	});

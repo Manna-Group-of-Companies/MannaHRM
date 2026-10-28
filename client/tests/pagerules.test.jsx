@@ -89,7 +89,7 @@ describe("who is shown Security", () => {
 	});
 
 	it("is on nobody else's, admin or not, and their old link lands on Setup readiness", () => {
-		for (const [user, admin] of [["mannarubber.products@mannarubber.com", true], ["someone@x.com", null]]) {
+		for (const [user, admin] of [["mannarubber@gmail.com", true], ["someone@x.com", null]]) {
 			expect(tabsFor("settings", tabs, user, admin).map((t) => t[0])).not.toContain("security");
 			expect(landingFor("settings", "security", user, admin)).toBe("overview");
 		}
@@ -147,7 +147,7 @@ describe("the Security page", () => {
 	});
 
 	it("changes nothing for anybody but the page admin", async () => {
-		const view = await draw("mannarubber.products@mannarubber.com");
+		const view = await draw("mannarubber@gmail.com");
 		expect(view.container.textContent).toContain("Only the page administrator");
 		expect(button(view, "Save")).toBeUndefined();
 	});

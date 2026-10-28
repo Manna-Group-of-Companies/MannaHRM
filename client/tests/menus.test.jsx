@@ -11,7 +11,7 @@ import { loadedState } from "./fixture";
 import { OtReport, WeeklyReport, AbsentReport } from "@/features/attendance/RangeReports";
 import { reportsFor } from "@/features/attendance/DownloadReport";
 
-const MRP = "mannarubber.products@mannarubber.com";
+const MRP = "mannarubber@gmail.com";
 
 describe("the Manna Rubber Products login's Attendance menu", () => {
 	beforeEach(() => resetStore());
@@ -69,7 +69,7 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 	});
 });
 
-describe.each([MRP, "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com", "mannatyreretreads@mannarubber.com"])(
+describe.each([MRP, "hitechrubber@gmail.com", "mannatreads@gmail.com", "mannatyreretreads@gmail.com"])(
 	"the company login %s's Employees module", (login) => {
 	beforeEach(() => resetStore());
 
@@ -125,7 +125,7 @@ describe("Add New Employee", () => {
 		expect(landingFor("employees", "new", "it@mannarubber.com", true)).toBe("new");
 		/* The company logins read employees and change none (16 October 2026). */
 		expect(landingFor("employees", "new", MRP, true)).toBe("overview");
-		expect(landingFor("employees", "new", "hitechrubber@mannarubber.com", false)).toBe("overview");
+		expect(landingFor("employees", "new", "hitechrubber@gmail.com", false)).toBe("overview");
 	});
 
 	it("adds no tab to the strip", () => {
@@ -304,8 +304,8 @@ describe("who may edit the Calendar", () => {
 		expect(calEditor(" HR@MannaRubber.com ")).toBe(true);
 	});
 
-	it.each(["mannarubber.products@mannarubber.com", "hitechrubber@mannarubber.com", "mannatreads@mannarubber.com",
-		"mannatyreretreads@mannarubber.com", "it@mannarubber.com", "", null])("is not %s, even when the site would let it write", (u) => {
+	it.each(["mannarubber@gmail.com", "hitechrubber@gmail.com", "mannatreads@gmail.com",
+		"mannatyreretreads@gmail.com", "it@mannarubber.com", "", null])("is not %s, even when the site would let it write", (u) => {
 		expect(calEditor(u)).toBe(false);
 	});
 });

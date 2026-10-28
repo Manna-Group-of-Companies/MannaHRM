@@ -132,7 +132,7 @@ a week *for this location*; the questions below are now about the others.
 ### The company logins can still change pay on the site — 16 Oct 2026
 
 HR asked that `mannarubber.products@`, `hitechrubber@`, `mannatreads@` and
-`mannatyreretreads@mannarubber.com` never edit a salary — the administrator's
+`mannatyreretreads@gmail.com` never edit a salary — the administrator's
 alone — but run payroll, download it (the 5-tab Excel included), make slips,
 and give or upload the loans and advances people take. The dashboard now
 shows them nothing that changes a salary (`SALARY_VIEW_ONLY` in

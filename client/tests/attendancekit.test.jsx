@@ -66,8 +66,8 @@ describe("the eleven reports", () => {
 
 	it("offers HR every one, and a company login only the ones its menu had", () => {
 		expect(reportsFor("hr@mannarubber.com", true)).toHaveLength(11);
-		expect(reportsFor("hitechrubber@mannarubber.com", true)).toHaveLength(11);
-		expect(reportsFor("mannarubber.products@mannarubber.com", true).map((r) => r[0]).sort())
+		expect(reportsFor("hitechrubber@gmail.com", true)).toHaveLength(11);
+		expect(reportsFor("mannarubber@gmail.com", true).map((r) => r[0]).sort())
 			.toEqual(["absent", "daily", "inout", "ot", "weekly"]);
 		expect(reportsFor("someone@mannarubber.com", false)).toEqual([]);
 	});
@@ -159,7 +159,7 @@ describe("the pages", () => {
 	});
 
 	it("Settings → Location shows a login that only reads employees the names and nothing to change", async () => {
-		const view = await openLocation("hitechrubber@mannarubber.com");
+		const view = await openLocation("hitechrubber@gmail.com");
 		expect(view.container.textContent).toContain("Main Gate");
 		expect(view.queryByRole("button", { name: "Add location" })).toBeNull();
 		expect(view.queryByRole("button", { name: "Edit Main Gate" })).toBeNull();

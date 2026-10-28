@@ -179,7 +179,7 @@ describe("the reference's Employees controls", () => {
 	});
 
 	it("offers no ticking and no Deactivate to a login that only reads employees", async () => {
-		set({ ...loadedState(), user: "mannarubber.products@mannarubber.com" });
+		set({ ...loadedState(), user: "mannarubber@gmail.com" });
 		const r = await draw();
 		expect(r.container.querySelector('tbody input[type="checkbox"]')).toBeNull();
 		expect(r.container.textContent).not.toContain("Add new profile");

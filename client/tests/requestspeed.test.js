@@ -25,7 +25,7 @@ describe("Save", () => {
 	beforeEach(() => { calls.length = 0; resetStore(); });
 
 	it("returns once the day is written, without re-reading the dashboard, and leaves nothing in the approval queue", async () => {
-		set({ user: "hitechrubber@mannarubber.com", approvals: { ...getState().approvals,
+		set({ user: "hitechrubber@gmail.com", approvals: { ...getState().approvals,
 			attendance: [{ name: "HR-REG-OTHER", employee: "E2", status: "Pending Approval" }] } });
 		const emp = { name: "E1", employee_name: "Asha", company: "Hi-Tech Rubber Industries" };
 		const res = await saveDayEdit(emp, "2026-09-01", { in: "08:00", out: "", reason: "Machine missed" });

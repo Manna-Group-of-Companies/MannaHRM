@@ -46,10 +46,10 @@ SUFFIX = os.environ.get("COMPANY_USER_PASSWORD_SUFFIX", "@2026")
 #: 16 Sep 2026; the earlier hri.hr / mrppl.hr / mt.hr / mtr.hr and hitech.hr /
 #: treads.hr / retreads.hr logins are disabled with their locks removed.
 COMPANY_USERS = [
-	("Hi-Tech Rubber Industries", "hitechrubber@mannarubber.com", "Hi-Tech Rubber Industries", "Hitechrubber"),
-	("Manna Rubber Products Private Limited", "mannarubber.products@mannarubber.com", "Manna Rubber Products", "Mannarubberproducts"),
-	("Manna Treads", "mannatreads@mannarubber.com", "Manna Treads", "Mannatreads"),
-	("Manna Tyre Retreads", "mannatyreretreads@mannarubber.com", "Manna Tyre Retreads", "Mannatyreretreads"),
+	("Hi-Tech Rubber Industries", "hitechrubber@gmail.com", "Hi-Tech Rubber Industries", "Hitechrubber"),
+	("Manna Rubber Products Private Limited", "mannarubber@gmail.com", "Manna Rubber Products", "Mannarubberproducts"),
+	("Manna Treads", "mannatreads@gmail.com", "Manna Treads", "Mannatreads"),
+	("Manna Tyre Retreads", "mannatyreretreads@gmail.com", "Manna Tyre Retreads", "Mannatyreretreads"),
 ]
 
 #: HR User reads employees, attendance and leave; HR Manager adds Salary Slip,

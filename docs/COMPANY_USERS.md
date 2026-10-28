@@ -21,10 +21,10 @@ arithmetic is `client/src/lib/companydash.js`, tested in
 
 | Company | Login | Roles | Lock |
 |---|---|---|---|
-| Hi-Tech Rubber Industries | `hitechrubber@mannarubber.com` | HR Manager, HR User | User Permission → Company |
-| Manna Rubber Products Private Limited | `mannarubber.products@mannarubber.com` | HR Manager, HR User | User Permission → Company |
-| Manna Treads | `mannatreads@mannarubber.com` | HR Manager, HR User | User Permission → Company |
-| Manna Tyre Retreads | `mannatyreretreads@mannarubber.com` | HR Manager, HR User | User Permission → Company |
+| Hi-Tech Rubber Industries | `hitechrubber@gmail.com` | HR Manager, HR User | User Permission → Company |
+| Manna Rubber Products Private Limited | `mannarubber@gmail.com` | HR Manager, HR User | User Permission → Company |
+| Manna Treads | `mannatreads@gmail.com` | HR Manager, HR User | User Permission → Company |
+| Manna Tyre Retreads | `mannatyreretreads@gmail.com` | HR Manager, HR User | User Permission → Company |
 
 Passwords follow Manna's `Stem@2026` convention and are **not** written here.
 Change them after first sign-in.

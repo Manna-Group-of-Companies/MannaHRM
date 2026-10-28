@@ -26,7 +26,7 @@ import { store, set, getState, resetStore } from "@/store";
    --------------------------------------------------------------------------- */
 
 const HR = "hr@mannarubber.com";
-const COMPANY = "mannarubber.products@mannarubber.com";
+const COMPANY = "mannarubber@gmail.com";
 const draw = (ui) => render(<Provider store={store}>{ui}</Provider>);
 
 /** What the page strip would draw for this module — the reference. */

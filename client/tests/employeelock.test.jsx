@@ -11,7 +11,7 @@ import { loadedState } from "./fixture";
 /* The four company logins read employees and change nothing about them
    (16 October 2026) — data/menus.js employeesLocked. */
 
-const COMPANY = "hitechrubber@mannarubber.com";
+const COMPANY = "hitechrubber@gmail.com";
 
 /** One Employee as the document endpoint returns it — see profileedit.test.jsx. */
 const DOC = {

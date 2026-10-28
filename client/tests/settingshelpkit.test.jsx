@@ -45,7 +45,7 @@ describe("Reports", () => {
 	});
 
 	it("offers a company login only the attendance reports its menu had", () => {
-		expect(attTilesFor("mannarubber.products@mannarubber.com", true).map((t) => t[0]))
+		expect(attTilesFor("mannarubber@gmail.com", true).map((t) => t[0]))
 			.toEqual(["inout", "daily", "monthly", "absent", "ot", "weekly"]);
 		expect(attTilesFor(HR, true)).toHaveLength(11);
 	});
@@ -155,7 +155,7 @@ describe("Settings", () => {
 	});
 
 	it("gives a login that only reads employees no Add department", async () => {
-		await act(async () => set({ ...loadedState(), user: "hitechrubber@mannarubber.com", admin: true, section: "settings", subtab: "departments" }));
+		await act(async () => set({ ...loadedState(), user: "hitechrubber@gmail.com", admin: true, section: "settings", subtab: "departments" }));
 		const view = draw(<Departments />);
 		expect(view.queryByRole("button", { name: "Add department" })).toBeNull();
 	});

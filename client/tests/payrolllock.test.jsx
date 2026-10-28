@@ -11,7 +11,7 @@ import { loadedState } from "./fixture";
 /* The four company logins run payroll and download it, and change no pay
    (16 October 2026) — data/menus.js. */
 
-const COMPANY = "mannatreads@mannarubber.com";
+const COMPANY = "mannatreads@gmail.com";
 
 async function draw(user) {
 	act(() => set({ ...loadedState(), user, section: "payroll", subtab: "overview" }));
@@ -44,7 +44,7 @@ describe("a company login on Payroll", () => {
 
 	it("is the four company logins and nobody else, whatever the case of the address", () => {
 		expect(SALARY_VIEW_ONLY).toHaveLength(4);
-		expect(salaryLocked("MannaTreads@MannaRubber.com")).toBe(true);
+		expect(salaryLocked("MannaTreads@Gmail.com")).toBe(true);
 		expect(salaryLocked("hr@mannarubber.com")).toBe(false);
 	});
 

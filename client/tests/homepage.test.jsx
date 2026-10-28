@@ -128,7 +128,7 @@ describe("the front page", () => {
 	});
 
 	it("keeps Add employee from a login that only reads employees", async () => {
-		await loaded({ user: "mannarubber.products@mannarubber.com" });
+		await loaded({ user: "mannarubber@gmail.com" });
 		const { container } = draw();
 		expect(container.textContent).not.toContain("Add employee");
 		expect(container.textContent).toContain("Request time off");

@@ -354,7 +354,7 @@ describe("Bank Transfer moves the month along", () => {
 	});
 
 	it("works out nothing for a login kept from changing pay", async () => {
-		act(() => set({ user: "hitechrubber@mannarubber.com" }));
+		act(() => set({ user: "hitechrubber@gmail.com" }));
 		await draw(BankSheet);
 		await act(async () => {});
 		expect(calls).toEqual([]);

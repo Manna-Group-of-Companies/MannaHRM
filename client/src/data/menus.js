@@ -35,16 +35,16 @@ const COMPANY_EMPLOYEES = ["overview", "calendar", "profile", "joining"];
 const COMPANY_PAYROLL = ["overview", "advances", "slips"];
 
 export const USER_MENUS = {
-	"mannarubber.products@mannarubber.com": {
+	"mannarubber@gmail.com": {
 		/* Manage Shift added 16 October 2026, asked for: Assign shift is there,
 		   and the four company logins give their own people shifts. */
 		attendance: ["overview", "inout", "monthly", "ot", "daily", "absent", "weekly", "shifts"],
 		employees: COMPANY_EMPLOYEES,
 		payroll: COMPANY_PAYROLL,
 	},
-	"hitechrubber@mannarubber.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
-	"mannatreads@mannarubber.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
-	"mannatyreretreads@mannarubber.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
+	"hitechrubber@gmail.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
+	"mannatreads@gmail.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
+	"mannatyreretreads@gmail.com": { employees: COMPANY_EMPLOYEES, payroll: COMPANY_PAYROLL },
 	/* Asked for on 24 September 2026: On Board is this login's alone (ONLY_FOR
 	   below), and of it, Onboarding alone — Letters, Documents and Assets are
 	   still built and still at their addresses, just not on its strip. Its
@@ -110,10 +110,10 @@ const login = (user) => String(user || "").trim().toLowerCase();
 
 /** The logins that run payroll and download it but do not change pay. */
 export const SALARY_VIEW_ONLY = [
-	"mannarubber.products@mannarubber.com",
-	"hitechrubber@mannarubber.com",
-	"mannatreads@mannarubber.com",
-	"mannatyreretreads@mannarubber.com",
+	"mannarubber@gmail.com",
+	"hitechrubber@gmail.com",
+	"mannatreads@gmail.com",
+	"mannatyreretreads@gmail.com",
 ];
 
 /** Whether this login is kept from every control that changes pay. */

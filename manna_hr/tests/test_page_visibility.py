@@ -20,7 +20,7 @@ SETTINGS = os.path.join(HERE, "..", "manna_hr", "doctype", "manna_hr_settings", 
 
 def test_only_the_page_admin_may_change_page_visibility():
 	assert rules.may_set_page_visibility("hr@mannarubber.com")
-	assert not rules.may_set_page_visibility("mannarubber.products@mannarubber.com")
+	assert not rules.may_set_page_visibility("mannarubber@gmail.com")
 	assert not rules.may_set_page_visibility("")
 
 
@@ -61,7 +61,7 @@ def test_a_field_the_site_already_has_is_not_sent_again():
 # --- Employee fields ---------------------------------------------------------
 
 ACCESS = {"new": {"custom_pan_no": "read"}, "edit": {"employee_number": "read", "ctc": "hidden"}}
-CLERK = "mannarubber.products@mannarubber.com"
+CLERK = "mannarubber@gmail.com"
 
 
 def test_a_locked_field_cannot_be_changed_on_an_existing_employee():
