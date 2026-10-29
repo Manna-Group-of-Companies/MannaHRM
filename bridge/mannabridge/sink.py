@@ -240,6 +240,24 @@ class ErpSink:
 		except (requests.RequestException, ValueError, TypeError):
 			return None
 
+	def adms_seen(self, base_url):
+		"""`device_id` → `last_seen` for every Attendance Device, or {} if unread.
+
+		{} reads every machine, which is the safe answer to a site that will not
+		say: a machine read twice costs nothing, one read by nobody is a day.
+		"""
+		try:
+			r = self._session.get(
+				base_url.rstrip("/") + "/api/resource/Attendance Device",
+				params={"fields": json.dumps(["device_id", "last_seen"]), "limit_page_length": 0},
+				timeout=self._timeout,
+			)
+			if r.status_code != 200:
+				return {}
+			return {d["device_id"]: d.get("last_seen") for d in r.json().get("data") or [] if d.get("device_id")}
+		except (requests.RequestException, ValueError, KeyError, TypeError):
+			return {}
+
 	def heartbeat(self, base_url):
 		"""Cheap liveness check, so a dead line is logged as a dead line."""
 		try:

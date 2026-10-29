@@ -23,7 +23,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-from mannabridge import adms, clock, commands
+from mannabridge import adms, clock, commands, failover
 from mannabridge.config import load_config
 from mannabridge.device import Device
 from mannabridge.queue import PunchQueue
@@ -221,6 +221,15 @@ def run_once(devices, queue, sink, retain_days, erp_url=None, by_serial=None, fi
 		except Exception:
 			# A clock is a report about the punches; the punches are the pay.
 			log.exception("unexpected failure checking the clocks")
+
+	# A machine ADMS is serving is not read here; one that has gone quiet is.
+	# See failover.py. Skipped machines are not "unread": their punches reach
+	# the site by ADMS, and the site moves their shifts itself.
+	if erp_url and hasattr(sink, "adms_seen"):
+		live = failover.on_adms(sink.adms_seen(erp_url), datetime.now())
+		if live:
+			log.info("on ADMS, not read this pass: %s", ", ".join(sorted(live)))
+		devices = [d for d in devices if d.name not in live]
 
 	unread = []
 	found = poll_devices(devices, queue, unread=unread)
