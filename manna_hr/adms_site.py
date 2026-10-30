@@ -389,6 +389,27 @@ def on_employee_update(doc, method=None):
 
 
 @frappe.whitelist()
+def resend_from_start(serial):
+	"""Ask a machine to send every punch it still holds, on its next hello.
+
+	For a machine whose punches stopped arriving — Manna Treads, 14 to 30
+	October 2026, whose firmware asked for paths this server did not answer —
+	and which now connects with its stamp already past them. Safe to repeat:
+	a punch already stored collides on its name and is skipped, and one older
+	than `adms.STORE_DAYS` is acknowledged and not kept. Nothing is cleared on
+	the machine; this only moves the server's bookmark back.
+	"""
+	frappe.only_for(HR_ROLES + ("System Manager",))
+	serial = (serial or "").strip()
+	if not _device(serial):
+		frappe.throw("{0} is not on an active Attendance Device.".format(serial))
+	before = frappe.db.get_global(_stamp_key(serial))
+	frappe.db.set_global(_stamp_key(serial), "0")
+	frappe.db.commit()
+	return {"serial": serial, "before": before, "after": "0"}
+
+
+@frappe.whitelist()
 def new_on_machine():
 	"""Everybody punching on a machine whom no Employee carries yet.
 
