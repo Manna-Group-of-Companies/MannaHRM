@@ -84,7 +84,7 @@ def handle(endpoint, request):
 		device = _device(serial)
 		_seen(device)
 		stamp = frappe.db.get_global(_stamp_key(serial)) or "0"
-		return adms.option_block(serial, stamp)
+		return adms.option_block(serial, stamp, timezone=adms.timezone_for(serial))
 
 	if endpoint == "cdata" and method == "POST":
 		table = (args.get("table") or "").upper()

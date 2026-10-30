@@ -192,6 +192,18 @@ def punch_key(serial, device_user, punched_at):
 #: The bridge's per-machine `timezone` exists for the same trap.
 TIMEZONE = "330"
 
+#: Machines told no time zone at all, so they keep their own clock as MRP Gate
+#: 1 does. Their firmware drops the half hour from "5.5" and from "330" alike,
+#: so any zone sent sets them exactly 30 minutes behind at every hello, and a
+#: clock put right at the machine lasted only until the next one (HR, 30
+#: October 2026). The clock is then whatever is set at the machine.
+OWN_CLOCK = frozenset({"NYU7262002047", "CGKK211162173"})
+
+
+def timezone_for(serial):
+	"""The `TimeZone` a machine is told, or None for one that keeps its own clock."""
+	return None if serial in OWN_CLOCK else TIMEZONE
+
 
 def option_block(serial, stamp, delay=10, error_delay=30, timezone=TIMEZONE):
 	"""The handshake answer, which is also how the machine is configured.
@@ -211,7 +223,7 @@ def option_block(serial, stamp, delay=10, error_delay=30, timezone=TIMEZONE):
 		"TransTimes=00:00;23:59",
 		"TransInterval=1",
 		"TransFlag={0}".format(TRANS_FLAG),
-		"TimeZone={0}".format(timezone),
+		*(["TimeZone={0}".format(timezone)] if timezone else []),
 		"Realtime=1",
 		# A fixed scramble with a published key. HTTPS is the protection.
 		"Encrypt=0",
