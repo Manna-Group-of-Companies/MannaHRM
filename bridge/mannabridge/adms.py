@@ -95,6 +95,17 @@ def unknown_device_id(serial):
 	return UNKNOWN_PREFIX + serial
 
 
+def route_of(path):
+	"""The path a handler matches on: no trailing slash, no `.aspx`.
+
+	Some firmware (ZAM70 Ver3.3.12, the Manna Treads face machine) asks for
+	`/iclock/cdata.aspx`. Matched as an unknown path it is answered 404, its
+	hello is never answered with the options block, and no punch is ever posted.
+	"""
+	path = path.rstrip("/")
+	return path[: -len(".aspx")] if path.lower().endswith(".aspx") else path
+
+
 def serial_of_unknown(device_id):
 	"""The serial back out of a parked row's device id, or None."""
 	if device_id and device_id.startswith(UNKNOWN_PREFIX):
@@ -320,7 +331,7 @@ class AdmsHandler(BaseHTTPRequestHandler):
 
 	# `do_GET` / `do_POST` are the names `BaseHTTPRequestHandler` dispatches on.
 	def do_GET(self):
-		path = urlparse(self.path).path.rstrip("/")
+		path = route_of(urlparse(self.path).path)
 		query = self._query()
 		serial = (query.get("SN") or "").strip()
 
@@ -333,7 +344,7 @@ class AdmsHandler(BaseHTTPRequestHandler):
 		return self._reply("Not an ADMS endpoint\n", status=404)
 
 	def do_POST(self):
-		path = urlparse(self.path).path.rstrip("/")
+		path = route_of(urlparse(self.path).path)
 		query = self._query()
 		serial = (query.get("SN") or "").strip()
 		body = self._body()

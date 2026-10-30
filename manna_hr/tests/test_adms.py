@@ -125,3 +125,11 @@ def test_the_sync_point_never_moves_back():
 
 def test_a_shift_with_no_punches_is_left_alone():
 	assert adms.sync_point("2026-10-26 17:31:55", None, []) is None
+
+
+def test_a_firmware_asking_for_aspx_paths_is_answered_as_the_plain_ones():
+	assert adms.endpoint_of("/cdata.aspx") == "cdata"
+	assert adms.endpoint_of("getrequest.aspx") == "getrequest"
+	assert adms.endpoint_of("/devicecmd.ASPX") == "devicecmd"
+	assert adms.endpoint_of("/cdata") == "cdata"
+	assert adms.endpoint_of("") == ""

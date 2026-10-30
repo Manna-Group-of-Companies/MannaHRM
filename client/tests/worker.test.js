@@ -173,4 +173,16 @@ describe("the fingerprint machines", () => {
 		expect(res.status).toBe(500);
 		expect(await res.text()).not.toMatch(/^OK/);
 	});
+
+	test("a_machines_reply_goes_with_a_length_not_chunked_because_old_firmware_cannot_read_chunks", async () => {
+		answer({ body: "GET OPTION FROM: NYU7262002047\nStamp=0\n" });
+		const res = await worker.fetch(
+			new Request("http://adms.mannarubber.com/iclock/cdata.aspx?SN=NYU7262002047&options=all"),
+			{ ERP_URL: SITE, ASSETS: { fetch: vi.fn() } },
+		);
+		expect(sent.url).toBe(SITE + "/iclock/cdata.aspx?SN=NYU7262002047&options=all");
+		expect(res.headers.get("content-length")).toBe(String("GET OPTION FROM: NYU7262002047\nStamp=0\n".length));
+		expect(res.headers.get("transfer-encoding")).toBeNull();
+		expect(await res.text()).toMatch(/^GET OPTION FROM/);
+	});
 });

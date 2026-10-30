@@ -445,3 +445,9 @@ def test_a_first_push_sends_nothing_from_before_the_start_date(tmp_path):
 		server.shutdown()
 	assert answer == "OK: 3"
 	assert sorted(r["punched_at"] for r in queue.pending()) == ["2026-09-01 08:02:00", "2026-09-15 06:41:31"]
+
+
+def test_a_firmware_asking_for_aspx_paths_reaches_the_same_handlers():
+	assert adms.route_of("/iclock/cdata.aspx") == "/iclock/cdata"
+	assert adms.route_of("/iclock/getrequest.aspx/") == "/iclock/getrequest"
+	assert adms.route_of("/iclock/cdata/") == "/iclock/cdata"

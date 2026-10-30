@@ -96,6 +96,17 @@ export async function forward(request, site) {
 		out.set("location", location.slice(origin.length) || "/");
 	}
 
+	/* A machine's reply is a few lines, read whole: the site's answer passed
+	   through as it came gets sent chunked, and older ZK firmware cannot read a
+	   chunked reply. Buffered, it goes with a Content-Length. Nothing else is
+	   buffered — a payslip PDF has no reason to wait in this Worker. */
+	if (url.pathname === "/iclock" || url.pathname.startsWith("/iclock/")) {
+		const body = await res.arrayBuffer();
+		out.delete("transfer-encoding");
+		out.set("content-length", String(body.byteLength));
+		return new Response(body, { status: res.status, statusText: res.statusText, headers: out });
+	}
+
 	return new Response(res.body, { status: res.status, statusText: res.statusText, headers: out });
 }
 

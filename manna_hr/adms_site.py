@@ -57,7 +57,7 @@ class AdmsRenderer:
 		# saved — a guest request must never leave behind an Administrator one.
 		frappe.set_user("Administrator")
 		try:
-			text = handle(self.path[len(ROOT):].strip("/"), frappe.request)
+			text = handle(adms.endpoint_of(self.path[len(ROOT):]), frappe.request)
 		except Exception:
 			# Not `OK`, so the machine keeps the post and sends it again.
 			frappe.db.rollback()

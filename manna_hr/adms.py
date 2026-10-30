@@ -49,6 +49,18 @@ def unknown_device_id(serial):
 	return UNKNOWN_PREFIX + serial
 
 
+def endpoint_of(path):
+	"""`cdata`, `getrequest`, … from what follows `/iclock/`.
+
+	Some firmware — the Manna Treads face machine, ZAM70 Ver3.3.12, found 30
+	October 2026 — asks for `cdata.aspx` and `getrequest.aspx`. Answered as an
+	unknown path, its hello got a bare `OK` instead of the options block, and it
+	sat with a warning on its screen and never posted a punch.
+	"""
+	endpoint = (path or "").strip("/")
+	return endpoint[: -len(".aspx")] if endpoint.lower().endswith(".aspx") else endpoint
+
+
 # ------------------------------------------------------------------ bodies ---
 
 
