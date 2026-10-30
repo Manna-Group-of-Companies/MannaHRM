@@ -184,7 +184,16 @@ def punch_key(serial, device_user, punched_at):
 # --------------------------------------------------------------- handshake ---
 
 
-def option_block(serial, stamp, delay=10, error_delay=30, timezone="5.5"):
+#: IST in minutes. Never "5.5": firmware that sets its clock from the server —
+#: Manna Treads (ZAM70) and Hi-Tech Gate, 30 October 2026 — reads that as 5 and
+#: runs exactly 30 minutes behind, so every arrival is stamped half an hour
+#: early, nobody is late, and putting the clock right by hand is undone at the
+#: next hello. A machine that keeps its own clock ignores the line either way.
+#: The bridge's per-machine `timezone` exists for the same trap.
+TIMEZONE = "330"
+
+
+def option_block(serial, stamp, delay=10, error_delay=30, timezone=TIMEZONE):
 	"""The handshake answer, which is also how the machine is configured.
 
 	The same block the bridge sent, so a machine moved from the bridge to the

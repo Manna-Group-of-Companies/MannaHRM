@@ -133,3 +133,9 @@ def test_a_firmware_asking_for_aspx_paths_is_answered_as_the_plain_ones():
 	assert adms.endpoint_of("/devicecmd.ASPX") == "devicecmd"
 	assert adms.endpoint_of("/cdata") == "cdata"
 	assert adms.endpoint_of("") == ""
+
+
+def test_ist_is_sent_in_minutes_because_firmware_reads_five_and_a_half_as_five():
+	block = adms.option_block("NYU7262002047", "0")
+	assert "TimeZone=330\n" in block
+	assert "TimeZone=5.5" not in block
