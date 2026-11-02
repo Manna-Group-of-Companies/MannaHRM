@@ -246,7 +246,7 @@ export function Job() {
 									onDrop={(e) => { e.preventDefault(); const a = apps.find((x) => x.name === drag); if (a) void move(a, st); setDrag(""); }}>
 									<div className="k-col-h">{STAGE_LABEL[st]}<span className="k-pill k-p-green k-nodot" style={{ padding: "1px 8px" }}>{col.length}</span></div>
 									{col.length ? col.map((a) => (
-										<div className="k-cand" key={a.name} draggable onDragStart={() => setDrag(a.name)} style={{ background: "rgb(var(--card))" }}>
+										<div className="k-cand" key={a.name} draggable onDragStart={(e) => { e.dataTransfer.setData("text/plain", a.name); setDrag(a.name); }} style={{ background: "rgb(var(--card))" }}>
 											<button type="button" style={{ width: "100%", textAlign: "left" }} onClick={() => openApp(a)}><Who name={a.applicant_name} sub={a.email_id} /></button>
 											<div className="k-cand-m">
 												<Stars score={storedScore(a)} />
