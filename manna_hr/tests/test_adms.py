@@ -135,14 +135,6 @@ def test_a_firmware_asking_for_aspx_paths_is_answered_as_the_plain_ones():
 	assert adms.endpoint_of("") == ""
 
 
-def test_ist_is_sent_in_minutes_because_firmware_reads_five_and_a_half_as_five():
-	block = adms.option_block("NYU7262002047", "0")
-	assert "TimeZone=330\n" in block
-	assert "TimeZone=5.5" not in block
-
-
-def test_a_machine_that_keeps_its_own_clock_is_told_no_time_zone_at_all():
-	own = adms.option_block("NYU7262002047", "0", timezone=adms.timezone_for("NYU7262002047"))
-	assert "TimeZone" not in own
-	other = adms.option_block("CGKK211561350", "0", timezone=adms.timezone_for("CGKK211561350"))
-	assert "TimeZone=330\n" in other
+def test_no_machine_is_told_a_time_zone_so_the_server_never_sets_a_clock():
+	for serial in ("NYU7262002047", "CGKK211162173", "CGKK211561350", "6426150300688"):
+		assert "TimeZone" not in adms.option_block(serial, "0")

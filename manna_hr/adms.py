@@ -184,25 +184,15 @@ def punch_key(serial, device_user, punched_at):
 # --------------------------------------------------------------- handshake ---
 
 
-#: IST in minutes. Never "5.5": firmware that sets its clock from the server —
-#: Manna Treads (ZAM70) and Hi-Tech Gate, 30 October 2026 — reads that as 5 and
-#: runs exactly 30 minutes behind, so every arrival is stamped half an hour
-#: early, nobody is late, and putting the clock right by hand is undone at the
-#: next hello. A machine that keeps its own clock ignores the line either way.
-#: The bridge's per-machine `timezone` exists for the same trap.
-TIMEZONE = "330"
-
-#: Machines told no time zone at all, so they keep their own clock as MRP Gate
-#: 1 does. Their firmware drops the half hour from "5.5" and from "330" alike,
-#: so any zone sent sets them exactly 30 minutes behind at every hello, and a
-#: clock put right at the machine lasted only until the next one (HR, 30
-#: October 2026). The clock is then whatever is set at the machine.
-OWN_CLOCK = frozenset({"NYU7262002047", "CGKK211162173"})
-
-
-def timezone_for(serial):
-	"""The `TimeZone` a machine is told, or None for one that keeps its own clock."""
-	return None if serial in OWN_CLOCK else TIMEZONE
+#: **No machine is told a time zone, so the server never sets a clock** (HR,
+#: 2 November 2026: the time is not touched in any company). A `TimeZone` line
+#: is what makes firmware that syncs to the server set its clock at every
+#: hello — and Manna Treads (ZAM70) and Hi-Tech Gate drop the half hour from
+#: "5.5" and "330" alike, so any zone sent put them exactly 30 minutes behind
+#: and undid a clock put right at the machine. Without it each machine keeps
+#: the clock set at the machine, as MRP Gate 1 always has. Same decision as the
+#: bridge's `fix_clocks`, off: a gate's clock is somebody's choice.
+TIMEZONE = None
 
 
 def option_block(serial, stamp, delay=10, error_delay=30, timezone=TIMEZONE):
