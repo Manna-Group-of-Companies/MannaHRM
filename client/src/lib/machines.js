@@ -10,10 +10,12 @@
 
 export const ADMS_QUIET_MINUTES = 15;
 
-/* A punch that reached the site in the last hour, off a machine ADMS has not
-   seen, came by the bridge. Longer than one pass, short enough that a night
-   with nobody at the gate reads as quiet rather than connected. */
-export const BRIDGE_QUIET_MINUTES = 60;
+/* A punch that reached the site in the last day, off a machine ADMS has not
+   seen, came by the bridge. A day, not an hour (2 November 2026): between the
+   morning's arrivals and the evening's departures nobody punches at a gate, and
+   an hour read every bridge machine as Not connected by eleven. The bridge
+   sends no heartbeat of its own, so a punch is the only sign there is. */
+export const BRIDGE_QUIET_MINUTES = 24 * 60;
 
 const stamp = (v) => {
 	if (!v) return null;
