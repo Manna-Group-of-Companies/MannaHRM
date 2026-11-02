@@ -53,7 +53,7 @@ export const USER_MENUS = {
 	   ahead of this login's own three; Manage Shift joined them from
 	   Attendance the same day. App users on 22 October, beside Permission. */
 	"hr@mannarubber.com": { onboard: ["overview"], settings: ["company", "offices", "departments", "titles", "schedules", "shifts", "calendar",
-		"permission", "appusers", "password", "notifications", "overview", "coverage", "security"] },
+		"permission", "appusers", "machines", "password", "notifications", "overview", "coverage", "security"] },
 };
 
 /* Who may change which pages everybody is shown — Settings → Security, asked
