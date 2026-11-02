@@ -11,6 +11,7 @@ import { EmptyState, Pill } from "@/components/kit/ui";
 
 const when = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—");
 const PILL = { ADMS: "Active", Bridge: "Pending", Quiet: "Suspended" };
+const SAYS = { ADMS: "ADMS connected", Bridge: "Bridge connected", Quiet: "Not connected" };
 
 export default function Machines() {
 	const [data, setData] = useState(undefined);
@@ -50,7 +51,7 @@ export default function Machines() {
 								<tr key={r.name}>
 									<td className="k-title-cell"><b>{r.name}</b><small style={{ display: "block", color: "rgb(var(--ink-3))" }}>{r.deviceId}</small></td>
 									<td data-label="Company">{r.company || "—"}</td>
-									<td data-label="Connection"><Pill status={PILL[r.route]}>{r.route}</Pill></td>
+									<td data-label="Connection"><Pill status={PILL[r.route]}>{SAYS[r.route]}</Pill></td>
 									<td data-label="ADMS last seen">{when(r.lastSeen)}</td>
 									<td data-label="Last punch">{when(r.lastPunch)}</td>
 									<td data-label="Reached site">{when(r.reached)}</td>
