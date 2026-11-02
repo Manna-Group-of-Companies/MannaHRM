@@ -16,7 +16,7 @@ describe("which road a machine is on", () => {
 	});
 
 	it("stays the bridge through a quiet afternoon, when nobody punches at a gate for hours", () => {
-		expect(routeOf({ last_seen: null }, { creation: "2026-11-01 15:00:00" }, new Date("2026-11-02T15:14:00"))).toBe("Bridge");
+		expect(routeOf({ last_seen: null }, { creation: "2026-11-02 09:01:00" }, new Date("2026-11-02T15:14:00"))).toBe("Bridge");
 	});
 
 	it("is quiet when neither road has brought anything for a day", () => {
