@@ -167,6 +167,8 @@
 .k-col.k-over{outline-color:rgb(var(--brand));background:rgb(var(--brand-soft))}
 .k-col-h{display:flex;align-items:center;justify-content:space-between;font-weight:700;margin-bottom:12px;padding:0 4px}
 .k-col-h span{font-size:12px;background:rgb(var(--wash));color:rgb(var(--ink-2));padding:2px 9px;border-radius:999px;font-variant-numeric:tabular-nums}
+.k-col-h .k-col-act{display:flex;align-items:center;gap:6px;background:none;padding:0}
+.k-col-add{width:28px;height:28px}
 .k-cand{background:rgb(var(--wash));border-radius:12px;padding:12px;margin-bottom:10px;cursor:grab;transition:transform .2s var(--ease-out),box-shadow .2s,opacity .2s;border:1px solid transparent}
 .k-cand:hover{transform:translateY(-2px);box-shadow:0 10px 20px -12px rgb(var(--char) / .25);border-color:rgb(var(--line-2));background:rgb(var(--card))}
 .k-cand:active{cursor:grabbing}
@@ -337,10 +339,11 @@
 .k-step.k-done i{background:rgb(var(--live-dark));color:#fff}
 .k-step-line{flex:0 0 40px;height:2px;background:rgb(var(--line));align-self:center;border-radius:2px;overflow:hidden}
 .k-step-line.k-done{background:rgb(var(--brand))}
-.k-drop{border:2px dashed rgb(var(--line-2));border-radius:16px;padding:30px 20px;text-align:center;color:rgb(var(--ink-2));transition:border-color .2s,background .2s;position:relative;cursor:pointer}
+.k-drop{display:block;border:2px dashed rgb(var(--line-2));border-radius:16px;padding:30px 20px;text-align:center;color:rgb(var(--ink-2));transition:border-color .2s,background .2s;position:relative;cursor:pointer}
 .k-drop:hover,.k-drop.k-over{border-color:rgb(var(--brand));background:rgb(var(--brand-soft))}
 .k-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .k-drop b{color:rgb(var(--ink));display:block;margin:8px 0 2px}
+.k-drop span{display:block;font-size:13px}
 .k-file-row{display:flex;align-items:center;gap:12px}
 .k-ftype{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:10.5px;font-weight:700;flex-shrink:0;letter-spacing:.02em}
 .k-acc{border-bottom:1px solid rgb(var(--line))}
@@ -754,3 +757,23 @@
 @media (max-width:640px){
   .k-filters{grid-template-columns:minmax(0,1fr) !important}
 }
+
+/* The first-visit welcome (layout/Welcome.jsx). */
+.k-welcome{max-width:500px;padding:20px 24px 22px}
+.k-welcome-band{height:120px;border-radius:14px;background:rgb(var(--live-dark));display:flex;align-items:center;justify-content:center;margin-bottom:18px;position:relative;overflow:hidden}
+.k-welcome-band::before,.k-welcome-band::after{content:"";position:absolute;border-radius:50%;background:rgb(255 255 255 / .12)}
+.k-welcome-band::before{width:150px;height:150px;left:-40px;top:-50px}
+.k-welcome-band::after{width:110px;height:110px;right:-24px;bottom:-50px}
+.k-welcome-band span{font-size:56px;font-weight:800;color:#fff;position:relative}
+.k-welcome h2{margin:0;font-size:20px}
+.k-welcome-tips{list-style:none;margin:16px 0 8px;padding:0;display:grid;gap:14px}
+.k-welcome-tips li{display:flex;gap:12px;align-items:flex-start}
+.k-welcome-tips b{display:block;font-size:14px}
+.k-welcome-tips small{color:rgb(var(--ink-2));font-size:13px}
+.k-welcome-ico{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:rgb(var(--live) / .16);color:rgb(var(--live-dark))}
+
+/* Offboarding checklist: one tick per thing to get back or close. */
+.k-checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.k-check{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgb(var(--line-2));border-radius:10px;}
+.k-check-x{color:rgb(var(--ink-3));padding:4px;border-radius:6px}
+.k-check-x:hover{color:rgb(var(--bad));background:rgb(var(--wash))}
