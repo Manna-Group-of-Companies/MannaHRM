@@ -40,6 +40,7 @@ export default function Machines() {
 				{err ? <EmptyState title="Machines could not be read">{err}</EmptyState> : null}
 				{data && !rows.length ? <EmptyState title="No machines registered" /> : null}
 				{rows.length ? (
+					<div className="k-tbl-wrap">
 					<table className="k-rt" aria-label="Machines">
 						<thead>
 							<tr>{["Machine", "Company", "Connection", "ADMS last seen", "Last punch", "Reached site"].map((c) => <th key={c}><span>{c}</span></th>)}</tr>
@@ -57,6 +58,7 @@ export default function Machines() {
 							))}
 						</tbody>
 					</table>
+					</div>
 				) : null}
 			</div>
 		</SettingsFrame>
