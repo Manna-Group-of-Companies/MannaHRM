@@ -11,7 +11,7 @@
    is writing that status.
    --------------------------------------------------------------------------- */
 
-import { apiCreate, apiWrite, listAll } from "@/api/client";
+import { apiCreate, apiUpload, apiWrite, listAll } from "@/api/client";
 import { getState, set } from "@/store";
 import { DETAIL_FIELD, loadOpenings } from "@/api/recruitment";
 
@@ -47,11 +47,24 @@ export async function loadRecruitment({ fresh = false } = {}) {
 }
 
 /** Move an applicant: their status, as the signed-in person. */
+/** Name, email, phone and source, as HR corrects them. */
+export async function editApplicant(name, f) {
+	const doc = { applicant_name: f.name.trim(), email_id: f.email.trim().toLowerCase(), phone_number: f.phone.trim(), source: f.source || "" };
+	const r = await apiWrite("Job Applicant", name, doc);
+	if (!r.ok && /closed Job Opening/i.test(r.error || "")) throw new Error("This job is closed. Set it to Open, then edit the candidate.");
+	if (!r.ok) throw new Error(r.error || "The site would not change it.");
+	if (f.cv) {
+		const up = await apiUpload(f.cv, { doctype: "Job Applicant", name, field: "resume_attachment" });
+		const w = await apiWrite("Job Applicant", name, { resume_attachment: up.file_url });
+		if (!w.ok) throw new Error(w.error || "The CV was not attached.");
+		doc.resume_attachment = up.file_url;
+	}
+	const { rec } = getState();
+	set({ rec: { ...rec, apps: rec.apps.map((a) => (a.name === name ? { ...a, ...doc } : a)) } });
+}
+
 export async function setApplicantStatus(name, status) {
 	const r = await apiWrite("Job Applicant", name, { status });
-	// hrms re-checks the opening on every save, not only the first, so a closed
-	// job freezes its applicants where they stand until it is opened again.
-	if (!r.ok && /closed Job Opening/i.test(r.error || "")) throw new Error("This job is closed. Set it to Open, then move the candidate.");
 	if (!r.ok) throw new Error(r.error || "The site would not change it.");
 	const { rec } = getState();
 	set({ rec: { ...rec, apps: rec.apps.map((a) => (a.name === name ? { ...a, status } : a)) } });
@@ -82,6 +95,39 @@ export const addNote = (name, text) => apiCreate("Comment", {
 	comment_type: "Comment", reference_doctype: "Job Applicant", reference_name: name,
 	content: String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
 });
+
+/** One person added by hand, from a column's +, into that column's stage.
+    Job Applicant has no location or experience field, so those two travel as
+    a note on the applicant rather than being dropped. The CV is filed after
+    the applicant exists, and a CV that will not upload leaves the applicant
+    standing — somebody who applied is not undone by a failed attachment. */
+export async function addCandidate(f) {
+	const doc = {
+		applicant_name: f.name.trim(),
+		email_id: f.email.trim().toLowerCase(),
+		job_title: f.job,
+		status: f.stage || "Open",
+	};
+	if (f.phone.trim()) doc.phone_number = f.phone.trim();
+	if (f.source) doc.source = f.source;
+	// hrms's own field for the employee who referred them; it shows only for a referral source.
+	if (f.referrer && /referral/i.test(f.source)) doc.source_name = f.referrer;
+	const app = await apiCreate("Job Applicant", doc);
+	const said = [f.location.trim() && `Location: ${f.location.trim()}`, String(f.exp).trim() && `Experience: ${String(f.exp).trim()} years`].filter(Boolean);
+	if (said.length) await addNote(app.name, said.join(" · ")).catch(() => null);
+	let cvErr = "";
+	if (f.cv) {
+		try {
+			const up = await apiUpload(f.cv, { doctype: "Job Applicant", name: app.name, field: "resume_attachment" });
+			const w = await apiWrite("Job Applicant", app.name, { resume_attachment: up.file_url });
+			if (!w.ok) cvErr = w.error || "The CV was not attached.";
+		} catch (e) {
+			cvErr = e.message || String(e);
+		}
+	}
+	await loadRecruitment({ fresh: true });
+	return { name: app.name, cvErr };
+}
 
 /* ---- settings -------------------------------------------------------------- */
 

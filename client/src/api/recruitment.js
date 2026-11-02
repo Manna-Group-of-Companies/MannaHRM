@@ -1,5 +1,5 @@
 import { api, apiCall, apiCreate, apiDelete, apiUpload, apiWrite, http, listAll, whoami } from "@/api/client";
-import { CRITERIA_FIELDS, criteriaOf, explain, fromRating, guessSource, readContact, scoreResume, toRating } from "@/lib/resumescore";
+import { CRITERIA_FIELDS, criteriaOf, hasCriteria, explain, fromRating, guessSource, readContact, scoreResume, toRating } from "@/lib/resumescore";
 import { kindOf, resumeText } from "@/lib/resumetext";
 
 /* ---------------------------------------------------------------------------
@@ -309,4 +309,19 @@ export async function rescore(opening, rows, detail, onStep) {
 		if (w.ok) changed++; else unread.push(`${r.applicant_name || r.name} (${w.error})`);
 	}
 	return { changed, same, unread, details };
+}
+
+/** One applicant scored on their own page, by the same rules as the Resumes
+    window — `rescore`, against the position's criteria wherever they are kept.
+    A CV with no text (a scan, an old .doc) is said, never scored zero. */
+export async function scoreApplicant(app) {
+	const { rows } = await loadOpenings();
+	let opening = rows.find((o) => o.name === app.job_title);
+	if (!opening) throw new Error("This applicant's job is not on the site.");
+	if (!hasCriteria(criteriaOf(opening))) opening = { ...opening, ...(await readCriteriaNote(opening.name)) };
+	if (!hasCriteria(criteriaOf(opening))) throw new Error("This job has no scoring criteria. Set them in Resumes on the hierarchy chart.");
+	const { rows: apps, detail } = await loadApplicants(app.job_title);
+	const r = await rescore(opening, [apps.find((x) => x.name === app.name) || app], detail);
+	if (r.unread.length) throw new Error("The CV has no text to read, so it is not scored.");
+	return r.details[app.name] || "";
 }

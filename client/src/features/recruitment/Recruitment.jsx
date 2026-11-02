@@ -12,10 +12,10 @@
 import { useEffect, useState } from "react";
 import { set, useApp } from "@/store";
 import { navigate } from "@/routes/router";
-import { createOpening, storedScore } from "@/api/recruitment";
+import { createOpening, scoreApplicant, storedScore } from "@/api/recruitment";
 import {
-	JOB_STATUS, REJECTED, STAGES, STAGE_LABEL, addNote, addSource, loadRecruitment, readNotes, readSources,
-	readTemplates, saveJob, setApplicantStatus, setJobStatus,
+	JOB_STATUS, REJECTED, STAGES, STAGE_LABEL, addCandidate, addNote, addSource, loadRecruitment, readNotes, readSources,
+	readTemplates, saveJob, editApplicant, setApplicantStatus, setJobStatus,
 } from "@/api/jobs";
 import { loadOpenings } from "@/api/recruitment";
 import { dmy, tidyDept } from "@/lib/format";
@@ -172,6 +172,88 @@ function EditJob({ j, onClose }) {
 	);
 }
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** A column's +: somebody who applied outside the careers page, straight into that stage. */
+function AddCandidate({ jobs, job, stage, onClose }) {
+	const [f, setF] = useState({ name: "", email: "", phone: "", job, source: "", referrer: "", location: "", exp: "", cv: null, stage });
+	const staff = (useApp().employees || []).filter((x) => x.status === "Active").sort((a, b) => String(a.employee_name).localeCompare(String(b.employee_name)));
+	const referral = /referral/i.test(f.source);
+	const [err, setErr] = useState({});
+	const [sources, setSources] = useState([]);
+	const [busy, setBusy] = useState(false);
+	useEffect(() => {
+		readSources().then((r) => { setSources(r); setF((x) => (x.source || !r.length ? x : { ...x, source: r[0].name })); }).catch(() => setSources([]));
+	}, []);
+	const put = (k) => (e) => { setF({ ...f, [k]: e.target.value }); setErr({ ...err, [k]: "" }); };
+	const submit = async (e) => {
+		e.preventDefault();
+		const bad = {};
+		if (!f.name.trim()) bad.name = "Enter their full name";
+		if (!EMAIL.test(f.email.trim())) bad.email = "Enter a valid email";
+		if (Object.keys(bad).length) { setErr(bad); return; }
+		setBusy(true);
+		try {
+			const r = await addCandidate(f);
+			toast(r.cvErr ? `${f.name.trim()} added — the CV was not attached: ${r.cvErr}` : `${f.name.trim()} added to ${STAGE_LABEL[stage]}`);
+			onClose();
+		} catch (x) {
+			setErr({ form: why(x) });
+			setBusy(false);
+		}
+	};
+	const field = (k, label, props = {}, full = false, req = false) => (
+		<div className={`k-field${full ? " k-full" : ""}${err[k] ? " k-bad" : ""}`}>
+			<label htmlFor={`ac-${k}`}>{label}{req ? <span className="k-req"> *</span> : null}</label>
+			<input id={`ac-${k}`} className="k-inp" value={f[k]} onChange={put(k)} {...props} />
+			{err[k] ? <small className="k-err">{err[k]}</small> : null}
+		</div>
+	);
+	return (
+		<KitModal title="Add candidate" sub="Add someone who applied outside the careers page." onClose={onClose}>
+			<form noValidate onSubmit={submit}>
+				<div className="k-form-grid">
+					{field("name", "Full name", { autoFocus: true }, true, true)}
+					{field("email", "Email", { type: "email" }, false, true)}
+					{field("phone", "Phone", { type: "tel" })}
+					<div className="k-field">
+						<label htmlFor="ac-job">Job</label>
+						<select id="ac-job" className="k-inp k-sel" value={f.job} onChange={put("job")}>
+							{jobs.map((x) => <option key={x.name} value={x.name}>{x.job_title}</option>)}
+						</select>
+					</div>
+					<div className="k-field">
+						<label htmlFor="ac-source">Source</label>
+						<select id="ac-source" className="k-inp k-sel" value={f.source} onChange={put("source")}>
+							<option value="">—</option>
+							{sources.map((x) => <option key={x.name} value={x.name}>{x.source_name || x.name}</option>)}
+						</select>
+					</div>
+					{referral ? (
+						<div className="k-field k-full">
+							<label htmlFor="ac-referrer">Referred by</label>
+							<select id="ac-referrer" className="k-inp k-sel" value={f.referrer} onChange={put("referrer")}>
+								<option value="">—</option>
+								{staff.map((x) => <option key={x.name} value={x.name}>{x.employee_name} · {x.name}</option>)}
+							</select>
+						</div>
+					) : null}
+					{field("location", "Location")}
+					{field("exp", "Years of experience", { type: "number", min: 0, max: 50 })}
+				</div>
+				<label className="k-drop" style={{ marginTop: 14, padding: 18 }}>
+					<KitIcon name="upload" size={22} stroke={1.8} />
+					<b>Attach CV</b>
+					<span>{f.cv ? f.cv.name : "PDF or Word"}</span>
+					<input type="file" accept=".pdf,.doc,.docx" aria-label="Attach CV" onChange={(e) => setF({ ...f, cv: e.target.files?.[0] || null })} />
+				</label>
+				{err.form ? <small className="k-err">{err.form}</small> : null}
+				<ModalFoot ok="Add candidate" busy={busy} onCancel={onClose} />
+			</form>
+		</KitModal>
+	);
+}
+
 export function Job() {
 	const rec = useRec();
 	const s = useApp();
@@ -180,6 +262,7 @@ export function Job() {
 	const [upload, setUpload] = useState(false);
 	const [edit, setEdit] = useState(false);
 	const [drag, setDrag] = useState("");
+	const [adding, setAdding] = useState("");
 	const j = (rec.jobs || []).find((x) => x.name === s.recJob);
 	const back = () => navigate("recruitment", "overview");
 	if (rec.state === "ok" && !j) {
@@ -244,7 +327,12 @@ export function Job() {
 								<div className="k-col" key={st} style={{ background: "rgb(var(--wash))" }}
 									onDragOver={(e) => e.preventDefault()}
 									onDrop={(e) => { e.preventDefault(); const a = apps.find((x) => x.name === drag); if (a) void move(a, st); setDrag(""); }}>
-									<div className="k-col-h">{STAGE_LABEL[st]}<span className="k-pill k-p-green k-nodot" style={{ padding: "1px 8px" }}>{col.length}</span></div>
+									<div className="k-col-h">{STAGE_LABEL[st]}
+										<span className="k-col-act">
+											<span className="k-pill k-p-green k-nodot" style={{ padding: "1px 8px" }}>{col.length}</span>
+											<button type="button" className="icon-btn k-col-add" aria-label={`Add candidate to ${STAGE_LABEL[st]}`} title="Add candidate" onClick={() => setAdding(st)}><KitIcon name="plus" size={16} stroke={2} /></button>
+										</span>
+									</div>
 									{col.length ? col.map((a) => (
 										<div className="k-cand" key={a.name} draggable onDragStart={(e) => { e.dataTransfer.setData("text/plain", a.name); setDrag(a.name); }} style={{ background: "rgb(var(--card))" }}>
 											<button type="button" style={{ width: "100%", textAlign: "left" }} onClick={() => openApp(a)}><Who name={a.applicant_name} sub={a.email_id} /></button>
@@ -279,6 +367,7 @@ export function Job() {
 					onClose={() => { setUpload(false); void loadRecruitment({ fresh: true }); }} />
 			) : null}
 			{edit ? <EditJob j={j} onClose={() => setEdit(false)} /> : null}
+			{adding ? <AddCandidate jobs={rec.jobs || []} job={j.name} stage={adding} onClose={() => setAdding("")} /> : null}
 		</div>
 	);
 }
@@ -349,11 +438,70 @@ export function Candidates() {
 
 /* ------------------------------------------------------------ applicant --- */
 
+/** The applicant page's Edit: what HR may correct after the resume was read. */
+function EditApplicant({ a, onClose }) {
+	const [f, setF] = useState({ name: a.applicant_name || "", email: a.email_id || "", phone: a.phone_number || "", source: a.source || "", cv: null });
+	const [sources, setSources] = useState([]);
+	const [err, setErr] = useState("");
+	const [busy, setBusy] = useState(false);
+	useEffect(() => { readSources().then(setSources).catch(() => setSources([])); }, []);
+	const put = (k) => (e) => setF({ ...f, [k]: e.target.value });
+	const submit = async (e) => {
+		e.preventDefault();
+		if (!f.name.trim()) { setErr("Enter their full name"); return; }
+		if (!EMAIL.test(f.email.trim())) { setErr("Enter a valid email"); return; }
+		setBusy(true);
+		try {
+			await editApplicant(a.name, f);
+			if (f.cv) {
+				const said = await scoreApplicant(a).then(() => "CV saved and scored", (x) => `CV saved — not scored: ${why(x)}`);
+				await loadRecruitment({ fresh: true });
+				toast(said);
+			} else toast("Saved");
+			onClose();
+		} catch (x) { setErr(why(x)); setBusy(false); }
+	};
+	const field = (k, label, props = {}) => (
+		<div className="k-field">
+			<label htmlFor={`ea-${k}`}>{label}</label>
+			<input id={`ea-${k}`} className="k-inp" value={f[k]} onChange={put(k)} {...props} />
+		</div>
+	);
+	return (
+		<KitModal title="Edit applicant" onClose={onClose}>
+			<form noValidate onSubmit={submit}>
+				<div className="k-form-grid">
+					{field("name", "Full name", { autoFocus: true })}
+					{field("email", "Email", { type: "email" })}
+					{field("phone", "Phone", { type: "tel" })}
+					<div className="k-field">
+						<label htmlFor="ea-source">Source</label>
+						<select id="ea-source" className="k-inp k-sel" value={f.source} onChange={put("source")}>
+							<option value="">—</option>
+							{sources.map((x) => <option key={x.name} value={x.name}>{x.source_name || x.name}</option>)}
+						</select>
+					</div>
+				</div>
+				<label className="k-drop" style={{ marginTop: 14, padding: 18 }}>
+					<KitIcon name="upload" size={22} stroke={1.8} />
+					<b>{a.resume_attachment ? "Replace CV" : "Add CV"}</b>
+					<span>{f.cv ? f.cv.name : "PDF or Word"}</span>
+					<input type="file" accept=".pdf,.doc,.docx" aria-label="CV" onChange={(e) => setF({ ...f, cv: e.target.files?.[0] || null })} />
+				</label>
+				{err ? <small className="k-err">{err}</small> : null}
+				<ModalFoot ok="Save" busy={busy} onCancel={onClose} />
+			</form>
+		</KitModal>
+	);
+}
+
 export function Applicant() {
 	const rec = useRec();
 	const s = useApp();
 	const [tab, setTab] = useState("profile");
 	const [notes, setNotes] = useState(null);
+	const [editing, setEditing] = useState(false);
+	const [scoring, setScoring] = useState(false);
 	const [note, setNote] = useState("");
 	const a = (rec.apps || []).find((x) => x.name === s.recApp);
 	useEffect(() => {
@@ -371,6 +519,11 @@ export function Applicant() {
 	const score = storedScore(a);
 	const detail = String(a.custom_score_detail || "").split("\n").filter(Boolean);
 	const resume = a.resume_attachment || "";
+	const scoreNow = async () => {
+		setScoring(true);
+		try { await scoreApplicant(a); await loadRecruitment({ fresh: true }); toast("Scored"); } catch (x) { toast(why(x)); }
+		setScoring(false);
+	};
 	const send = async (e) => {
 		e.preventDefault();
 		if (!note.trim()) return;
@@ -388,6 +541,9 @@ export function Applicant() {
 					</div>
 				</div>
 				<div className="k-ph-act">
+					<button type="button" className="k-btn k-btn-line" onClick={() => setEditing(true)}>
+						<KitIcon name="edit" size={18} stroke={2} />Edit
+					</button>
 					{a.status === "Accepted" ? (
 						<button type="button" className="k-btn k-btn-green" onClick={() => navigate("employees", "new")}>
 							<KitIcon name="user" size={18} stroke={2} />Create profile
@@ -395,6 +551,7 @@ export function Applicant() {
 					) : null}
 				</div>
 			</div>
+			{editing ? <EditApplicant a={a} onClose={() => setEditing(false)} /> : null}
 			<div className="k-split">
 				<div className="k-card k-profile-card">
 					<div style={{ display: "flex", justifyContent: "center", margin: "4px 0 14px" }}><KitAvatar name={a.applicant_name} size={96} /></div>
@@ -413,6 +570,7 @@ export function Applicant() {
 						{[["Applied", dmy(day10(a.creation))], ["Score", score == null ? "Not scored" : `${score} / 10`]].map(([k, v]) => (
 							<div className="k-r" key={k} style={{ justifyContent: "space-between" }}><span className="k-muted">{k}</span><b>{v}</b></div>
 						))}
+						<button type="button" className="k-btn k-btn-line k-btn-sm" style={{ marginTop: 8 }} disabled={scoring} onClick={() => (resume ? void scoreNow() : setEditing(true))}>{!resume ? "Add CV to score" : scoring ? "Scoring…" : score == null ? "Score CV" : "Score again"}</button>
 					</div>
 				</div>
 				<div className="k-card">
