@@ -49,6 +49,9 @@ export async function loadRecruitment({ fresh = false } = {}) {
 /** Move an applicant: their status, as the signed-in person. */
 export async function setApplicantStatus(name, status) {
 	const r = await apiWrite("Job Applicant", name, { status });
+	// hrms re-checks the opening on every save, not only the first, so a closed
+	// job freezes its applicants where they stand until it is opened again.
+	if (!r.ok && /closed Job Opening/i.test(r.error || "")) throw new Error("This job is closed. Set it to Open, then move the candidate.");
 	if (!r.ok) throw new Error(r.error || "The site would not change it.");
 	const { rec } = getState();
 	set({ rec: { ...rec, apps: rec.apps.map((a) => (a.name === name ? { ...a, status } : a)) } });
