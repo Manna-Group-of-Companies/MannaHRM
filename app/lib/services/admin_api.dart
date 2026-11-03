@@ -4,15 +4,18 @@ import 'package:dio/dio.dart';
 
 import 'package:manna_hr_app/core/constants.dart';
 import 'package:manna_hr_app/core/day.dart';
+import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/session.dart';
 
-/// HR's reads — and HR's side makes nothing but reads.
+/// HR's reads — and one write, a leave decision.
 ///
-/// **No write of any kind.** Not a punch, not a correction, not Attendance,
-/// not a leave decision. HR corrects a day and decides leave on the website,
-/// where the approval rules are; a phone that could do it too would be a second
-/// set of rules to keep in step (CLAUDE.md §1). Sign-in and the session are
-/// `Api`'s, shared with the employee's side.
+/// Not a punch, not a correction, not Attendance. Leave is decided here (29
+/// October 2026, asked for) the way the website decides it — `apiDecide` in
+/// `client/src/api/client.js`: the status set and the whole document submitted
+/// through `savedocs`, so hrms's controller is what judges it on the site —
+/// the balance, an overlap, whether this login may approve. The phone holds no
+/// rule about who may, which is why it may do this at all (CLAUDE.md §1).
+/// Sign-in and the session are `Api`'s, shared with the employee's side.
 ///
 /// **A short field list stands behind every long one**, as in `Api`: Frappe
 /// answers 417 for the whole read when asked for one field a site has not got.
@@ -184,6 +187,30 @@ class AdminApi {
         orderBy: 'from_date desc',
         max: max,
       );
+
+  /// Approve or reject one application: [status] is `Approved` or `Rejected`.
+  /// Read fresh first, so a request somebody decided on the website a minute
+  /// ago is said rather than submitted twice. Throws what the site said.
+  static Future<void> decideLeave(String name, String status) async {
+    if (status != 'Approved' && status != 'Rejected') {
+      throw Refused('$status is not a decision.');
+    }
+    final r = await Session.I.dio.get('${_res('Leave Application')}/${Uri.encodeComponent(name)}');
+    final doc = (r.data is Map) ? r.data['data'] : null;
+    if (doc is! Map) {
+      throw Refused(frappeMessage(r.data) ?? '$name could not be read from the site.');
+    }
+    if ('${doc['docstatus']}' != '0') {
+      throw Refused('$name is already ${doc['status'] ?? 'decided'}.');
+    }
+    final s = await Session.I.dio.post('/api/method/frappe.desk.form.save.savedocs',
+        data: {'doc': jsonEncode({...doc, 'status': status}), 'action': 'Submit'},
+        options: Options(contentType: Headers.formUrlEncodedContentType));
+    final ok = (s.statusCode ?? 0) >= 200 && (s.statusCode ?? 0) < 300;
+    if (!ok) {
+      throw Refused(frappeMessage(s.data) ?? 'The site refused the decision and said nothing about why.');
+    }
+  }
 
   /// How many leave applications nobody has decided yet.
   static Future<int> pendingLeave() => _count('Leave Application', [['status', '=', 'Open'], ['docstatus', '=', 0]]);

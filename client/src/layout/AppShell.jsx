@@ -8,6 +8,7 @@ import { KitToast } from "@/components/kit/overlay";
 import SubNav from "@/layout/SubNav";
 import PageOutlet from "@/layout/PageOutlet";
 import GoTo from "@/layout/GoTo";
+import Welcome from "@/layout/Welcome";
 import Shortcuts from "@/layout/Shortcuts";
 import { MapDialog } from "@/components/PunchMap";
 import { PhotoDialog } from "@/components/PunchPhoto";
@@ -68,6 +69,7 @@ export default function AppShell() {
 			<PhotoDialog />
 			<GoTo />
 			<Shortcuts />
+			<Welcome />
 		</div>
 	);
 }

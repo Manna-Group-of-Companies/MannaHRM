@@ -18,7 +18,7 @@ class ReportsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     void open(Widget page) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     return Scaffold(
-      appBar: brandBar('Reports'),
+      appBar: brandBar('HR Reports'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -117,30 +117,68 @@ class _PayrollReportState extends State<PayrollReport> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
           children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              IconButton(tooltip: 'Previous month', onPressed: _loading ? null : () => _shift(-1), icon: const Icon(Icons.chevron_left)),
-              Text(monthTitle('$_ym-01'), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: kInk)),
-              IconButton(tooltip: 'Next month', onPressed: _loading ? null : () => _shift(1), icon: const Icon(Icons.chevron_right)),
-            ]),
-            if (_error.isNotEmpty) Note(_error),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(gradient: kBrandGradient, borderRadius: BorderRadius.circular(18)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Net payroll', style: TextStyle(color: Colors.white, fontSize: 13)),
-                const SizedBox(height: 4),
-                Text(_loading ? '…' : rupees(_sum('net_pay')),
-                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text(
-                  '${_rows.length} ${_rows.length == 1 ? 'slip' : 'slips'}${drafts > 0 ? ' · $drafts draft' : ''}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12.5),
-                ),
+            // The FlutterFlow report (29 October 2026): the month on its own
+            // bar, the net on a white card, gross and deductions under it.
+            Panel(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                IconButton(
+                    tooltip: 'Previous month',
+                    onPressed: _loading ? null : () => _shift(-1),
+                    icon: const Icon(Icons.chevron_left)),
+                Text(monthTitle('$_ym-01'),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: kInk)),
+                IconButton(
+                    tooltip: 'Next month',
+                    onPressed: _loading ? null : () => _shift(1),
+                    icon: const Icon(Icons.chevron_right)),
               ]),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            if (_error.isNotEmpty) Note(_error),
+            Container(
+              padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Row(children: [
+                  Expanded(
+                    child: Text('Net Payroll Summary',
+                        style: TextStyle(color: Color(0xFF3A4252), fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  ),
+                  Icon(Icons.payments_rounded, color: Color(0xFF0B0F19)),
+                ]),
+                const SizedBox(height: 18),
+                Text(_loading ? '…' : rupees(_sum('net_pay')),
+                    style: const TextStyle(color: Color(0xFF0B0F19), fontSize: 32, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('${_rows.length} ${_rows.length == 1 ? 'slip' : 'slips'} this month',
+                    style: const TextStyle(color: Color(0xFF4A5262), fontSize: 13)),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(height: 1, color: Color(0xFFD9DCE1)),
+                ),
+                Row(children: [
+                  const Text('Status',
+                      style: TextStyle(color: Color(0xFF4A5262), fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 10),
+                  if (!_loading && _rows.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: drafts > 0 ? const Color(0xFFF2B33D) : kGreen,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(drafts > 0 ? '$drafts draft' : 'Processed',
+                          style: const TextStyle(color: Color(0xFF0B0F19), fontSize: 12, fontWeight: FontWeight.w800)),
+                    )
+                  else
+                    const Text('—', style: TextStyle(color: Color(0xFF4A5262))),
+                ]),
+              ]),
+            ),
+            const SizedBox(height: 16),
             TileGrid([
-              Panel(child: _figure('Gross', _sum('gross_pay'), kGood)),
+              Panel(child: _figure('Gross Salary', _sum('gross_pay'), kInk)),
               Panel(child: _figure('Deductions', _sum('total_deduction'), kBad)),
             ]),
             const SectionTitle('Salary slips'),
@@ -184,8 +222,8 @@ class _PayrollReportState extends State<PayrollReport> {
   }
 
   Widget _figure(String label, double n, Color ink) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(color: ink, fontSize: 12.5)),
-        const SizedBox(height: 4),
-        Text(_loading ? '…' : rupees(n), style: TextStyle(color: ink, fontSize: 17, fontWeight: FontWeight.w800)),
+        Text(label, style: const TextStyle(color: kInk2, fontSize: 12.5, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Text(_loading ? '…' : rupees(n), style: TextStyle(color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
       ]);
 }

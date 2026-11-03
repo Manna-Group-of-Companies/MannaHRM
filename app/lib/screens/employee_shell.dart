@@ -137,16 +137,15 @@ class _HomeTabState extends State<_HomeTab> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          KitHeader(
+          HomeHeader(
+            greeting: greeting(ServerClock.I.now().hour),
             name: name,
+            role: role,
             image: '${emp?['image'] ?? ''}',
-            subtitle: [greeting(ServerClock.I.now().hour), if (role.isNotEmpty) role].join(' · '),
-            onMenu: () => widget.onTab(3),
             onAvatar: () => _open(const ProfileScreen()),
           ),
-          Container(
-            decoration: const BoxDecoration(gradient: kBandEdge),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
             child: TodayCard(key: ValueKey(_round)),
           ),
           Padding(
@@ -162,7 +161,7 @@ class _HomeTabState extends State<_HomeTab> {
               const SizedBox(height: 16),
               TileGrid([
                 Tile(
-                  icon: Icons.event_available_rounded,
+                  icon: Icons.event_note_rounded,
                   label: 'Apply Leave',
                   color: kTileGreen,
                   onTap: () async {
@@ -172,44 +171,38 @@ class _HomeTabState extends State<_HomeTab> {
                 ),
                 Tile(
                   icon: Icons.calendar_month_rounded,
-                  label: 'My Attendance',
-                  color: kTileBlue,
+                  label: 'Attendance',
+                  color: kTileGreen,
                   onTap: () => widget.onTab(1),
                 ),
                 Tile(
-                  icon: Icons.person_rounded,
+                  icon: Icons.person_outline_rounded,
                   label: 'My Profile',
-                  color: kTilePurple,
+                  color: kTileGreen,
                   onTap: () => _open(const ProfileScreen()),
                 ),
                 Tile(
-                  icon: Icons.receipt_long_rounded,
+                  icon: Icons.payments_rounded,
                   label: 'View Payslip',
-                  color: kTileOrange,
+                  color: kTileGreen,
                   onTap: () => _open(const PayslipScreen()),
                 ),
               ]),
               SectionTitle('Recent Activity',
-                  trailing: TextButton(onPressed: () => widget.onTab(2), child: const Text('View all'))),
+                  trailing: TextButton(
+                    onPressed: () => widget.onTab(2),
+                    child: const Text('See All', style: TextStyle(fontWeight: FontWeight.w800)),
+                  )),
               if (_recent.isEmpty && !_loading)
                 const Panel(child: Text('Nothing asked for yet.', style: TextStyle(color: kInk2)))
               else
-                Panel(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(children: [
-                    for (final a in _recent)
-                      ListTile(
-                        leading: IconBadge(
-                          a.kind == ActivityKind.leave ? Icons.beach_access_rounded : Icons.edit_calendar_rounded,
-                          color: a.kind == ActivityKind.leave ? kTileGreen : kTileBlue,
-                          size: 36,
-                        ),
-                        title: Text(a.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                        subtitle: Text(dmy(a.when), style: const TextStyle(fontSize: 12)),
-                        trailing: Pill(a.status, color: wordColour(a.status)),
-                      ),
-                  ]),
-                ),
+                for (final a in _recent)
+                  ActivityCard(
+                    icon: a.kind == ActivityKind.leave ? Icons.flight_takeoff_rounded : Icons.edit_calendar_rounded,
+                    title: a.title,
+                    subtitle: dmy(a.when),
+                    status: a.status,
+                  ),
             ]),
           ),
         ],

@@ -20,7 +20,10 @@
    Pure: no React, no network.
    --------------------------------------------------------------------------- */
 
-/** The template's columns, in order. The four HR fills are the last four. */
+/** The template's columns, in order. HR fills New Base; the three after it
+    fill themselves (HR, 29 October 2026) — the amount and the percentage are
+    formulas on New Base, and Effective From is the page's date. Typed over, a
+    cell is read as typed, so a sheet can still be filled by amount or by %. */
 export const TEMPLATE_COLUMNS = [
 	"Emp Code", "Name", "Department", "Salary Structure", "Current Base",
 	"New Base", "Increment Amount", "Increment %", "Effective From",
@@ -221,14 +224,16 @@ export function incrementDoc(line) {
 	return doc;
 }
 
-/** The template: one row per person with a salary now, their current base
-    filled in and the increment columns left for HR. */
+/** The template: one row per person, like the salary upload's list, their
+    current base filled in where they have one and the increment columns left
+    for HR. Somebody with no salary yet is listed with Current Base empty, and
+    the preview says so if HR fills them in (HR, 30 October 2026: a sheet of
+    only the few with a salary looked like no sheet at all). */
 export function templateRows(employees, assignments, day) {
 	const out = [];
 	for (const e of employees || []) {
 		const a = inForce(assignments, e.name, day);
-		if (!a) continue;
-		out.push([e.employee_number || e.name, e.employee_name || "", e.department || "", a.salary_structure, Number(a.base) || 0, "", "", "", ""]);
+		out.push([e.employee_number || e.name, e.employee_name || "", e.department || "", a ? a.salary_structure : "", a ? Number(a.base) || 0 : "", "", "", "", ""]);
 	}
 	return out.sort((x, y) => String(x[0]).localeCompare(String(y[0]), undefined, { numeric: true }));
 }

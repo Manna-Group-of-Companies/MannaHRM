@@ -31,8 +31,15 @@ function sooryaRow(r) {
 	return isSoorya(r.company) || isSoorya(r.branch) || isSoorya(r._co);
 }
 
-function labourRow(r) {
-	return has(`${r.employmentType} ${r.department} ${r.designation} ${r.branch}`, /contract|labou?r|manpower/);
+/** BMS's workers (HR, 29 October 2026): Factor HR wrote "(BMS)" after their
+    code — HPT-103(BMS) — and kept it in the old code. They are labour supply,
+    paid in cash by hand, so they go on the Labour supply tab with their
+    attendance whatever their record's department says. */
+const BMS = /\(\s*bms\s*\)/i;
+export const bmsRow = (r) => BMS.test(`${r.code || ""} ${r.oldCode || ""}`);
+
+export function labourRow(r) {
+	return bmsRow(r) || has(`${r.employmentType} ${r.department} ${r.designation} ${r.branch}`, /contract|labou?r|manpower/);
 }
 
 /** Whether a person takes any of their net pay home in cash, by their own
@@ -69,8 +76,22 @@ export function assignedOnly(rows, assignments, end) {
 	const has = new Set((assignments || [])
 		.filter((a) => Number(a.docstatus ?? 1) === 1 && (!end || String(a.from_date) <= String(end)))
 		.map((a) => a.employee));
-	const kept = (rows || []).filter((r) => has.has(r.employee));
+	/* Labour supply is paid in cash by hand, not from a salary structure, so
+	   it is kept for its attendance whether or not it has one. */
+	const kept = (rows || []).filter((r) => has.has(r.employee) || labourRow(r));
 	return { rows: kept, out: (rows || []).length - kept.length };
+}
+
+/** A month with slips, with its labour supply off the attendance instead
+    (HR, 30 October 2026). Labour supply — BMS's workers above all — is paid in
+    cash by hand and has no slip, so a register built from slips alone leaves
+    the Labour supply tab empty. Its people come from the preview, which is the
+    attendance; everybody else stays on their slip.
+    @param slipRows registerRows' rows  @param preview previewRows' rows */
+export function withLabourPreview(slipRows, preview) {
+	const labour = (preview || []).filter(labourRow);
+	const ids = new Set(labour.map((r) => r.employee));
+	return [...(slipRows || []).filter((r) => !labourRow(r) && !ids.has(r.employee)), ...labour];
 }
 
 /** Each row with the person's actual salary (Employee Actual Salary, 14 October
@@ -117,7 +138,7 @@ export function payrollDesignParts(registers, { bankCap = 20000, pfShare } = {})
 		...r,
 		company: r.company || p.company || "",
 		_co: p.company || r.company || "",
-		_preview: Boolean(p.preview),
+		_preview: Boolean(p.preview) || Boolean(r.kind),
 		...(pfShare === 100 || pfShare === 50 ? { pfShare } : {}),
 	});
 	const allPreview = (group) => group.length > 0 && group.every((r) => r._preview);

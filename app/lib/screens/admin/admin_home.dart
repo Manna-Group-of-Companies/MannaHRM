@@ -111,116 +111,109 @@ class _AdminHomeState extends State<AdminHome> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          KitHeader(
+          // HR's home, the FlutterFlow way (29 October 2026): the band with the
+          // name, and HR's own punch inside it when an Employee record carries
+          // this login — every function in one menu (asked for 21 October).
+          HomeHeader(
+            banded: true,
             name: name,
+            role: 'HR Admin',
+            roleColor: kAccent,
             image: '${Session.I.employee?['image'] ?? ''}',
-            subtitle: '${greeting(ServerClock.I.now().hour)} · HR Admin',
-            onMenu: widget.onMenu,
+            onAvatar: widget.onMenu,
+            child: Session.I.employee == null
+                ? null
+                : TodayCard(key: ValueKey(_round), onPunched: _load, compact: true),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              if (_error.isNotEmpty) Note(_error),
-              // HR's own punch, when an Employee record carries this login:
-              // every function in one menu (asked for 21 October 2026).
-              if (Session.I.employee != null) ...[
-                TodayCard(key: ValueKey(_round), onPunched: _load),
-                const SizedBox(height: 16),
-              ],
+              if (_error.isNotEmpty) ...[const SizedBox(height: 14), Note(_error)],
+              const CenterTitle('Organization Overview'),
               TileGrid([
                 Tile(
                   icon: Icons.people_alt_rounded,
                   label: 'Employees',
                   count: n(s?.employees),
-                  color: kTileBlue,
+                  color: kGreen,
                   onTap: () => widget.onTab(1),
                 ),
                 Tile(
                   icon: Icons.event_note_rounded,
                   label: 'Leave Requests',
                   count: n(s?.pendingLeave),
-                  color: kTilePurple,
+                  color: const Color(0xFFFFB020),
                   onTap: () => widget.onTab(2),
                 ),
                 Tile(
                   icon: Icons.how_to_reg_rounded,
                   label: 'Punched Today',
                   count: n(s?.inToday),
-                  color: kTileGreen,
+                  color: const Color(0xFF3D9BFF),
                   onTap: () => _open(const DayScreen()),
                 ),
                 Tile(
                   icon: Icons.person_off_rounded,
                   label: 'Not In Yet',
                   count: n(s?.notInToday),
-                  color: kBad,
+                  color: const Color(0xFFF2564B),
                   onTap: () => _open(const DayScreen(initialTab: 1)),
                 ),
               ]),
-              const SectionTitle('Quick Actions'),
-              TileGrid([
-                Tile(
+              const CenterTitle('Quick Actions'),
+              TileGrid(columns: 3, gap: 12, [
+                MiniTile(
                   icon: Icons.fingerprint,
                   label: "Today's Attendance",
-                  color: kTileOrange,
                   onTap: () => _open(const DayScreen()),
                 ),
-                Tile(
+                MiniTile(
                   icon: Icons.fact_check_outlined,
                   label: 'Manage Leave',
-                  color: kTilePurple,
                   onTap: () => widget.onTab(2),
                 ),
-                Tile(
+                MiniTile(
                   icon: Icons.insert_chart_outlined,
                   label: 'View Reports',
-                  color: kTileBlue,
                   onTap: () => widget.onTab(3),
                 ),
-                Tile(
+                MiniTile(
                   icon: Icons.settings_outlined,
                   label: 'Settings',
-                  color: kInk2,
                   onTap: () => _open(const SettingsScreen()),
                 ),
               ]),
               if (Session.I.employee != null) ...[
-                const SectionTitle('My Self-Service'),
-                TileGrid([
-                  Tile(
+                const CenterTitle('My Self-Service'),
+                TileGrid(columns: 3, gap: 12, [
+                  MiniTile(
                     icon: Icons.calendar_month_rounded,
                     label: 'My Attendance',
-                    color: kTileBlue,
                     onTap: () => _open(const CalendarScreen()),
                   ),
-                  Tile(
+                  MiniTile(
                     icon: Icons.event_available_rounded,
                     label: 'Apply Leave',
-                    color: kTileGreen,
                     onTap: () => openApplyLeave(context),
                   ),
-                  Tile(
+                  MiniTile(
                     icon: Icons.beach_access_rounded,
                     label: 'My Leave',
-                    color: kTilePurple,
                     onTap: () => _open(const LeaveScreen()),
                   ),
-                  Tile(
+                  MiniTile(
                     icon: Icons.receipt_long_rounded,
                     label: 'My Payslip',
-                    color: kTileOrange,
                     onTap: () => _open(const PayslipScreen()),
                   ),
-                  Tile(
+                  MiniTile(
                     icon: Icons.person_rounded,
                     label: 'My Profile',
-                    color: kTilePurple,
                     onTap: () => _open(const ProfileScreen()),
                   ),
-                  Tile(
+                  MiniTile(
                     icon: Icons.edit_calendar_rounded,
                     label: 'My Corrections',
-                    color: kTileBlue,
                     onTap: () => _open(const CorrectionsScreen()),
                   ),
                 ]),

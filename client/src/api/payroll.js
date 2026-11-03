@@ -37,7 +37,7 @@ async function listSome(label, wide, narrow, filters) {
 }
 
 const ENTRY_WIDE = ["name", "company", "start_date", "end_date", "posting_date", "docstatus", "status",
-	"number_of_employees", "owner", "creation"];
+	"number_of_employees", "error_message", "owner", "creation"];
 const ENTRY_NARROW = ["name", "company", "start_date", "end_date", "posting_date", "docstatus", "owner", "creation"];
 const SLIP_WIDE = ["name", "employee", "employee_name", "company", "department", "designation", "start_date",
 	"end_date", "posting_date", "docstatus", "status", "payroll_entry", "salary_structure", "payment_days",
@@ -122,6 +122,10 @@ export async function startSalaryProcess(company, start, end, posting) {
 
 /** Step 2: submit the entry, which makes the draft slips. */
 export const createSalarySlips = (name) => apiSubmitDraft("Payroll Entry", name);
+
+/** Step 2 again, for a run hrms marked Failed: the entry is submitted, so it is
+    hrms's own Create Salary Slips on it — the desk's button for a failed run. */
+export const retrySalarySlips = (name) => apiDocMethod("Payroll Entry", name, "create_salary_slips");
 
 /** Step 3: submit the entry's draft slips — the payslips — through hrms's own
     `submit_salary_slips`, the desk's Submit Salary Slip button, so its checks

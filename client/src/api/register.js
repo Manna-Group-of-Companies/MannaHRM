@@ -196,7 +196,12 @@ export async function loadPreviewReads(company, ym, start, end) {
 		/* Drafts too, so the page can say one is waiting; only a submitted one is counted. */
 		safe("This month's advances and loan instalments", "those columns are empty", () => listAll("Additional Salary",
 			["name", "employee", "salary_component", "amount", "docstatus"],
-			[["payroll_date", ">=", start], ["payroll_date", "<=", end], ["docstatus", "<", 2], ...co], 500), null),
+			[["payroll_date", ">=", start], ["payroll_date", "<=", end], ["docstatus", "<", 2], ...co], 500)
+			/* A recurring one — Salary Setup's health insurance — has no payroll
+			   date, only a run of months, so it is asked for by overlap. */
+			.then(async (once) => [...once, ...await listAll("Additional Salary",
+				["name", "employee", "salary_component", "amount", "docstatus"],
+				[["is_recurring", "=", 1], ["from_date", "<=", end], ["to_date", ">=", start], ["docstatus", "<", 2], ...co], 500)]), null),
 		loadLoansDue(company, ym),
 	]);
 	if (attendance === null) attendanceRead = false;

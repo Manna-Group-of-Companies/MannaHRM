@@ -24,6 +24,14 @@ export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
     Settings' `onboarding_sheet_id` wins once the site holds one. */
 export const DEFAULT_SHEET = { id: "1ocKXzWOov_CFD2he-29UKtb16_SppzF7tWbbjDVDIV0", gid: 389438614 };
 
+/** The joining Form's responses Sheet — the Form Share form sends, with a
+    Machine Number question (made 2 November 2026, in itmrppl@gmail.com's
+    Drive). Create Employee reads this and the onboarding Sheet above. */
+export const JOINING_SHEET = { id: "1tQRaoO7L_AWcfCM_icQozFSw-7zs3I2iwlhnnoOWrOw", gid: null };
+
+/** The joining Form's pre-filled link, NUMBER and NAME where the person's go. */
+export const JOINING_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSfej9ZHJJInztdBtewpZizVQdLRjASQv5BVCXVaSyN7p_UV3A/viewform?usp=pp_url&entry.1675631558=NUMBER&entry.340026437=NAME";
+
 /** A Sheet's id and tab out of whatever was pasted: its full URL or a bare id. */
 export function sheetRef(v) {
 	const t = String(v || "").trim();
@@ -99,7 +107,10 @@ export async function readGoogleSheet(ref) {
 	const bearer = token && token.until > Date.now() ? token.value : await signIn();
 	const meta = await sheetsApi(`${ref.id}?fields=sheets.properties(sheetId,title)`, bearer);
 	const tabs = (meta.sheets || []).map((s) => s.properties);
-	const tab = tabs.find((p) => p.sheetId === ref.gid) || tabs[0];
+	/* With no tab named, the Form's own: a linked Sheet keeps its empty Sheet1
+	   beside "Form Responses 1", and reading that one finds nobody. */
+	const tab = tabs.find((p) => p.sheetId === ref.gid)
+		|| tabs.find((p) => /^Form Responses/i.test(p.title)) || tabs[0];
 	if (!tab) return [];
 	const range = encodeURIComponent(`'${tab.title.replace(/'/g, "''")}'`);
 	/* Unformatted, with dates as serial numbers: the Sheet's display format is

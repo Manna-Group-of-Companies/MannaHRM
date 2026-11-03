@@ -48,6 +48,21 @@ flutter:
   assets:
     - assets/manna_logo.png
 
+  # The FlutterFlow design's face (29 October 2026). Bundled rather than
+  # fetched: a gate with no signal still has to draw the punch button.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
+
 # The launcher icon, built by `dart run tool/make_icon.dart` from
 # assets/manna_logo.png — see that file for why the lockup cannot be handed to
 # the generator directly.

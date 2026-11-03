@@ -108,47 +108,88 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // The kit's sign-in: the mark and the name on one line,
-                    // then the heading large and centred.
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                        child: Image.asset('assets/manna_logo.png', height: 22, fit: BoxFit.contain),
-                      ),
-                      const SizedBox(width: 10),
-                      const Text('Manna HR', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: kInk)),
-                    ]),
-                    const SizedBox(height: 28),
-                    const Text('Sign in to your account',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: kInk, height: 1.2)),
-                    const SizedBox(height: 30),
-                    TextField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      autofillHints: const [AutofillHints.username],
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email / user id',
-                        prefixIcon: Icon(Icons.person_outline),
+                    // The FlutterFlow sign-in (29 October 2026): the logo on a
+                    // white tile, the name, then the form in a card of its own.
+                    Center(
+                      child: Container(
+                        width: 76,
+                        height: 76,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                        child: Image.asset('assets/manna_logo.png', fit: BoxFit.contain),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _password,
-                      obscureText: !_showPassword,
-                      autofillHints: const [AutofillHints.password],
-                      onSubmitted: (_) => _busy ? null : _signIn(),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          tooltip: _showPassword ? 'Hide password' : 'Show password',
-                          icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
-                          onPressed: () => setState(() => _showPassword = !_showPassword),
+                    const SizedBox(height: 18),
+                    const Text('Manna HR',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: kInk)),
+                    const SizedBox(height: 4),
+                    const Text('People • Attendance • Payroll',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kInk2)),
+                    const SizedBox(height: 24),
+                    Panel(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        const Text('Sign in to your account',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: kInk)),
+                        const SizedBox(height: 20),
+                        const FieldLabel('Email / User ID'),
+                        TextField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          autofillHints: const [AutofillHints.username],
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(prefixIcon: Icon(Icons.person_rounded)),
                         ),
+                        const SizedBox(height: 16),
+                        const FieldLabel('Password'),
+                        TextField(
+                          controller: _password,
+                          obscureText: !_showPassword,
+                          autofillHints: const [AutofillHints.password],
+                          onSubmitted: (_) => _busy ? null : _signIn(),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.lock_rounded),
+                            suffixIcon: IconButton(
+                              tooltip: _showPassword ? 'Hide password' : 'Show password',
+                              icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                              onPressed: () => setState(() => _showPassword = !_showPassword),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        if (_error.isNotEmpty) Note(_error),
+                        if (_said.isNotEmpty) Note(_said, kind: NoteKind.ok),
+                        FilledButton(
+                          onPressed: _busy ? null : _signIn,
+                          child: _busy
+                              ? const SizedBox(
+                                  height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: kOnPrimary))
+                              : const Text('Sign in'),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton(onPressed: _busy ? null : _forgot, child: const Text('Forgot password?')),
+                      ]),
+                    ),
+                    const SizedBox(height: 10),
+                    // Folded away rather than absent: nobody in the factory
+                    // needs it, and whoever is testing against a bench cannot
+                    // do without it.
+                    InkWell(
+                      onTap: () => setState(() => _showSite = !_showSite),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+                        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kCardLine))),
+                        child: Row(children: [
+                          const Expanded(
+                            child: Text('Site address',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kInk)),
+                          ),
+                          Icon(_showSite ? Icons.remove_rounded : Icons.add_rounded, color: kInk),
+                        ]),
                       ),
                     ),
                     if (_showSite) ...[
@@ -160,32 +201,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: const InputDecoration(labelText: 'Site URL', prefixIcon: Icon(Icons.dns_outlined)),
                       ),
                     ],
-                    const SizedBox(height: 18),
-                    if (_error.isNotEmpty) Note(_error),
-                    if (_said.isNotEmpty) Note(_said, kind: NoteKind.ok),
-                    FilledButton(
-                      onPressed: _busy ? null : _signIn,
-                      child: _busy
-                          ? const SizedBox(
-                              height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: kOnPrimary))
-                          : const Text('Sign in'),
-                    ),
-                    const SizedBox(height: 6),
-                    TextButton(onPressed: _busy ? null : _forgot, child: const Text('Forgot password?')),
-                    // Folded away rather than absent: nobody in the factory
-                    // needs it, and whoever is testing against a bench cannot
-                    // do without it.
-                    TextButton.icon(
-                      onPressed: () => setState(() => _showSite = !_showSite),
-                      icon: Icon(_showSite ? Icons.expand_less : Icons.expand_more, size: 18),
-                      label: const Text('Site'),
-                      style: TextButton.styleFrom(foregroundColor: kInk2),
-                    ),
-                    const SizedBox(height: 18),
-                    Center(child: Image.asset('assets/manna_logo.png', height: 24, fit: BoxFit.contain)),
-                    const SizedBox(height: 8),
-                    const Text('Version $kAppVersion',
-                        textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: kInk2)),
+                    const SizedBox(height: 40),
+                    const Text('v$kAppVersion',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kFaint)),
                   ],
                 ),
               ),

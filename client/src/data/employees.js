@@ -229,8 +229,11 @@ export const NEW_EMP_STEPS = [
 		   is the day their leave starts, and a question left for later is a
 		   joiner who finds out in their third month that they have none. */
 		["Leave", [
-			["leave_type",     "Leave Type",     "select", 1, "leavetype", 8],
-			["leaves_a_month", "Leaves A Month", "number", 1, "",          8],
+			/* Both optional (HR, 2 November 2026). Leave Type left empty is Casual
+			   Leave (LEAVE_TYPE_NAME); Leaves A Month left empty is 0, which gives
+			   no leave — Give monthly leave on Apply Leave can do it later. */
+			["leave_type",     "Leave Type",     "select", 0, "leavetype", 8],
+			["leaves_a_month", "Leaves A Month", "number", 0, "",          8],
 		]],
 		/* Filled in at the start for a fixed-term hire and empty for everybody
 		   else. Here rather than on a later screen because a contract that ends is

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	cellValue, companyMethod, componentsFor, employeePatch, findUploadColumns, planUpload, rateOf, ratesOf, splitOf, structureName,
-	toSave, uploadRow, uploadStructureDoc, verifyUpload,
+	insuranceDoc, isInsurance, toSave, uploadComponentDoc, uploadRow, uploadStructureDoc, verifyUpload,
 } from "@/lib/salaryupload";
 
 /* ---------------------------------------------------------------------------
@@ -247,13 +247,13 @@ describe("the list to fill in", () => {
 		const assignments = [{ employee: "HR-EMP-1", salary_structure: "Salary PF 12 ESI 0.75 - Manna Rubber", base: 20000, from_date: "2026-04-01", docstatus: 1 }];
 		const p = person("HR-EMP-1", "MR001", { department: "Stores", salary_mode: "Bank", custom_bank_amount: 15000 });
 		const row = uploadRow(p, assignments);
-		expect(row).toEqual(["MR001", "Person MR001", "Stores", 20000, 15000, 5000, 12, 0.75]);
+		expect(row).toEqual(["MR001", "Person MR001", "Stores", 20000, 15000, 5000, 12, 0.75, null]);
 		expect(toSave(plan([row], { assignments, people: [p] }))).toEqual([]);
 	});
 
 	it("leaves a percentage share blank rather than turning it into rupees", () => {
 		const assignments = [{ employee: "HR-EMP-1", salary_structure: "Staff", base: 20000, from_date: "2026-04-01", docstatus: 1 }];
-		expect(uploadRow(person("HR-EMP-1", "MR001", { custom_bank_percent: 60 }), assignments).slice(3)).toEqual([20000, null, null, null, null]);
+		expect(uploadRow(person("HR-EMP-1", "MR001", { custom_bank_percent: 60 }), assignments).slice(3)).toEqual([20000, null, null, null, null, null]);
 	});
 });
 
@@ -316,5 +316,57 @@ describe("the EPF calculation, chosen once per company", () => {
 
 	it("does not read another company's structures as this company's choice", () => {
 		expect(companyMethod([{ name: "Salary Basic 50 PF 12 no ESI - Manna Treads" }], CO)).toBe("");
+	});
+});
+
+describe("health insurance (HR, 29 October 2026)", () => {
+	const H = [...HEAD, "Health Insurance ₹"];
+	const withIns = (rows, ctx = {}) => planUpload([H, ...rows], { company: CO, people: PEOPLE, comps: COMPS, bankFields: true, method: "full", ...ctx });
+	const running = (employee, amount, from = "2026-09-01") => ({ employee, amount, from_date: from, salary_component: "Health Insurance", is_recurring: 1, docstatus: 1 });
+
+	it("takes a different rupee amount from each person, as a recurring deduction from the date the salaries apply", () => {
+		const p = withIns([["MR001", "", 29000, "", "", 12, 0, 500], ["MR002", "", 30000, "", "", 12, 0, 750]]);
+		expect(p.lines.map((l) => [l.code, l.insurance, l.insure])).toEqual([["MR001", 500, true], ["MR002", 750, true]]);
+		const doc = insuranceDoc(p.lines[0], "2026-09-01", CO, p.roles);
+		expect(doc).toMatchObject({ employee: "HR-EMP-1", company: CO, salary_component: "Health Insurance", type: "Deduction", amount: 500, is_recurring: 1, from_date: "2026-09-01" });
+		expect(doc.to_date > "2090-01-01").toBe(true);
+	});
+
+	it("makes the Health Insurance component when the site has none, and never cuts it for days not worked", () => {
+		const p = withIns([["MR001", "", 29000, "", "", 12, 0, 500]]);
+		const ins = p.components.find((c) => c.role === "insurance");
+		expect(ins).toMatchObject({ name: "Health Insurance", type: "Deduction", exists: false });
+		expect(uploadComponentDoc(ins).depends_on_payment_days).toBe(0);
+	});
+
+	it("leaves a person with no amount, or a blank cell, without any insurance written", () => {
+		const p = withIns([["MR001", "", 29000, "", "", 12, 0, ""], ["MR002", "", 30000, "", "", 12, 0, 0]]);
+		expect(p.lines.every((l) => !l.insure)).toBe(true);
+		expect(p.components.some((c) => c.role === "insurance")).toBe(false);
+	});
+
+	it("does not change an insurance already running, and says so when the sheet differs", () => {
+		const p = withIns([["MR001", "", 29000, "", "", 12, 0, 600]], { insurance: [running("HR-EMP-1", 500)] });
+		expect(p.lines[0].insure).toBe(false);
+		expect(p.lines[0].notes.join(" ")).toContain("already ₹500");
+	});
+
+	it("refuses an amount that is not a number, or not less than the salary", () => {
+		const p = withIns([["MR001", "", 29000, "", "", 12, 0, "lots"], ["MR002", "", 30000, "", "", 12, 0, 30000]]);
+		expect(p.lines).toEqual([]);
+		expect(p.problems.map((x) => x.row)).toEqual([2, 3]);
+	});
+
+	it("reads health insurance back off the site, and does not take ESI for it", () => {
+		const p = withIns([["MR001", "", 29000, "", "", 12, 0, 500]]);
+		expect(verifyUpload(p.lines, { assignments: [], employees: [], insurance: [running("HR-EMP-1", 500)] })
+			.filter((w) => /insurance/.test(w.text))).toEqual([]);
+		expect(verifyUpload(p.lines, { assignments: [], employees: [], insurance: [] }).map((w) => w.text)).toContain("has no health insurance deduction on the site");
+		expect(isInsurance("Employee State Insurance")).toBe(false);
+		expect(isInsurance("Health Insurance")).toBe(true);
+	});
+
+	it("puts the running amount on the list to fill in", () => {
+		expect(uploadRow(person("HR-EMP-1", "MR001"), [], [running("HR-EMP-1", 500)]).at(-1)).toBe(500);
 	});
 });

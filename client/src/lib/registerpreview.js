@@ -24,7 +24,7 @@ import { structureFor } from "@/lib/payroll";
 import { kindOf } from "@/lib/salarysheet";
 import { LEAVE_TYPE_NAME, monthCarry } from "@/lib/monthlyleave";
 import { ESIC, PF, UAN } from "@/lib/statutory";
-import { ratesOf } from "@/lib/salaryupload";
+import { isInsurance, ratesOf } from "@/lib/salaryupload";
 
 const n = (v) => Number(v) || 0;
 /* Leave days and hours as the site wrote them, without the float dust a sum of
@@ -80,7 +80,7 @@ export const esiMember = (person) => Boolean(String(ESIC(person) || "").trim());
     named on the page so HR knows which cells are theirs to fill. */
 export const LEFT_EMPTY = [
 	"daily wage", "food allowance", "bata", "Labour Welfare Fund", "mess", "Covid-19 advance",
-	"insurance", "food deduction", "project incentive", "round off",
+	"food deduction", "project incentive", "round off",
 ];
 
 const words = (list) => (list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}` : list.join(""));
@@ -171,6 +171,7 @@ export function previewRows({
 			branch: p.branch || company,
 			employee: p.name,
 			code: p.employee_number || p.name,
+			oldCode: p.custom_factor_hr_id || "",
 			name: p.employee_name || p.name,
 			salaryMode: p.salary_mode || "",
 			...bankShareOf(p),
@@ -199,6 +200,8 @@ export function previewRows({
 			esiMember: esiMember(p),
 			pfGovt: "No",
 			advance: blank(sum(mine.filter((x) => kind(x) === "advance"), (x) => x.amount)),
+			/* Salary Setup's health insurance: a recurring Additional Salary. */
+			insurance: blank(sum(mine.filter((x) => isInsurance(x.salary_component)), (x) => x.amount)),
 			loanInstalment: blank(posted || sum(owed, (d) => d.amount)),
 			loanOutstanding: outstanding.length ? sum(outstanding, (d) => d.outstanding) : "",
 		};

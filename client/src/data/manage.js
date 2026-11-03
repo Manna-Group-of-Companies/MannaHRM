@@ -45,9 +45,6 @@ export const MANAGED = [
 	["payroll", "actualsalary", "Actual Salary", "Employee Actual Salary",
 		"Each person's actual salary from a date. Kept apart from payroll: the salary slip, PF and "
 		+ "ESI come from the salary structure assignment, never from here."],
-	["payroll", "festivalbonus", "Festival Bonus", "Employee Festival Bonus",
-		"A festival bonus given to each person, uploaded as HR's sheet. Paid apart from the salary: "
-		+ "no salary slip reads it."],
 
 	/* ---- Employees ---- */
 	["employees", "cattypes", "Category Types", "Employee Category Type",
@@ -149,6 +146,8 @@ export const NO_PAGE = [
 		+ "machine's own user list; read on the desk."],
 	["Attendance Device Punch", "Written by ADMS (manna_hr/adms_site.py) as each machine pushes; "
 		+ "a waiting punch delivers by itself once its reason is fixed, so there is nothing to edit."],
+	["Employee Festival Bonus", "Its page was folded into Payroll → Increments on request, 29 Oct 2026: "
+		+ "the upload, the bank sheet and the list are drawn there."],
 ];
 
 /* ---------------------------------------------------------------------------

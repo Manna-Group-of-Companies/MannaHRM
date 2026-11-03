@@ -58,6 +58,7 @@ import BankSheet from "@/features/payroll/BankSheet";
 import { bankSheetWorkbook } from "@/lib/banksheetxlsx";
 import { bankSheet } from "@/lib/banksheet";
 import { lastMonth } from "@/lib/payrollrun";
+import { thisMonth } from "@/lib/format";
 import { periodOf } from "@/lib/payroll";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
@@ -192,6 +193,11 @@ describe("Salary Setup", () => {
 });
 
 describe("Advances & Loans", () => {
+	it("starts an advance on the current month, so it comes out of this month's salary", async () => {
+		const v = await draw(AdvancesLoans);
+		expect(v.container.querySelector("#al-from").value).toBe(thisMonth());
+	});
+
 	it("makes one deduction a month, each submitted, and says so", async () => {
 		const v = await draw(AdvancesLoans);
 		await type(v, "#al-person", "HR-EMP-00001");

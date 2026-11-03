@@ -277,44 +277,6 @@ export default function Onboarding() {
 			</header>
 
 			<div className="onbbar" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
-				<button
-					className="embtn pri out"
-					disabled={(share.state !== "ok" && share.state !== "fallback") || !share.url}
-					title={share.state === "ok" && !share.url
-						? "No Google Form URL is set on Manna HR Settings yet."
-						: "Copy the Google Form's share link, to send to an employee."}
-					onClick={copyLink}
-				>
-					{copied ? "Link copied" : "Share Google Form"}
-				</button>
-				{share.url ? (
-					<a className="embtn" href={share.url} target="_blank" rel="noopener noreferrer"
-						title="Open the Google Form in a new tab.">
-						Open Form
-					</a>
-				) : null}
-				<button
-					className="embtn"
-					disabled={sync.busy || share.state !== "ok"}
-					title={share.state === "fallback"
-						? "Sync Now runs on the site, in the Manna HR app, which is not installed there yet. It reads the responses Sheet with a Google login that must stay on the server."
-						: share.state === "loading"
-							? "Reading Form settings — wait for that first."
-							: "Ask the site to read the linked Google Sheet again and bring in anything new."}
-					onClick={() => void syncNow()}
-				>
-					{sync.busy ? "Syncing…" : "Sync Now"}
-				</button>
-				<button className="embtn pri"
-					disabled={!canUpload || up.busy || !GOOGLE_CLIENT_ID}
-					title={!GOOGLE_CLIENT_ID
-						? "Needs a Google OAuth client id of type Web application, set as VITE_GOOGLE_CLIENT_ID in client/.env — see .env.example. Until then, Upload Responses."
-						: !canUpload
-							? "Waiting for the onboarding queue — or Employee Onboarding on this site has no Personal Email field yet: python tools/create_custom_fields.py \"Employee Onboarding\" --apply"
-							: "Sign in to Google as somebody the responses Sheet is shared with, and read it. Nothing is written until you press Import."}
-					onClick={() => void fromGoogle()}>
-					{up.busy && !up.plan ? "Reading Sheet…" : "Sync from Google Sheet"}
-				</button>
 				<label className={"embtn" + (canUpload && !up.busy ? "" : " off")}
 					title={canUpload
 						? "The Form's responses as a file: in the responses Google Sheet, File → Download → .xlsx or .csv, then choose it here. Nothing is written until you press Import."
@@ -325,15 +287,6 @@ export default function Onboarding() {
 					<input type="file" accept=".xlsx,.csv" hidden disabled={!canUpload || up.busy}
 						aria-label="Upload Form responses" onChange={(e) => void pickFile(e)} />
 				</label>
-				<span className="text-fine text-ink-3">
-					{share.state === "loading" ? "Reading Form settings…"
-						: share.state === "fallback"
-							? (share.err
-								? `Share works. Sync Now is unavailable — the site answered: ${share.err}`
-								: "Sync Now starts working once the Manna HR app is installed on the site — until then, Sync from Google Sheet or Upload Responses.")
-							: share.lastSync ? `Last synced ${dmyTime(share.lastSync)}`
-								: "Never synced yet"}
-				</span>
 			</div>
 
 			{up.plan ? (

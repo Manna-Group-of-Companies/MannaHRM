@@ -1,4 +1,4 @@
-import { entryFor, runState, slipTotals, withoutStructure } from "@/lib/payroll";
+import { entryFor, failReason, runState, slipTotals, withoutStructure } from "@/lib/payroll";
 import { missingComponents } from "@/lib/payrollsetup";
 
 /* ---------------------------------------------------------------------------
@@ -84,7 +84,10 @@ export function homeSteps({ setup, extras, pay, people, end }) {
 	else if (run === "none") runStep = { state: "todo", text: "Salary has not been run for this month yet." };
 	else if (run === "draft") runStep = { state: "todo", text: "The people are picked. Create the salary slips to continue." };
 	else if (run === "queued") runStep = { state: "wait", text: "Frappe is making the salary slips. Refresh in a minute." };
-	else if (run === "failed") runStep = { state: "warn", text: "The salary run failed. Open it in Frappe to see why." };
+	else if (run === "failed") {
+		const why = failReason(entry);
+		runStep = { state: "warn", text: why ? `The salary slips could not be made: ${why}` : "The salary slips could not be made, and the site gave no reason. Try again." };
+	}
 	else if (run === "slips") runStep = { state: "warn", text: `${plural(tot.count - tot.submitted, "slip is", "slips are")} still a draft. Pay the bank, then press Transferred on Bank Transfer.` };
 	else runStep = { state: "done", text: `${plural(tot.count, "slip", "slips")} submitted.` };
 	runStep.run = run;

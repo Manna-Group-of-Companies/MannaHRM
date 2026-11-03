@@ -40,35 +40,22 @@ beforeEach(() => {
 });
 
 describe("Onboarding without the manna_hr app on the site", () => {
-	it("keeps Share working and says why Sync Now does not, without Frappe's raw error", async () => {
+	/* Removed 2 November 2026, asked for: the joining Form goes out from Share
+	   form on New on the machine, and comes back by Sync Google Form on Create
+	   Employee. Upload Responses stays. */
+	it("has no Share Google Form, Sync Now or Sync from Google Sheet, and keeps Upload Responses", async () => {
 		const view = await draw();
 		const text = view.container.textContent;
 		expect(text).toContain("Upload Responses");
-		expect(text).toContain("once the Manna HR app is installed");
 		expect(text).not.toContain("Failed to get method");
-		const share = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Share Google Form");
-		expect(share.disabled).toBe(false);
-		const sync = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Sync Now");
-		expect(sync.disabled).toBe(true);
-	});
-
-	it("uses the Form link on Manna HR Settings when the site holds one", async () => {
-		settings = { onboarding_form_url: "https://forms.example/ours" };
-		const view = await draw();
-		expect(view.container.querySelector('a[href="https://forms.example/ours"]')).not.toBeNull();
+		const labels = [...view.container.querySelectorAll("button")].map((b) => b.textContent);
+		for (const gone of ["Share Google Form", "Sync Now", "Sync from Google Sheet"]) expect(labels).not.toContain(gone);
 	});
 
 	it("still prints an error that is not the missing app, since that one means something else", async () => {
 		method = () => Promise.reject(new Error("Not permitted"));
 		const view = await draw();
 		expect(view.container.textContent).toContain("Not permitted");
-	});
-
-	it("syncs when the app answers", async () => {
-		method = () => Promise.resolve({ form_url: "https://forms.example/x", last_sync: "" });
-		const view = await draw();
-		const sync = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Sync Now");
-		expect(sync.disabled).toBe(false);
 	});
 });
 

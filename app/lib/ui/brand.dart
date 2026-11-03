@@ -17,6 +17,11 @@ const kRaised = Color(0xFF303948);
 const kLine = Color(0xFF2D3645);
 const kFieldLine = Color(0xFF465061);
 
+/// The FlutterFlow design (29 October 2026): fields sit a shade *below* the
+/// card they are on, and every card carries a hairline a shade above it.
+const kField = Color(0xFF1A2131);
+const kCardLine = Color(0xFF2F3849);
+
 /// The kit's primary button is white with the page's navy on it — the
 /// reverse of its light page, where the same button is navy.
 const kPrimary = Colors.white;
@@ -86,72 +91,84 @@ AppBar brandBar(String title, {List<Widget>? actions, PreferredSizeWidget? botto
       titleTextStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: kInk),
     );
 
-/// The top of a home screen, the kit's *Home - V2*: a card-coloured band with
-/// the bar in it — menu on the left, the person's avatar and a chevron on the
-/// right — and "Hi, Name" over a grey line under that. [overlap] is how far
-/// the band runs on below its text, for a card to sit across its edge.
-class KitHeader extends StatelessWidget {
-  const KitHeader({
+/// The top of a home screen, the FlutterFlow way (29 October 2026): the
+/// greeting small, the name large, the role under it, the photo on the right.
+///
+/// [banded] draws it on a card-coloured band with rounded lower corners, as
+/// HR's home does, and puts [child] — HR's own attendance — inside the band.
+class HomeHeader extends StatelessWidget {
+  const HomeHeader({
     super.key,
     required this.name,
-    required this.subtitle,
+    required this.role,
+    this.greeting = '',
     this.image = '',
-    this.onMenu,
+    this.roleColor = kInk2,
     this.onAvatar,
-    this.overlap = 0,
+    this.banded = false,
+    this.child,
   });
 
   final String name;
-  final String subtitle;
+  final String role;
+  final String greeting;
   final String image;
-  final VoidCallback? onMenu;
+  final Color roleColor;
   final VoidCallback? onAvatar;
-  final double overlap;
+  final bool banded;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: kCard,
-      padding: EdgeInsets.fromLTRB(12, MediaQuery.of(context).padding.top + 8, 12, 22 + overlap),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          if (onMenu != null)
-            IconButton(tooltip: 'Menu', onPressed: onMenu, icon: const Icon(Icons.notes_rounded, color: kInk))
-          else
-            const SizedBox(width: 48),
-          const Spacer(),
-          InkWell(
-            borderRadius: BorderRadius.circular(30),
-            onTap: onAvatar,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Row(children: [
-                Avatar(name: name, image: image, radius: 18),
-                const SizedBox(width: 6),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: kInk2, size: 20),
-              ]),
-            ),
-          ),
-        ]),
-        const SizedBox(height: 18),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+    final top = MediaQuery.of(context).padding.top;
+    final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // The whole name, not the kit's first name alone: HR phones are
-            // shared, and two Priyas is one login looking like another's.
+            if (greeting.isNotEmpty)
+              Text(greeting, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kInk2)),
+            // The whole name: HR phones are shared, and two Priyas is one
+            // login looking like another's. "Hi," is its own word so the name
+            // stays findable as itself.
             Row(children: [
-              const Text('Hi, ', style: TextStyle(color: kInk, fontSize: 24, fontWeight: FontWeight.w800)),
+              if (banded)
+                const Text('Hi, ', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: kInk)),
               Flexible(
-                child: Text(name.trim().isEmpty ? 'there' : name.trim(),
+                child: Text(name,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: kInk, fontSize: 24, fontWeight: FontWeight.w800)),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: kInk, height: 1.25)),
               ),
             ]),
-            const SizedBox(height: 6),
-            Text(subtitle, overflow: TextOverflow.ellipsis, style: const TextStyle(color: kInk2, fontSize: 14)),
+            if (role.isNotEmpty)
+              Text(role,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: roleColor)),
           ]),
         ),
+        const SizedBox(width: 12),
+        InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onAvatar,
+          child: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: kCardLine, width: 2)),
+            child: Avatar(name: name, image: image, radius: 24),
+          ),
+        ),
       ]),
+      if (child != null) ...[const SizedBox(height: 20), child!],
+    ]);
+    if (!banded) {
+      return Padding(padding: EdgeInsets.fromLTRB(20, top + 16, 20, 4), child: body);
+    }
+    return Container(
+      padding: EdgeInsets.fromLTRB(18, top + 14, 18, 20),
+      decoration: const BoxDecoration(
+        color: kCard,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+        boxShadow: [BoxShadow(color: Colors.black38, blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: body,
     );
   }
 }
@@ -216,7 +233,8 @@ class Panel extends StatelessWidget {
   Widget build(BuildContext context) => Material(
         color: kCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: kCardLine),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
@@ -240,9 +258,12 @@ class IconBadge extends StatelessWidget {
       );
 }
 
-/// A square door on a home screen: an icon and a word, and sometimes a count.
+/// A door on a home screen. Without a [count] it is the FlutterFlow action
+/// tile: an icon on a raised circle over a word, centred. With one it is a
+/// figure: the icon on a filled circle of its [color], a small label, and the
+/// number large under it.
 class Tile extends StatelessWidget {
-  const Tile({super.key, required this.icon, required this.label, required this.onTap, this.color = kInk, this.count});
+  const Tile({super.key, required this.icon, required this.label, required this.onTap, this.color = kGreen, this.count});
 
   final IconData icon;
   final String label;
@@ -251,46 +272,147 @@ class Tile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  Widget build(BuildContext context) {
+    if (count == null) {
+      return Panel(
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          IconBadge(icon, color: color, size: 46),
+          const SizedBox(height: 12),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: kInk)),
+        ]),
+      );
+    }
+    return Panel(
+      onTap: onTap,
+      padding: const EdgeInsets.all(18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: Icon(icon, color: kPage, size: 22),
+        ),
+        const SizedBox(height: 18),
+        Center(
+          child: Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kInk2)),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(count!,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: kInk, height: 1.15)),
+        ),
+      ]),
+    );
+  }
+}
+
+/// A small door, three to a row — HR's Quick Actions.
+class MiniTile extends StatelessWidget {
+  const MiniTile({super.key, required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
   Widget build(BuildContext context) => Panel(
         onTap: onTap,
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconBadge(icon, color: color, size: 48),
-            const SizedBox(height: 16),
-            if (count != null) ...[
-              Text(count!, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: kInk, height: 1.1)),
-              const SizedBox(height: 6),
-              Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: kInk2)),
-            ] else
-              Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kInk)),
-          ],
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: kGreen, size: 26),
+          const SizedBox(height: 8),
+          Text(label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kInk)),
+        ]),
       );
 }
 
-/// Two tiles to a row, at any count.
+/// Tiles in rows of [columns], at any count.
 class TileGrid extends StatelessWidget {
-  const TileGrid(this.tiles, {super.key});
+  const TileGrid(this.tiles, {super.key, this.columns = 2, this.gap = 14});
 
   final List<Widget> tiles;
+  final int columns;
+  final double gap;
 
   @override
   Widget build(BuildContext context) => Column(
         children: [
-          for (var i = 0; i < tiles.length; i += 2) ...[
-            if (i > 0) const SizedBox(height: 12),
+          for (var i = 0; i < tiles.length; i += columns) ...[
+            if (i > 0) SizedBox(height: gap),
             IntrinsicHeight(
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Expanded(child: tiles[i]),
-                const SizedBox(width: 12),
-                Expanded(child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox()),
+                for (var j = 0; j < columns; j++) ...[
+                  if (j > 0) SizedBox(width: gap),
+                  Expanded(child: i + j < tiles.length ? tiles[i + j] : const SizedBox()),
+                ],
               ]),
             ),
           ],
         ],
+      );
+}
+
+/// A centred heading over a group — "Organization Overview".
+class CenterTitle extends StatelessWidget {
+  const CenterTitle(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 26, 0, 16),
+        child: Text(text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kInk)),
+      );
+}
+
+/// One thing somebody asked for, on a card of its own: a square icon, the
+/// title and a line under it, and where it stands.
+class ActivityCard extends StatelessWidget {
+  const ActivityCard({super.key, required this.icon, required this.title, required this.subtitle, required this.status});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Panel(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: kRaised, borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: kGreen, size: 21),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(children: [
+                Text(title,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: kInk)),
+                const SizedBox(height: 3),
+                Text(subtitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: kInk2)),
+              ]),
+            ),
+            const SizedBox(width: 8),
+            Pill(status, color: wordColour(status)),
+          ]),
+        ),
       );
 }
 
@@ -453,3 +575,36 @@ const kBandEdge = LinearGradient(
   colors: [kCard, kCard, kPage, kPage],
   stops: [0, .32, .32, 1],
 );
+
+/// A field's name over the field, the FlutterFlow way, rather than a label
+/// that floats inside the box.
+class FieldLabel extends StatelessWidget {
+  const FieldLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(left: 2, bottom: 8),
+        child: Text(text, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kInk)),
+      );
+}
+
+/// A status on a dark wash with an icon — "✓ Present" on the Today card.
+class StatusTag extends StatelessWidget {
+  const StatusTag(this.text, {super.key, required this.color, this.icon});
+
+  final String text;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(color: color.withValues(alpha: .16), borderRadius: BorderRadius.circular(20)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[Icon(icon, size: 15, color: color), const SizedBox(width: 5)],
+          Text(text, style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w700)),
+        ]),
+      );
+}

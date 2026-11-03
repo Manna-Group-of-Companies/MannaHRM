@@ -23,7 +23,7 @@
    side and a different shape is a second thing to learn.
    --------------------------------------------------------------------------- */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { getState, set, useApp } from "@/store";
 import { listAll } from "@/api/client";
@@ -115,10 +115,15 @@ const AP_COLS = [
 	)],
 ];
 
+/* The month so far: a page that opened on today alone showed "Not generated
+   yet", then nothing at all on a day nobody punched from the app, which read
+   as the app sending nothing (HR, 2 November 2026). */
+const monthStart = () => todayIso().slice(0, 8) + "01";
+
 async function apGenerate() {
 	void loadWorkLocations();
 	const f = getState().ap;
-	const from = f.from || todayIso();
+	const from = f.from || monthStart();
 	const till = f.till || todayIso();
 	set({ ap: { ...f, from, till } });
 
@@ -351,7 +356,11 @@ function Grid({ s, grid }) {
 
 export default function AppPunches() {
 	const s = useApp();
-	const [from, setFrom] = useState(s.ap.from || todayIso());
+	/* Read on arrival, once: the punches are the page, not something to ask for. */
+	useEffect(() => {
+		if (!getState().apState) void apGenerate();
+	}, []);
+	const [from, setFrom] = useState(s.ap.from || monthStart());
 	const [till, setTill] = useState(s.ap.till || todayIso());
 	const view = s.ap.view || "punches";
 	const rows = (s.apRows || [])

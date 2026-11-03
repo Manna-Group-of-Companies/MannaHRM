@@ -4,6 +4,32 @@ import { NEW_EMP_BLANK } from "@/lib/newemp";
 import { go } from "@/routes/router";
 import { apiCall } from "@/api/client";
 import { dmy, initials } from "@/lib/format";
+import { NAME, NUMBER, formLinkFor, isFormLink, shareText, whatsappLink } from "@/lib/formshare";
+import { JOINING_FORM } from "@/lib/googlesheet";
+
+/* The joining Form's pre-filled link; a build can name another
+   (VITE_EMPLOYEE_FORM), and a link pasted at the prompt lasts the session —
+   not localStorage, which lib/mode.js alone owns. */
+let formLink = import.meta.env.VITE_EMPLOYEE_FORM || JOINING_FORM;
+
+function askFormLink() {
+	const got = window.prompt(`Google Form pre-filled link (Machine number = ${NUMBER}, Full name = ${NAME})`, formLink);
+	if (got == null) return "";
+	if (!isFormLink(got)) {
+		window.alert(`That is not a Google Form pre-filled link with ${NUMBER} in it.`);
+		return "";
+	}
+	formLink = got.trim();
+	return formLink;
+}
+
+function shareForm(r) {
+	const link = formLink || askFormLink();
+	if (!link) return;
+	const name = r.name_on_device || "";
+	const text = shareText({ pin: r.pin, name, company: r.company }, formLinkFor(link, { pin: r.pin, name }));
+	window.open(whatsappLink(text), "_blank", "noopener");
+}
 
 /* ---------------------------------------------------------------------------
    New on the machine — somebody enrolled on a fingerprint machine whom no
@@ -65,7 +91,12 @@ export default function NewOnMachine() {
 									</span>
 								</span>
 								<span className="cov part">Waiting</span>
-								<button className="embtn pri ml-auto"
+								<button className="embtn ml-auto"
+									aria-label={`Share the form on WhatsApp, no. ${r.pin}`}
+									onClick={() => shareForm(r)}>
+									Share form
+								</button>
+								<button className="embtn pri"
 									aria-label={`Create Employee for machine no. ${r.pin}`}
 									onClick={() => toWizardFromMachine(r)}>
 									Create Employee

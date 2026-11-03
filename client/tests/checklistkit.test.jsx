@@ -30,7 +30,7 @@ describe("the to-do list", () => {
 		const { isHidden } = await import("@/data/sections");
 		const { MODULES } = await import("@/routes/registry");
 		expect(isHidden("checklist", "todos")).toBe(true);
-		expect(MODULES.checklist.tabs[0]).toEqual(["overview", "Onboarding"]);
+		expect(MODULES.checklist.tabs[0]).toEqual(["overview", "Offboarding"]);
 		vi.spyOn(http, "get").mockImplementation(() => Promise.resolve({ data: { data: [] } }));
 		await act(async () => set({ ...loadedState(), user: HR, section: "checklist", subtab: "overview", todos: { state: "ok", rows: TODOS } }));
 		const { container } = draw();

@@ -4,9 +4,9 @@
  *  ToDo, Employee Onboarding / Employee Separation and their Tasks, and the
  *  two templates (api/checklist.js).
  *
- *  Starting an onboarding or a separation, and changing a template, stay on
- *  the site's desk: hrms makes each activity's Task when the document is
- *  saved there, and a checklist begun here without them would tick nothing.
+ *  Starting an onboarding or a separation, and making or changing a
+ *  template, are here too (29 October 2026, features/checklist/BoardingForms):
+ *  a checklist is made submitted, which is when hrms makes each Task.
  */
 
 import { useEffect, useState } from "react";
@@ -17,12 +17,12 @@ import {
 	setTask, setTodo,
 } from "@/api/checklist";
 import { dmy, todayIso, tidyDept } from "@/lib/format";
-import { deskUrl } from "@/lib/desk";
 import { openEmployee } from "@/features/employees/openEmployee";
 import KitIcon from "@/components/kit/KitIcon";
 import KitAvatar from "@/components/kit/KitAvatar";
 import { EmptyState, PageHead, Pill, SegTabs, Who } from "@/components/kit/ui";
 import { Confirm, KitModal, ModalFoot, toast } from "@/components/kit/overlay";
+import { StartBoarding, TemplateForm } from "@/features/checklist/BoardingForms";
 
 const day10 = (v) => String(v || "").slice(0, 10);
 const why = (e) => String(e?.message || e || "The site would not do that.").slice(0, 240);
@@ -33,16 +33,6 @@ const BOARD_PILL = { Pending: "Not started", "In Process": "In progress", Comple
 function Progress({ pct }) {
 	return (
 		<div className="k-progress"><div className="k-bar"><i style={{ width: `${Math.round(pct)}%` }} /></div><span>{Math.round(pct)}%</span></div>
-	);
-}
-
-/** The site's desk, for what is started or changed there. */
-function DeskButton({ s, doctype, label }) {
-	const href = s.site ? `${deskUrl(s.site, doctype)}/new` : "";
-	return href ? (
-		<a className="k-btn k-btn-ink" href={href} target="_blank" rel="noreferrer"><KitIcon name="plus" size={18} stroke={2} />{label}</a>
-	) : (
-		<button type="button" className="k-btn k-btn-ink" disabled title="Which desk this opens has not been settled yet."><KitIcon name="plus" size={18} stroke={2} />{label}</button>
 	);
 }
 
@@ -217,6 +207,7 @@ export function TodoDetail() {
 
 export function Boarding({ kind }) {
 	const s = useApp();
+	const [start, setStart] = useState(false);
 	useEffect(() => { void loadBoarding(); }, []);
 	const rows = (s.boarding[kind] || []).filter((r) => !s.company || r.company === s.company);
 	const open = (r) => { set({ chkList: { kind, name: r.name } }); navigate("checklist", "list"); };
@@ -224,7 +215,9 @@ export function Boarding({ kind }) {
 	return (
 		<div className="kit k-enter">
 			<PageHead title={kind} sub={kind === "Onboarding" ? "Help new people settle in" : "Make sure leavers hand over smoothly"}>
-				<DeskButton s={s} doctype={KINDS[kind].doctype} label={kind === "Onboarding" ? "Start onboarding" : "Start offboarding"} />
+				<button type="button" className="k-btn k-btn-ink" onClick={() => setStart(true)}>
+					<KitIcon name="plus" size={18} stroke={2} />{kind === "Onboarding" ? "Start onboarding" : "Start offboarding"}
+				</button>
 			</PageHead>
 			<div className="k-card">
 				{s.boarding.state !== "ok" && s.boarding.state !== "error" ? <div className="k-sk" style={{ height: 200 }} /> : rows.length ? (
@@ -246,6 +239,7 @@ export function Boarding({ kind }) {
 					</div>
 				) : <EmptyState icon="check" title={`No ${kind.toLowerCase()} in progress`} sub={`Start a checklist when someone ${kind === "Onboarding" ? "joins" : "leaves"}.`} />}
 			</div>
+			{start ? <StartBoarding kind={kind} onClose={() => setStart(false)} onMade={(name) => open({ name })} /> : null}
 		</div>
 	);
 }
@@ -257,7 +251,7 @@ export function ChecklistDetail() {
 	const [busy, setBusy] = useState("");
 	const reload = () => readChecklist(kind, name).then(setData).catch(() => setData(null));
 	useEffect(() => { if (kind && name) void reload(); else setData(null); }, [kind, name]);
-	const back = () => navigate("checklist", kind === "Offboarding" ? "offboarding" : "overview");
+	const back = () => navigate("checklist", kind === "Offboarding" ? "overview" : "onboarding");
 	if (data === undefined) return <div className="kit"><div className="k-sk" style={{ height: 300 }} /></div>;
 	if (!data) return <div className="kit"><div className="k-card"><EmptyState icon="check" title="This checklist is not there" sub="It may have been cancelled on the site."><button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={back}>Go back</button></EmptyState></div></div>;
 	const { doc, items } = data;
@@ -320,16 +314,18 @@ export function ChecklistSettings() {
 	const s = useApp();
 	const [tab, setTab] = useState("Onboarding");
 	const [lists, setLists] = useState({});
-	useEffect(() => {
+	const [making, setMaking] = useState(false);
+	const readAll = () => {
 		readTemplates("Onboarding").then((r) => setLists((l) => ({ ...l, Onboarding: r })));
 		readTemplates("Offboarding").then((r) => setLists((l) => ({ ...l, Offboarding: r })));
-	}, []);
+	};
+	useEffect(readAll, []);
 	const L = lists[tab];
 	const open = (t) => { set({ chkTpl: { kind: tab, name: t.name } }); navigate("checklist", "template"); };
 	return (
 		<div className="kit k-enter">
 			<PageHead title="Checklist Settings" sub="Templates used for onboarding and offboarding">
-				<DeskButton s={s} doctype={KINDS[tab].template} label="New template" />
+				<button type="button" className="k-btn k-btn-ink" onClick={() => setMaking(true)}><KitIcon name="plus" size={18} stroke={2} />New template</button>
 			</PageHead>
 			<div className="k-card">
 				<div className="k-card-h">
@@ -340,13 +336,14 @@ export function ChecklistSettings() {
 						{L.map((t) => (
 							<button type="button" className="k-tile" key={t.name} onClick={() => open(t)}>
 								<span className="k-ti"><KitIcon name="check" size={20} stroke={2} /></span>
-								<h3>{t.name}</h3>
+								<h3>{t.title || t.name}</h3>
 								<p>{[t.designation, tidyDept(t.department), t.company].filter(Boolean).join(" · ") || "Everybody"}</p>
 							</button>
 						))}
 					</div>
 				) : <EmptyState icon="check" title="No templates yet" sub="Create one to reuse the same tasks." />}
 			</div>
+			{making ? <TemplateForm kind={tab} onClose={() => setMaking(false)} onSaved={readAll} /> : null}
 		</div>
 	);
 }
@@ -355,12 +352,13 @@ export function TemplateDetail() {
 	const s = useApp();
 	const { kind, name } = s.chkTpl || {};
 	const [doc, setDoc] = useState(undefined);
-	useEffect(() => { if (kind && name) readTemplate(kind, name).then(setDoc); else setDoc(null); }, [kind, name]);
+	const [editing, setEditing] = useState(false);
+	const read = () => { if (kind && name) readTemplate(kind, name).then(setDoc); else setDoc(null); };
+	useEffect(read, [kind, name]);
 	const back = () => navigate("checklist", "settings");
 	if (doc === undefined) return <div className="kit"><div className="k-sk" style={{ height: 240 }} /></div>;
 	if (!doc) return <div className="kit"><div className="k-card"><EmptyState icon="check" title="This template is not there" sub=""><button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={back}>Go back</button></EmptyState></div></div>;
 	const acts = doc.activities || [];
-	const href = s.site ? `${deskUrl(s.site, KINDS[kind].template)}/${encodeURIComponent(name)}` : "";
 	return (
 		<div className="kit k-enter">
 			<div className="k-ph">
@@ -369,11 +367,11 @@ export function TemplateDetail() {
 					<div className="k-crumbs"><button type="button" onClick={back}>Checklist settings</button><KitIcon name="right" size={14} stroke={2} /><b>{name}</b></div>
 				</div>
 				<div className="k-ph-act">
-					{href ? <a className="k-btn k-btn-line" href={href} target="_blank" rel="noreferrer"><KitIcon name="edit" size={16} stroke={2} />Edit on the site</a> : null}
+					<button type="button" className="k-btn k-btn-line" onClick={() => setEditing(true)}><KitIcon name="edit" size={16} stroke={2} />Edit</button>
 				</div>
 			</div>
 			<div className="k-card">
-				<div className="k-card-h"><div><h3>{name}</h3><span className="k-muted" style={{ fontSize: 13 }}>{kind} · {acts.length} task{acts.length === 1 ? "" : "s"}</span></div></div>
+				<div className="k-card-h"><div><h3>{doc.title || name}</h3><span className="k-muted" style={{ fontSize: 13 }}>{kind} · {acts.length} task{acts.length === 1 ? "" : "s"}</span></div></div>
 				{acts.length ? (
 					<div className="k-tbl-wrap">
 						<table className="k-rt">
@@ -391,6 +389,7 @@ export function TemplateDetail() {
 					</div>
 				) : <EmptyState icon="check" title="No tasks yet" sub="Add the steps everyone should go through." />}
 			</div>
+			{editing ? <TemplateForm kind={kind} doc={doc} onClose={() => setEditing(false)} onSaved={read} /> : null}
 		</div>
 	);
 }
@@ -399,9 +398,9 @@ export default function Checklist() {
 	const { subtab } = useApp();
 	if (subtab === "todo") return <TodoDetail />;
 	if (subtab === "todos") return <Todo />;
-	if (subtab === "offboarding") return <Boarding kind="Offboarding" />;
+	if (subtab === "onboarding") return <Boarding kind="Onboarding" />;
 	if (subtab === "list") return <ChecklistDetail />;
 	if (subtab === "settings") return <ChecklistSettings />;
 	if (subtab === "template") return <TemplateDetail />;
-	return <Boarding kind="Onboarding" />;
+	return <Boarding kind="Offboarding" />;
 }

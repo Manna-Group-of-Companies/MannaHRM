@@ -6,6 +6,7 @@ import { changesOn, defaultEffective, tally, verifyLine } from "@/lib/increments
 import { todayIso } from "@/lib/format";
 import { deskUrl } from "@/lib/desk";
 import { payRows } from "@/features/payroll/shared";
+import FestivalBonus from "@/features/payroll/FestivalBonus";
 import { Desk, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 
 /* PAYROLL → INCREMENTS. Ours, 5 October 2026 — January's salary increments.
@@ -255,6 +256,8 @@ export default function Increments() {
 					</Scroll>
 				)}
 			</Panel>
+
+			<FestivalBonus />
 		</div>
 	);
 }

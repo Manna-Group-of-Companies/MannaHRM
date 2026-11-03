@@ -12,7 +12,9 @@
    assets) is a different job and is untouched.
    --------------------------------------------------------------------------- */
 
-import { apiCreate, apiWrite, getDoc, listAll } from "@/api/client";
+import { apiCreate, apiCreateSubmitted, apiWrite, getDoc, listAll } from "@/api/client";
+import { candidateChain } from "@/api/onboarding";
+import { onboardingDoc, separationDoc, templateDoc } from "@/lib/boarding";
 import { getState, set } from "@/store";
 
 const TODO = ["name", "description", "status", "priority", "date", "allocated_to", "reference_type", "reference_name", "assigned_by", "creation"];
@@ -93,6 +95,32 @@ export async function setTask(name, done) {
 	if (!r.ok) throw new Error(r.error || "The site would not change it.");
 }
 
-/** The templates, read (Checklist settings). */
-export const readTemplates = (kind) => listAll(KINDS[kind].template, ["name", "designation", "department", "company"]).catch(() => []);
+/** The templates, read (Checklist settings). `title` where the site's
+    template has one; asked again without it where it does not. */
+export const readTemplates = (kind) => listAll(KINDS[kind].template, ["name", "title", "designation", "department", "company"])
+	.catch(() => listAll(KINDS[kind].template, ["name", "designation", "department", "company"])).catch(() => []);
+
+/** Start an offboarding: the Employee Separation, submitted, which is when
+    hrms makes a Task for each activity. Returns its name. */
+export async function startOffboarding(f, emp) {
+	const made = await apiCreateSubmitted("Employee Separation", separationDoc(f, emp));
+	await loadBoarding({ fresh: true });
+	return made.name;
+}
+
+/** Start an onboarding: the Job Applicant and Job Offer hrms needs behind it,
+    made or reused, then the Employee Onboarding, submitted. Returns its name. */
+export async function startOnboarding(f) {
+	const made = await apiCreateSubmitted("Employee Onboarding", await candidateChain(onboardingDoc(f)));
+	await loadBoarding({ fresh: true });
+	return made.name;
+}
+
+/** Make a template, or save one — its activities are replaced by the list. */
+export async function saveTemplate(kind, f, name) {
+	if (!name) return (await apiCreate(KINDS[kind].template, templateDoc(f))).name;
+	const r = await apiWrite(KINDS[kind].template, name, templateDoc(f));
+	if (!r.ok) throw new Error(r.error || "The site would not save it.");
+	return name;
+}
 export const readTemplate = (kind, name) => getDoc(KINDS[kind].template, name);

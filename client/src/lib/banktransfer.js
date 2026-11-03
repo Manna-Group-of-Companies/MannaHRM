@@ -8,6 +8,8 @@
    run's steps the page takes next.
    --------------------------------------------------------------------------- */
 
+import { failReason } from "@/lib/payroll";
+
 /**
  * What Bank Transfer does about one company's month.
  *
@@ -34,7 +36,7 @@ export function transferStep({ company, ym, now, locked, ok, state, entry }) {
 	if (ym > now) return { ...none, why: "That month has not happened yet." };
 	const next = state === "none" ? "start" : state === "draft" ? "slips" : "";
 	if (next) return ym < now ? { ...none, auto: next } : { ...none, calc: next };
-	if (state === "failed") return { ...none, why: `${entry?.name || "This month's run"} failed on the site. Open it in Frappe to see why.` };
+	if (state === "failed") return { ...none, why: `${entry?.name || "This month's run"} could not make the salary slips${failReason(entry) ? `: ${failReason(entry)}` : ""}. Try again on the Payroll page.` };
 	/* Slips made one at a time on the desk have no run to submit them through. */
 	if (state === "slips" && !entry) return { ...none, why: "These slips were made on the desk, not by a run, so they are submitted there." };
 	return { ...none, transfer: state === "slips" };

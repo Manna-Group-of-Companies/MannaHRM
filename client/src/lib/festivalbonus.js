@@ -9,11 +9,15 @@ import { amountOf, plain } from "@/lib/basepayimport";
    the page gives the bank its own sheet for it. So it is not an Additional
    Salary, which hrms would put on the month's slip.
 
-   One upload is one festival on one date, both chosen on the page, so the
+   Bonus is given in one month of the year, not every month (HR, 29 October
+   2026), so what is chosen is the month, kept as its 1st in `bonus_date`;
+   rows already on the site match by month whatever day they hold.
+
+   One upload is one festival in one month, both chosen on the page, so the
    sheet is only codes and amounts. A row matches a person by employee code
    only: two people can share a name. A person named twice in the sheet has
    not been decided, so neither row is used. A person who already has this
-   festival's bonus on this date is updated, and the same amount again is left
+   festival's bonus in this month is updated, and the same amount again is left
    alone, so the same sheet uploaded twice writes nothing.
 
    Pure. Nothing is written here.
@@ -21,6 +25,12 @@ import { amountOf, plain } from "@/lib/basepayimport";
 
 const norm = (v) => String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 const near = (a, b) => Math.abs(Number(a) - Number(b)) < 0.005;
+const month = (d) => String(d || "").slice(0, 7);
+const sameMonth = (a, b) => month(a) === month(b);
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026-08-01" → "Aug 2026". */
+export const bonusMonthLabel = (d) => (/^\d{4}-\d{2}/.test(String(d || "")) ? `${MONTHS[Number(month(d).slice(5)) - 1]} ${month(d).slice(0, 4)}` : "");
 
 /* What a heading means. Order matters: "Bonus Amount" is the amount, and a
    "Name" column is never one. */
@@ -45,10 +55,10 @@ export function findBonusColumns(table) {
 	return null;
 }
 
-/** What is wrong with the festival and date chosen on the page, or "". */
+/** What is wrong with the festival and month chosen on the page, or "". */
 export function checkBonusOccasion({ festival, date }) {
 	if (!String(festival || "").trim()) return "Type the festival.";
-	if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return "Pick the bonus date.";
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return "Pick the bonus month.";
 	return "";
 }
 
@@ -108,7 +118,7 @@ export function planBonus(table, ctx) {
 			problems.push({ row: c.row, text: `Row ${c.row}, ${c.who}: appears ${n} times, so none of them is used until it appears once.` });
 			continue;
 		}
-		const had = existing.find((e) => e.employee === c.p.name && norm(e.festival) === norm(festival) && String(e.bonus_date) === date);
+		const had = existing.find((e) => e.employee === c.p.name && norm(e.festival) === norm(festival) && sameMonth(e.bonus_date, date));
 		lines.push({
 			row: c.row, employee: c.p.name, code: c.p.employee_number || c.p.name, name: c.p.employee_name || c.p.name,
 			amount: c.amount, festival, date,
@@ -128,8 +138,8 @@ export const bonusToSave = (plan) => (plan && plan.ok ? plan.lines.filter((l) =>
 export function verifyBonus(lines, after) {
 	const wrong = [];
 	for (const l of lines) {
-		const got = (after || []).find((e) => e.employee === l.employee && norm(e.festival) === norm(l.festival) && String(e.bonus_date) === l.date);
-		if (!got) wrong.push({ name: l.name, text: `has no ${l.festival} bonus on ${l.date} on the site` });
+		const got = (after || []).find((e) => e.employee === l.employee && norm(e.festival) === norm(l.festival) && sameMonth(e.bonus_date, l.date));
+		if (!got) wrong.push({ name: l.name, text: `has no ${l.festival} bonus in ${bonusMonthLabel(l.date)} on the site` });
 		else if (!near(got.amount, l.amount)) wrong.push({ name: l.name, text: `has ₹${Number(got.amount)} on the site, not ₹${l.amount}` });
 	}
 	return wrong;
@@ -140,8 +150,8 @@ export function verifyBonus(lines, after) {
 export function bonusOccasions(rows) {
 	const seen = new Map();
 	for (const r of rows || []) {
-		const key = `${String(r.festival).trim()}|${r.bonus_date}`;
-		if (!seen.has(key)) seen.set(key, { key, festival: String(r.festival).trim(), date: String(r.bonus_date) });
+		const key = `${String(r.festival).trim()}|${month(r.bonus_date)}`;
+		if (!seen.has(key)) seen.set(key, { key, festival: String(r.festival).trim(), date: `${month(r.bonus_date)}-01` });
 	}
 	return [...seen.values()].sort((a, b) => b.date.localeCompare(a.date) || a.festival.localeCompare(b.festival));
 }
@@ -150,7 +160,7 @@ export function bonusOccasions(rows) {
     bank gets the same sheet as for salary. Every bonus on the site is decided,
     so each reads as submitted. */
 export const bonusAsSlips = (rows, occasion) => (rows || [])
-	.filter((r) => occasion && String(r.festival).trim() === occasion.festival && String(r.bonus_date) === occasion.date)
+	.filter((r) => occasion && String(r.festival).trim() === occasion.festival && sameMonth(r.bonus_date, occasion.date))
 	.map((r) => ({ name: r.name, employee: r.employee, employee_name: r.employee_name, net_pay: r.amount, docstatus: 1 }));
 
 /** The sheet's headings, in the order the downloaded list has them. */
@@ -159,6 +169,6 @@ export const BONUS_HEADS = ["Emp Code", "Name", "Department", "Bonus Amount"];
 /** One person's row of the list to fill in, with what they already have for
     this festival, so a sheet sent back unchanged changes nothing. */
 export function bonusRow(p, existing, { festival, date }) {
-	const had = (existing || []).find((e) => e.employee === p.name && norm(e.festival) === norm(festival) && String(e.bonus_date) === date);
+	const had = (existing || []).find((e) => e.employee === p.name && norm(e.festival) === norm(festival) && sameMonth(e.bonus_date, date));
 	return [p.employee_number || p.name, p.employee_name || "", p.department || "", had ? Number(had.amount) : null];
 }

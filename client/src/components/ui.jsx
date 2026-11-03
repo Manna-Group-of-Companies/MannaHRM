@@ -289,11 +289,17 @@ export const NO_SITE = "Which desk this opens has not been settled yet — this 
     master behind the row. Leave it off and the control says it is still waiting
     on the site, which is the other reason `href` can be empty and a different
     thing to tell somebody. */
+export const DESK_HIDDEN = true;
+
 export function Desk({ href, title, dead, label, className = "embtn", children, ...rest }) {
 	/* `rest` is for the attributes that decide how the control *looks* — the
 	   `data-act` the Assets Details toolbar colours its glyphs from. It reaches
 	   both branches, so a link and the disabled button standing in for it are
 	   still the same control to the stylesheet. */
+	/* Hidden everywhere on request, 29 Oct 2026: HR works in this dashboard and
+	   not on the desk, so no page offers a way out to Frappe. Kept as a
+	   component so putting the links back is this one line. */
+	if (DESK_HIDDEN) return null;
 	if (!href) {
 		return (
 			<button className={className} disabled aria-label={label} title={dead || NO_SITE} {...rest}>

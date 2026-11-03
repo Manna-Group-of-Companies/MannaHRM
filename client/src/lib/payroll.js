@@ -55,6 +55,16 @@ export function entryFor(entries) {
 	return live.sort((a, b) => rank(b) - rank(a) || String(b.creation).localeCompare(String(a.creation)))[0] || null;
 }
 
+/** Why hrms failed a run, as one readable sentence: the last line of what it
+    stored in `error_message`, which is often a whole traceback with the
+    sentence HR needs at its foot. "" when the site gave none. */
+export function failReason(entry) {
+	const text = String((entry && entry.error_message) || "").replace(/<[^>]+>/g, " ");
+	const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+	const last = lines.length ? lines[lines.length - 1] : "";
+	return last.replace(/^[\w.]+(Error|Exception):\s*/, "").trim();
+}
+
 /** The state of a month, from its entry and its slips. */
 export function runState(entry, slips) {
 	const live = (slips || []).filter((s) => Number(s.docstatus) < 2);

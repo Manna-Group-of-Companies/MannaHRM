@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { bankShareOf } from "@/lib/register";
 import { registerWorkbook } from "@/lib/registerxlsx";
-import { activeOnly, assignedOnly, designCompanies, payrollDesignParts, paysCash, withActualSalary } from "@/lib/payrolldesign";
+import { activeOnly, assignedOnly, designCompanies, payrollDesignParts, paysCash, withActualSalary, withLabourPreview } from "@/lib/payrolldesign";
 
 /* ---------------------------------------------------------------------------
    How a person's net pay is handed over — part to their bank account, the rest
@@ -275,5 +275,40 @@ describe("who the 5-tab carries", () => {
 		const { rows: kept, out } = assignedOnly(rows, assignments, "2026-09-30");
 		expect(kept.map((r) => r.employee)).toEqual(["AMAL", "PAUL"]);
 		expect(out).toBe(2);
+	});
+});
+
+describe("BMS's workers (HR, 29 October 2026)", () => {
+	const MR = "Manna Rubber Products Pvt.Ltd";
+	it("go on the Labour supply tab and off every pay tab, by (BMS) on the code or the old code", () => {
+		const rows = [
+			slip("HPT-103(BMS)", 15000, { employee: "E1", department: "Production" }),
+			slip("HPT-200", 15000, { employee: "E2", oldCode: "HPT-099 (BMS)" }),
+			slip("MRP-293", 29000, { employee: "E3" }),
+		];
+		const parts = payrollDesignParts([{ company: MR, rows }], { bankCap: 20000 });
+		expect(parts.find((x) => x.sheet === "Labour supply").rows.map((r) => r.code)).toEqual(["HPT-103(BMS)", "HPT-200"]);
+		expect(parts.filter((x) => x.sheet !== "Labour supply").flatMap((x) => x.rows.map((r) => r.code)).filter((c) => c !== "MRP-293")).toEqual([]);
+	});
+
+	it("are kept for their attendance with no salary structure, since they are paid in cash by hand", () => {
+		const rows = [{ employee: "E1", code: "HPT-103(BMS)" }, { employee: "E2", code: "MRP-001" }];
+		expect(assignedOnly(rows, [], "2026-09-30")).toEqual({ rows: [rows[0]], out: 1 });
+	});
+});
+
+describe("the Labour supply tab in a month with slips (HR, 30 October 2026)", () => {
+	it("is BMS's workers' attendance, though they have no slip, and everybody else stays on their slip", () => {
+		const slipRows = [{ employee: "E3", code: "MRP-293" }, { employee: "E9", code: "HPT-050", department: "Labour supply" }];
+		const preview = [
+			{ employee: "E1", code: "HPT-103(BMS)", kind: "Salary" },
+			{ employee: "E3", code: "MRP-293", kind: "Salary" },
+			{ employee: "E9", code: "HPT-050", department: "Labour supply", kind: "Salary" },
+		];
+		const rows = withLabourPreview(slipRows, preview);
+		expect(rows.map((r) => [r.code, Boolean(r.kind)])).toEqual([["MRP-293", false], ["HPT-103(BMS)", true], ["HPT-050", true]]);
+		const parts = payrollDesignParts([{ company: "Manna Rubber Products Pvt.Ltd", rows }], { bankCap: 20000 });
+		const tab = parts.find((x) => x.sheet === "Labour supply");
+		expect([tab.rows.map((r) => r.code), tab.preview]).toEqual([["HPT-103(BMS)", "HPT-050"], true]);
 	});
 });

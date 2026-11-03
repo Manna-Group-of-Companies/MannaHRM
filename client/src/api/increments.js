@@ -39,10 +39,24 @@ export async function downloadTemplate(employees, assignments, day, company) {
 		c.font = { bold: true, color: { argb: "FFFFFFFF" } };
 		c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: HEAD_FILL } };
 	});
-	for (const r of templateRows(employees, assignments, day)) ws.addRow(r);
-	[12, 26, 20, 22, 13, 13, 16, 12, 14].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+	ws.getCell("F1").note = "Fill the new monthly salary. Increment Amount and Increment % work it out.";
+	ws.getCell("G1").note = "Or fill the rise in rupees and leave New Base empty.";
+	ws.getCell("H1").note = "Or fill the rise as a percentage: 8 for 8%.";
+	ws.getCell("I1").note = "The day the new salary starts.";
+	for (const r of templateRows(employees, assignments, day)) {
+		const row = ws.addRow(r);
+		const n = row.number;
+		/* Blank until New Base is filled, so an untouched row still reads as
+		   "no increment given" and not as a cut to nothing. */
+		row.getCell(7).value = { formula: `IF(F${n}="","",F${n}-E${n})`, result: "" };
+		row.getCell(8).value = { formula: `IF(OR(F${n}="",E${n}="",E${n}=0),"",ROUND((F${n}-E${n})/E${n}*100,2))`, result: "" };
+		row.getCell(9).value = new Date(`${day}T00:00:00Z`);
+	}
+	[14, 30, 20, 26, 16, 16, 18, 14, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+	for (const c of [5, 6, 7]) ws.getColumn(c).numFmt = "#,##0.00";
+	ws.getColumn(8).numFmt = "0.00";
 	ws.getColumn(9).numFmt = "dd-mm-yyyy";
-	ws.views = [{ state: "frozen", ySplit: 1, xSplit: 2 }];
+	ws.views = [{ state: "frozen", ySplit: 1 }];
 	await downloadWorkbook(wb, `Increments ${day.slice(0, 4)}${company ? " " + company : ""}.xlsx`);
 }
 

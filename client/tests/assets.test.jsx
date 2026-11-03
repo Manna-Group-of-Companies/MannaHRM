@@ -131,9 +131,9 @@ describe("a submitted asset", () => {
 			.toMatch(/submitted/i);
 	});
 
-	it("still offers Open, so the record can be reached where it can be amended", async () => {
+	it("offers no way out to the desk (hidden on request, 29 Oct 2026)", async () => {
 		await draw({ pick: "ACC-ASS-00001" });
-		expect(screen.getByRole("link", { name: /Open on the site/ })).toBeInTheDocument();
+		expect(screen.queryByRole("link", { name: /Open on the site/ })).toBeNull();
 	});
 });
 

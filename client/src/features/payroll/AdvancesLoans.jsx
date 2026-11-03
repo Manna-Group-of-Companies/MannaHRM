@@ -6,7 +6,7 @@ import { readUploadTable } from "@/api/salaryupload";
 import { KINDS, checkPlan, ledger, ledgerTotals, planSaid } from "@/lib/advances";
 import { planOldLoans } from "@/lib/oldloans";
 import { lastMonth } from "@/lib/payrollrun";
-import { todayIso } from "@/lib/format";
+import { thisMonth, todayIso } from "@/lib/format";
 import { deskUrl } from "@/lib/desk";
 import { payRows } from "@/features/payroll/shared";
 import { Desk, Empty, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
@@ -40,7 +40,9 @@ export default function AdvancesLoans() {
 
 	const [rows, setRows] = useState(undefined);
 	const [err, setErr] = useState("");
-	const [form, setForm] = useState({ employee: "", kind: "advance", principal: "", instalments: "1", from: nextMonth() });
+	/* An advance taken this month comes out of this month's salary (HR, 29
+	   October 2026) — so the first instalment starts on the current month. */
+	const [form, setForm] = useState({ employee: "", kind: "advance", principal: "", instalments: "1", from: thisMonth() });
 	const [busy, setBusy] = useState(false);
 	const [confirm, setConfirm] = useState(false);
 	const [msg, setMsg] = useState(null);

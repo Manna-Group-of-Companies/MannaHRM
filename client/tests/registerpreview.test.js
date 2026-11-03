@@ -265,7 +265,7 @@ describe("the preview workbook", () => {
 			CH: "CF6-CG6",
 			CJ: "(BE6/2)*6",
 			CK: "IF(BE6=0,0,IF(CJ6<17999,320,IF(CJ6<29999,450,IF(CJ6<44999,600,IF(CJ6<99999,750,IF(CJ6<124999,1000,1250)))))/6)",
-			CM: "CB6+CD6+CG6+BX6+CI6+BY6+CK6+CL6",
+			CM: "CB6+CD6+CG6+BX6+CI6+BY6+CK6+CL6+BT6",
 			CN: "BP6-CM6",
 			CQ: "CN6-CO6",
 			CR: "ROUNDUP(CQ6,0)+CS6",
@@ -294,7 +294,7 @@ describe("the preview workbook", () => {
 			BV: 'IF(BQ7="Yes",IF(BM7<25000,BM7*12%,25000*12%),0)',
 			BW: 'IF(BS7="Yes",BP7*0.75%,0)',
 			CK: "IF(BE7=0,0,IF(CJ7<17999,320,IF(CJ7<29999,450,IF(CJ7<44999,600,IF(CJ7<99999,750,IF(CJ7<124999,1000,1250)))))/6)",
-			CM: "CB7+CD7+CG7+BX7+CI7+BY7+CK7+CL7",
+			CM: "CB7+CD7+CG7+BX7+CI7+BY7+CK7+CL7+BT7",
 			CR: "ROUNDUP(CQ7,0)+CS7",
 			CT: "$H$4",
 		});
@@ -312,7 +312,7 @@ describe("the preview workbook", () => {
 
 	it("totals the sheet's own columns on the row under the last person", async () => {
 		const ws = (await book([SALARY, WAGES])).getWorksheet("Wages Register");
-		const ids = ["BA", "BL", "BN", "BO", "BP", "BV", "BW", "BX", "BY", "BZ", "CA", "CB", "CC", "CD", "CE", "CK", "CL", "CM", "CN", "CQ", "CR"];
+		const ids = ["BA", "BL", "BN", "BO", "BP", "BT", "BV", "BW", "BX", "BY", "BZ", "CA", "CB", "CC", "CD", "CE", "CK", "CL", "CM", "CN", "CQ", "CR"];
 		expect(formulas(ws, 8, ids)).toEqual(Object.fromEntries(ids.map((id) => [id, `SUM(${id}6:${id}7)`])));
 		expect(ws.getCell("AT8").value).toBeNull();
 		expect(ws.getCell("BL8").font.bold).toBe(true);

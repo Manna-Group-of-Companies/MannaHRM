@@ -46,6 +46,7 @@ export default function SalaryUpload({ company, data, open, onToggle, onSaved })
 			const p = planUpload(table, {
 				company, people: who.people, bankFields: who.bankFields, method,
 				assignments: data.assignments || [], structures: data.structures || [], comps: data.components || [],
+				insurance: data.insurance || [],
 			});
 			setUpload({ name: file.name, plan: p, bankFields: who.bankFields });
 		} catch (err) {
@@ -57,7 +58,7 @@ export default function SalaryUpload({ company, data, open, onToggle, onSaved })
 		const { people } = await loadUploadPeople();
 		const mine = people.filter((p) => p.company === company && (!p.status || p.status === "Active"))
 			.sort((a, b) => String(a.employee_name).localeCompare(String(b.employee_name)));
-		await downloadUploadList(mine, data.assignments || [], company);
+		await downloadUploadList(mine, data.assignments || [], company, data.insurance || []);
 	}
 
 	async function onSave() {
@@ -68,7 +69,7 @@ export default function SalaryUpload({ company, data, open, onToggle, onSaved })
 		});
 		const fresh = await onSaved();
 		const { people } = await loadUploadPeople().catch(() => ({ people: [] }));
-		const wrong = verifyUpload(r.made, { assignments: (fresh && fresh.assignments) || [], employees: people });
+		const wrong = verifyUpload(r.made, { assignments: (fresh && fresh.assignments) || [], insurance: (fresh && fresh.insurance) || [], employees: people });
 		setStep(""); setProg(null); setUpload(null);
 		const parts = [];
 		if (r.setupError) parts.push(r.setupError);
@@ -80,11 +81,11 @@ export default function SalaryUpload({ company, data, open, onToggle, onSaved })
 
 	const comps = plan && plan.ok ? plan.components : [];
 	const toMake = comps.filter((c) => !c.exists);
-	const notCut = comps.filter((c) => c.exists && c.prorated === false);
+	const notCut = comps.filter((c) => c.exists && c.prorated === false && c.role !== "insurance");
 	const newStructures = plan && plan.ok ? plan.structures.filter((x) => !x.exists) : [];
 
 	return (
-		<Panel title="Upload salaries — salary, bank and cash, PF and ESI" ico="⇪" shut={!open} onToggle={onToggle}>
+		<Panel title="Upload salaries — salary, bank and cash, PF, ESI and health insurance" ico="⇪" shut={!open} onToggle={onToggle}>
 			{!company && <Note className="warn">Pick a company in the top bar first.</Note>}
 			{fixed === "mixed" && <Note className="warn">This company has salary structures under both EPF calculations. Settle that in Frappe before uploading more.</Note>}
 			<div className="flds">
@@ -139,7 +140,7 @@ export default function SalaryUpload({ company, data, open, onToggle, onSaved })
 						<Scroll>
 							<table className="fptable" aria-label="Salaries in the sheet">
 								<thead>
-									<tr><th>Person</th><th>Actual salary</th><th>Bank and cash</th><th>PF</th><th>ESI</th><th>Salary structure</th><th>What happens</th></tr>
+									<tr><th>Person</th><th>Actual salary</th><th>Bank and cash</th><th>PF</th><th>ESI</th><th>Health insurance</th><th>Salary structure</th><th>What happens</th></tr>
 								</thead>
 								<tbody>
 									{plan.lines.map((l) => (
@@ -149,6 +150,7 @@ export default function SalaryUpload({ company, data, open, onToggle, onSaved })
 											<td>{splitSaid(l.split, l.salary)}</td>
 											<td className="num">{pc(l.pf)}</td>
 											<td className="num">{pc(l.esi)}</td>
+											<td className="num">{l.insurance > 0 ? rs(l.insurance) : l.insuranceNow ? rs(l.insuranceNow) : "—"}</td>
 											<td>{l.assign ? l.structure : (l.current && l.current.structure) || ""}</td>
 											<td>
 												{lineAction(l)}

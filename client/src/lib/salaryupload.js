@@ -29,6 +29,15 @@ import { amountOf, plain } from "@/lib/basepayimport";
    not worked, so the structure says "of the salary" and hrms makes it "of the
    pay due".
 
+   **Health insurance** (HR, 29 October 2026) is a ₹ a month taken from the
+   person's pay, different for each person. It is a recurring Additional Salary
+   — hrms's own — on a Health Insurance deduction, from the date the salaries
+   apply, and not a line on the structure: a structure is shared by everybody on
+   the same PF and ESI rates, and its formulas cannot carry one person's amount
+   without a field on the site. It is not cut for days not worked — a premium
+   is the same in a short month. One already running is not changed here, as a
+   salary is not; a blank cell leaves the person as they are.
+
    Pure. A row is reported and left out rather than guessed at, and matching is
    by employee code only — two people can share a name.
    --------------------------------------------------------------------------- */
@@ -83,6 +92,7 @@ const HEADS = [
 	["cash", (c) => /cash/.test(c) && !/%|percent|share/.test(c)],
 	["pf", (c) => /\bpf\b|provident|\bepf\b/.test(c) && !/\bno\b|no\.|number|account|a\/c|uan|wage/.test(c)],
 	["esi", (c) => /\besic?\b|state insurance/.test(c) && !/\bno\b|no\.|number|\bip\b|wage/.test(c)],
+	["insurance", (c) => /insurance|mediclaim/.test(c) && !/state insurance|\bno\b|no\.|number|policy/.test(c)],
 	["name", (c) => /name/.test(c)],
 	["salary", (c) => /actual|salary|gross|monthly|base|wages?\b|pay/.test(c) && !/net|bank|cash|\bpf\b|\besic?\b/.test(c)],
 ];
@@ -190,7 +200,13 @@ const ROLES = {
 	allowance: { type: "Earning", find: /^(special|other) allowance$/i, make: { name: "Special Allowance", abbr: "SA" } },
 	pf: { type: "Deduction", find: /^(provident fund|employee provident fund|pf|epf)$/i, make: { name: "Provident Fund", abbr: "PF" } },
 	esi: { type: "Deduction", find: /^(esi|esic|employee state insurance|employees? state insurance)$/i, make: { name: "Employee State Insurance", abbr: "ESI" } },
+	insurance: { type: "Deduction", find: /^((health|medical|group|group health|group medical) insurance|insurance|mediclaim)$/i, make: { name: "Health Insurance", abbr: "HI" }, whole: true },
 };
+
+/** A component that is health insurance, by name — for reading back what the
+    upload made and for the 5-tab's Insurance column. Never ESI. */
+export const isInsurance = (component) => /insurance|mediclaim/i.test(String(component || ""))
+	&& !/state insurance|\besic?\b/i.test(String(component || ""));
 
 /** Which component plays each part, and which have to be made first. */
 export function componentsFor(comps) {
@@ -206,7 +222,7 @@ export function componentsFor(comps) {
 		let abbr = r.make.abbr;
 		for (let i = 2; abbrs.has(abbr); i++) abbr = `${r.make.abbr}${i}`;
 		abbrs.add(abbr);
-		out[role] = { name: r.make.name, abbr, type: r.type, exists: false, prorated: true };
+		out[role] = { name: r.make.name, abbr, type: r.type, exists: false, prorated: !r.whole };
 	}
 	return out;
 }
@@ -218,7 +234,36 @@ export const uploadComponentDoc = (c) => ({
 	salary_component_abbr: c.abbr,
 	type: c.type,
 	is_tax_applicable: c.type === "Earning" ? 1 : 0,
-	depends_on_payment_days: 1,
+	depends_on_payment_days: c.prorated === false ? 0 : 1,
+});
+
+/** Far enough off that the deduction runs until somebody stops it; hrms wants
+    an end on a recurring Additional Salary. */
+export const INSURANCE_UNTIL = "2099-12-31";
+
+/** The health insurance deduction running for each person: their latest
+    submitted recurring one. @param rows recurring Additional Salary rows */
+export function insuranceNow(rows) {
+	const out = new Map();
+	for (const x of rows || []) {
+		if (Number(x.docstatus) !== 1 || !Number(x.is_recurring ?? 1) || !isInsurance(x.salary_component)) continue;
+		const had = out.get(x.employee);
+		if (!had || String(x.from_date) > String(had.from_date)) out.set(x.employee, x);
+	}
+	return out;
+}
+
+/** One person's health insurance, as hrms's recurring Additional Salary. */
+export const insuranceDoc = (l, from, company, roles) => ({
+	employee: l.employee,
+	company,
+	salary_component: roles.insurance.name,
+	type: "Deduction",
+	amount: l.insurance,
+	is_recurring: 1,
+	from_date: from,
+	to_date: INSURANCE_UNTIL,
+	overwrite_salary_structure_amount: 1,
 });
 
 /** The Salary Structure for one pair of rates under one EPF calculation, in
@@ -271,7 +316,7 @@ export function employeePatch(emp, split, bankFields) {
       people — every Employee, with salary_mode and the two bank fields
       assignments — submitted Salary Structure Assignments */
 export function planUpload(table, ctx) {
-	const { company, people = [], assignments = [], structures = [], comps = [], bankFields = false } = ctx;
+	const { company, people = [], assignments = [], structures = [], comps = [], bankFields = false, insurance = [] } = ctx;
 	if (!company) return { ok: false, error: "Pick a company in the top bar. A salary structure belongs to one company." };
 	const fixed = companyMethod(structures, company);
 	if (fixed === "mixed") return { ok: false, error: `${company} has salary structures made under both EPF calculations. Settle that in Frappe before uploading more.` };
@@ -297,6 +342,7 @@ export function planUpload(table, ctx) {
 		.sort((a, b) => String(b.from_date).localeCompare(String(a.from_date)))[0] || null;
 
 	const cell = (row, key) => (cols.at[key] === undefined ? "" : row[cols.at[key]]);
+	const covered = insuranceNow(insurance);
 	const cand = [];
 	const problems = [];
 	let blank = 0;
@@ -305,7 +351,7 @@ export function planUpload(table, ctx) {
 		const code = String(plain(cell(row, "id"))).trim();
 		const nameCell = String(plain(cell(row, "name"))).trim();
 		const rawSalary = plain(cell(row, "salary"));
-		const others = ["bankPct", "bank", "cashPct", "cash", "pf", "esi"].some((k) => String(plain(cell(row, k))).trim() !== "");
+		const others = ["bankPct", "bank", "cashPct", "cash", "pf", "esi", "insurance"].some((k) => String(plain(cell(row, k))).trim() !== "");
 		if (!code && !nameCell && rawSalary === "" && !others) continue;
 		const who = [code, nameCell].filter(Boolean).join(" ") || "(blank)";
 		const bad = (text) => problems.push({ row: r + 1, text: `Row ${r + 1}, ${who}: ${text}.` });
@@ -330,8 +376,12 @@ export function planUpload(table, ctx) {
 		if (!(esi >= 0 && esi <= 100)) { bad(`the ESI % "${plain(cell(row, "esi"))}" is not a percentage between 0 and 100`); continue; }
 		const split = splitOf({ salary, bankPct: cell(row, "bankPct"), bank: cell(row, "bank"), cashPct: cell(row, "cashPct"), cash: cell(row, "cash") });
 		if (split && split.error) { bad(split.error); continue; }
+		const rawIns = String(plain(cell(row, "insurance"))).trim();
+		const ins = rawIns === "" ? null : amountOf(rawIns);
+		if (ins !== null && !(ins >= 0)) { bad(`the health insurance "${rawIns}" is not an amount`); continue; }
+		if (ins !== null && ins >= salary) { bad(`the health insurance ₹${said(ins)} is not less than the salary`); continue; }
 
-		cand.push({ row: r + 1, who, p, salary, pf, esi, split });
+		cand.push({ row: r + 1, who, p, salary, pf, esi, split, ins });
 	}
 
 	/* One row a person. Two rows for somebody are a sheet that has not been
@@ -347,6 +397,7 @@ export function planUpload(table, ctx) {
 		}
 		const structure = structureName(c.pf, c.esi, company, method);
 		const now = current(c.p.name);
+		const insNow = covered.get(c.p.name) || null;
 		const { patch, unsaved } = employeePatch(c.p, c.split, bankFields);
 		const notes = [];
 		if (now && (!near(num(now.base), c.salary) || (ratesOf(now.salary_structure) && now.salary_structure !== structure))) {
@@ -357,11 +408,15 @@ export function planUpload(table, ctx) {
 		if (c.pf > 0 && c.pf !== 12) notes.push(`PF is ${said(c.pf)}%, not the usual 12%.`);
 		if (c.esi > 0 && c.esi !== 0.75) notes.push(`ESI is ${said(c.esi)}%, not the usual 0.75%.`);
 		if (c.esi > 0 && c.salary > ESI_CEILING) notes.push(`The salary is over ₹${ESI_CEILING.toLocaleString("en-IN")}, so no ESI is taken.`);
+		if (c.ins !== null && insNow && !near(num(insNow.amount), c.ins)) {
+			notes.push(`Health insurance is already ₹${num(insNow.amount).toLocaleString("en-IN")} a month from ${insNow.from_date}. That is not changed here.`);
+		}
 		if (c.pf > 0 && c.salary * methodOf(method).share > PF_CEILING) notes.push(`EPF is worked out on ₹${PF_CEILING.toLocaleString("en-IN")}, the ceiling.`);
 		lines.push({
 			row: c.row, employee: c.p.name, code: c.p.employee_number || c.p.name, name: c.p.employee_name || c.p.name,
 			salary: c.salary, pf: c.pf, esi: c.esi, split: c.split, structure,
 			assign: !now, current: now ? { structure: now.salary_structure, base: num(now.base) } : null,
+			insurance: c.ins, insure: Boolean(c.ins > 0 && !insNow), insuranceNow: insNow ? num(insNow.amount) : null,
 			patch, notes,
 		});
 	}
@@ -379,6 +434,7 @@ export function planUpload(table, ctx) {
 	const needs = new Set(newStructures.filter((s) => !s.exists).flatMap((s) => [
 		"basic", ...(method === "half" ? ["allowance"] : []), ...(s.pf > 0 ? ["pf"] : []), ...(s.esi > 0 ? ["esi"] : []),
 	]));
+	if (lines.some((l) => l.insure)) needs.add("insurance");
 	const components = [...needs].map((role) => ({ role, ...roles[role] }));
 
 	return { ok: true, columns: cols.heads, lines, problems, blank, structures: newStructures, components, roles, method };
@@ -389,11 +445,12 @@ export function lineAction(l) {
 	const bits = [];
 	if (l.assign) bits.push("new salary");
 	if (Object.keys(l.patch).length) bits.push("bank and cash");
+	if (l.insure) bits.push("health insurance");
 	return bits.length ? bits.join(" + ") : "no change";
 }
 
 /** Everybody the save will touch. */
-export const toSave = (plan) => (plan && plan.ok ? plan.lines.filter((l) => l.assign || Object.keys(l.patch).length) : []);
+export const toSave = (plan) => (plan && plan.ok ? plan.lines.filter((l) => l.assign || l.insure || Object.keys(l.patch).length) : []);
 
 /** Each saved line read back off the site: what does not say what the sheet said.
     @param after {assignments, employees} as read after the save */
@@ -405,6 +462,11 @@ export function verifyUpload(lines, after) {
 			if (!got) wrong.push({ employee: l.employee, name: l.name, text: `has no ${l.structure} on the site` });
 			else if (!near(num(got.base), l.salary)) wrong.push({ employee: l.employee, name: l.name, text: `has ₹${num(got.base)} on the site, not ₹${l.salary}` });
 		}
+		if (l.insure) {
+			const got = insuranceNow(after.insurance).get(l.employee);
+			if (!got) wrong.push({ employee: l.employee, name: l.name, text: "has no health insurance deduction on the site" });
+			else if (!near(num(got.amount), l.insurance)) wrong.push({ employee: l.employee, name: l.name, text: `has health insurance ₹${num(got.amount)} on the site, not ₹${l.insurance}` });
+		}
 		const e = (after.employees || []).find((x) => x.name === l.employee) || {};
 		for (const [k, v] of Object.entries(l.patch)) {
 			const have = k === "salary_mode" ? String(e[k] || "") : num(e[k]);
@@ -415,12 +477,12 @@ export function verifyUpload(lines, after) {
 }
 
 /** The sheet's headings, in the order the downloaded list has them. */
-export const UPLOAD_HEADS = ["Emp Code", "Name", "Department", "Actual Salary", "Bank ₹", "Cash ₹", "PF %", "ESI %"];
+export const UPLOAD_HEADS = ["Emp Code", "Name", "Department", "Actual Salary", "Bank ₹", "Cash ₹", "PF %", "ESI %", "Health Insurance ₹"];
 
 /** One person's row of the list to fill in: what the site already holds, so a
     sheet sent back unchanged changes nothing. A percentage share is left blank
     rather than turned into rupees, so it stays a percentage. */
-export function uploadRow(p, assignments) {
+export function uploadRow(p, assignments, insurance = []) {
 	const now = assignments
 		.filter((a) => a.employee === p.name && Number(a.docstatus ?? 1) === 1)
 		.sort((a, b) => String(b.from_date).localeCompare(String(a.from_date)))[0];
@@ -431,5 +493,6 @@ export function uploadRow(p, assignments) {
 		if (p.salary_mode === "Cash") { bank = 0; cash = base; } else if (pct === 100) { bank = base; cash = 0; } else if (!pct && amt > 0) { bank = amt; cash = Math.max(0, base - amt); }
 	}
 	const rates = now ? ratesOf(now.salary_structure) : null;
-	return [p.employee_number || p.name, p.employee_name || "", p.department || "", base, bank, cash, rates ? rates.pf : null, rates ? rates.esi : null];
+	const ins = insuranceNow(insurance).get(p.name);
+	return [p.employee_number || p.name, p.employee_name || "", p.department || "", base, bank, cash, rates ? rates.pf : null, rates ? rates.esi : null, ins ? num(ins.amount) : null];
 }

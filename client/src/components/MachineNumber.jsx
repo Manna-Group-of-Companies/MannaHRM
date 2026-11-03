@@ -14,7 +14,13 @@ import { heldOnMachines, heldOnSite, nextFreeNumber, numberProblem } from "@/lib
    The roster is what the bridge writes on every pass. Read here rather than
    through the store because this is the only screen that needs it and it is one
    small request. */
-export default function MachineNumber({ value, employees, onPick }) {
+/** A name, compared as a machine stores it: case and spacing ignored. */
+const sameName = (a, b) => {
+	const k = (v) => String(v || "").toLowerCase().replace(/[^a-z]/g, "");
+	return Boolean(k(a)) && k(a) === k(b);
+};
+
+export default function MachineNumber({ value, employees, onPick, name }) {
 	const [rows, setRows] = useState(null);
 	const [read, setRead] = useState(false);
 
@@ -36,16 +42,29 @@ export default function MachineNumber({ value, employees, onPick }) {
 
 	const site = heldOnSite(employees);
 	const machines = rows ? heldOnMachines(rows) : null;
-	const problem = numberProblem(value, { site, machines });
+	const found = numberProblem(value, { site, machines });
+	/* The machine already calling this number by the name being created is
+	   the person themselves — New on the machine's Create Employee, every time
+	   — and their punches belong here. Somebody else's name on it is still the
+	   warning (2 November 2026). */
+	const held = found?.kind === "machine" ? machines.get(String(value).trim()) : null;
+	const own = held && sameName(held.name_on_device, name) ? held : null;
+	const problem = own ? null : found;
 	const free = nextFreeNumber({ site, machines });
 
 	return (
 		<div className="machinenum" data-kind={problem ? problem.kind : value ? "ok" : "empty"}>
+			{own ? (
+				<p><b>Machine Code {value}</b> is {own.name_on_device} on {own.device_id}. Their punches come to this record.</p>
+			) : null}
 			{problem ? <p><b>Machine Code:</b> {problem.text}</p> : null}
-			{!problem && value ? (
+			{!problem && !own && value ? (
 				<p><b>Machine Code {value}</b> is held by nobody, here or on {machines.size} user(s) read off the machines.</p>
 			) : null}
-			{free ? (
+			{/* A suggestion only while the number is missing or wrong: offered
+			    beside a number that is this person's own, it reads as "change
+			    it", and taking it would strand their punches on the old one. */}
+			{own || (value && !problem) ? null : free ? (
 				<button type="button" className="btn ghost" onClick={() => onPick(free)}>
 					Use {free} — free on both lists
 				</button>

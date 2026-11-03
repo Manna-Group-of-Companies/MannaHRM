@@ -55,6 +55,7 @@ ThemeData mannaTheme() {
   );
   return ThemeData(
     useMaterial3: true,
+    fontFamily: 'PlusJakartaSans',
     colorScheme: scheme,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: kPage,
@@ -74,7 +75,7 @@ ThemeData mannaTheme() {
       style: OutlinedButton.styleFrom(
         foregroundColor: kInk,
         side: const BorderSide(color: kFieldLine),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: const StadiumBorder(),
       ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(backgroundColor: kCard, surfaceTintColor: Colors.transparent),
@@ -103,12 +104,12 @@ ThemeData mannaTheme() {
         foregroundColor: kOnPrimary,
         minimumSize: const Size.fromHeight(50),
         textStyle: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: const StadiumBorder(),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: kPage,
+      fillColor: kField,
       labelStyle: const TextStyle(color: kInk2),
       hintStyle: const TextStyle(color: kFaint),
       prefixIconColor: kInk2,
@@ -225,29 +226,25 @@ class SplashScreen extends StatelessWidget {
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [kCard, kPage],
-            ),
-          ),
+          color: kPage,
           child: SafeArea(
             child: Column(children: [
               const Spacer(flex: 3),
               // The lockup is dark-on-white artwork — half of it is grey — so
               // it sits on a white plate, never straight on the navy.
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
-                child: Image.asset('assets/manna_logo.png', height: 54, fit: BoxFit.contain),
+                width: 96,
+                height: 96,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+                child: Image.asset('assets/manna_logo.png', fit: BoxFit.contain),
               ),
               const SizedBox(height: 26),
               const Text('Manna HR',
                   style: TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
-              const Text('People  •  Attendance  •  Payroll',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
+              const Text('People • Attendance • Payroll',
+                  style: TextStyle(color: kAccent, fontSize: 14, fontWeight: FontWeight.w700)),
               const Spacer(flex: 3),
               const SizedBox(
                   height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),

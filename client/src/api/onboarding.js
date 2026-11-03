@@ -48,9 +48,9 @@ async function firstName(doctype, filters) {
 	return rows?.[0]?.name || "";
 }
 
-/** Create one candidate, reusing the applicant and offer when they exist.
-    Throws the site's own message, which the page prints against the email. */
-export async function createCandidate(doc) {
+/** The Job Applicant and Job Offer behind one onboarding, made or reused, and
+    the onboarding itself to make with them. */
+export async function candidateChain(doc) {
 	const { applicant, offer, onboarding } = chainDocs(doc);
 
 	const applicantName = await firstName("Job Applicant", [["email_id", "=", applicant.email_id]])
@@ -59,5 +59,11 @@ export async function createCandidate(doc) {
 	const offerName = await firstName("Job Offer", [["job_applicant", "=", applicantName], ["docstatus", "<", 2]])
 		|| (await apiCreate("Job Offer", { ...offer, job_applicant: applicantName })).name;
 
-	return apiCreate("Employee Onboarding", { ...onboarding, job_applicant: applicantName, job_offer: offerName });
+	return { ...onboarding, job_applicant: applicantName, job_offer: offerName };
+}
+
+/** Create one candidate, reusing the applicant and offer when they exist.
+    Throws the site's own message, which the page prints against the email. */
+export async function createCandidate(doc) {
+	return apiCreate("Employee Onboarding", await candidateChain(doc));
 }

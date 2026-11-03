@@ -11,7 +11,9 @@ import MachineNumber from "@/components/MachineNumber";
 import { deskUrl } from "@/lib/desk";
 import { createAppLogin, createEmployee } from "@/api/employee";
 import { accessFor, lockedFields } from "@/lib/fieldaccess";
-import { markCandidate } from "@/api/candidate";
+import { markCandidate, wizardFromCandidate } from "@/api/candidate";
+import { DEFAULT_SHEET, GOOGLE_CLIENT_ID, JOINING_SHEET, readGoogleSheet } from "@/lib/googlesheet";
+import { dateOrder, mapRow } from "@/lib/onboardimport";
 import { giveNewJoinerLeave } from "@/api/monthlyleave";
 import { todayIso } from "@/lib/format";
 import { LEAVE_TYPE_NAME, policyTitle } from "@/lib/monthlyleave";
@@ -213,6 +215,108 @@ function Field({ row, opts, value, onChange, readOnly }) {
 	);
 }
 
+/* "Sync Google Form" — the joining Form's answers, read from its responses
+   Sheet as whoever is signed in to Google (lib/googlesheet.js, the same read
+   as Onboarding's), newest first. Picking one fills the boxes; nothing is
+   written anywhere until Create, and what is already typed — the Emp Code,
+   the Machine Code — is kept where the Form has no answer for it. */
+function responsesOf(rows) {
+	const order = dateOrder(rows);
+	/* "Machine Number" is not one of the server's Onboarding fields — it is
+	   what Share form fills in, read here only to find the person again. */
+	/* Gender and Title too (2 November 2026): asked on the joining Form for
+	   the Employee, not for Employee Onboarding, so read here the same way. */
+	const ans = (r, q) => String(r[q] || "").trim();
+	return rows.map((r) => ({
+		...mapRow(r, order),
+		machine_number: ans(r, "Machine Number"),
+		gender: ans(r, "Gender"),
+		salutation: ans(r, "Title"),
+		custom_pan_no: ans(r, "PAN Number").toUpperCase(),
+	}))
+		.filter((d) => d.employee_name)
+		.reverse();
+}
+
+/** A Sheet row, in the site's field names, as the candidate the wizard is filled from. */
+function candidateOf(d) {
+	const c = {};
+	for (const [k, v] of Object.entries(d)) c[k.replace(/^custom_/, "")] = v;
+	return c;
+}
+
+function FormSync({ f, extra }) {
+	const [st, setSt] = useState({ busy: false, rows: null, err: "", q: "" });
+	async function read() {
+		setSt({ busy: true, rows: null, err: "", q: "" });
+		try {
+			/* The joining Form's Sheet, then the older onboarding one. Either can
+			   be closed to whoever is signed in to Google; one that can be read
+			   is enough, and both refusing is the error shown. */
+			const got = await Promise.allSettled([readGoogleSheet(JOINING_SHEET), readGoogleSheet(DEFAULT_SHEET)]);
+			const ok = got.filter((x) => x.status === "fulfilled");
+			if (!ok.length) throw got[0].reason;
+			const rows = ok.flatMap((x) => responsesOf(x.value));
+			/* The person this form is for, found without a search: by the Machine
+			   Code Share form put in their link, else by first name. One answer
+			   by machine number is theirs; anything else is shown to choose from. */
+			const pin = String(f.attendance_device_id || "").trim();
+			const byPin = pin ? rows.filter((d) => String(d.machine_number || "").trim() === pin) : [];
+			if (byPin.length === 1) return pick(byPin[0]);
+			setSt({ busy: false, rows: byPin.length ? byPin : rows, err: "", q: byPin.length ? "" : String(f.first_name || "") });
+		} catch (e) {
+			setSt({ busy: false, rows: null, err: e.message || String(e), q: "" });
+		}
+	}
+	function pick(d) {
+		const w = wizardFromCandidate(candidateOf(d));
+		/* Only an answer, never a blank over what HR already chose. */
+		const own = Object.fromEntries([["gender", d.gender], ["salutation", d.salutation],
+			["custom_pan_no", d.custom_pan_no]].filter(([, v]) => v));
+		/* A question the Form does not ask — Company, Department and Designation
+		   since 2 November 2026 — comes back empty, and must not wipe what New on
+		   the machine or HR already put in the box. An answer, never a blank. */
+		const answered = Object.fromEntries(Object.entries(w.f).filter(([, v]) => v != null && String(v).trim() !== ""));
+		patch("newemp", { f: { ...f, ...answered, ...own }, extra: { ...(extra || {}), ...w.extra }, err: "" });
+		setSt({ busy: false, rows: null, err: "", q: "" });
+	}
+	const q = st.q.trim().toLowerCase();
+	const shown = (st.rows || []).filter((d) => !q
+		|| [d.employee_name, d.custom_cell_number, d.custom_personal_email].some((x) => String(x || "").toLowerCase().includes(q)));
+	return (
+		<>
+			<button className="embtn" onClick={st.rows ? () => setSt({ ...st, rows: null }) : read}
+				disabled={st.busy || !GOOGLE_CLIENT_ID}
+				title={GOOGLE_CLIENT_ID
+					? "Fill this form from a joining Google Form response. Signs in to Google to read the responses Sheet; nothing is created until Create."
+					: "No Google client id is set (VITE_GOOGLE_CLIENT_ID), so the Form's Sheet cannot be read."}>
+				{st.busy ? "Reading the Form…" : st.rows ? "Close the list" : "Sync Google Form"}
+			</button>
+			{st.err && <div className="formsync"><span className="err">{st.err}</span></div>}
+			{st.rows && (
+				<div className="formsync">
+					<input type="search" placeholder="Search name, mobile or email" value={st.q} autoFocus
+						onChange={(e) => setSt({ ...st, q: e.target.value })} />
+					{shown.length ? (
+						<ul>
+							{shown.slice(0, 50).map((d, i) => (
+								<li key={i}>
+									<button onClick={() => pick(d)}>
+										<b>{d.employee_name}</b>
+										<span className="muted">
+											{[d.custom_cell_number, d.designation, d.department, d.custom_form_timestamp?.slice(0, 10)].filter(Boolean).join(" · ")}
+										</span>
+									</button>
+								</li>
+							))}
+						</ul>
+					) : <p className="muted">{st.rows.length ? "No response matches." : "The Form has no responses yet."}</p>}
+				</div>
+			)}
+		</>
+	);
+}
+
 export default function CreateEmployee() {
 	const s = useApp();
 	const { step, f, busy, done, err, from, fromName, extra, marked, leave: gave, app } = s.newemp;
@@ -387,8 +491,10 @@ export default function CreateEmployee() {
 					Create Employee · step {step + 1} of {NEW_EMP_STEPS.length}
 					{blank ? "" : " · typed here, nothing created yet — it keeps if you leave"}
 				</span>
+				<span className="ml-auto" />
+				<FormSync f={f} extra={extra} />
 				{!blank && (
-					<button className="embtn ml-auto" onClick={reset}
+					<button className="embtn" onClick={reset}
 						title="Empty every step of the form. Nothing has been written to the site, so there is nothing there to undo — and nothing here to get back either.">
 						Clear the form
 					</button>
@@ -470,6 +576,7 @@ export default function CreateEmployee() {
 							) : null}
 							{rows.some((r) => r[0] === "attendance_device_id") && f.custom_punch_method !== "Mobile App" ? (
 								<MachineNumber value={f.attendance_device_id} employees={all}
+									name={[f.first_name, f.middle_name, f.last_name].filter(Boolean).join(" ")}
 									onPick={(n) => setF("attendance_device_id", n)} />
 							) : null}
 						</section>

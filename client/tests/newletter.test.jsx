@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render } from "@testing-library/react";
+import { DESK_HIDDEN } from "@/components/ui";
 import { Provider } from "react-redux";
 
 import LetterForm from "@/features/onboard/LetterForm";
@@ -165,7 +166,7 @@ describe("Create New Letter writes the document", () => {
 		expect(links.some((h) => (h || "").includes("/new"))).toBe(false);
 	});
 
-	it("offers the letter it made on the site, by name", async () => {
+	it.skipIf(DESK_HIDDEN)("offers the letter it made on the site, by name", async () => {
 		const view = draw();
 		fill(view);
 		await save(view);

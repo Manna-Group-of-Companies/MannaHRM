@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/app.dart';
 import 'package:manna_hr_app/core/day.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -206,6 +207,54 @@ void main() {
     expect(find.text('None yet'), findsOneWidget);
   });
 
+  testWidgets('a pending leave is approved from its sheet, after a confirmation', (t) async {
+    final decided = <String>[];
+    await t.pumpWidget(MannaHrApp(
+      home: LeaveRequestsScreen(
+        load: (status) async => status == 'Open' && decided.isEmpty
+            ? [
+                {'name': 'L1', 'employee': 'E1', 'employee_name': 'Amit Verma', 'leave_type': 'Casual Leave',
+                  'from_date': '2026-10-21', 'to_date': '2026-10-21', 'total_leave_days': 1, 'status': 'Open'},
+              ]
+            : <Map<String, dynamic>>[],
+        decide: (name, status) async => decided.add('$name $status'),
+      ),
+    ));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Amit Verma'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Approve'));
+    await t.pumpAndSettle();
+    expect(decided, isEmpty, reason: 'nothing is sent before the confirmation');
+    await t.tap(find.widgetWithText(FilledButton, 'Approve').last);
+    await t.pumpAndSettle();
+    expect(decided, ['L1 Approved']);
+    expect(find.text('Nothing waiting'), findsOneWidget);
+  });
+
+  testWidgets('a refused decision says what the site said and keeps the request', (t) async {
+    await t.pumpWidget(MannaHrApp(
+      home: LeaveRequestsScreen(
+        load: (status) async => status == 'Open'
+            ? [
+                {'name': 'L1', 'employee': 'E1', 'employee_name': 'Amit Verma', 'leave_type': 'Casual Leave',
+                  'from_date': '2026-10-21', 'to_date': '2026-10-21', 'total_leave_days': 1, 'status': 'Open'},
+              ]
+            : <Map<String, dynamic>>[],
+        decide: (name, status) async => throw const Refused('Insufficient leave balance'),
+      ),
+    ));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Amit Verma'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(OutlinedButton, 'Reject'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Reject'));
+    await t.pumpAndSettle();
+    expect(find.text('Insufficient leave balance'), findsOneWidget);
+    expect(find.text('Amit Verma'), findsWidgets);
+  });
+
   Future<void> hrHome(WidgetTester t) async {
     await t.pumpWidget(MannaHrApp(
       home: Scaffold(
@@ -229,7 +278,7 @@ void main() {
     await hrHome(t);
     expect(find.byType(TodayCard), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Punch In'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Punch Out'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Punch Out'), findsOneWidget);
     await t.scrollUntilVisible(find.text('My Corrections'), 300);
     for (final label in ['My Self-Service', 'My Attendance', 'Apply Leave', 'My Leave', 'My Payslip', 'My Profile']) {
       expect(find.text(label), findsOneWidget, reason: label);

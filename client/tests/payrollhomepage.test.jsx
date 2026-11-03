@@ -64,7 +64,7 @@ describe("Payroll opens on its own page", () => {
 		/* Employee Payroll and Payroll Settings joined on 21 Oct 2026 and left
 		   on 22 Oct, asked for by HR. */
 		/* Festival Bonus on 22 Oct, beside Actual Salary: paid apart from the salary. */
-		expect(shown).toEqual(["overview", "setup", "actualsalary", "festivalbonus", "increments", "advances", "slips", "transfer"]);
+		expect(shown).toEqual(["overview", "setup", "actualsalary", "increments", "advances", "slips", "transfer"]);
 	});
 
 	it("no longer has Employee Payroll, Payroll Detail or Payroll Settings, and their old addresses open Payroll", () => {
@@ -100,7 +100,7 @@ describe("the page", () => {
 		const { container } = await draw();
 		expect(container.textContent).toMatch(/still a draft/);
 		const link = [...container.querySelectorAll("a")].find((a) => a.textContent === "Submit them in Frappe");
-		expect(link.getAttribute("href")).toBe("https://erp.example.invalid/app/additional-salary");
+		expect(link).toBeUndefined();
 	});
 
 	it("sends each step to the page that does it", async () => {

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useApp } from "@/store";
-import { loadPayroll, payKey, createSalarySlips, startSalaryProcess } from "@/api/payroll";
+import { loadPayroll, payKey, createSalarySlips, retrySalarySlips, startSalaryProcess } from "@/api/payroll";
 import { addLoanDeductions, loadCompanyInfo, loadLoansDue } from "@/api/salarysheet";
-import { addExtra, loadRunReads, makeComponents, submitExtras } from "@/api/payrollrun";
+import { loadRunReads, makeComponents, submitExtras } from "@/api/payrollrun";
 import { entryFor, periodOf, runState, structureFor } from "@/lib/payroll";
 import { exportWhy, homeSteps } from "@/lib/payrollhome";
 import {
-	EXTRA_KINDS, checkExtra, componentsToMake, extraState, kindFor, lastMonth, monthChoices, sortExtras, startWhy,
+	componentsToMake, extraState, lastMonth, monthChoices, sortExtras, startWhy,
 } from "@/lib/payrollrun";
 import { buildSheet, periodLabel, postingState } from "@/lib/salarysheet";
 import { salarySheetXlsx } from "@/lib/salarysheetxlsx";
@@ -15,16 +15,15 @@ import { loadActualSalaries, loadPreviewReads, loadRegisterReads } from "@/api/r
 import { registerChecks, registerRows } from "@/lib/register";
 import { previewRows, previewSummary } from "@/lib/registerpreview";
 import { registerBookXlsx, registerDesignBookXlsx, registerXlsx } from "@/lib/registerxlsx";
-import { activeOnly, assignedOnly, designCompanies, isMrppl, payrollDesignParts, withActualSalary } from "@/lib/payrolldesign";
+import { activeOnly, assignedOnly, bmsRow, designCompanies, isMrppl, payrollDesignParts, withActualSalary, withLabourPreview } from "@/lib/payrolldesign";
 import { EPF_METHODS, companyMethod, methodOf } from "@/lib/salaryupload";
 
 /** What goes to the bank on Diff Cash for anybody without a share of their own. */
 const DIFF_CASH_CAP = 20000;
 import { MONTHS, thisMonth } from "@/lib/format";
-import { deskUrl } from "@/lib/desk";
 import { payRows } from "@/features/payroll/shared";
 import SheetTable, { money } from "@/features/payroll/SheetTable";
-import { Desk, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
+import { Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 import { salaryLocked } from "@/data/menus";
 import { navigate } from "@/routes/router";
 
@@ -62,18 +61,16 @@ const CHIP = { done: "Done", warn: "Needs you", wait: "Working", todo: "To do", 
     is trouble, anything part-way is work in progress. */
 const MONTH_CLS = { final: "good", failed: "bad", draft: "warn", queued: "warn", slips: "warn" };
 
-const reportUrl = (site, name) => site && `${site}/app/query-report/${encodeURIComponent(name)}`;
 
 export default function PayrollRun() {
 	const s = useApp();
-	const { company, site } = s;
+	const { company } = s;
 
 	const [ym, setYm] = useState(lastMonth);
 	const [reads, setReads] = useState({ components: undefined, all: undefined, extras: undefined });
 	const [loans, setLoans] = useState({ state: "loading", due: [], groups: [], components: [], err: "" });
 	const [info, setInfo] = useState(null);
 	const [address, setAddress] = useState("");
-	const [form, setForm] = useState({ employee: "", kind: "advance", component: "", amount: "" });
 	const [busy, setBusy] = useState("");
 	/* The 5-tab download's question: null while not asking, else the EPF
 	   calculation ticked so far ("" for none yet). */
@@ -132,11 +129,13 @@ export default function PayrollRun() {
 	const t = view.totals;
 	const doing = view.steps[view.current];
 	const why = startWhy({ company, ym, now, ok, entry });
-	const slipsExist = ok && pay.slips.some((x) => Number(x.docstatus) < 2);
 	const exp = exportWhy({ company, label, slips: sheet.rows.length, state: pay && pay.state });
 
 	const who = (id) => (people.find((p) => p.name === id) || {}).employee_name || id;
-	const say = (kind, text) => setMsg({ kind, text });
+	/* `at` puts the message under that step's own buttons. The run step sits far
+	   below the tiles, and an error printed up there was never seen: the button
+	   stopped saying "Creating…" and the run read as having done nothing. */
+	const say = (kind, text, at) => setMsg({ kind, text, at });
 
 	const reload = async () => {
 		setConfirm("");
@@ -149,23 +148,7 @@ export default function PayrollRun() {
 		await readExtras();
 		setBusy("");
 		if (r.failed.length) say("warn", `${r.failed.map((f) => `${f.name} — ${f.error}`).join("; ")}`);
-		else say("ok", `Made ${r.made.join(", ")}. You can change them later in Frappe.`);
-	}
-
-	async function onAdd() {
-		const problem = checkExtra(form, people);
-		if (problem) return say("warn", problem);
-		setBusy("add"); setMsg(null);
-		try {
-			const r = await addExtra(form, end, company, true);
-			say("ok", `${kindFor(form.kind).label} of ${rupees(form.amount)} for ${who(form.employee)} is in ${label} (${r.name}). `
-				+ (slipsExist ? "Slips already made do not change — cancel them in Frappe and make them again to include it." : "The next salary slips will carry it."));
-			setForm({ ...form, amount: "" });
-		} catch (e) {
-			say("warn", e.message || String(e));
-		}
-		await readExtras();
-		setBusy("");
+		else say("ok", `Made ${r.made.join(", ")}. You can change them later.`);
 	}
 
 	async function onSubmitDrafts() {
@@ -196,9 +179,23 @@ export default function PayrollRun() {
 		setBusy("start"); setMsg(null);
 		try {
 			const name = await startSalaryProcess(company, start, end, end);
-			say("ok", `${name} made, and hrms has picked who is on it. Create the salary slips when you are ready.`);
+			say("ok", `${name} made, and hrms has picked who is on it. Create the salary slips when you are ready.`, "run");
 		} catch (e) {
-			say("warn", e.message || String(e));
+			say("warn", e.message || String(e), "run");
+		}
+		await readPay(true);
+		setBusy("");
+	}
+
+	/* A run hrms marked Failed: its own Create Salary Slips again, once whatever
+	   the reason named has been put right. */
+	async function onRetry() {
+		setBusy("retry"); setMsg(null);
+		try {
+			await retrySalarySlips(entry.name);
+			say("ok", `${entry.name} is making the salary slips again.`, "run");
+		} catch (e) {
+			say("warn", e.message || String(e), "run");
 		}
 		await readPay(true);
 		setBusy("");
@@ -208,9 +205,9 @@ export default function PayrollRun() {
 		setBusy("slips"); setMsg(null);
 		try {
 			await createSalarySlips(entry.name);
-			say("ok", `${entry.name} submitted — hrms is making the draft salary slips. Nothing is paid until they are submitted.`);
+			say("ok", `${entry.name} submitted — hrms is making the draft salary slips. Nothing is paid until they are submitted.`, "run");
 		} catch (e) {
-			say("warn", e.message || String(e));
+			say("warn", e.message || String(e), "run");
 		}
 		setConfirm("");
 		await readPay(true);
@@ -380,6 +377,14 @@ export default function PayrollRun() {
 						sheet: slipSheet, ym, company: c.name, people: reads.people, attendance: reads.attendance,
 						calendar: reads.calendar, assignments: data.assignments || [], structureFor, ledger: reads.ledger,
 					});
+					/* Labour supply has no slips: its tab is its attendance. */
+					const pre = await loadPreviewReads(c.name, ym, start, end);
+					rows = withLabourPreview(rows, previewRows({
+						ym, company: c.name, people: pre.people, attendance: pre.attendance,
+						attendanceRead: pre.attendanceRead, calendar: pre.calendar,
+						assignments: data.assignments || [], overtime: pre.overtime, shifts: pre.shifts,
+						ledger: pre.ledger, extras: pre.extras, loans: pre.loans, loanComponents: pre.loanComponents,
+					}).rows);
 				} else {
 					const reads = await loadPreviewReads(c.name, ym, start, end);
 					fromPunches += reads.punchDays || 0;
@@ -398,24 +403,31 @@ export default function PayrollRun() {
 				noSalary += assigned.out;
 				registers.push({ company: c.name, title, abbr: c.abbr, preview, rows: withActualSalary(assigned.rows, actuals, end).map((r) => ({ ...r, company: title })) });
 			}
+			/* BMS's workers are on several companies' books — MRP-251 (BMS) on
+			   Manna Rubber, HPT-103(BMS) on Manna Treads — and are one Labour
+			   supply (HR, 30 October 2026). A file for one company also takes them
+			   off every other company, by their attendance, onto its Labour supply
+			   tab; each keeps the company they are on. */
+			const read = new Set(companies.map((c) => c.name));
+			for (const c of (s.companies || []).filter((x) => x && x.name && !read.has(x.name))) {
+				const pre = await loadPreviewReads(c.name, ym, start, end);
+				const bms = previewRows({
+					ym, company: c.name, people: pre.people, attendance: pre.attendance,
+					attendanceRead: pre.attendanceRead, calendar: pre.calendar,
+					overtime: pre.overtime, shifts: pre.shifts, ledger: pre.ledger, extras: pre.extras,
+					loans: pre.loans, loanComponents: pre.loanComponents,
+				}).rows.filter(bmsRow);
+				if (!bms.length) continue;
+				fromPunches += pre.punchDays || 0;
+				registers.push({ company: companies[0].name, title: registers[0]?.title || companies[0].name, abbr: companies[0].abbr, preview: true, rows: bms });
+			}
 			/* Active people only — the file pays them (lib/payrolldesign.js activeOnly). */
-			const { registers: active, out: notActive } = activeOnly(registers);
+			const { registers: active } = activeOnly(registers);
 			const parts = payrollDesignParts(active, { bankCap: cap, pfShare });
 			await registerDesignBookXlsx(parts, { ym, address, bankCap: cap });
-			const empty = parts.filter((p) => !p.count).map((p) => p.sheet);
-			const mrpplRows = active.filter((p) => isMrppl(p.company)).flatMap((p) => p.rows);
-			const unknownModes = mrpplRows.filter((r) => !String(r.salaryMode || "").trim()).length;
-			const notes = [];
-			if (empty.length) notes.push(`No rows matched: ${empty.join(", ")}. Check Company, Branch, Salary Mode and Employment Type on Employee records.`);
-			if (unknownModes) notes.push(`${unknownModes} MRPPL employee row(s) have no Salary Mode and were placed on MRPPL Salary-1. Set Employee Salary Mode to Bank or Cash for accurate separation.`);
-			if (noSalary) notes.push(`${noSalary} ${noSalary === 1 ? "person has" : "people have"} no salary structure assigned and ${noSalary === 1 ? "is" : "are"} not in the file.`);
-			if (fromPunches) notes.push(`${fromPunches} day${fromPunches === 1 ? "" : "s"} had no Attendance in Frappe and ${fromPunches === 1 ? "was" : "were"} taken from the punches.`);
-			if (notActive.length) {
-				const who = notActive.slice(0, 8).map((x) => `${x.name} (${x.status})`).join(", ") + (notActive.length > 8 ? ` and ${notActive.length - 8} more` : "");
-				notes.push(`Left out because they are not Active: ${who}. Pay anybody who has left through Full & Final.`);
-			}
-			if (differs.length) notes.push(`${differs.join("; ")} — their salary slips' PF was worked out that way, not by ${named}.`);
-			say(notes.length ? "warn" : "ok", `Downloaded the five-tab payroll workbook for ${label} — ${companies.map((c) => c.name).join(", ")} — with EPF wages by ${named}. Full wages and statutory deductions remain from Salary Slips. ${notes.join(" ")}`);
+			/* One line (HR, 30 October 2026): the notes on Salary Mode, punches,
+			   empty tabs and EPF that used to follow read as errors to HR. */
+			say("ok", `5-tab Excel for ${label} downloaded.`);
 		} catch (e) {
 			say("warn", "The five-tab Excel workbook could not be made: " + (e.message || e));
 		}
@@ -464,9 +476,7 @@ export default function PayrollRun() {
 							{st.bare.length > 12 ? ` and ${st.bare.length - 12} more` : ""}
 						</small>
 						<div className="ctl prrow">
-							<Desk className="embtn pri" href={site && deskUrl(site, "Bulk Salary Structure Assignment", "new")} label="Assign salary structures in Frappe">
-								Assign salary structures
-							</Desk>
+							<button type="button" className="embtn pri" onClick={() => navigate("payroll", "setup")}>Assign salary structures</button>
 						</div>
 					</>
 				)}
@@ -475,33 +485,10 @@ export default function PayrollRun() {
 		extras: (st) => (locked ? <><p>{st.text}</p>{extrasTable}</> : (
 			<>
 				<p>{st.text}</p>
-				<div className="ctl prform">
-					<label className="sr-only" htmlFor="pr-person">Person</label>
-					<select id="pr-person" className="who" value={form.employee} onChange={(e) => setForm({ ...form, employee: e.target.value })}>
-						<option value="">Person…</option>
-						{people.slice().sort((a, b) => String(a.employee_name).localeCompare(String(b.employee_name))).map((p) => (
-							<option key={p.name} value={p.name}>{p.employee_name} ({p.name})</option>
-						))}
-					</select>
-					<label className="sr-only" htmlFor="pr-kind">What</label>
-					<select id="pr-kind" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-						{EXTRA_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}
-					</select>
-					{form.kind === "other" && (
-						<>
-							<label className="sr-only" htmlFor="pr-comp">Salary component</label>
-							<select id="pr-comp" value={form.component} onChange={(e) => setForm({ ...form, component: e.target.value })}>
-								<option value="">Component…</option>
-								{(reads.all || []).map((c) => <option key={c.name} value={c.name}>{c.name} ({c.type})</option>)}
-							</select>
-						</>
-					)}
-					<label className="sr-only" htmlFor="pr-amt">Amount in rupees</label>
-					<input id="pr-amt" className="amt" type="number" inputMode="decimal" min="0" step="0.01" placeholder="Amount ₹" value={form.amount}
-						onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-					<button type="button" className="embtn pri" disabled={busy === "add"} onClick={() => void onAdd()}>
-						{busy === "add" ? "Adding…" : `Add to ${label}`}
-					</button>
+				{/* Advances and loans are given on their own page, which spreads one over
+				   months (HR, 29 October 2026: the form here was a second way in). */}
+				<div className="ctl prrow">
+					<button type="button" className="embtn pri" onClick={() => navigate("payroll", "advances")}>Advances &amp; Loans</button>
 				</div>
 				{extrasTable}
 				{drafts.length > 0 && (
@@ -532,7 +519,7 @@ export default function PayrollRun() {
 					</div>
 				)}
 				{loans.state === "error" && (
-					<small className="muted block">Loans are not on this site, so add each instalment above as a Loan instalment.</small>
+					<small className="muted block">Loans are not on this site, so give each one on Advances &amp; Loans.</small>
 				)}
 			</>
 		)),
@@ -543,6 +530,11 @@ export default function PayrollRun() {
 					{!entry && (
 						<button type="button" className="embtn pri" disabled={Boolean(why) || busy === "start"} onClick={() => void onStart()}>
 							{busy === "start" ? "Starting…" : "Start the salary run"}
+						</button>
+					)}
+					{run === "failed" && entry && (
+						<button type="button" className="embtn pri" disabled={busy === "retry"} onClick={() => void onRetry()}>
+							{busy === "retry" ? "Trying…" : "Try again"}
 						</button>
 					)}
 					{run === "draft" && (confirm === "slips" ? (
@@ -558,17 +550,13 @@ export default function PayrollRun() {
 					{run === "slips" && entry && (
 						<button type="button" className="embtn pri" onClick={() => navigate("payroll", "transfer")}>Bank Transfer</button>
 					)}
-					{entry && run !== "slips" && (
-						<Desk className="embtn" href={site && deskUrl(site, "Payroll Entry", entry.name)} label="Open the salary run in Frappe">
-							Open {entry.name}
-						</Desk>
-					)}
 					<button type="button" className="embtn" onClick={() => void reload()}>Refresh</button>
 				</div>
+				{msg && msg.at === "run" && <Note className={msg.kind === "warn" ? "warn" : undefined}>{msg.text}</Note>}
 				{!entry && why && <small className="muted block">{why}</small>}
 				{run === "slips" && (
 					<small className="muted block">
-						Submitting the slips is what books the pay, so it is done in Frappe: open the run, select the slips and choose Submit.
+						Submitting the slips is what books the pay: it is done on Bank Transfer, once the bank has been sent the money.
 					</small>
 				)}
 			</>
@@ -613,10 +601,9 @@ export default function PayrollRun() {
 				)}
 				{sheet.rows.length > 0 && <SheetTable sheet={sheet} label={label} />}
 				<div className="ctl prlinks">
-					<span className="lab">Open in Frappe</span>
-					<Desk href={site && deskUrl(site, "Salary Slip")} label="Salary slips in Frappe">Salary slips</Desk>
-					<Desk href={reportUrl(site, "Salary Register")} label="Salary Register in Frappe">Salary Register</Desk>
-					<Desk href={reportUrl(site, "Bank Remittance")} label="Bank Remittance in Frappe">Bank Remittance</Desk>
+					<button type="button" className="embtn" onClick={() => navigate("payroll", "slips")}>Payslips</button>
+					<button type="button" className="embtn" onClick={() => navigate("payroll", "register")}>Salary Register</button>
+					<button type="button" className="embtn" onClick={() => navigate("payroll", "transfer")}>Bank Transfer</button>
 				</div>
 			</>
 		),
@@ -644,7 +631,7 @@ export default function PayrollRun() {
 				<Tile k="Month is" n={MONTH_IS[run] || "—"} cls={"word " + (MONTH_CLS[run] || "")} s={doing ? `Next: ${doing.title}` : "All done"} />
 			</Tiles>
 
-			{msg && <Note className={msg.kind === "warn" ? "warn" : undefined}>{msg.text}</Note>}
+			{msg && !msg.at && <Note className={msg.kind === "warn" ? "warn" : undefined}>{msg.text}</Note>}
 
 			<ol className="prsteps">
 				{view.steps.map((st, i) => {

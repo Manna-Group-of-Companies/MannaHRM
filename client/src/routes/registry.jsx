@@ -62,7 +62,6 @@ import MyTimeOff from "@/features/leave/MyTimeOff";
 import PayrollRun from "@/features/payroll/PayrollRun";
 import SalarySetup from "@/features/payroll/SalarySetup";
 import ActualSalary from "@/features/payroll/ActualSalary";
-import FestivalBonus from "@/features/payroll/FestivalBonus";
 import EmployeeImport from "@/features/employees/EmployeeImport";
 import HierarchyChart from "@/features/employees/HierarchyChart";
 import Directory from "@/features/employees/Directory";
@@ -259,7 +258,7 @@ const TABS = {
 	/* The To-do list left the menu on 21 Oct 2026, asked for by HR, so the
 	   module opens on Onboarding; the list is `todos` now, hidden (data/sections.js),
 	   and `/checklist/onboarding` falls through to `/checklist`, the same page. */
-	checklist: [["overview", "Onboarding"], ["offboarding", "Offboarding"], ["settings", "Checklist Settings"], ["todos", "To-do list"]],
+	checklist: [["overview", "Offboarding"], ["onboarding", "Onboarding"], ["settings", "Checklist Settings"], ["todos", "To-do list"]],
 	recruitment: [["overview", "Jobs"], ["candidates", "Candidates"], ["settings", "Recruitment Settings"]],
 	documents: [["overview", "Documents"]],
 	news: [["overview", "News"]],
@@ -338,7 +337,7 @@ const PAGES = {
 		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
 		...managedPages("payroll"), ...blueprintPages("payroll"),
 		/* The list, with HR's sheet uploaded above it (14 Oct 2026). */
-		actualsalary: ActualSalary, festivalbonus: FestivalBonus },
+		actualsalary: ActualSalary },
 	loans: { overview: LoanApplication, register: LoanRegister,
 		projection: LoanProjection, all: moduleAll("loans", "Loans"),
 		...managedPages("loans"), ...blueprintPages("loans") },
@@ -346,7 +345,7 @@ const PAGES = {
 	reports: { overview: Reports, ...Object.fromEntries(REPORT_PAGES.map((k) => [k, Reports])) },
 	notifications: { overview: Notifications },
 	help: { overview: Help, faq: Help, privacy: Help, shortcuts: Help, contact: Help },
-	checklist: { overview: Checklist, todo: Checklist, todos: Checklist, offboarding: Checklist, list: Checklist, settings: Checklist, template: Checklist },
+	checklist: { overview: Checklist, onboarding: Checklist, todo: Checklist, todos: Checklist, offboarding: Checklist, list: Checklist, settings: Checklist, template: Checklist },
 	recruitment: { overview: Recruitment, candidates: Recruitment, settings: Recruitment, job: Recruitment, applicant: Recruitment, new: Recruitment },
 	documents: { overview: CompanyDocuments, folder: CompanyDocuments },
 	news: { overview: News, item: News, new: News, edit: News },

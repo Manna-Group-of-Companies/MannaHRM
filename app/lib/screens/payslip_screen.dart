@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:manna_hr_app/screens/correction_sheet.dart' show dmy;
 import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/money.dart';
 import 'package:manna_hr_app/services/api.dart';
@@ -107,63 +108,98 @@ class _PayslipScreenState extends State<PayslipScreen> {
       if (_reading && s == null)
         const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator()))
       else if (s != null) ...[
+        // The FlutterFlow payslip (29 October 2026): the net on a white card,
+        // the month's days under it, then each side of the slip on its own.
         Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(gradient: kBrandGradient, borderRadius: BorderRadius.circular(18)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Net Salary', style: TextStyle(color: Colors.white, fontSize: 13)),
-            const SizedBox(height: 4),
-            Text(rupees(net), style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800)),
-            if ('${s['payment_days'] ?? ''}'.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text('${s['payment_days']} payment days',
-                  style: const TextStyle(color: Colors.white, fontSize: 12.5)),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          child: Column(children: [
+            const Text('Net Salary Payable',
+                style: TextStyle(color: Color(0xFF3A4252), fontSize: 13.5, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            Text(rupees(net),
+                style: const TextStyle(color: Color(0xFF0B0F19), fontSize: 34, fontWeight: FontWeight.w800)),
+            if ('${s['posting_date'] ?? ''}'.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(color: const Color(0xFFE6E8EC), borderRadius: BorderRadius.circular(20)),
+                child: Text('${s['status'] == 'Submitted' ? 'Paid on' : 'Dated'} ${dmy('${s['posting_date']}')}',
+                    style: const TextStyle(color: Color(0xFF4A5262), fontSize: 12, fontWeight: FontWeight.w700)),
+              ),
             ],
           ]),
         ),
-        const SizedBox(height: 12),
-        IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(child: _total('Earnings', s['gross_pay'], kGood, kGreenSoft)),
-            const SizedBox(width: 12),
-            Expanded(
-                child: _total('Deductions', s['total_deduction'], kBad, kBadSoft)),
-          ]),
-        ),
-        _lines('Earnings', s['earnings']),
-        _lines('Deductions', s['deductions']),
+        const SizedBox(height: 16),
+        _days(s),
+        _lines('Earnings', s['earnings'], s['gross_pay']),
+        _lines('Deductions', s['deductions'], s['total_deduction']),
       ],
     ];
   }
 
-  Widget _total(String label, Object? n, Color ink, Color bg) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(color: ink, fontSize: 12.5)),
-          const SizedBox(height: 4),
-          Text(rupees(n), style: TextStyle(color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
-        ]),
-      );
+  /// Working days, days absent, days paid — each a number over a word, the
+  /// three apart by hairlines.
+  Widget _days(Map<String, dynamic> s) {
+    String n(Object? v) {
+      final d = double.tryParse('${v ?? ''}');
+      if (d == null) return '—';
+      return d == d.roundToDouble() ? '${d.round()}' : '$d';
+    }
 
-  Widget _lines(String title, Object? rows) {
+    final absent = (double.tryParse('${s['absent_days'] ?? 0}') ?? 0) +
+        (double.tryParse('${s['leave_without_pay'] ?? 0}') ?? 0);
+    Widget cell(String value, String label, Color ink) => Expanded(
+          child: Column(children: [
+            Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: ink)),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: kInk2)),
+          ]),
+        );
+    return Panel(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: IntrinsicHeight(
+        child: Row(children: [
+          cell(n(s['total_working_days']), 'Working Days', kInk),
+          const VerticalDivider(color: kCardLine, width: 1),
+          // A slip puts the cut in absent_days, not leave_without_pay, so the
+          // two are added — the dashboard's lossOfPay does the same.
+          cell(n(absent), 'Days Absent', kBad),
+          const VerticalDivider(color: kCardLine, width: 1),
+          cell(n(s['payment_days']), 'Paid Days', kInfo),
+        ]),
+      ),
+    );
+  }
+
+  /// One side of the slip: its total in the card's head, a hairline, then a
+  /// line for each component.
+  Widget _lines(String title, Object? rows, Object? total) {
     final list = rows is List ? rows.whereType<Map>().toList() : const <Map>[];
     if (list.isEmpty) return const SizedBox();
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SectionTitle(title),
-      Panel(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Panel(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
         child: Column(children: [
+          Row(children: [
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kInk))),
+            Text(rupees(total), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kInk)),
+          ]),
+          const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Divider(color: kCardLine, height: 1)),
           for (final r in list)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 9),
+              padding: const EdgeInsets.only(bottom: 14),
               child: Row(children: [
-                Expanded(child: Text('${r['salary_component'] ?? ''}', style: const TextStyle(color: kInk))),
+                Expanded(
+                  child: Text('${r['salary_component'] ?? ''}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kInk2)),
+                ),
                 Text(rupees(r['amount']), style: const TextStyle(fontWeight: FontWeight.w700, color: kInk)),
               ]),
             ),
         ]),
       ),
-    ]);
+    );
   }
 }

@@ -1,8 +1,8 @@
-import { apiCreate, apiCreateSubmitted, apiWrite, listAll } from "@/api/client";
+import { apiCreate, apiCreateSubmitted, apiSubmitDraft, apiWrite, listAll } from "@/api/client";
 import { parseCsv } from "@/lib/basepayfile";
 import { assignmentDoc } from "@/lib/salarysetup";
 import {
-	UPLOAD_HEADS, cellValue, toSave, uploadComponentDoc, uploadRow, uploadStructureDoc,
+	UPLOAD_HEADS, cellValue, insuranceDoc, toSave, uploadComponentDoc, uploadRow, uploadStructureDoc,
 } from "@/lib/salaryupload";
 import { downloadWorkbook } from "@/lib/xlsx";
 import { HEAD_FILL } from "@/lib/fills";
@@ -50,7 +50,7 @@ export async function readUploadTable(file) {
 }
 
 /** The list to fill in: everybody in the company, with what the site holds. */
-export async function downloadUploadList(people, assignments, company) {
+export async function downloadUploadList(people, assignments, company, insurance = []) {
 	const ExcelJS = (await import("exceljs")).default;
 	const wb = new ExcelJS.Workbook();
 	wb.creator = "Manna HR";
@@ -62,9 +62,10 @@ export async function downloadUploadList(people, assignments, company) {
 	ws.getCell("E1").note = "Fill Bank ₹ or Cash ₹ (or both, adding up to the salary). A Bank % column works too.";
 	ws.getCell("G1").note = "12 for 12%. 0 or empty for somebody who is not in PF.";
 	ws.getCell("H1").note = "0.75 for 0.75%. 0 or empty for somebody who is not in ESI.";
-	for (const p of people) ws.addRow(uploadRow(p, assignments || []));
-	[14, 30, 20, 16, 14, 14, 10, 10].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
-	for (const c of [4, 5, 6]) ws.getColumn(c).numFmt = "#,##0.00";
+	ws.getCell("I1").note = "Rupees a month, taken from the pay. Empty for nobody.";
+	for (const p of people) ws.addRow(uploadRow(p, assignments || [], insurance || []));
+	[14, 30, 20, 16, 14, 14, 10, 10, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+	for (const c of [4, 5, 6, 9]) ws.getColumn(c).numFmt = "#,##0.00";
 	ws.views = [{ state: "frozen", ySplit: 1 }];
 	await downloadWorkbook(wb, `Salaries${company ? " " + company : ""}.xlsx`);
 }
@@ -115,6 +116,15 @@ export async function saveUpload(plan, from, company, comps, onStep = () => {}) 
 			if (Object.keys(l.patch).length) {
 				const r = await apiWrite("Employee", l.employee, l.patch);
 				if (!r.ok) throw new Error(`${l.assign ? "the salary is saved, but " : ""}the bank and cash split was refused — ${r.error || "no reason given"}`);
+			}
+			if (l.insure) {
+				/* Made, then submitted: a draft takes nothing from anybody's pay. */
+				try {
+					const ins = await apiCreate("Additional Salary", insuranceDoc(l, from, company, plan.roles));
+					await apiSubmitDraft("Additional Salary", ins.name);
+				} catch (e) {
+					throw new Error(`${l.assign || Object.keys(l.patch).length ? "the rest is saved, but " : ""}the health insurance was refused — ${e.message || e}`);
+				}
 			}
 			made.push(l);
 		} catch (e) {

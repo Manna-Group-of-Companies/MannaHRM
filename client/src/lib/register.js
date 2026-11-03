@@ -35,6 +35,8 @@ export const PATTERNS = {
 	food: /food|mess/i,
 	pf: /provident|\bepf\b|^pf\b/i,
 	esi: /\besi\b|state insurance|^esic/i,
+	/* Health insurance, as Salary Setup's upload names it — never ESI. */
+	insurance: /^(?!.*state insurance).*(insurance|mediclaim)/i,
 	ptax: /professional tax|^p\.?tax/i,
 	lwf: /welfare|\blwf\b/i,
 };
@@ -155,17 +157,18 @@ export function columnsOf(row, dedKinds = {}) {
 	const esi = pick(row.ded, PATTERNS.esi);
 	const ptax = pick(row.ded, PATTERNS.ptax);
 	const lwf = pick(row.ded, PATTERNS.lwf);
+	const insurance = pick(row.ded, PATTERNS.insurance);
 	const sum = (kind) => cents(Object.entries(row.ded || {}).reduce((t, [k, v]) => (dedKinds[k] === kind ? t + n(v) : t), 0));
 
 	/* A deduction the register has no column of its own for — Income Tax, say. It is
 	   in the slip's total deduction and so in the net, and is named so that nobody
 	   has to wonder why the columns do not add up. */
-	const known = [PATTERNS.pf, PATTERNS.esi, PATTERNS.ptax, PATTERNS.lwf];
+	const known = [PATTERNS.pf, PATTERNS.esi, PATTERNS.ptax, PATTERNS.lwf, PATTERNS.insurance];
 	const unmapped = Object.entries(row.ded || {})
 		.filter(([k, v]) => n(v) && !known.some((re) => re.test(k)) && dedKinds[k] !== "advance" && dedKinds[k] !== "loan")
 		.map(([k, v]) => [k, cents(v)]);
 
-	return { basic, da, hra, conveyance, other: rest, overtime, bata, food, due, pf, esi, ptax, lwf, advance: sum("advance"), loan: sum("loan"), unmapped };
+	return { basic, da, hra, conveyance, other: rest, overtime, bata, food, due, pf, esi, ptax, lwf, insurance, advance: sum("advance"), loan: sum("loan"), unmapped };
 }
 
 /**
@@ -211,6 +214,7 @@ export function registerRows({ sheet, ym, people = new Map(), attendance = new M
 			branch: who.branch || company,
 			employee: r.employee,
 			code: who.employee_number || r.employee,
+			oldCode: who.custom_factor_hr_id || "",
 			name: r.name,
 			salaryMode: who.salary_mode || "",
 			...bankShareOf(who),

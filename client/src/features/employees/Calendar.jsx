@@ -33,8 +33,15 @@ import { active, scoped } from "@/lib/scope";
     a calendar named for a list that does not exist would show an empty month and
     blame the month. */
 function calList(s) {
-	const lists = s.holidayLists.map((h) => h.name);
-	return lists.includes(s.cal.list) ? s.cal.list : lists[0] || "";
+	const day = (s.cal.month || thisMonth()) + "-01";
+	const covers = (h) => !!h.from_date && h.from_date <= day && day <= (h.to_date || "");
+	const picked = s.holidayLists.find((h) => h.name === s.cal.list);
+	/* A list picked by hand holds only while the month is inside it: lists run
+	   a year, and walking into the next one — or 1 January arriving — should
+	   show that year's list rather than last year's, empty. */
+	if (picked && (covers(picked) || !picked.from_date)) return picked.name;
+	const now = s.holidayLists.find(covers);
+	return (now || picked || s.holidayLists[0] || {}).name || "";
 }
 
 /** One day's entries, out of what this site can actually answer: the named

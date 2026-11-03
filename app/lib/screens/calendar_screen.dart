@@ -131,10 +131,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       'punched on.',
               kind: NoteKind.warn,
             ),
+          Panel(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), child: _monthBar()),
+          const SizedBox(height: 16),
+          if (!_loading) ...[_counts(), const SizedBox(height: 16)],
           Panel(
-            padding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
             child: Column(children: [
-              _monthBar(),
               _weekHeader(),
               if (_loading)
                 const Padding(padding: EdgeInsets.symmetric(vertical: 60), child: CircularProgressIndicator())
@@ -143,8 +145,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ]),
           ),
           if (!_loading) ...[
-            const SizedBox(height: 14),
-            _counts(),
             if (_ym == _today.substring(0, 7)) ..._todayBlock(),
             const SizedBox(height: 16),
             _key(),
@@ -174,7 +174,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             onPressed: _loading ? null : () => _shiftMonth(-1),
           ),
           Text('${kMonthNames[_month - 1]} $_year',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: kInk)),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kInk)),
           IconButton(
             tooltip: 'Next month',
             icon: const Icon(Icons.chevron_right),
@@ -184,15 +184,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
 
   Widget _weekHeader() {
-    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     return Row(
       children: labels
           .map((d) => Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 6, top: 2),
+                  padding: const EdgeInsets.only(bottom: 10, top: 2),
                   child: Text(d,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kInk2)),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kInk2)),
                 ),
               ))
           .toList(),
@@ -228,10 +228,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       borderRadius: BorderRadius.circular(10),
       onTap: () => _openDay(r),
       child: Container(
-        margin: const EdgeInsets.all(3),
+        margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: filled ? colour : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(9),
           border: Border.all(
             color: isToday ? kInk : (filled ? Colors.transparent : kLine),
             width: isToday ? 2 : 1,
@@ -240,7 +240,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Stack(children: [
           Center(
             child: Text('$day',
-                style: TextStyle(color: filled ? kPage : kInk, fontWeight: FontWeight.w700)),
+                style: TextStyle(color: filled ? kPage : kInk, fontWeight: FontWeight.w800, fontSize: 13.5)),
           ),
           // A day carrying a correction is flagged, whatever its colour: it is
           // the day somebody already knows about and is waiting on.
@@ -253,22 +253,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _counts() {
     final c = countStates(_rows);
+    // Two digits, as the design draws them: 02 lines up under 22.
     Widget stat(String label, int n, IconData icon, Color colour) => Panel(
-          padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            IconBadge(icon, color: colour, size: 36),
-            const SizedBox(width: 10),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: kInk2)),
-              Text('$n', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: kInk)),
-            ]),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kInk2)),
+            const SizedBox(height: 4),
+            Text(n.toString().padLeft(2, '0'),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: colour)),
           ]),
         );
     return TileGrid([
       stat('Present', c[DayStatus.present] ?? 0, Icons.how_to_reg_rounded, kStatusColour[DayStatus.present]!),
       stat('Absent', c[DayStatus.absent] ?? 0, Icons.person_off_rounded, kStatusColour[DayStatus.absent]!),
-      stat('On leave', c[DayStatus.onLeave] ?? 0, Icons.beach_access_rounded, kStatusColour[DayStatus.onLeave]!),
-      stat('Holiday / off', (c[DayStatus.holiday] ?? 0) + (c[DayStatus.weeklyOff] ?? 0), Icons.weekend_rounded,
+      stat('Leave', c[DayStatus.onLeave] ?? 0, Icons.beach_access_rounded, kStatusColour[DayStatus.onLeave]!),
+      stat('Holidays', (c[DayStatus.holiday] ?? 0) + (c[DayStatus.weeklyOff] ?? 0), Icons.weekend_rounded,
           kStatusColour[DayStatus.holiday]!),
     ]);
   }

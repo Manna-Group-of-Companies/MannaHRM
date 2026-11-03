@@ -128,9 +128,10 @@ describe("leaves a month, asked when an employee is added", () => {
 		expect(employeeDoc({ first_name: "A", leaves_a_month: "2" })).toEqual({ first_name: "A" });
 	});
 
-	it("an_empty_answer_is_a_gap_not_a_mistake", () => {
+	it("an_empty_answer_is_neither_a_gap_nor_a_mistake_because_both_leave_fields_are_optional", () => {
 		expect(leaveProblems({})).toEqual([]);
-		expect(problemsOf({}, []).gaps).toContain("Leaves A Month");
+		expect(problemsOf({}, []).gaps).not.toContain("Leaves A Month");
+		expect(problemsOf({}, []).gaps).not.toContain("Leave Type");
 	});
 
 	it("a_wrong_answer_stops_create", () => {

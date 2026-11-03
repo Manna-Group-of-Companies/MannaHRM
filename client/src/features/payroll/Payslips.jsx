@@ -74,7 +74,7 @@ export default function Payslips() {
 			</Tiles>
 
 			{pay && pay.state === "error" && <Note className="warn">The payslips could not be read: {pay.err}</Note>}
-			{ok && drafts > 0 && <Note>Slips marked Draft print with DRAFT on them. Submit the salary run in Frappe to make them final.</Note>}
+			{ok && drafts > 0 && <Note>Slips marked Draft print with DRAFT on them. Press Transferred on Bank Transfer to make them final.</Note>}
 
 			<div className="ctl prrow payfind">
 				<label className="sr-only" htmlFor="psl-find">Find</label>

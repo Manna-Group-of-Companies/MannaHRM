@@ -43,7 +43,7 @@ export function pagesOf(section, user, admin) {
     and their pages are switched by the strip over the page. */
 export const NAV = [
 	{ key: "employees", label: "Employees", icon: "users", sections: ["employees", "survey"] },
-	{ key: "checklist", label: "Checklist", icon: "check", sections: ["checklist", "onboard"] },
+	{ key: "checklist", label: "Checklist", icon: "check", sections: ["onboard", "checklist"] },
 	{ key: "timeoff", label: "Time Off", icon: "clock", sections: ["leave"] },
 	{ key: "attendance", label: "Attendance", icon: "cal", sections: ["attendance"] },
 	{ key: "payroll", label: "Payroll", icon: "wallet", sections: ["payroll", "loans"] },

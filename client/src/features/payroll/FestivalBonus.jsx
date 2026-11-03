@@ -5,7 +5,7 @@ import { readUploadTable } from "@/api/salaryupload";
 import { downloadBonusList, loadBonusPeople, loadBonusRows, saveBonus } from "@/api/festivalbonus";
 import { loadBankDetails } from "@/api/banksheet";
 import { loadCompanyInfo } from "@/api/salarysheet";
-import { bonusAsSlips, bonusOccasions, bonusToSave, checkBonusOccasion, planBonus, verifyBonus } from "@/lib/festivalbonus";
+import { bonusAsSlips, bonusMonthLabel, bonusOccasions, bonusToSave, checkBonusOccasion, planBonus, verifyBonus } from "@/lib/festivalbonus";
 import { bankSheet } from "@/lib/banksheet";
 import { bankSheetXlsx } from "@/lib/banksheetxlsx";
 import { todayIso } from "@/lib/format";
@@ -28,7 +28,7 @@ export default function FestivalBonus() {
 	const [open, setOpen] = useState(true);
 	const [bankOpen, setBankOpen] = useState(true);
 	const [festival, setFestival] = useState("");
-	const [date, setDate] = useState(todayIso);
+	const [date, setDate] = useState(() => `${todayIso().slice(0, 7)}-01`);
 	const [upload, setUpload] = useState(null);
 	const [confirm, setConfirm] = useState(false);
 	const [step, setStep] = useState("");
@@ -93,9 +93,9 @@ export default function FestivalBonus() {
 			const sheet = bankSheet(bonusAsSlips(given, chosen), emps);
 			await bankSheetXlsx(sheet, {
 				ym: chosen.date.slice(0, 7), company, info,
-				title: `${chosen.festival.toUpperCase()} BONUS — ${chosen.date.split("-").reverse().join("-")}`,
+				title: `${chosen.festival.toUpperCase()} BONUS — ${bonusMonthLabel(chosen.date).toUpperCase()}`,
 				amountHead: "Bonus",
-				filename: `bonus-${slug(chosen.festival)}-${slug(company || "group")}-${chosen.date}.xlsx`,
+				filename: `bonus-${slug(chosen.festival)}-${slug(company || "group")}-${chosen.date.slice(0, 7)}.xlsx`,
 			});
 		} catch (e) {
 			setBankMsg("The Excel file could not be made: " + (e.message || e));
@@ -115,8 +115,8 @@ export default function FestivalBonus() {
 						<input id="fb-festival" type="text" placeholder="e.g. Onam 2026" value={festival} onChange={(e) => { setFestival(e.target.value); setUpload(null); }} />
 					</div>
 					<div className="fld">
-						<label className="lab" htmlFor="fb-date">Bonus date</label>
-						<input id="fb-date" type="date" value={date} onChange={(e) => { setDate(e.target.value); setUpload(null); }} />
+						<label className="lab" htmlFor="fb-date">Bonus month</label>
+						<input id="fb-date" type="month" value={date.slice(0, 7)} onChange={(e) => { setDate(e.target.value ? `${e.target.value}-01` : ""); setUpload(null); }} />
 					</div>
 					<div className="fld wide">
 						<label className="lab" htmlFor="fb-file">The sheet (Excel or CSV)</label>
@@ -198,7 +198,7 @@ export default function FestivalBonus() {
 							<label className="lab" htmlFor="fb-occasion">Festival</label>
 							<span className="fldrow">
 								<select id="fb-occasion" value={chosen ? chosen.key : ""} onChange={(e) => setPick(e.target.value)}>
-									{occasions.map((o) => <option key={o.key} value={o.key}>{o.festival} — {o.date}</option>)}
+									{occasions.map((o) => <option key={o.key} value={o.key}>{o.festival} — {bonusMonthLabel(o.date)}</option>)}
 								</select>
 								<button type="button" className="embtn pri" disabled={!chosenRows.length} onClick={() => void onBankSheet()}>Download bank sheet</button>
 							</span>

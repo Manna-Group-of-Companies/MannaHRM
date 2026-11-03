@@ -105,44 +105,84 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   Widget build(BuildContext context) {
     final rows = _shown;
     final narrowed = _status != 'Active' || _company.isNotEmpty;
+    final companies = ({for (final r in _all) '${r['company'] ?? ''}'}..remove('')).toList()..sort();
+    final top = MediaQuery.of(context).padding.top;
+    // The FlutterFlow directory (29 October 2026): the title and the search on
+    // a band with rounded lower corners, the companies as chips under it.
     return Scaffold(
-      appBar: brandBar('Employees'),
       body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Row(children: [
-            Expanded(
+        Container(
+          padding: EdgeInsets.fromLTRB(20, top + 12, 12, 18),
+          decoration: const BoxDecoration(
+            color: kCard,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              if (Navigator.of(context).canPop()) ...[
+                const BackButton(color: kInk),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Employees', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: kInk)),
+                  Text(
+                    [
+                      '${rows.length} ${rows.length == 1 ? 'person' : 'people'}',
+                      if (_status.isNotEmpty) _status,
+                    ].join(' · '),
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kInk2),
+                  ),
+                ]),
+              ),
+              IconButton(
+                tooltip: 'Filter',
+                onPressed: _all.isEmpty ? null : _filters,
+                icon: Badge(isLabelVisible: narrowed, child: const Icon(Icons.tune_rounded, color: kInk)),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
               child: TextField(
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search),
-                  hintText: 'Search employee',
+                  hintText: 'Search name or code',
                   contentPadding: EdgeInsets.symmetric(vertical: 10),
                 ),
                 onChanged: (s) => setState(() => _query = s),
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton.filledTonal(
-              tooltip: 'Filter',
-              onPressed: _all.isEmpty ? null : _filters,
-              icon: Badge(isLabelVisible: narrowed, child: const Icon(Icons.filter_list_rounded)),
-            ),
           ]),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 0, 18, 6),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              [
-                '${rows.length} ${rows.length == 1 ? 'person' : 'people'}',
-                if (_status.isNotEmpty) _status,
-                if (_company.isNotEmpty) _company,
-              ].join(' · '),
-              style: const TextStyle(fontSize: 12.5, color: kInk2),
+        if (companies.length > 1)
+          SizedBox(
+            height: 58,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+              children: [
+                for (final c in ['', ...companies])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(c.isEmpty ? 'All' : c),
+                      selected: _company == c,
+                      showCheckmark: true,
+                      checkmarkColor: kInk,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w700, color: kInk),
+                      backgroundColor: kCard,
+                      selectedColor: kRaised,
+                      side: const BorderSide(color: kCardLine),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      onSelected: (_) => setState(() => _company = c),
+                    ),
+                  ),
+              ],
             ),
-          ),
-        ),
+          )
+        else
+          const SizedBox(height: 10),
         if (_loading) const LinearProgressIndicator(minHeight: 2),
         if (_error.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Note(_error)),
         Expanded(
@@ -154,31 +194,45 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                     itemCount: rows.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, i) {
                       final r = rows[i];
                       final status = '${r['status'] ?? ''}';
                       final role = '${r['designation'] ?? ''}'.isNotEmpty
                           ? '${r['designation']}'
                           : tidyDept('${r['department'] ?? ''}');
+                      final company = '${r['company'] ?? ''}';
                       return Panel(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                         onTap: () => Navigator.of(context).push(MaterialPageRoute(
                           builder: (_) => ProfileScreen(id: '${r['name']}', seed: r),
                         )),
                         child: Row(children: [
-                          Avatar(name: '${r['employee_name'] ?? ''}', image: '${r['image'] ?? ''}'),
-                          const SizedBox(width: 12),
+                          Avatar(name: '${r['employee_name'] ?? ''}', image: '${r['image'] ?? ''}', radius: 26),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text('${r['employee_name'] ?? r['name']}',
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.w700, color: kInk)),
+                                  style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: kInk)),
+                              const SizedBox(height: 2),
                               Text(
-                                ['${r['employee_number'] ?? ''}', role].where((s) => s.isNotEmpty).join(' · '),
+                                ['${r['employee_number'] ?? ''}', role].where((s) => s.isNotEmpty).join(' • '),
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12.5, color: kInk2),
+                                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: kInk2),
                               ),
+                              if (company.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Row(children: [
+                                  const Icon(Icons.business_rounded, size: 13, color: kFaint),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(company,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: kFaint)),
+                                  ),
+                                ]),
+                              ],
                             ]),
                           ),
                           if (status.isNotEmpty) Pill(status, color: wordColour(status)),

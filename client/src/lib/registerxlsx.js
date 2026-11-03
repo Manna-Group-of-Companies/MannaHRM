@@ -62,7 +62,7 @@ function paint(cell, s) {
 }
 
 /** The columns the preview totals under its last row — the sheet's own. */
-const TOTALS = ["BA", "BL", "BN", "BO", "BP", "BV", "BW", "BX", "BY", "BZ", "CA", "CB", "CC", "CD", "CE", "CK", "CL", "CM", "CN", "CQ", "CR"];
+const TOTALS = ["BA", "BL", "BN", "BO", "BP", "BT", "BV", "BW", "BX", "BY", "BZ", "CA", "CB", "CC", "CD", "CE", "CK", "CL", "CM", "CN", "CQ", "CR"];
 const YELLOW = "FFFF00";
 
 /** A preview is asked for, or its rows say so: only the preview's rows carry a kind. */
@@ -347,7 +347,7 @@ export function addRegisterSheet(wb, rows, opts) {
 		   be charged the lowest slab and show a net of less than nothing. */
 		calc("CK", `IF(${c("BE")}=0,0,IF(${c("CJ")}<17999,320,IF(${c("CJ")}<29999,450,IF(${c("CJ")}<44999,600,IF(${c("CJ")}<99999,750,IF(${c("CJ")}<124999,1000,1250)))))/6)`);
 		put("CL", p.lwf);
-		calc("CM", ["CB", "CD", "CG", "BX", "CI", "BY", "CK", "CL"].map(c).join("+"));
+		calc("CM", ["CB", "CD", "CG", "BX", "CI", "BY", "CK", "CL", "BT"].map(c).join("+"));
 		calc("CN", `${c("BP")}-${c("CM")}`);
 		put("CO", p.foodDeduction);
 		put("CP", p.incentive);
@@ -499,6 +499,7 @@ export function addRegisterSheet(wb, rows, opts) {
 		}
 		put("BR", "No");
 		put("BS", p.esiMember ? "Yes" : "No");
+		put("BT", money(p.insurance));
 		calc("BU", ref("AT"));
 		put("BV", money(p.pf));
 		put("BW", money(p.esi));

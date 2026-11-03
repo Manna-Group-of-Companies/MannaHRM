@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { bankSheet } from "@/lib/banksheet";
 import {
-	bonusAsSlips, bonusOccasions, bonusRow, bonusToSave, checkBonusOccasion, findBonusColumns, planBonus, verifyBonus,
+	bonusAsSlips, bonusMonthLabel, bonusOccasions, bonusRow, bonusToSave, checkBonusOccasion, findBonusColumns, planBonus, verifyBonus,
 } from "@/lib/festivalbonus";
 
 /* ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ describe("reading HR's bonus sheet", () => {
 
 	it("reads nothing until the festival and the date are chosen", () => {
 		expect(plan([["Emp Code", "Bonus"], ["MR001", 5000]], { festival: "  " })).toEqual({ ok: false, error: "Type the festival." });
-		expect(plan([["Emp Code", "Bonus"], ["MR001", 5000]], { date: "" })).toEqual({ ok: false, error: "Pick the bonus date." });
+		expect(plan([["Emp Code", "Bonus"], ["MR001", 5000]], { date: "" })).toEqual({ ok: false, error: "Pick the bonus month." });
 		expect(checkBonusOccasion(ON)).toBe("");
 	});
 
@@ -93,7 +93,7 @@ describe("after saving", () => {
 		const after = [{ employee: "HR-EMP-1", festival: "Onam 2026", bonus_date: "2026-08-25", amount: 4000 }];
 		expect(verifyBonus(lines, after)).toEqual([
 			{ name: "Anand", text: "has ₹4000 on the site, not ₹5000" },
-			{ name: "Priya", text: "has no Onam 2026 bonus on 2026-08-25 on the site" },
+			{ name: "Priya", text: "has no Onam 2026 bonus in Aug 2026 on the site" },
 		]);
 	});
 });
@@ -105,8 +105,15 @@ describe("the bank sheet for a festival", () => {
 		{ name: "B-3", employee: "HR-EMP-1", employee_name: "Anand Raghavan", festival: "Christmas 2026", bonus_date: "2026-12-20", amount: 2000 },
 	];
 
+	it("a bonus is one month, so a row on any day of that month is the same bonus", () => {
+		const existing = [{ name: "B-1", employee: "HR-EMP-1", festival: "Onam 2026", bonus_date: "2026-08-25", amount: 5000 }];
+		const p = planBonus([["Emp Code", "Bonus"], ["MR001", 5000]], { people, existing, festival: "Onam 2026", date: "2026-08-01" });
+		expect(p.lines[0].action).toBe("same");
+		expect(bonusMonthLabel("2026-08-01")).toBe("Aug 2026");
+	});
+
 	it("lists each festival once, newest first", () => {
-		expect(bonusOccasions(rows).map((o) => `${o.festival}|${o.date}`)).toEqual(["Christmas 2026|2026-12-20", "Onam 2026|2026-08-25"]);
+		expect(bonusOccasions(rows).map((o) => `${o.festival}|${o.date}`)).toEqual(["Christmas 2026|2026-12-01", "Onam 2026|2026-08-01"]);
 	});
 
 	it("pays that festival's bonuses and nothing else, through the same bank sheet as salary", () => {

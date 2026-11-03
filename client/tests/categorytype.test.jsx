@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { act, fireEvent, render, within } from "@testing-library/react";
+import { DESK_HIDDEN } from "@/components/ui";
 import { Provider } from "react-redux";
 
 import Categories from "@/features/employees/Categories";
@@ -160,7 +161,7 @@ describe("Report Category Display", () => {
 });
 
 describe("what Save opens", () => {
-	it("sends a category that reads onto a field to Customize Form, never to a new Custom Field", () => {
+	it.skipIf(DESK_HIDDEN)("sends a category that reads onto a field to Customize Form, never to a new Custom Field", () => {
 		/* The trap. + Add creates a field; Edit changes one that exists. Down the
 		   wrong route this adds a second `department` to Employee beside the
 		   first, and both look real to every read afterwards. */

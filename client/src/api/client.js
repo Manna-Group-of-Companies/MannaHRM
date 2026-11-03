@@ -395,7 +395,10 @@ export async function apiCreate(label, doc) {
     adjustment adds nothing, and hrms allows one submitted adjustment per
     allocation, so it is created submitted, and replaced by cancel-and-amend
     when the total changes. */
-const SUBMITTED_FROM_HERE = new Set(["Shift Assignment", "Leave Policy", "Leave Policy Assignment", "Salary Structure", "Salary Structure Assignment", "Leave Application", "Leave Adjustment"]);
+/* Employee Onboarding and Employee Separation (29 Oct 2026): hrms makes a
+   checklist's Tasks on submit, so a draft one ticks nothing (lib/boarding.js). */
+const SUBMITTED_FROM_HERE = new Set(["Shift Assignment", "Leave Policy", "Leave Policy Assignment", "Salary Structure", "Salary Structure Assignment", "Leave Application", "Leave Adjustment",
+	"Employee Onboarding", "Employee Separation"]);
 
 export async function apiCreateSubmitted(label, doc) {
 	if (!SUBMITTED_FROM_HERE.has(label)) throw new Error(`${label} is not created submitted from here.`);

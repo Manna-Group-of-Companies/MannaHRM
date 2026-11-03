@@ -60,7 +60,14 @@ describe("which step Bank Transfer takes", () => {
 	it("says a failed run failed, and takes no step on it", () => {
 		const s = at({ state: "failed", entry: { name: "PE-1" } });
 		expect([s.auto, s.transfer]).toEqual(["", false]);
-		expect(s.why).toMatch(/PE-1 failed/);
+		expect(s.why).toMatch(/PE-1 could not make the salary slips/);
+	});
+
+	it("names hrms's own reason for a failed run, the last line of its traceback, and never sends HR to Frappe", () => {
+		const entry = { name: "PE-1", error_message: "Traceback (most recent call last):\n  File x\nfrappe.exceptions.ValidationError: Please set Payroll Payable Account in Company Manna" };
+		const s = at({ state: "failed", entry });
+		expect(s.why).toContain("Please set Payroll Payable Account in Company Manna");
+		expect(s.why).not.toMatch(/Frappe/);
 	});
 });
 

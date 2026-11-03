@@ -25,8 +25,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Manna HR'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Email / user id'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
+    // Each box is named over it, not inside it (the FlutterFlow design).
+    expect(find.text('Email / User ID'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.byType(TextField), findsNWidgets(2));
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
   });
 
@@ -36,7 +38,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(TextField, 'Site URL'), findsNothing);
-    await tester.tap(find.text('Site'));
+    await tester.ensureVisible(find.text('Site address'));
+    await tester.tap(find.text('Site address'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'Site URL'), findsOneWidget);
   });

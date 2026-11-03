@@ -55,11 +55,11 @@ describe("a company login on Payroll", () => {
 		expect(labels).toContain("Download 5-tab Excel");
 		expect(view.container.querySelector("#pr-amt")).toBeNull();
 		expect(view.container.querySelector("#pr-person")).toBeNull();
-		expect(labels.some((l) => /^Add to |^Add loan instalments|^Submit \d+ draft|^Make /.test(l))).toBe(false);
+		expect(labels.some((l) => /^Add to |^Add loan instalments|^Submit \d+ draft|^Make |^Advances & Loans$/.test(l))).toBe(false);
 	});
 
 	it("leaves HR's own login every control it had", async () => {
 		const view = await draw("hr@mannarubber.com");
-		expect(view.container.querySelector("#pr-amt")).not.toBeNull();
+		expect([...view.container.querySelectorAll("button")].some((b) => b.textContent === "Advances & Loans")).toBe(true);
 	});
 });

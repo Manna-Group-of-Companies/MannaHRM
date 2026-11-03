@@ -19,14 +19,17 @@ const attempt = async (fn) => {
 /** Components, structures and the assignments in force. A refusal is `null`. */
 export async function loadSetup(company) {
 	const co = company ? [["company", "=", company]] : [];
-	const [components, structures, assignments] = await Promise.all([
+	const [components, structures, assignments, insurance] = await Promise.all([
 		attempt(() => listAll("Salary Component", ["name", "type", "salary_component_abbr", "disabled", "depends_on_payment_days"], [["disabled", "=", 0]], 500)),
 		attempt(() => listAll("Salary Structure", ["name", "company", "docstatus", "is_active", "payroll_frequency"],
 			[["docstatus", "=", 1], ...co], 500)),
 		attempt(() => listAll("Salary Structure Assignment", ["name", "employee", "employee_name", "salary_structure", "from_date", "base", "company", "docstatus"],
 			[["docstatus", "=", 1], ...co], 500)),
+		/* Health insurance runs as a recurring Additional Salary (lib/salaryupload.js). */
+		attempt(() => listAll("Additional Salary", ["name", "employee", "salary_component", "amount", "from_date", "to_date", "is_recurring", "docstatus"],
+			[["is_recurring", "=", 1], ["docstatus", "=", 1], ...co], 500)),
 	]);
-	return { components, structures, assignments };
+	return { components, structures, assignments, insurance };
 }
 
 /** Make a Salary Structure and submit it. Throws what the site said. */

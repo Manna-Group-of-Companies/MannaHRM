@@ -330,3 +330,10 @@ describe("days Frappe has not marked, from the punches", () => {
 		expect(marked.get("E1")).toEqual({ 1: "Present" });
 	});
 });
+
+describe("health insurance on the 5-tab (HR, 29 October 2026)", () => {
+	it("puts a Health Insurance deduction in the Insurance column, apart from ESI and not as an unnamed deduction", () => {
+		const c = columnsOf({ earn: { Basic: 29000 }, ded: { "Provident Fund": 1800, "Employee State Insurance": 200, "Health Insurance": 500 } });
+		expect([c.insurance, c.esi, c.unmapped]).toEqual([500, 200, []]);
+	});
+});

@@ -170,7 +170,10 @@ export async function load() {
 					[["time", ">=", today + " 00:00:00"]]))
 				.then(byMachine),
 			readShiftTypes(),
-			listAll("Holiday List", ["name"]),
+			/* The dates are what lets the calendar move to next year's list by
+			   itself on 1 January; names alone if the read is refused them. */
+			listAll("Holiday List", ["name", "from_date", "to_date"])
+				.catch(() => listAll("Holiday List", ["name"])),
 			/* Whether a type is earned monthly is what Create Employee needs to
 			   know before it offers "N a month" of it. Falls back to names like
 			   the reads around it: this read is the dashboard. */

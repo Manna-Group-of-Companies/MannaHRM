@@ -140,10 +140,11 @@ describe("the documents", () => {
 		expect(inForce(SSA, "HR-EMP-00200", "2027-01-01")).toBe(null);
 	});
 
-	it("the_template_lists_everybody_with_a_salary_and_their_current_base", () => {
+	it("the_template_lists_everybody_and_leaves_current_base_empty_for_somebody_with_no_salary", () => {
 		expect(templateRows(EMPS, SSA, "2027-01-01")).toEqual([
 			["MRP-004", "SAJI KUMAR K M", "Production", "Staff Monthly", 40000, "", "", "", ""],
 			["MRP-293", "PAUL SUNNY", "IT", "Staff Monthly", 25000, "", "", "", ""],
+			["MRP-500", "NEW JOINER", "Stores", "", "", "", "", "", ""],
 		]);
 	});
 
@@ -208,6 +209,17 @@ describe("uploading and applying", () => {
 		expect(lines.map((l) => [l.code, l.status, l.newBase, l.from])).toEqual([
 			["MRP-004", "ready", 44000, "2027-01-01"], ["MRP-293", "ready", 27500, "2027-01-01"],
 		]);
+	});
+
+	it("the_template_fills_amount_percent_and_date_itself_and_an_untouched_row_is_no_increment", async () => {
+		/* As Excel saves the downloaded sheet: formulas with their worked-out results. */
+		const f = (formula, result) => ({ formula, result });
+		const file = await xlsxFile([
+			["MRP-004", "SAJI KUMAR K M", "Production", "Staff Monthly", 40000, 44000, f("IF(F2=\"\",\"\",F2-E2)", 4000), f("ROUND(...)", 10), new Date(Date.UTC(2027, 0, 1))],
+			["MRP-293", "PAUL SUNNY", "IT", "Staff Monthly", 25000, "", f("IF(F3=\"\",\"\",F3-E3)", ""), f("ROUND(...)", ""), new Date(Date.UTC(2027, 0, 1))],
+		]);
+		const { lines } = await readSheet(file, ctx);
+		expect(lines.map((l) => [l.code, l.status, l.newBase ?? null])).toEqual([["MRP-004", "ready", 44000], ["MRP-293", "skip", null]]);
 	});
 
 	it("a_decrease_is_applied_only_when_hr_ticks_for_it", async () => {

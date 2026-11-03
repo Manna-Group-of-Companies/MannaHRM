@@ -10,15 +10,18 @@ import 'package:manna_hr_app/ui/brand.dart';
 /// Leave applications across the group, by status: Pending, Approved,
 /// Rejected.
 ///
-/// **Read, not decided.** Approving one submits it, and hrms then books the
-/// balance and marks the days — that happens on the website, as the approver,
-/// where the queue already is (`kLeaveApprover`). A second place to approve
-/// from would be a second set of rules about who may.
+/// A pending one is approved or rejected from its sheet, through
+/// `AdminApi.decideLeave` — the website's own submit, so the website shows the
+/// decision and hrms books the balance and marks the days. Whether this login
+/// may decide is the site's to say; a refusal is shown as the site put it.
 class LeaveRequestsScreen extends StatelessWidget {
-  const LeaveRequestsScreen({super.key, this.load});
+  const LeaveRequestsScreen({super.key, this.load, this.decide});
 
   /// For the tests: one status's rows, in place of the site.
   final Future<List<Map<String, dynamic>>> Function(String status)? load;
+
+  /// For the tests: a decision, in place of the site.
+  final Future<void> Function(String name, String status)? decide;
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
@@ -31,7 +34,7 @@ class LeaveRequestsScreen extends StatelessWidget {
             ),
           ),
           body: TabBarView(children: [
-            _StatusList(status: 'Open', load: load),
+            _StatusList(status: 'Open', load: load, decide: decide),
             _StatusList(status: 'Approved', load: load),
             _StatusList(status: 'Rejected', load: load),
           ]),
@@ -40,10 +43,11 @@ class LeaveRequestsScreen extends StatelessWidget {
 }
 
 class _StatusList extends StatefulWidget {
-  const _StatusList({required this.status, this.load});
+  const _StatusList({required this.status, this.load, this.decide});
 
   final String status;
   final Future<List<Map<String, dynamic>>> Function(String status)? load;
+  final Future<void> Function(String name, String status)? decide;
 
   @override
   State<_StatusList> createState() => _StatusListState();
@@ -148,6 +152,34 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
     );
   }
 
+  Future<void> _decide(BuildContext sheet, Map<String, dynamic> r, String status) async {
+    final who = '${r['employee_name'] ?? r['employee']}';
+    final sure = await showDialog<bool>(
+      context: sheet,
+      builder: (d) => AlertDialog(
+        title: Text(status == 'Approved' ? 'Approve leave?' : 'Reject leave?'),
+        content: Text('$who · ${r['leave_type'] ?? ''} · ${_span(r)}'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.of(d).pop(true),
+            child: Text(status == 'Approved' ? 'Approve' : 'Reject'),
+          ),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await (widget.decide ?? AdminApi.decideLeave)('${r['name']}', status);
+      if (sheet.mounted) Navigator.of(sheet).pop();
+      messenger.showSnackBar(SnackBar(content: Text('$who: ${status == 'Approved' ? 'approved' : 'rejected'}')));
+      _load();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(humanError(e))));
+    }
+  }
+
   Future<void> _open(Map<String, dynamic> r) => showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
@@ -176,6 +208,25 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
               InfoRow(icon: Icons.event_outlined, label: 'Applied on', value: dmy('${r['posting_date'] ?? ''}')),
               InfoRow(icon: Icons.business_outlined, label: 'Company', value: '${r['company'] ?? ''}'),
               const SizedBox(height: 12),
+              if ('${r['status']}' == 'Open') ...[
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _decide(ctx, r, 'Rejected'),
+                      style: OutlinedButton.styleFrom(foregroundColor: kBad),
+                      child: const Text('Reject'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => _decide(ctx, r, 'Approved'),
+                      child: const Text('Approve'),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+              ],
               OutlinedButton.icon(
                 onPressed: () {
                   Navigator.of(ctx).pop();

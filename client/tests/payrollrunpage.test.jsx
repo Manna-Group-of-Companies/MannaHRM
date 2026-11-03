@@ -142,64 +142,20 @@ describe("step 1 — the set-up", () => {
 		expect([...v.container.querySelectorAll("button")].some((b) => /^Make /.test(b.textContent))).toBe(false);
 	});
 
-	it("says who has no salary structure and sends them to Frappe to be given one", async () => {
+	it("says who has no salary structure and sends them to Salary Setup here, never to Frappe", async () => {
 		const v = await draw();
 		expect(v.container.textContent).toContain("no salary structure");
-		const a = [...v.container.querySelectorAll("a")].find((x) => x.textContent === "Assign salary structures");
-		expect(a.getAttribute("href")).toBe("https://erp.example.invalid/app/bulk-salary-structure-assignment/new");
+		expect([...v.container.querySelectorAll("button")].some((b) => b.textContent === "Assign salary structures")).toBe(true);
+		expect([...v.container.querySelectorAll("a")].filter((a) => /\/app\//.test(a.getAttribute("href") || ""))).toEqual([]);
 	});
 });
 
 describe("step 2 — advances, loans and bonuses", () => {
-	it("adds an advance as an Additional Salary dated the month's last day, then submits it", async () => {
+	it("adds nothing itself and sends HR to Advances & Loans, the one place an advance is given", async () => {
 		const v = await draw();
-		await pick(v, "#pr-person", "HR-EMP-00001");
-		await pick(v, "#pr-kind", "advance");
-		await pick(v, "#pr-amt", "5000");
-		await click([...v.container.querySelectorAll("button")].find((b) => b.textContent.startsWith("Add to ")));
-		await act(async () => {});
-		const made = calls.find((c) => c[0] === "create" && c[1] === "Additional Salary");
-		expect(made[2]).toMatchObject({ employee: "HR-EMP-00001", company: "Manna Rubber", salary_component: "Salary Advance",
-			amount: 5000, payroll_date: END, overwrite_salary_structure_amount: 1 });
-		expect(calls.find((c) => c[0] === "submit")).toEqual(["submit", "Additional Salary", "HR-ADD-1"]);
-		expect(v.container.textContent).toContain("Advance taken of ₹5,000");
-	});
-
-	it("travels a loan instalment through Loan EMI and leave encashment through Leave Encashment", async () => {
-		const v = await draw();
-		for (const [kind, component] of [["loan", "Loan EMI"], ["encash", "Leave Encashment"]]) {
-			await pick(v, "#pr-person", "HR-EMP-00002");
-			await pick(v, "#pr-kind", kind);
-			await pick(v, "#pr-amt", "1200");
-			await click([...v.container.querySelectorAll("button")].find((b) => b.textContent.startsWith("Add to ")));
-			await act(async () => {});
-			const last = calls.filter((c) => c[0] === "create" && c[1] === "Additional Salary").pop();
-			expect(last[2].salary_component, kind).toBe(component);
-		}
-	});
-
-	it("lets a bonus choose its component from what the site has", async () => {
-		site.components = [...ALL3, { name: "Bonus", type: "Earning", disabled: 0 }];
-		const v = await draw();
-		await pick(v, "#pr-kind", "other");
-		expect([...v.container.querySelector("#pr-comp").options].map((o) => o.value)).toContain("Bonus");
-		await pick(v, "#pr-person", "HR-EMP-00001");
-		await pick(v, "#pr-comp", "Bonus");
-		await pick(v, "#pr-amt", "2000");
-		await click([...v.container.querySelectorAll("button")].find((b) => b.textContent.startsWith("Add to ")));
-		await act(async () => {});
-		expect(calls.find((c) => c[0] === "create" && c[1] === "Additional Salary")[2].salary_component).toBe("Bonus");
-	});
-
-	it("will not add without a person or an amount, and says which", async () => {
-		const v = await draw();
-		const add = () => [...v.container.querySelectorAll("button")].find((b) => b.textContent.startsWith("Add to "));
-		await click(add());
-		expect(v.container.textContent).toContain("Pick the person.");
-		await pick(v, "#pr-person", "HR-EMP-00001");
-		await click(add());
-		expect(v.container.textContent).toContain("Type the amount");
-		expect(calls.some((c) => c[0] === "create")).toBe(false);
+		expect(v.container.querySelector("#pr-person")).toBeNull();
+		expect(v.container.querySelector("#pr-amt")).toBeNull();
+		expect([...v.container.querySelectorAll("button")].some((b) => b.textContent === "Advances & Loans")).toBe(true);
 	});
 
 	it("submits the drafts of the month only after a confirm", async () => {
@@ -382,7 +338,8 @@ describe("step 4 — the sheet", () => {
 		await made1();
 		await act(async () => {});
 		expect(made[0].parts.flatMap((p) => p.rows.map((r) => r.code))).not.toContain("MR001");
-		expect(v.container.textContent).toContain("1 person has no salary structure assigned and is not in the file.");
+		expect(v.container.textContent).toContain("5-tab Excel for September 2026 downloaded.");
+		expect(v.container.textContent).not.toContain("not in the file");
 	});
 
 	it("puts only Active people in the 5-tab Excel, and names whoever it left out", async () => {
@@ -401,7 +358,7 @@ describe("step 4 — the sheet", () => {
 		const codes = made[0].parts.flatMap((p) => p.rows.map((r) => r.code));
 		expect(codes).toContain("MR001");
 		expect(codes).not.toContain("MR002");
-		expect(v.container.textContent).toContain("Left out because they are not Active: Bindu Thomas (Left). Pay anybody who has left through Full & Final.");
+		expect(v.container.textContent).not.toContain("Left out because");
 	});
 
 	it("asks for the EPF calculation before the 5-tab Excel, and makes nothing until one is chosen", async () => {
@@ -430,11 +387,11 @@ describe("step 4 — the sheet", () => {
 		const rows = parts.flatMap((p) => p.rows);
 		expect(rows.length).toBeGreaterThan(0);
 		expect(rows.every((r) => r.pfShare === 50)).toBe(true);
-		expect(v.container.textContent).toContain("with EPF wages by Calculation 2");
+		expect(v.container.textContent).not.toContain("EPF wages by");
 		/* Manna Rubber is picked in the top bar, so the file is that company alone,
 		   on tabs under its own abbreviation. */
 		expect(parts.map((p) => p.sheet)).toEqual(["MR Salary-1", "MR Cash-1", "MR Diff Cash", "MR Labour supply"]);
-		expect(v.container.textContent).toContain("— Manna Rubber —");
+		expect(v.container.textContent).toContain("5-tab Excel for September 2026 downloaded.");
 	});
 
 	it("makes the register from the slips, not a preview, when the month has slips", async () => {
