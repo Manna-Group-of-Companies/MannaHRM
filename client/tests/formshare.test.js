@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formLinkFor, isFormLink, shareText, whatsappLink } from "@/lib/formshare";
+import { formLinkFor, isFormLink, shareText, submittedBy, whatsappLink } from "@/lib/formshare";
 
 const LINK = "https://docs.google.com/forms/d/e/1FAIpQ/viewform?usp=pp_url&entry.111=NUMBER&entry.222=NAME&entry.333=Manna+Treads";
 
@@ -26,5 +26,17 @@ describe("share form", () => {
 		const twice = text + text;
 		expect(twice).toContain("https://x/form?entry.2=Manoj%20ram\n");
 		expect(twice).not.toContain("Manoj%20ramHello");
+	});
+});
+
+describe("who sent the form back", () => {
+	test("a response is matched to the machine number Share form put in the link, latest first", () => {
+		const got = submittedBy([
+			{ Timestamp: 46327.5, "Machine Number": "512", "Full Name": "Manoj Ram" },
+			{ Timestamp: 46328.25, "Machine Number": " 512 ", "Full Name": "Manoj Ram K" },
+			{ Timestamp: 46328, "Machine Number": "", "Full Name": "Nobody's number" },
+		]);
+		expect(Object.keys(got)).toEqual(["512"]);
+		expect(got["512"]).toEqual({ name: "Manoj Ram K", at: "2026-11-02 06:00" });
 	});
 });

@@ -50,3 +50,23 @@ export function shareText({ pin, name, company }, link) {
 		"",
 	].join("\n");
 }
+
+/** Who has sent the form back: machine number → { name, at }, the latest
+    answer for each. The Sheet is read unformatted, so the Timestamp is a
+    serial day number (lib/googlesheet.js), turned here into YYYY-MM-DD HH:MM.
+    The number is the one Share form put in the link; an answer with none, or
+    one somebody cleared, cannot be matched and is left out rather than
+    guessed onto somebody by name. */
+export function submittedBy(rows) {
+	const out = {};
+	for (const r of rows || []) {
+		const pin = String(r["Machine Number"] ?? "").trim();
+		if (!pin) continue;
+		const serial = Number(r.Timestamp);
+		const at = Number.isFinite(serial) && serial > 0
+			? new Date(Math.round((serial - 25569) * 86400000)).toISOString().slice(0, 16).replace("T", " ")
+			: String(r.Timestamp || "");
+		if (!out[pin] || at > out[pin].at) out[pin] = { name: String(r["Full Name"] || r.Name || "").trim(), at };
+	}
+	return out;
+}

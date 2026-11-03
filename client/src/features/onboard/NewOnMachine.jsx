@@ -4,8 +4,8 @@ import { NEW_EMP_BLANK } from "@/lib/newemp";
 import { go } from "@/routes/router";
 import { apiCall } from "@/api/client";
 import { dmy, initials } from "@/lib/format";
-import { NAME, NUMBER, formLinkFor, isFormLink, shareText, whatsappLink } from "@/lib/formshare";
-import { JOINING_FORM } from "@/lib/googlesheet";
+import { NAME, NUMBER, formLinkFor, isFormLink, shareText, submittedBy, whatsappLink } from "@/lib/formshare";
+import { GOOGLE_CLIENT_ID, JOINING_FORM, JOINING_SHEET, loadGoogle, readGoogleSheet } from "@/lib/googlesheet";
 
 /* The joining Form's pre-filled link; a build can name another
    (VITE_EMPLOYEE_FORM), and a link pasted at the prompt lasts the session —
@@ -57,6 +57,17 @@ export function toWizardFromMachine(r) {
 
 export default function NewOnMachine() {
 	const [st, setSt] = useState({ state: "loading", rows: [], err: "" });
+	/* Who has sent the form back, read from its Sheet on a click: reading it
+	   signs in to Google, and a popup outside a click is blocked. */
+	const [sent, setSent] = useState({ state: "unread", by: {}, err: "" });
+	useEffect(() => { if (GOOGLE_CLIENT_ID) loadGoogle().catch(() => {}); }, []);
+	const checkForm = () => {
+		setSent({ state: "reading", by: {}, err: "" });
+		readGoogleSheet(JOINING_SHEET).then(
+			(rows) => setSent({ state: "ok", by: submittedBy(rows), err: "" }),
+			(e) => setSent({ state: "error", by: {}, err: String(e?.message || e) }),
+		);
+	};
 
 	useEffect(() => {
 		let dead = false;
@@ -76,10 +87,15 @@ export default function NewOnMachine() {
 			<header>
 				<h3>New on the machine</h3>
 				<span className="n">{st.rows.length}</span>
+				<button className="embtn ml-auto" onClick={checkForm} disabled={sent.state === "reading" || !GOOGLE_CLIENT_ID}>
+					{sent.state === "reading" ? "Checking…" : sent.state === "ok" ? "Check again" : "Check form"}
+				</button>
 			</header>
+			{sent.state === "error" ? <div className="onbmsg">The form's responses could not be read: {sent.err}</div> : null}
 			<div className="onblist">
 				{st.rows.map((r) => {
 					const who = r.name_on_device || `Machine no. ${r.pin}`;
+					const back = sent.by[String(r.pin).trim()];
 					return (
 						<article className="onbcard" key={`${r.attendance_device}-${r.pin}`}>
 							<div className="top">
@@ -91,6 +107,9 @@ export default function NewOnMachine() {
 									</span>
 								</span>
 								<span className="cov part">Waiting</span>
+								{sent.state === "ok" ? (back
+									? <span className="cov live" title={back.name}>Form submitted {dmy(back.at.slice(0, 10))} {back.at.slice(11)}</span>
+									: <span className="cov none">Form not submitted</span>) : null}
 								<button className="embtn ml-auto"
 									aria-label={`Share the form on WhatsApp, no. ${r.pin}`}
 									onClick={() => shareForm(r)}>
