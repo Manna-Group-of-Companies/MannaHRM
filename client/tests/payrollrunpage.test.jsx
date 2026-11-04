@@ -296,7 +296,11 @@ describe("step 4 — the sheet", () => {
 		]);
 		const ws = wb.getWorksheet("Wages Register");
 		expect(ws.getCell("B1").value).toMatch(/ - PREVIEW, NOT FROM SALARY SLIPS$/);
-		expect(ws.getCell("BL6").value).toEqual({ formula: 'IF(BC6="Wages",(BE6/26)*AT6,BE6-BK6)' });
+		/* The columns move with the month's length — BL on a 30-day month, a
+		   column right on a 31-day one — so the formula is found in its row. */
+		const row6 = [];
+		ws.getRow(6).eachCell((cell) => row6.push(cell.value?.formula || ""));
+		expect(row6.some((f) => /^IF\(\w+6="Wages",\(\w+6\/26\)\*\w+6,\w+6-\w+6\)$/.test(f))).toBe(true);
 		const text = v.container.textContent;
 		expect(text).toContain(`A preview of the wages register for ${periodLabel(YM)} was made, with 2 people.`);
 		expect(text).toContain("worked out by Excel from the sheet's own formulas and the attendance, not by the salary slips, so do not pay from it");
@@ -338,7 +342,7 @@ describe("step 4 — the sheet", () => {
 		await made1();
 		await act(async () => {});
 		expect(made[0].parts.flatMap((p) => p.rows.map((r) => r.code))).not.toContain("MR001");
-		expect(v.container.textContent).toContain("5-tab Excel for September 2026 downloaded.");
+		expect(v.container.textContent).toContain(`5-tab Excel for ${periodLabel(YM)} downloaded.`);
 		expect(v.container.textContent).not.toContain("not in the file");
 	});
 
@@ -391,7 +395,7 @@ describe("step 4 — the sheet", () => {
 		/* Manna Rubber is picked in the top bar, so the file is that company alone,
 		   on tabs under its own abbreviation. */
 		expect(parts.map((p) => p.sheet)).toEqual(["MR Salary-1", "MR Cash-1", "MR Diff Cash", "MR Labour supply"]);
-		expect(v.container.textContent).toContain("5-tab Excel for September 2026 downloaded.");
+		expect(v.container.textContent).toContain(`5-tab Excel for ${periodLabel(YM)} downloaded.`);
 	});
 
 	it("makes the register from the slips, not a preview, when the month has slips", async () => {

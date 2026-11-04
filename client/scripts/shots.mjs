@@ -71,7 +71,9 @@ const CHECKINS = [
 	["ci5", "HR-EMP-00007", `${today} 07:58:00`, "IN"],
 	["ci6", "HR-EMP-00007", `${today} 16:40:00`, "OUT"],
 	["ci7", "HR-EMP-00008", `${today} 09:31:00`, "IN"],
-].map(([name, employee, time, log_type]) => ({ name, employee, time, log_type }))
+].map(([name, employee, time, log_type], i) => ({ name, employee, time, log_type, creation: time,
+	/* One machine off each road, so Settings → Machines has a last punch to show. */
+	device_id: i % 2 ? "BIO-NCD8250800688" : "BIO-MRP-GATE1" }))
 	/* Two phone punches, so the Location column is drawn with something in it:
 	   one near the gate, and one that arrived with the location switched off. */
 	.concat([
@@ -219,6 +221,12 @@ const DATA = {
 			custom_score_detail: "No text could be read from this file." },
 	],
 	"Job Applicant Source": [{ name: "LinkedIn" }, { name: "Indeed" }],
+	/* Two machines, one on each road, so Settings → Machines draws its table
+	   — the one that turns into cards on a phone. */
+	"Attendance Device": [
+		{ name: "BIO-MRP-GATE1", device_id: "BIO-MRP-GATE1", company: "Manna Rubber Products Private Limited", is_active: 1, last_seen: `${ago(0)} 09:00:00` },
+		{ name: "Tyre Retreads NCD8250800688", device_id: "BIO-NCD8250800688", company: "Manna Tyre Retreads", is_active: 1, last_seen: null },
+	],
 };
 
 /** The doctype out of `/api/resource/Employee%20Checkin?…`. */
@@ -295,6 +303,11 @@ const PAGES = [
 	["lettertypes", "/onboard/lettertypes", "Letter Types, managed here"],
 	["settings-shifts", "/settings/shifts", "Settings → Manage Shift — shifts made and assigned here"],
 	["notices", "/dashboard/notices", "Announcements & CEO Speak — the composer"],
+	["recruitment", "/recruitment", "Recruitment — the jobs"],
+	["candidates", "/recruitment/candidates", "Recruitment — the candidates"],
+	["machines", "/settings/machines", "Settings → Machines — ADMS or the bridge"],
+	["salary-setup", "/payroll/setup", "Salary Setup — the salary upload"],
+	["increments", "/payroll/increments", "Increments — January's sheet"],
 	/* The shell's own states (21 October 2026), which have no address: the
 	   fourth item is something to do first. A function rather than a button's
 	   name, because most of these are a click on a control that has no words
@@ -423,6 +436,9 @@ async function main() {
 			(route) => route.fulfill({ status: 200, contentType: "text/html", body: "<html></html>" }),
 		);
 
+		/* Welcomed already: the first-visit window (lib/welcome.js) sits over
+		   every page and takes every click until somebody closes it. */
+		await ctx.addInitScript(() => { try { localStorage.setItem("manna.welcome.hr@mannarubber.com", "1"); } catch { /* shown, then */ } });
 		const page = await ctx.newPage();
 		const oops = [];
 		page.on("pageerror", (e) => oops.push(String(e)));
