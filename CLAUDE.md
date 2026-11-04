@@ -362,7 +362,7 @@ existing `Attendance Log` history should be migrated is still open.
   than the cursor and the machine is about to reuse those timestamps —
   re-sending a punch is free, losing one is somebody's day. A drift beyond six
   hours is refused and logged either way.
-- **Salary increments** (asked for 5 October 2026): Payroll → Salary Setup → January increments (its own page until 4 November 2026) takes
+- **Salary increments** (asked for 5 October 2026): Payroll → Increments takes
   HR's January Excel sheet — downloaded pre-filled with everybody's current
   base, one of New Base / Increment Amount / Increment % filled per person —
   previews every row, and on Apply makes each increment a new submitted

@@ -64,13 +64,7 @@ describe("Payroll opens on its own page", () => {
 		/* Employee Payroll and Payroll Settings joined on 21 Oct 2026 and left
 		   on 22 Oct, asked for by HR. */
 		/* Festival Bonus on 22 Oct, beside Actual Salary: paid apart from the salary. */
-		/* Increments left the strip on 4 Nov 2026, moved inside Salary Setup. */
-		expect(shown).toEqual(["overview", "setup", "actualsalary", "advances", "slips", "transfer"]);
-	});
-
-	it("opens Salary Setup from the old Increments address, where January's increments now are", () => {
-		expect(MODULES.payroll.tabs.map((t) => t[0])).not.toContain("increments");
-		expect(pageFor("payroll", "increments")).toBe(pageFor("payroll", "setup"));
+		expect(shown).toEqual(["overview", "setup", "actualsalary", "increments", "advances", "slips", "transfer"]);
 	});
 
 	it("no longer has Employee Payroll, Payroll Detail or Payroll Settings, and their old addresses open Payroll", () => {

@@ -7,7 +7,6 @@ import { needsStructure } from "@/lib/salarysetup";
 import { lastMonth } from "@/lib/payrollrun";
 import { payRows } from "@/features/payroll/shared";
 import SalaryUpload from "@/features/payroll/SalaryUpload";
-import Increments from "@/features/payroll/Increments";
 import { Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 
 /* PAYROLL → SALARY SETUP. Ours, 2 October 2026 — where payroll starts.
@@ -24,11 +23,7 @@ import { Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 
    The two hand-entry steps under the sheet — make a structure, then give it to
    ticked people — were removed on 22 October 2026, asked for by HR; the sheet
-   does both. lib/salarysetup.js and api/salarysetup.js still hold their rules.
-
-   January's increments are here too (4 November 2026, asked for by HR): the
-   Increments page, Festival Bonus with it, moved under the salary upload, and
-   its old address opens this page. */
+   does both. lib/salarysetup.js and api/salarysetup.js still hold their rules. */
 
 const rs = (v) => "₹" + Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
@@ -86,8 +81,6 @@ export default function SalarySetup() {
 			{data.structures === null && <Note className="warn">This login may not read salary structures on the site — it needs HR Manager.</Note>}
 
 			<SalaryUpload company={company} data={data} open={open("upload", true)} onToggle={toggle("upload", true)} onSaved={read} />
-
-			<Increments embedded />
 
 			<Panel title={`Already set up — ${assigned.length}`} ico="✔" shut={!open("done", false)} onToggle={toggle("done", false)}>
 				{assigned.length === 0 ? <p className="muted">Nobody yet.</p> : (
