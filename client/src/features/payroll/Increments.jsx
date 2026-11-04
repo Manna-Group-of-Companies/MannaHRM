@@ -59,7 +59,9 @@ function OnSite({ v }) {
 	return <small className={"block way " + v.way}>✓ On the site: {word} to {rs(v.base)} ({v.made})</small>;
 }
 
-export default function Increments() {
+/** `embedded` (4 November 2026): drawn inside Salary Setup, which owns the page's
+    heading and its Refresh. The page of its own was removed, asked for by HR. */
+export default function Increments({ embedded = false }) {
 	const s = useApp();
 	const { company, site } = s;
 	const [assignments, setAssignments] = useState(undefined);
@@ -139,9 +141,9 @@ export default function Increments() {
 	const working = busy.startsWith("apply");
 
 	return (
-		<div className="paypage susetup">
+		<div className={embedded ? "" : "paypage susetup"}>
 			<div className="emhead">
-				<h2>Increments</h2>
+				{embedded ? <h3>January increments</h3> : <h2>Increments</h2>}
 				<span className="n">{company || "all companies"}</span>
 				<span className="right">
 					<button type="button" className="embtn" onClick={() => void read()}>Refresh</button>

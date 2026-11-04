@@ -67,7 +67,6 @@ import HierarchyChart from "@/features/employees/HierarchyChart";
 import Directory from "@/features/employees/Directory";
 import OrgChart from "@/features/employees/OrgChart";
 import CompanyChart from "@/features/employees/CompanyChart";
-import Increments from "@/features/payroll/Increments";
 import AdvancesLoans from "@/features/payroll/AdvancesLoans";
 import Payslips from "@/features/payroll/Payslips";
 import BankSheet from "@/features/payroll/BankSheet";
@@ -236,11 +235,12 @@ const TABS = {
 	   page — one guided page that runs the month (features/payroll/PayrollRun.jsx)
 	   — beside four more of ours: Salary Setup, Advances & Loans, Payslips and
 	   Bank Transfer. The older tabs are hidden, not deleted. 5 Oct 2026:
-	   Increments, January's raises from HR's Excel sheet. */
+	   Increments, January's raises from HR's Excel sheet — inside Salary Setup
+	   since 4 Nov 2026, its old address opening that page. */
 	/* The run stays first — Payroll opens on its own page. The HRDashboard
 	   reference's Employee Payroll, its Payroll Detail and its Payroll Settings
 	   joined on 21 October 2026 and were removed on 22 October, asked for by HR. */
-	payroll: [["overview", "Payroll"], ["setup", "Salary Setup"], ...managedTabs("payroll"), ["increments", "Increments"], ["advances", "Advances & Loans"], ["slips", "Payslips"],
+	payroll: [["overview", "Payroll"], ["setup", "Salary Setup"], ...managedTabs("payroll"), ["advances", "Advances & Loans"], ["slips", "Payslips"],
 		["transfer", "Bank Transfer"], ["adhoc", "Adhoc Payments/Deductions"], ["process", "Salary Process"],
 		["sheet", "Salary Sheet"], ["payslip", "Salary Payslip"], ["register", "Salary Register"],
 		["bank", "Bank Transfer"], ["frappe", "Frappe Payroll"], ["fnf", "Final Settlement"],
@@ -332,7 +332,7 @@ const PAGES = {
 		all: moduleAll("leave", "Leave"),
 		...blueprintPages("leave") },
 	payroll: {
-		overview: PayrollRun, setup: SalarySetup, increments: Increments, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
+		overview: PayrollRun, setup: SalarySetup, increments: SalarySetup, advances: AdvancesLoans, slips: Payslips, transfer: BankSheet, adhoc: Adhoc, frappe: FrappePayroll, sheet: SalarySheet, process: SalaryProcess, fnf: FnF,
 		itdec: ITDeclarations, bank: BankTransfer, bonus: BonusReport, payslip: Payslip,
 		register: SalaryRegister, ptax: ProfTax, all: moduleAll("payroll", "Payroll"),
 		...managedPages("payroll"), ...blueprintPages("payroll"),
