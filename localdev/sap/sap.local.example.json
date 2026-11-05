@@ -1,0 +1,8 @@
+{
+  "url": "https://192.168.100.200:50000/b1s/v1",
+  "fingerprint256": "9D:1C:6A:3F:60:1A:39:BF:1F:5F:F9:82:68:D6:D1:DA:75:E9:F8:F1:0F:90:4D:2D:A3:AB:30:C2:47:0F:E8:97",
+  "username": "PUT_SAP_USERNAME_HERE",
+  "password": "PUT_SAP_PASSWORD_HERE",
+  "password_overrides": {},
+  "test_dbs": []
+}

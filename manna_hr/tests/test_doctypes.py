@@ -75,6 +75,20 @@ def test_the_folder_and_the_name_agree(spec):
 
 
 @pytest.mark.parametrize("spec", CASES)
+def test_the_controller_defines_the_class_frappe_looks_for(spec):
+	"""Frappe imports the folder's .py and asks it for the doctype's name with the
+	spaces and hyphens taken out. A class left with an older name — as
+	`Employee Attendance Regularization`'s was, `AttendanceRegularization`, from
+	before the rename — is an ImportError on the first `install-app` (22 Oct
+	2026, a local bench) and on every save after it."""
+	path = next(p for p, s in SPECS.items() if s is spec).with_suffix(".py")
+	if not path.exists():
+		return
+	want = spec["name"].replace(" ", "").replace("-", "")
+	assert "\nclass {0}(".format(want) in "\n" + path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("spec", CASES)
 def test_every_link_names_a_doctype_that_will_exist(spec):
 	for field in spec["fields"]:
 		if field["fieldtype"] not in LINKING:

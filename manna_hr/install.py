@@ -707,12 +707,17 @@ def _seed_asset_categories():
 	for name in ASSET_CATEGORIES:
 		if frappe.db.exists("Asset Category", name):
 			continue
+		# ignore_mandatory for the Accounts table, which ERPNext 16 requires and
+		# which is exactly the half left to Accounts above. Without it the first
+		# install anywhere stopped here (22 Oct 2026, local bench). An Asset
+		# booked under one of these still has to have its accounts set first —
+		# ERPNext checks that on the Asset, which is where that decision belongs.
 		frappe.get_doc(
 			{
 				"doctype": "Asset Category",
 				"asset_category_name": name,
 			}
-		).insert(ignore_permissions=True)
+		).insert(ignore_permissions=True, ignore_mandatory=True)
 
 
 def _set_payroll_settings():

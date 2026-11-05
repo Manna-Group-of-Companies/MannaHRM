@@ -59,3 +59,13 @@ _claude/
 Claude outputs/
 # package.ps1 -Auto writes one into its zip; one lying in the bridge folder is a key.
 bridge/autoinstall.toml
+
+# localdev/sap: the SAP Business One login. Never committed.
+localdev/sap/sap.local.json
+
+# Per-PC Vite overrides (localdev points the dev server at the local bench).
+client/.env.local
+client/.env.*.local
+localdev/sap/out/
+# make-test-logins.mjs writes the local copy's test passwords here; each PC makes its own.
+localdev/TEST_LOGINS.md
