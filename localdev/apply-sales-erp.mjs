@@ -48,7 +48,12 @@ for (const f of fs.readdirSync(SERVER).filter((n) => n.endsWith("_doctypes.json"
 	for (const def of JSON.parse(fs.readFileSync(path.join(SERVER, f), "utf8")).doctypes) {
 		if (await exists("DocType", def.name)) { say("ok", `DocType ${def.name} (exists; not compared)`); continue; }
 		say(apply ? "created" : "missing", `DocType ${def.name}  (${f})`);
-		if (apply) await call("POST", R("DocType"), { ...def, doctype: "DocType" });
+		// Every right spelled out: DocPerm defaults write, create and delete to 1, so a row that says only
+		// "read" would hand a reader the right to change and delete (found 5 Nov 2026 on SAP Invoice).
+		const RIGHTS = ["read", "write", "create", "delete", "submit", "cancel", "amend", "report", "export", "import",
+			"print", "email", "share", "set_user_permissions", "if_owner"];
+		const permissions = (def.permissions || []).map((p) => ({ permlevel: 0, ...Object.fromEntries(RIGHTS.map((k) => [k, p[k] ? 1 : 0])), role: p.role }));
+		if (apply) await call("POST", R("DocType"), { ...def, permissions, doctype: "DocType" });
 	}
 }
 
