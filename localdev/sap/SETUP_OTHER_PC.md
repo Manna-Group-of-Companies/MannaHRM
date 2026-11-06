@@ -294,21 +294,40 @@ git -C MannaHRM fetch origin
 git -C MannaHRM checkout localdev/erpnext-and-sap
 git -C MannaHRM pull origin localdev/erpnext-and-sap
 git -C SALES_DASHBOARD fetch origin
-git -C SALES_DASHBOARD checkout sap/manna-first-order-flow
-git -C SALES_DASHBOARD pull origin sap/manna-first-order-flow
+git -C SALES_DASHBOARD checkout sap/order-flow-with-approval
+git -C SALES_DASHBOARD pull origin sap/order-flow-with-approval
 ```
+
+**Which SALES_DASHBOARD branch (6 Nov 2026):** `sap/order-flow-with-approval`.
+It is the order flow (`sap/manna-first-order-flow`) with Paul's
+`feature/sales-targets-pick-list` merged in: production approves each pick list,
+Team Targets with the SAP invoice credit history, Product Sales, and the
+WhatsApp messages. **Only a pick list a production manager has approved goes to
+SAP**; until then PASS K logs "waiting for a production manager to approve it".
+`sap/manna-first-order-flow` is kept as it was, without approval.
 
 `sap.local.json`, `TEST_LOGINS.md` and the `.env` files are gitignored, so a
 pull never touches them. Then, with the local ERPNext started (§6 step 4), from
-`MannaHRM`:
+`MannaHRM`, each a dry run first and then with `--apply`:
 
-1. `node localdev/apply-sales-erp.mjs`, then the same with `--apply`: creates any
-   sales doctype or Server Script the local site lacks (the `SAP Invoice`
-   doctype came this way on 5 Nov 2026). It never changes an existing doctype.
-2. `node localdev/sap/run-credit-sync.mjs`, then `--apply`: credit limits,
-   outstanding, payment terms and SAP invoices from `TEST_MANNA_TREADS`.
-3. `node localdev/sap/run-order-sync.mjs`: a dry run of the order flow
-   (PASS M, P, H, K). `--apply` posts to the TEST companies.
+1. `node localdev/apply-sales-erp.mjs`: creates any sales doctype or Server
+   Script the local site lacks, and updates a script whose code changed (the
+   `SAP Invoice` doctype came this way on 5 Nov 2026, `manna_pick_list_approve`
+   on 6 Nov). It never changes a doctype that exists.
+2. `node localdev/add-sales-fields.mjs`: adds the fields an existing sales
+   doctype lacks (the three approval fields on `Manna Pick List`, 6 Nov 2026).
+   It only adds; a field already on the site is never changed.
+3. `node localdev/sap/run-credit-sync.mjs`: credit limits, outstanding, payment
+   terms and SAP invoices from `TEST_MANNA_TREADS`.
+4. `node localdev/sap/run-order-sync.mjs`: the order flow (PASS M, P, H, K).
+   `--apply` posts to the TEST companies.
+
+To test a pick list end to end: the order must be manager-approved
+(`PO Approved - Ready for SAP`) before a pick list can be made, and the pick list
+production-approved (the dashboard's Pick List Approval page, or
+`manna_pick_list_approve` as a production manager or System Manager) before
+PASS K sends it. A customer the credit sync has given real SAP figures may send
+a new order to Pending Approval first; that is the credit rule working.
 
 B1if and the TEST companies are on the SAP server and shared by every PC, while
 each PC's ERPNext is its own. Two PCs therefore number orders and pick lists the
