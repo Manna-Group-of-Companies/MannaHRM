@@ -42,9 +42,12 @@ certificate is checked by its fingerprint (step 4).
 
 ## 2. Copy the tooling across
 
-`localdev/` is **not in git** yet, so a `git clone` of MannaHRM does not bring it
-along. Copy the folder `MannaHRM\localdev\` from Melvin's PC (USB drive or a
-network share), **leaving out**:
+**Since 5 Nov 2026 `localdev/` is in git**, on MannaHRM's branch
+`localdev/erpnext-and-sap` (not `main`), with the secrets below kept out by
+`.gitignore`. So `git checkout localdev/erpnext-and-sap` brings it, and §7 is how
+a PC that is already set up takes the latest. The copy below is only for a PC
+without git access. Copy the folder `MannaHRM\localdev\` from Melvin's PC (USB
+drive or a network share), **leaving out**:
 
 - `sap\sap.local.json`: holds the password. You make your own in step 3.
 - `sap\out\`: reports from Melvin's runs. They name users and contain business data.
@@ -220,6 +223,7 @@ The rest need more:
 | Script | Also needs |
 |---|---|
 | `run-order-sync.mjs` | A local ERPNext at `127.0.0.1:8000` (the WSL bench, `localdev/README.md` §1–3) and `SALES_DASHBOARD/sap-order-sync` |
+| `run-credit-sync.mjs` | A local ERPNext and `SALES_DASHBOARD/sap-credit-sync`; the `SAP Invoice` doctype from `apply-sales-erp.mjs --apply` for the invoice mirror |
 | `run-sync.mjs` | A local ERPNext and `Manna_CMMS`, with `server/.env` pointing at `127.0.0.1` |
 | `flow.mjs`, `receive.mjs` | A local ERPNext, `Manna_CMMS` (running, for `receive`), and `localdev/TEST_LOGINS.md` |
 | `copy-items.mjs`, `items-check.mjs`, `erp-uom-test.mjs`, `retire-copied-requests.mjs` | `Manna_CMMS/server/.env`, for the local ERPNext key |
@@ -278,3 +282,36 @@ PC's Windows user name** wherever it appears.
 bank details and phone numbers**. It stays on the PC it was restored to, inside
 WSL. Never add a firewall rule for port 8000, and delete the downloaded backup
 files once the restore has worked.
+
+---
+
+## 7. Taking the latest code on a PC that is already set up
+
+Neither branch is `main`, so pull them by name. Run from `Documents\MANNA`:
+
+```powershell
+git -C MannaHRM fetch origin
+git -C MannaHRM checkout localdev/erpnext-and-sap
+git -C MannaHRM pull origin localdev/erpnext-and-sap
+git -C SALES_DASHBOARD fetch origin
+git -C SALES_DASHBOARD checkout sap/manna-first-order-flow
+git -C SALES_DASHBOARD pull origin sap/manna-first-order-flow
+```
+
+`sap.local.json`, `TEST_LOGINS.md` and the `.env` files are gitignored, so a
+pull never touches them. Then, with the local ERPNext started (§6 step 4), from
+`MannaHRM`:
+
+1. `node localdev/apply-sales-erp.mjs`, then the same with `--apply`: creates any
+   sales doctype or Server Script the local site lacks (the `SAP Invoice`
+   doctype came this way on 5 Nov 2026). It never changes an existing doctype.
+2. `node localdev/sap/run-credit-sync.mjs`, then `--apply`: credit limits,
+   outstanding, payment terms and SAP invoices from `TEST_MANNA_TREADS`.
+3. `node localdev/sap/run-order-sync.mjs`: a dry run of the order flow
+   (PASS M, P, H, K). `--apply` posts to the TEST companies.
+
+B1if and the TEST companies are on the SAP server and shared by every PC, while
+each PC's ERPNext is its own. Two PCs therefore number orders and pick lists the
+same (both can make `PICK-00426`), and Hi-Tech's SAP would get two pick lists
+with one name; only the first is invoiced. Test the pick-list flow from one PC
+at a time.
