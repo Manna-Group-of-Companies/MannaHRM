@@ -19,6 +19,7 @@ import { todayIso } from "@/lib/format";
 import { LEAVE_TYPE_NAME, policyTitle } from "@/lib/monthlyleave";
 import { loadCandidates } from "@/api/load";
 import { openEmployee } from "@/features/employees/openEmployee";
+import HandOverAssets from "@/features/onboard/BoardingAssets";
 import {
 	ED_STATUSES, PUNCH_METHODS, NEW_EMP_COPIED, NEW_EMP_HINT, NEW_EMP_NOFIELD, NEW_EMP_STEPS, punchesOnApp,
 } from "@/data/employees";
@@ -452,6 +453,12 @@ export default function CreateEmployee() {
 					{done.custom_punch_method !== "Mobile App" && done.attendance_device_id
 						? <OnMachine number={done.attendance_device_id} employee={id}
 							employeeName={done.employee_name} /> : null}
+
+					{/* The things that go out with a new joiner, handed over while
+					    the person is on screen — each one an Asset Assignment, so the
+					    site's handover rules run on every row. */}
+					{id ? <HandOverAssets employee={id} employeeName={done.employee_name}
+						company={done.company} /> : null}
 
 					{/* What this form did not ask for and hrms needs before the record
 					    does anything. Named rather than implied — a new Employee with

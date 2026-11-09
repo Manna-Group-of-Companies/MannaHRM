@@ -173,6 +173,73 @@ export function problems(row) {
 	return said;
 }
 
+/** Whether a handover is still out — the complement of CLOSED, the same test
+    `rules.assignment_is_open` makes on the server. */
+export const isOpen = (row) => !CLOSED.includes(statusFor(row));
+
+/** A list read, or nothing — a read that answered with something other than
+    rows is no rows, not a page that throws. */
+const rowsOf = (v) => (Array.isArray(v) ? v : []);
+
+/** What a person is holding, for a leaver's card or anybody else's.
+
+    Two sources, merged by asset: `Asset.custodian`, which is what ERPNext
+    moves and what the site believes, and an open `Asset Assignment`, which is
+    what was agreed. Either one alone misses something — an asset issued from
+    the Desk has a custodian and no contract, and a contract on a site whose
+    Asset read failed has no custodian to read — and a leaver who walks out
+    with the thing nobody listed is the one this exists to stop. The contract
+    wins where both exist, because it carries the units and the dates. */
+export function heldBy(emp, assets, assignments) {
+	if (!emp) return [];
+	assets = rowsOf(assets);
+	const byAsset = new Map(assets.map((a) => [a.name, a]));
+	const out = new Map();
+	for (const r of rowsOf(assignments)) {
+		if (r.employee !== emp || !isOpen(r)) continue;
+		const a = byAsset.get(r.asset) || {};
+		out.set(r.asset, {
+			asset: r.asset,
+			asset_name: a.asset_name || r.asset,
+			asset_type: r.asset_type || a.asset_category || "",
+			serial: r.serial_number || a.serial_no || "",
+			units: outstanding(r),
+			assign_date: r.assign_date || "",
+			valid_till: r.valid_till || "",
+			status: statusFor(r),
+			assignment: r.name,
+		});
+	}
+	for (const a of assets) {
+		if (a.custodian !== emp || out.has(a.name)) continue;
+		out.set(a.name, {
+			asset: a.name,
+			asset_name: a.asset_name || a.name,
+			asset_type: a.asset_category || "",
+			serial: a.serial_no || "",
+			units: 1,
+			assign_date: "",
+			valid_till: "",
+			status: "Assigned",
+			assignment: "",
+		});
+	}
+	return [...out.values()].sort((x, y) => x.asset_name.localeCompare(y.asset_name));
+}
+
+/** What can be handed to a new joiner: submitted, with nobody, and not tied up
+    in an open handover. The server refuses the rest anyway (`check_not_already_out`
+    and `move_asset` in manna_hr/assets.py) — listing them would only offer a
+    choice that is certain to bounce. Narrowed to the person's company, because
+    an asset belongs to one and the movement is booked against it. */
+export function issuable(assets, assignments, company) {
+	const tied = new Set(rowsOf(assignments).filter(isOpen).map((r) => r.asset));
+	return rowsOf(assets)
+		.filter((a) => a.docstatus === 1 && !a.custodian && !tied.has(a.name))
+		.filter((a) => !company || !a.company || a.company === company)
+		.sort((x, y) => String(x.asset_name || x.name).localeCompare(String(y.asset_name || y.name)));
+}
+
 /** Past its Valid Till and still not back.
 
     The one question the new fields make answerable and `Asset Movement` never

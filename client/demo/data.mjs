@@ -398,6 +398,37 @@ export function makeData({ today = new Date(), month = process.env.DEMO_MONTH, s
 		});
 	}
 
+	/* The asset register: a few things free to hand to a joiner, and two still
+	   with the leaver — one by custodian alone, one under a handover contract —
+	   so Create Employee's Hand over assets and FNF's Assets out both have
+	   something to show. */
+	for (const cat of ["Computers", "Mobile", "Safety Gear"]) {
+		add("Asset Category", { name: cat, asset_category_name: cat, creation: stampOf(dayOf(prev, 1)), modified: stampOf(dayOf(prev, 1)) });
+	}
+	const leaver = PEOPLE.find((p) => p.leavesPrevDay);
+	const asset = (n, asset_name, asset_category, serial_no, custodian = "") => add("Asset", {
+		name: `ACC-ASS-DEMO-${String(n).padStart(3, "0")}`, asset_name, item_code: asset_name.toUpperCase().replace(/\W+/g, "-"),
+		asset_category, company: A.name, status: custodian ? "In Use" : "Submitted", docstatus: 1, location: "Rubber Park (Demo)",
+		custodian, serial_no, purchase_date: dayOf(prev, 1), asset_quantity: 1, modified: stampOf(dayOf(prev, 1)),
+	});
+	asset(1, "Dell Latitude laptop", "Computers", "DL-5520-01");
+	asset(2, "Dell Latitude laptop", "Computers", "DL-5520-02");
+	asset(3, "Samsung A15 phone", "Mobile", "SM-A15-77");
+	asset(4, "Safety helmet", "Safety Gear", "");
+	/* Somebody still on the books holding something, because Start
+	   offboarding only offers active people. */
+	asset(7, "HP EliteBook", "Computers", "HP-840-21", PEOPLE[0].id);
+	if (leaver) {
+		asset(5, "Lenovo ThinkPad", "Computers", "LN-T14-09", leaver.id);
+		const phone = asset(6, "Redmi phone", "Mobile", "RD-12-44");
+		add("Asset Assignment", {
+			name: "HR-ASN-DEMO-00001", employee: leaver.id, employee_name: leaver.name, company: A.name,
+			asset: phone.name, asset_type: "Mobile", assets_code: phone.item_code, serial_number: phone.serial_no,
+			asset_status: "Assigned", assign_units: 1, assign_date: dayOf(prev, 1), return_unit: 0, lost_units: 0,
+			modified: stampOf(dayOf(prev, 1)),
+		});
+	}
+
 	return {
 		docs,
 		singles: {

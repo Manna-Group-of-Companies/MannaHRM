@@ -23,6 +23,8 @@ import KitAvatar from "@/components/kit/KitAvatar";
 import { EmptyState, PageHead, Pill, SegTabs, Who } from "@/components/kit/ui";
 import { Confirm, KitModal, ModalFoot, toast } from "@/components/kit/overlay";
 import { StartBoarding, TemplateForm } from "@/features/checklist/BoardingForms";
+import HandOverAssets, { AssetsToCollect, useAssetRegister } from "@/features/onboard/BoardingAssets";
+import { heldBy } from "@/lib/assign";
 
 const day10 = (v) => String(v || "").slice(0, 10);
 const why = (e) => String(e?.message || e || "The site would not do that.").slice(0, 240);
@@ -212,6 +214,18 @@ export function Boarding({ kind }) {
 	const rows = (s.boarding[kind] || []).filter((r) => !s.company || r.company === s.company);
 	const open = (r) => { set({ chkList: { kind, name: r.name } }); navigate("checklist", "list"); };
 	const dateOf = (r) => r[KINDS[kind].date] || s.byName[r.employee]?.[kind === "Onboarding" ? "date_of_joining" : "relieving_date"];
+	/* A leaver's assets, counted on the list so the ones still holding
+	   something stand out before anybody opens a checklist. Only on
+	   Offboarding: the register is a read of its own, and a joiner holds
+	   nothing yet. */
+	const off = kind === "Offboarding";
+	const register = useAssetRegister(off);
+	const assetCell = (r) => {
+		if (!register || s.assetErr || !r.employee) return "—";
+		const n = heldBy(r.employee, s.assets, s.assignments).length;
+		return n ? <Pill status="Due">{n} to collect</Pill> : <Pill status="Done">None</Pill>;
+	};
+	const cols = ["Employee", "Department", off ? "Last day" : "Start date", "Progress", ...(off ? ["Assets"] : []), ""];
 	return (
 		<div className="kit k-enter">
 			<PageHead title={kind} sub={kind === "Onboarding" ? "Help new people settle in" : "Make sure leavers hand over smoothly"}>
@@ -223,7 +237,7 @@ export function Boarding({ kind }) {
 				{s.boarding.state !== "ok" && s.boarding.state !== "error" ? <div className="k-sk" style={{ height: 200 }} /> : rows.length ? (
 					<div className="k-tbl-wrap">
 						<table className="k-rt">
-							<thead><tr>{["Employee", "Department", kind === "Onboarding" ? "Start date" : "Last day", "Progress", ""].map((c, i) => <th key={i}><span>{c}</span></th>)}</tr></thead>
+							<thead><tr>{cols.map((c, i) => <th key={i}><span>{c}</span></th>)}</tr></thead>
 							<tbody>
 								{rows.map((r) => (
 									<tr key={r.name} className="k-click" tabIndex={0} onClick={() => open(r)} onKeyDown={(ev) => { if (ev.key === "Enter") open(r); }}>
@@ -231,6 +245,7 @@ export function Boarding({ kind }) {
 										<td data-label="Department">{tidyDept(r.department) || "—"}</td>
 										<td data-label="Date">{dateOf(r) ? dmy(day10(dateOf(r))) : "—"}</td>
 										<td data-label="Progress"><Pill status={BOARD_PILL[r.boarding_status] || "Not started"}>{r.boarding_status || "Pending"}</Pill></td>
+										{off ? <td data-label="Assets">{assetCell(r)}</td> : null}
 										<td data-label=""><span className="k-row-go"><KitIcon name="right" size={16} stroke={2} /></span></td>
 									</tr>
 								))}
@@ -304,6 +319,16 @@ export function ChecklistDetail() {
 					))}
 				</div>
 			</div>
+			{/* The things that go out with a joiner, and come back with a leaver —
+			    each an Asset Assignment, so the site's handover rules run on every
+			    row (features/onboard/BoardingAssets.jsx). */}
+			{doc.employee ? (
+				<div className="k-ho-wrap">
+					{kind === "Onboarding"
+						? <HandOverAssets employee={doc.employee} employeeName={e.employee_name} company={doc.company || e.company} />
+						: <AssetsToCollect employee={doc.employee} employeeName={e.employee_name} />}
+				</div>
+			) : null}
 		</div>
 	);
 }

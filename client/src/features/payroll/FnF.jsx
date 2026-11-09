@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { patch, set, useApp } from "@/store";
-import { loadSeparations } from "@/api/load";
+import { loadOnBoard, loadSeparations } from "@/api/load";
+import { heldBy } from "@/lib/assign";
+import { openAssignments } from "@/features/onboard/BoardingAssets";
 import { dmy, fmt, initials, tidyDept, ymd } from "@/lib/format";
 import { download, toCsv } from "@/lib/csv";
 import { deskImport, deskUrl } from "@/lib/desk";
@@ -213,9 +215,42 @@ const Field = ({ k, v, title }) => (
 	</div>
 );
 
+/** What a leaver still has, and the way to take it back. Drawn under the card
+    only when there is something — a card per person with an empty box on it
+    would make the ones that matter harder to see. */
+function HeldStrip({ e, held }) {
+	if (!held.length) return null;
+	return (
+		<div className="fnfheld" role="note" aria-label={`Assets with ${e.employee_name || e.name}`}>
+			<b>{held.length} asset{held.length === 1 ? "" : "s"} still out — collect before settlement</b>
+			<ul>
+				{held.map((h) => (
+					<li key={h.asset} title={h.assignment
+						? `Asset Assignment ${h.assignment} — ${h.status}`
+						: "The asset names this person as custodian. No handover contract was written for it."}>
+						<span className="nm">{h.asset_name}</span>
+						<span className="muted">
+							{[h.asset_type, h.serial, h.units > 1 ? `${h.units} units` : "",
+								h.assign_date ? `since ${dmy(h.assign_date)}` : ""].filter(Boolean).join(" · ") || "—"}
+						</span>
+					</li>
+				))}
+			</ul>
+			<button className="embtn"
+				title="Open Assets Assignment on this person, with every handover they still hold listed."
+				onClick={() => openAssignments(e.name)}>
+				Collect assets
+			</button>
+		</div>
+	);
+}
+
 function Card({ s, e, picked, onPick }) {
 	const st = stageOf(e);
 	const exp = expDol(e);
+	/* `null` while the register has not been read, which is a different answer
+	   from nothing held and is drawn as one. */
+	const held = s.onboardRead && !s.onboardBusy ? heldBy(e.name, s.assets, s.assignments) : null;
 	return (
 		<article className="fnfcard">
 			<div className="who">
@@ -254,6 +289,11 @@ function Card({ s, e, picked, onPick }) {
 					title="Computed here, not stored: the day notice was given plus the notice period." />
 				<Field k="FNF processed" v=""
 					title="Full and Final Statement is not installed on this site and is not read by this dashboard. It cannot be anything but a dash here." />
+				<Field k="Assets out"
+					v={held === null ? (s.assetErr ? "not read" : "reading…") : held.length ? fmt(held.length) : "None"}
+					title={s.assetErr
+						? `The asset register could not be read: ${s.assetErr}`
+						: "Assets naming this person as custodian, and handovers not yet closed as returned or lost."} />
 				<div className="acts">
 					<Desk className="fhact on" href={s.site && deskUrl(s.site, "Employee", e.name)}
 						label="Edit on the site"
@@ -274,6 +314,7 @@ function Card({ s, e, picked, onPick }) {
 					</button>
 				</div>
 			</div>
+			{held ? <HeldStrip e={e} held={held} /> : null}
 		</article>
 	);
 }
@@ -287,6 +328,11 @@ export default function FnF() {
 	/* Read once, the first time somebody opens this page. The exit fields are of
 	   no use to any other screen and the load everybody does is wide enough. */
 	useEffect(() => { void loadSeparations(); }, []);
+	/* The asset register, for what each leaver still holds. On Board's read,
+	   made once — the same one the profile's Assets tab waits on. */
+	useEffect(() => {
+		if (!s.onboardRead) void loadOnBoard();
+	}, [s.onboardRead]);
 
 	const { all, nodate, matched, rows, capped } = fnfRows(s);
 	/* A selection is only ever over what is on screen: a row picked and then

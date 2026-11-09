@@ -4939,6 +4939,20 @@
   .fnfcard .det .pick { @apply self-center; }
   .fnfcount { @apply text-fine text-ink-3; }
 
+  /* What a leaver still holds. The unfinished wash, like the FNF Not Done chip
+     — something to be done before the settlement, not an error. */
+  .fnfheld {
+    @apply flex flex-wrap items-center gap-x-[1rem] gap-y-[.4rem] px-[.9rem] py-[.6rem]
+           bg-part-wash border-t border-line text-fine;
+  }
+  .fnfheld > b { @apply text-part basis-full; }
+  .fnfheld ul { @apply flex flex-wrap gap-x-[1.2rem] gap-y-[.25rem] m-0 p-0 list-none min-w-0; flex: 1 1 20rem; }
+  .fnfheld li { @apply flex flex-col min-w-0; }
+  .fnfheld li .nm { @apply text-ink font-semibold truncate; }
+  .fnfheld .muted { @apply text-ink-3; }
+  .fnfheld .embtn { @apply ml-auto; }
+
+
   /* ---------------------------------- payroll, the Bank Transfer screen ---- */
   /* A rail of collapsed filter groups down the left and a preview panel beside
      it — the only screen of Factor HR's here that is not a form above a report.

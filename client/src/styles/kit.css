@@ -777,3 +777,27 @@
 .k-check{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgb(var(--line-2));border-radius:10px;}
 .k-check-x{color:rgb(var(--ink-3));padding:4px;border-radius:6px}
 .k-check-x:hover{color:rgb(var(--bad));background:rgb(var(--wash))}
+
+/* Assets on joining and leaving (features/onboard/BoardingAssets.jsx): a
+   card under a checklist, and on Create Employee's done screen. Ours, not the
+   reference's — drawn from the same tokens so it sits with the kit. */
+.k-ho-wrap{margin-top:18px}
+.k-ho{display:flex;flex-direction:column;gap:10px}
+.k-ho .k-card-h{margin-bottom:4px}
+.k-ho .k-group-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:rgb(var(--ink-2));margin-top:4px}
+.k-ho .k-group-h .k-pill{padding:1px 8px}
+.k-ho-bar{display:grid;grid-template-columns:minmax(0,1fr) 170px 170px;gap:12px;align-items:end}
+.k-ho-bar .k-field{display:flex;flex-direction:column;gap:6px}
+.k-assets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border:1px solid rgb(var(--line));border-radius:12px;overflow:hidden}
+.k-assets li{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgb(var(--line));font-size:13.5px}
+.k-assets li:last-child{border-bottom:0}
+.k-assets li .k-grow{display:flex;flex-direction:column;min-width:0;flex:1}
+.k-assets li b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-pickable{max-height:300px;overflow-y:auto}
+.k-pickable li{padding:0}
+.k-pickable label{display:flex;align-items:center;gap:12px;padding:10px 14px;width:100%;cursor:pointer}
+.k-pickable label:hover{background:rgb(var(--wash))}
+.k-ok{margin:0;color:rgb(var(--live-dark));font-weight:600;font-size:13px}
+.k-ho-bad{margin:0}
+.k-ho-line{display:block;font-size:13px;margin-top:4px}
+@media (max-width:640px){.k-ho-bar{grid-template-columns:1fr 1fr}.k-ho-bar>.k-inp{grid-column:1/-1}}
