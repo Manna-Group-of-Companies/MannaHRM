@@ -9,15 +9,17 @@ import { payRows } from "@/features/payroll/shared";
 import FestivalBonus from "@/features/payroll/FestivalBonus";
 import { Desk, Note, Panel, Scroll, Tile, Tiles } from "@/components/ui";
 
-/* PAYROLL → INCREMENTS. Ours, 5 October 2026 — January's salary increments.
+/* PAYROLL → INCREMENTS. Ours, 5 October 2026 — salary increments, first
+   written for January. Hidden from the menu on 9 November 2026, asked for by
+   HR; its date starts on the 1st of this month when it is shown again.
 
-   Each January HR raises salaries from a spreadsheet. Download the sheet
+   HR raises salaries from a spreadsheet. Download the sheet
    (everybody with a salary, their current base filled in), fill in each
    person's New Base, Increment Amount or Increment %, upload it, read what
    each row will do, and apply. Each increment is a new Salary Structure
    Assignment from the effective date — hrms's own way of changing a base pay —
-   so the payroll run for January pays the new base and December's still pays
-   the old. See lib/increments.js.
+   so the payroll run for the effective month pays the new base and the month
+   before still pays the old. See lib/increments.js.
 
    **Up or down is said on every row**, before and after (asked for the same
    day): the preview marks each change, a decrease is applied only when HR
@@ -59,6 +61,8 @@ function OnSite({ v }) {
 	return <small className={"block way " + v.way}>✓ On the site: {word} to {rs(v.base)} ({v.made})</small>;
 }
 
+/* Hidden from the menu (9 November 2026, asked for by HR): HIDDEN_PAGES in
+   data/sections.js. Not deleted — Settings → Security can show it again. */
 export default function Increments() {
 	const s = useApp();
 	const { company, site } = s;

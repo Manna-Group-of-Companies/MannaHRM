@@ -4,7 +4,7 @@ import { patch, set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { load } from "@/api/load";
 import { scoped, uniq } from "@/lib/scope";
-import { NEW_EMP_BLANK, appLoginDefault, appLoginProblem, isBlank, makesAppLogin, missing, problemsOf } from "@/lib/newemp";
+import { NEW_EMP_BLANK, appLoginDefault, appLoginProblem, isBlank, makesAppLogin, managerChoices, missing, problemsOf } from "@/lib/newemp";
 import { Desk } from "@/components/ui";
 import OnMachine from "@/components/OnMachine";
 import MachineNumber from "@/components/MachineNumber";
@@ -93,8 +93,7 @@ function optionsFor(s, all, f) {
 	   the form once there is one rather than to the top bar's filter: the
 	   question follows the record being created, not whatever the header
 	   happened to be showing when somebody clicked Add New Employee. */
-	const managers = (f.company ? s.employees.filter((e) => e.company === f.company) : all)
-		.filter((e) => e.status === "Active")
+	const managers = managerChoices(f.company ? s.employees.filter((e) => e.company === f.company) : all).list
 		.map((e) => [e.name, e.employee_name + (e.designation ? ` · ${e.designation}` : "")]);
 
 	return {
@@ -580,6 +579,16 @@ export default function CreateEmployee() {
 										</span>
 									</div>
 								</div>
+							) : null}
+							{/* Under Reporting Manager: when the company has nobody ticked
+							    as a Manager yet, the list is everybody, and says so. */}
+							{rows.some((r) => r[0] === "reports_to") && f.company
+								&& !managerChoices(s.employees.filter((e) => e.company === f.company)).tagged ? (
+								<p className="wizmgr muted">
+									Nobody in {f.company} is tagged as a Manager yet, so Reporting Manager lists
+									everybody. Tick Manager on someone's Employee Profile, or below when creating
+									a manager.
+								</p>
 							) : null}
 							{rows.some((r) => r[0] === "attendance_device_id") && f.custom_punch_method !== "Mobile App" ? (
 								<MachineNumber value={f.attendance_device_id} employees={all}

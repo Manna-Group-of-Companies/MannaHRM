@@ -1553,6 +1553,8 @@
   .onbcard > .top .who { @apply flex flex-col min-w-0; }
   .onbcard > .top .who b { @apply font-display text-read text-ink; }
   .onbcard > .top .who .sub { @apply text-fine text-ink-3; }
+  .onbcard > .top .who .sub .co { @apply font-semibold text-ink-2; }
+  .onbcard > .top .who .sub .co.none { @apply font-normal italic text-ink-3; }
   .onbcard > .top .acts { @apply ml-auto flex gap-[.4rem] items-center; }
 
   /* ---- Recruitment (features/employees/Recruitment.jsx) -------------------
@@ -4106,6 +4108,8 @@
      is the small caps this site uses for a report title. Same rule, their
      lettering. */
   .wizbody > .fhtitle { @apply font-display text-norm tracking-normal normal-case pb-[.4rem]; }
+  /* Under Reporting Manager when the company has no tagged Manager yet. */
+  .wizmgr { @apply m-0 mt-[.5rem] text-fine text-ink-3; }
 
   /* A group of fields inside a step, with its own small heading. Steps 2 and 3
      have four each; step 1 has one with no heading, which is their screenshot.
@@ -5144,7 +5148,9 @@
   .paypage .fld.wide { grid-column: 1 / -1; }
   .paypage .fld > select, .paypage .fld > input { @apply w-full; }
   .paypage .fld > .lab, .paypage .flds .lab { @apply text-tiny font-semibold text-ink-3; }
-  .paypage .fldrow { @apply flex gap-[.4rem] items-center; }
+  /* Wraps: on a phone a file box and a button side by side squeeze the
+     button's words off its edge. */
+  .paypage .fldrow { @apply flex flex-wrap gap-[.4rem] items-center; }
   .paypage .fldrow > input { flex: 1 1 8rem; }
   /* The upload on Salary Setup: a file box beside the button that gives the blank list. */
   .paypage input[type="file"] { @apply text-fine py-[.3rem]; }
@@ -6870,6 +6876,11 @@ kbd {
      three lines and push the form off the fold. The circles stay their size:
      they are the touch target. */
   .wizform .wizf { grid-column: span 24; }
+  /* One column, not 24 with a field spanning them all: the 23 gaps between
+     24 columns are 23rem of their own, wider than a phone's card, so every
+     box was pushed 11px past the card's right edge (9 Nov 2026). */
+  .wizform { grid-template-columns: minmax(0, 1fr); }
+  .wizform .wizf { grid-column: 1 / -1; }
   .wizsteps { padding-left: .5rem; padding-right: .5rem; }
   .wizlab   { font-size: theme(fontSize.mini); }
   .wizsteps li::before { margin-right: .9rem; }

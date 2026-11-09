@@ -263,6 +263,11 @@ export const NEW_EMP_STEPS = [
 			["designation",    "Designation",       "select", 0, "designation", 8],
 			["reports_to",     "Reporting Manager", "select", 0, "reports_to",  8],
 			["leave_approver", "Approving Manager", "text",   0, "",            8],
+			/* Asked for by HR, 9 November 2026: a manager is tagged when they
+			   are created, and Reporting Manager above offers only the tagged
+			   managers of the company being typed in (managerChoices in
+			   lib/newemp.js). */
+			["custom_is_manager", "Manager", "check", 0, "", 24],
 		]],
 		/* Two to a row rather than three. There is no third field to put beside
 		   them — Machine Code is on step 1, where their screenshot puts it — and a
@@ -368,6 +373,8 @@ export const punchesOnMachine = (m) => m === "Fingerprint Machine" || m === "Bot
 export const punchesOnApp = (m) => m === "Mobile App" || m === "Both";
 
 export const NEW_EMP_HINT = {
+	"Manager": "Tick for somebody others report to. They are then offered as Reporting Manager "
+		+ "to new people in the same company.",
 	"Punch Method": "Fingerprint Machine needs a Machine Code, or every punch is dropped. Mobile App "
 		+ "needs a Company or Personal Email, which becomes the phone app's login.",
 	"Machine Code": "The fingerprint machine's enrolment number, and the join between a punch and a "

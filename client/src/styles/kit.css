@@ -801,3 +801,12 @@
 .k-ho-bad{margin:0}
 .k-ho-line{display:block;font-size:13px;margin-top:4px}
 @media (max-width:640px){.k-ho-bar{grid-template-columns:1fr 1fr}.k-ho-bar>.k-inp{grid-column:1/-1}}
+
+/* Employee Master's bar on a tablet or phone: the search on its own row, then
+   the view switch, Reload and Export on one row — not four full-width rows
+   with a lone reload icon in the middle of one. After the k-filters rules
+   above, which this narrows. */
+@media (max-width:880px){
+  .k-filters.emfilters{grid-template-columns:minmax(0,1fr) auto auto !important}
+  .k-filters.emfilters>.k-inp-ic:first-child{grid-column:1/-1}
+}

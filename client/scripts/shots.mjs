@@ -186,15 +186,15 @@ const DATA = {
 	"Employee Onboarding": [
 		{ name: "ONB-0001", employee_name: "Karthik Rao", boarding_status: "In Process",
 			date_of_joining: ago(-14), company: "Manna Rubber", department: "Production - MR",
-			designation: "Machine Operator", employee: "", docstatus: 1, owner: "hr@manna",
+			designation: "Machine Operator", employee_grade: "", employee: "", docstatus: 1, owner: "hr@manna",
 			creation: `${ago(6)} 12:00:00`, modified: `${ago(1)} 09:00:00`, modified_by: "hr@manna" },
 		{ name: "ONB-0002", employee_name: "Sneha Kulkarni", boarding_status: "Pending",
 			date_of_joining: ago(-30), company: "Manna Polymers", department: "Accounts - MP",
-			designation: "Accountant", employee: "", docstatus: 1, owner: "hr@manna",
+			designation: "Accountant", employee_grade: "", employee: "", docstatus: 1, owner: "hr@manna",
 			creation: `${ago(3)} 15:30:00`, modified: `${ago(3)} 15:30:00`, modified_by: "hr@manna" },
 		{ name: "ONB-0003", employee_name: "Joseph Ekka", boarding_status: "Completed",
 			date_of_joining: ago(60), company: "Manna Rubber", department: "Quality - MR",
-			designation: "Inspector", employee: "HR-EMP-00003", docstatus: 1, owner: "hr@manna",
+			designation: "Inspector", employee_grade: "", employee: "HR-EMP-00003", docstatus: 1, owner: "hr@manna",
 			creation: `${ago(70)} 10:00:00`, modified: `${ago(60)} 10:00:00`, modified_by: "hr@manna" },
 	],
 	/* Resumes for an open seat: the head office's Logistics seat (the fixture's
@@ -307,7 +307,25 @@ const PAGES = [
 	["candidates", "/recruitment/candidates", "Recruitment — the candidates"],
 	["machines", "/settings/machines", "Settings → Machines — ADMS or the bridge"],
 	["salary-setup", "/payroll/setup", "Salary Setup — the salary upload"],
-	["increments", "/payroll/increments", "Increments — January's sheet"],
+	/* Increments was hidden on 9 Nov 2026, so its address is not photographed.
+	   The pages below joined the same day: everything on the menu that had
+	   never been looked at in a real browser. */
+	["actual-salary", "/payroll/actualsalary", "Actual Salary"],
+	["advances", "/payroll/advances", "Advances & Loans"],
+	["payslips", "/payroll/slips", "Payslips"],
+	["bank-transfer", "/payroll/transfer", "Bank Transfer"],
+	["offboarding", "/checklist", "Checklist → Offboarding, with the Assets column"],
+	["new-employee", "/employees/new", "Create Employee, step 1"],
+	["directory", "/employees/directory", "Employees → Directory"],
+	["leave-history", "/leave/history", "Leave Application History"],
+	["overtime", "/attendance/overtime", "Overtime Entries"],
+	["corrections", "/attendance/corrections", "Attendance Regularization"],
+	["assignment", "/onboard/assignment", "On Board → Assets Assignment"],
+	["assets", "/onboard/assets", "On Board → Assets Details"],
+	["rec-settings", "/recruitment/settings", "Recruitment Settings"],
+	["documents", "/documents", "Documents"],
+	["news", "/news", "News"],
+	["help", "/help", "Help Center"],
 	/* The shell's own states (21 October 2026), which have no address: the
 	   fourth item is something to do first. A function rather than a button's
 	   name, because most of these are a click on a control that has no words

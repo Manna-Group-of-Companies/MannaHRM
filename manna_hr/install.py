@@ -60,10 +60,22 @@ CUSTOM_FIELDS = {
 			"description": "Field staff, drivers and reps. The coordinate is still recorded — it just does not refuse.",
 		},
 		{
+			# Asked for by HR (9 Nov 2026): tick somebody as a manager when they
+			# are created, and Create Employee's Reporting Manager offers only the
+			# tagged managers of the new person's company. A list, not a rule —
+			# hrms's reports_to still takes anybody.
+			"fieldname": "custom_is_manager",
+			"label": "Manager",
+			"fieldtype": "Check",
+			"insert_after": "custom_allow_remote_punch",
+			"in_standard_filter": 1,
+			"description": "Somebody others report to. Offered as Reporting Manager to new people in the same company.",
+		},
+		{
 			"fieldname": "custom_factor_hr_id",
 			"label": "Factor HR ID",
 			"fieldtype": "Data",
-			"insert_after": "custom_allow_remote_punch",
+			"insert_after": "custom_is_manager",
 			"unique": 1,
 			"read_only": 1,
 			"description": "The id this person had in Factor HR. Kept for reconciliation during changeover.",

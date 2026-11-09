@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { patch, set, useApp } from "@/store";
 import { loadOnBoard, loadSeparations } from "@/api/load";
 import { heldBy } from "@/lib/assign";
-import { openAssignments } from "@/features/onboard/BoardingAssets";
+import { canOpenAssignments, openAssignments } from "@/features/onboard/BoardingAssets";
 import { dmy, fmt, initials, tidyDept, ymd } from "@/lib/format";
 import { download, toCsv } from "@/lib/csv";
 import { deskImport, deskUrl } from "@/lib/desk";
@@ -218,7 +218,7 @@ const Field = ({ k, v, title }) => (
 /** What a leaver still has, and the way to take it back. Drawn under the card
     only when there is something — a card per person with an empty box on it
     would make the ones that matter harder to see. */
-function HeldStrip({ e, held }) {
+function HeldStrip({ e, held, canOpen }) {
 	if (!held.length) return null;
 	return (
 		<div className="fnfheld" role="note" aria-label={`Assets with ${e.employee_name || e.name}`}>
@@ -236,11 +236,13 @@ function HeldStrip({ e, held }) {
 					</li>
 				))}
 			</ul>
-			<button className="embtn"
-				title="Open Assets Assignment on this person, with every handover they still hold listed."
-				onClick={() => openAssignments(e.name)}>
-				Collect assets
-			</button>
+			{canOpen ? (
+				<button className="embtn"
+					title="Open Assets Assignment on this person, with every handover they still hold listed."
+					onClick={() => openAssignments(e.name)}>
+					Collect assets
+				</button>
+			) : null}
 		</div>
 	);
 }
@@ -314,7 +316,7 @@ function Card({ s, e, picked, onPick }) {
 					</button>
 				</div>
 			</div>
-			{held ? <HeldStrip e={e} held={held} /> : null}
+			{held ? <HeldStrip e={e} held={held} canOpen={canOpenAssignments(s)} /> : null}
 		</article>
 	);
 }

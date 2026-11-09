@@ -37,6 +37,12 @@ export const EMP_FIELDS = EMP_FIELDS_MIN.concat([
    lib/scope.js `needsDetails`. */
 export const EMP_FIELDS_WIDE = EMP_FIELDS.concat(["date_of_birth", "custom_needs_details"]);
 
+/* Tried first: `custom_is_manager` is ours (9 November 2026) — the Manager tick
+   behind Create Employee's Reporting Manager list. Not on the site until
+   `tools/create_custom_fields.py Employee --apply`; until then the read falls
+   to EMP_FIELDS_WIDE and nobody is tagged, so the list offers everybody. */
+export const EMP_FIELDS_TAGGED = EMP_FIELDS_WIDE.concat(["custom_is_manager"]);
+
 /* The Create Letters register — see features/onboard/CreateLetters.jsx, which
    draws Factor HR's own list of issued letters column for column.
 
@@ -154,7 +160,8 @@ export async function load() {
 			   needed. Asking for a field a site does not have is a 417 on the whole
 			   call, and the whole call is the dashboard — so the richer list is tried
 			   and the original one is what it falls back to. */
-			listAll("Employee", EMP_FIELDS_WIDE)
+			listAll("Employee", EMP_FIELDS_TAGGED)
+				.catch(() => listAll("Employee", EMP_FIELDS_WIDE))
 				.catch(() => listAll("Employee", EMP_FIELDS))
 				.catch(() => listAll("Employee", EMP_FIELDS_MIN)),
 			/* `default_holiday_list` is what the Calendar screen's "Default Calendar"

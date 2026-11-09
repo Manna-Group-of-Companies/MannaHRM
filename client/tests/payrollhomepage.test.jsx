@@ -64,7 +64,8 @@ describe("Payroll opens on its own page", () => {
 		/* Employee Payroll and Payroll Settings joined on 21 Oct 2026 and left
 		   on 22 Oct, asked for by HR. */
 		/* Festival Bonus on 22 Oct, beside Actual Salary: paid apart from the salary. */
-		expect(shown).toEqual(["overview", "setup", "actualsalary", "increments", "advances", "slips", "transfer"]);
+		/* Increments off the strip on 9 Nov 2026, asked for by HR. */
+		expect(shown).toEqual(["overview", "setup", "actualsalary", "advances", "slips", "transfer"]);
 	});
 
 	it("no longer has Employee Payroll, Payroll Detail or Payroll Settings, and their old addresses open Payroll", () => {

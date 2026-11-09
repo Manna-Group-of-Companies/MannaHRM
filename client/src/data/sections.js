@@ -85,7 +85,8 @@ export const HIDDEN_PAGES = {
 	   2026, also asked for; Offboarding became the first page so it could go. Checklist
 	   Settings the same day, also asked for — its templates still work. */
 	checklist: ["todos", "onboarding", "settings"],
-	payroll: ["adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],
+	/* Increments, 9 Nov 2026, asked for by HR — and not in Salary Setup either. */
+	payroll: ["increments", "adhoc", "process", "sheet", "payslip", "register", "bank", "frappe", "fnf", "itdec", "bonus", "ptax", "all"],
 };
 
 /* ---------------------------------------------------------------------------

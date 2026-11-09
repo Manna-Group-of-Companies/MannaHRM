@@ -180,16 +180,15 @@ describe("hand over assets, on the day somebody joins", () => {
 describe("a leaver's card shows what they still hold", () => {
 	const draw = () => render(<Provider store={store}><FnF /></Provider>);
 
-	it("lists the open handover and offers to collect it", () => {
-		set({ assignments: [contract()] });
+	it("lists the open handover, with no Collect button while HR's menu does not reach Assets Assignment", () => {
+		set({ assignments: [contract()], user: "hr@mannarubber.com" });
 		const view = draw();
 		const strip = view.getByRole("note", { name: "Assets with Sunitha Joseph" });
 		expect(strip.textContent).toContain("1 asset still out");
 		expect(strip.textContent).toContain("Dell laptop");
-
-		act(() => { view.getByText("Collect assets").click(); });
-		expect(getState().asg.emp).toBe("HR-EMP-00004");
-		expect(getState().subtab).toBe("assignment");
+		/* hr@mannarubber.com's On Board is Onboarding alone (USER_MENUS), so
+		   Assets Assignment would bounce back there — the button is not drawn. */
+		expect(view.queryByText("Collect assets")).toBeNull();
 	});
 
 	it("says None when nothing is out", () => {
@@ -206,16 +205,23 @@ describe("the checklist pages carry the assets", () => {
 
 	it("lists what a leaver still holds on their offboarding checklist", async () => {
 		checklist = { doc: offboarding, items: [] };
-		set({ assignments: [contract()], section: "checklist", subtab: "list", chkList: { kind: "Offboarding", name: offboarding.name } });
+		set({ assignments: [contract()], user: "hr@mannarubber.com", section: "checklist", subtab: "list", chkList: { kind: "Offboarding", name: offboarding.name } });
 		let view;
 		await act(async () => { view = draw(); });
 		const card = await vi.waitFor(() => view.getByRole("region", { name: "Assets to collect" }));
 		expect(card.textContent).toContain("still holds 1");
 		expect(card.textContent).toContain("Dell laptop");
+		expect(view.queryByText("Collect assets")).toBeNull();
+	});
 
-		act(() => { view.getByText("Collect assets").click(); });
-		expect(getState().asg.emp).toBe("HR-EMP-00004");
-		expect(getState().subtab).toBe("assignment");
+	it("lists a leaver's assets for a login without On Board, with no button that would bounce", async () => {
+		checklist = { doc: offboarding, items: [] };
+		set({ assignments: [contract()], user: "someone@mannarubber.com", section: "checklist", subtab: "list", chkList: { kind: "Offboarding", name: offboarding.name } });
+		let view;
+		await act(async () => { view = draw(); });
+		const card = await vi.waitFor(() => view.getByRole("region", { name: "Assets to collect" }));
+		expect(card.textContent).toContain("Dell laptop");
+		expect(view.queryByText("Collect assets")).toBeNull();
 	});
 
 	it("offers the free assets on a joiner's onboarding checklist", async () => {

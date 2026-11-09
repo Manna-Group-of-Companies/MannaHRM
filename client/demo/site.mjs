@@ -304,6 +304,19 @@ export function createSite(seed, { now = () => new Date() } = {}) {
 			return json(200, { message: { name: "PRACTICE-COMMENT" } });
 		case "upload_file":
 			return fail(417, "ValidationError", "Files are not kept on the practice site.");
+		case "manna_hr.adms_site.new_on_machine": {
+			/* Two people punching whom no Employee carries — one on a machine
+			   with a company, one on a machine without — for Onboarding's New on
+			   the machine list. Made up, like everything here. */
+			const co = seed.meta?.companies?.[0] || "";
+			const day = norm(seed.meta?.month || "").slice(0, 7) || "2026-10";
+			return json(200, { message: [
+				{ attendance_device: "BIO-DEMO-GATE1", pin: "861", punches: 12, first: `${day}-03 08:52:00`, last: `${day}-20 18:04:00`,
+					device_name: "Demo Gate 1", company: co, name_on_device: "MANOJ RAM", first_name: "MANOJ", last_name: "RAM" },
+				{ attendance_device: "BIO-DEMO-GATE2", pin: "887", punches: 2, first: `${day}-18 08:40:00`, last: `${day}-18 17:58:00`,
+					device_name: "Demo Gate 2", company: null, name_on_device: "NEELAM CHORANTH", first_name: "NEELAM", last_name: "CHORANTH" },
+			] });
+		}
 		default:
 			if (name.startsWith("manna_hr.")) return fail(417, "ValidationError", "That is not available on the practice site.");
 			return fail(403, "PermissionError", `Function ${name} is not whitelisted.`);

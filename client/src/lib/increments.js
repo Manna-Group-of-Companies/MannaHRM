@@ -1,5 +1,6 @@
 /* ---------------------------------------------------------------------------
-   Payroll → Increments: January's salary increments, from HR's Excel sheet.
+   Payroll → Increments (hidden from the menu since 9 November 2026): salary
+   increments, from HR's Excel sheet, from any date HR picks.
 
    **An increment is a new Salary Structure Assignment**, which is hrms's own
    way of saying "from this date, this person's base pay is this": the same
@@ -71,11 +72,16 @@ export function sheetProblem(cols) {
 
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-/** The 1st of January the increments are for: this year's until the end of
-    March (a sheet uploaded late is still for this January), next year's after. */
+/** The day a salary change starts, before HR picks another: the 1st of this
+    month.
+
+    HR changes salaries at any time, not only in January (9 November 2026), so
+    this is no longer next 1 January. The 1st of this month because payroll is
+    run for last month (lib/payrollrun.js `lastMonth`): this month is the one
+    not paid yet, so a change from its 1st is paid in full at the next run and
+    touches no month already paid. A mid-month date would split the month. */
 export function defaultEffective(today) {
-	const y = Number(today.slice(0, 4));
-	return Number(today.slice(5, 7)) <= 3 ? `${y}-01-01` : `${y + 1}-01-01`;
+	return `${String(today).slice(0, 7)}-01`;
 }
 
 /** A date cell as `YYYY-MM-DD`, or null. Excel gives a Date; a typed cell is

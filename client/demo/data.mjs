@@ -235,6 +235,10 @@ export function makeData({ today = new Date(), month = process.env.DEMO_MONTH, s
 			cell_number: `90000000${String(i + 1).padStart(2, "0")}`, personal_email: "", company_email: "", prefered_email: "",
 			salutation: p.gender === "Female" ? "Ms" : "Mr", reports_to: "", user_id: "", image: "", grade: "",
 			ctc: p.base * 12, modified: stampOf(dayOf(prev, 1)), creation: stampOf(dayOf(prev, 1)),
+			/* Tagged managers, for Create Employee's Reporting Manager list: the
+			   Plant Manager and the Production Supervisor in the first company,
+			   the Manager in the second. */
+			custom_is_manager: /Manager|Supervisor/.test(p.desig) ? 1 : 0,
 		});
 		add("Salary Structure Assignment", {
 			name: next("HR-SSA"), employee: p.id, employee_name: p.name, salary_structure: structureOf(p.co), company: p.co.name,

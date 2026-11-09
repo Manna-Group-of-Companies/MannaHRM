@@ -103,7 +103,7 @@ export const PROFILE_HEAD = [
 ];
 
 /** Rendered as Yes / No rather than 1 / 0. */
-export const PROFILE_CHECKS = new Set(["custom_allow_remote_punch", "leave_encashed", "unsubscribed"]);
+export const PROFILE_CHECKS = new Set(["custom_allow_remote_punch", "custom_is_manager", "leave_encashed", "unsubscribed"]);
 
 /** Prose rather than a value — wraps, and is never set in the mono column. */
 export const PROFILE_LONG = new Set([
@@ -189,6 +189,7 @@ export const PROFILE_PANES = {
 				["Branch", "branch"],
 				["Employment Type", "employment_type"],
 				["Reporting Manager", "reports_to"],
+				["Manager", "custom_is_manager"],
 				["Work Location", "custom_work_location"],
 				["Employee Code", "employee_number"],
 				["Factor HR Id", "custom_factor_hr_id"],

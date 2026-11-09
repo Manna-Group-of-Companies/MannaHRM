@@ -103,6 +103,14 @@ export default function NewOnMachine() {
 								<span className="who">
 									<b>{who}</b>
 									<span className="sub">
+										{/* The machine's company, which is the one Create Employee
+										    and the form's message start from — said here so HR sees
+										    it before either, and said as missing rather than left
+										    out when the machine has none. */}
+										{r.company
+											? <span className="co" title="The company set on this fingerprint machine. Create Employee starts from it.">{r.company}</span>
+											: <span className="co none" title="This fingerprint machine has no company set on the site, so Create Employee will ask for one.">No company on this machine</span>}
+										{" · "}
 										{[r.device_name, `No. ${r.pin}`, `${r.punches} punch(es) since ${dmy(String(r.first).slice(0, 10))}`].join(" · ")}
 									</span>
 								</span>

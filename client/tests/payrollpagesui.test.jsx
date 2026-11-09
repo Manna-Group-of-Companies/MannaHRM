@@ -108,6 +108,11 @@ describe("Salary Setup", () => {
 		expect(v.container.textContent).toMatch(/Still to set up/);
 	});
 
+	it("has no increments section — Increments is hidden, here as on the menu", async () => {
+		const v = await draw(SalarySetup);
+		expect(v.container.textContent).not.toMatch(/Change salaries|1\. The increment sheet/);
+	});
+
 	it("has no hand-made structure and no ticking people one by one — the salary sheet does both", async () => {
 		const v = await draw(SalarySetup);
 		expect(v.container.textContent).not.toMatch(/1\. Salary structure|2\. Give people their salary/);

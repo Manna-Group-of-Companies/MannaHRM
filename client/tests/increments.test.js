@@ -57,10 +57,10 @@ describe("reading HR's sheet", () => {
 		expect(cellDate("31-02-2027")).toBe(null);
 	});
 
-	it("the_increments_are_for_next_january_until_the_new_year_and_this_january_until_march", () => {
-		expect(defaultEffective("2026-10-05")).toBe("2027-01-01");
+	it("a salary change starts on the 1st of this month, the month not paid yet, whatever the month", () => {
+		expect(defaultEffective("2026-10-05")).toBe("2026-10-01");
+		expect(defaultEffective("2026-11-30")).toBe("2026-11-01");
 		expect(defaultEffective("2027-01-20")).toBe("2027-01-01");
-		expect(defaultEffective("2027-03-31")).toBe("2027-01-01");
 	});
 });
 

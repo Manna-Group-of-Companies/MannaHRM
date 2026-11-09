@@ -432,7 +432,7 @@ export default function EmployeeMaster() {
 			)}
 
 			<div className="k-card">
-				<div className="k-filters" style={{ gridTemplateColumns: "minmax(240px,1fr) auto auto auto" }}>
+				<div className="k-filters emfilters" style={{ gridTemplateColumns: "minmax(240px,1fr) auto auto auto" }}>
 					<div className="k-inp-ic">
 						<KitIcon name="search" size={18} stroke={2} />
 						{/* One search behind two boxes: this writes through to the top

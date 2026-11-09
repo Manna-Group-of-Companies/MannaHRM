@@ -159,6 +159,16 @@ describe("New on the machine", () => {
 		expect([s.section, s.subtab]).toEqual(["employees", "new"]);
 	});
 
+	it("names the machine's company on each card, and says so when the machine has none", async () => {
+		method = (m) => m === "manna_hr.adms_site.new_on_machine"
+			? Promise.resolve([RAHUL, { ...RAHUL, pin: "246", company: null, name_on_device: "SINU" }])
+			: Promise.reject(new Error(NOT_INSTALLED));
+		const view = await draw();
+		const cards = [...view.container.querySelectorAll('section[aria-label="New on the machine"] .onbcard')];
+		expect(cards[0].querySelector(".sub").textContent).toMatch(/^Manna Rubber · MRP Gate 1 · No\. 245/);
+		expect(cards[1].querySelector(".sub").textContent).toMatch(/^No company on this machine · MRP Gate 1/);
+	});
+
 	it("draws nothing when nobody is waiting", async () => {
 		method = (m) => m === "manna_hr.adms_site.new_on_machine" ? Promise.resolve([]) : Promise.reject(new Error(NOT_INSTALLED));
 		const view = await draw();

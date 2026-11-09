@@ -161,6 +161,7 @@ fixtures = [
 					"Employee-custom_punch_method",
 					"Employee-custom_work_location",
 					"Employee-custom_allow_remote_punch",
+					"Employee-custom_is_manager",
 					"Employee-custom_factor_hr_id",
 					"Employee-custom_personal_section",
 					"Employee-custom_nationality",

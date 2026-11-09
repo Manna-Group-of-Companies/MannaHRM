@@ -80,6 +80,16 @@ export const NEW_EMP_FIELDS = NEW_EMP_STEPS
     Not sent at all: `employee_name`. hrms builds it from the three name fields
     on validate, and a value sent here would be overwritten on the way in. A
     field that looks set and is not is worse than one that is plainly derived. */
+/** Who Reporting Manager offers: the active people of `pool` ticked as a
+    Manager. When nobody there is ticked yet — a company before anybody has
+    been tagged, or a site without the field — everybody active, and `tagged`
+    says so, so the form can tell HR rather than offer an empty list. Pure. */
+export function managerChoices(pool) {
+	const active = (pool || []).filter((e) => e.status === "Active");
+	const tagged = active.filter((e) => Number(e.custom_is_manager) === 1);
+	return { list: tagged.length ? tagged : active, tagged: tagged.length > 0 };
+}
+
 export function employeeDoc(f) {
 	const doc = {};
 	for (const k of NEW_EMP_FIELDS) {

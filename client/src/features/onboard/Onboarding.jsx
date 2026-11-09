@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { set, useApp } from "@/store";
-import { openAssignments } from "@/features/onboard/BoardingAssets";
+import { canOpenAssignments, openAssignments } from "@/features/onboard/BoardingAssets";
 import { NEW_EMP_BLANK } from "@/lib/newemp";
 import { wizardFromCandidate } from "@/api/candidate";
 import { loadCandidates } from "@/api/load";
@@ -371,17 +371,18 @@ export default function Onboarding() {
 										onClick={() => toWizard(c)}>
 										Create Employee
 									</button>
-								) : (
+								) : canOpenAssignments(s) ? (
 									/* Once they are an employee, the next thing that happens to
 									   them is the laptop and the ID card. Assets Assignment opens
-									   on this person, ready for a new handover. */
+									   on this person, ready for a new handover — offered only to a
+									   login whose menu reaches that page. */
 									<button className="embtn ml-auto"
 										aria-label={`Hand over assets to ${c.employee_name || c.name}`}
 										title="Open Assets Assignment on this employee, to hand over what goes out with them."
 										onClick={() => openAssignments(c.employee)}>
 										Hand over assets
 									</button>
-								)}
+								) : null}
 							</div>
 							<div className="onbgrid">
 								{DETAILS.map(([label, key, kind, doctype]) => {

@@ -4,6 +4,7 @@ import { patch, useApp } from "@/store";
 import { apiCreate } from "@/api/client";
 import { loadOnBoard } from "@/api/load";
 import { go } from "@/routes/router";
+import { landingFor, sectionFor } from "@/data/menus";
 import { heldBy, issuable, problems } from "@/lib/assign";
 import { dmy, todayIso } from "@/lib/format";
 import KitIcon from "@/components/kit/KitIcon";
@@ -38,6 +39,14 @@ export function useAssetRegister(wanted = true) {
 	}, [wanted, s.onboardRead]);
 	return Boolean(s.onboardRead && !s.onboardBusy);
 }
+
+/** Whether this login can actually land on Assets Assignment. On Board is one
+    login's module (`ONLY_FOR` in data/menus.js), and that login's own menu
+    (`USER_MENUS`) may leave the page off — PageOutlet then moves the visit on
+    to another page, so a button to it would read as broken. Asked the same
+    way PageOutlet asks, so the two cannot disagree. */
+export const canOpenAssignments = (s) => sectionFor("onboard", s.admin, s.user)
+	&& landingFor("onboard", "assignment", s.user, s.admin) === "assignment";
 
 /** Open Assets Assignment on one person. */
 export function openAssignments(employee) {
@@ -224,7 +233,7 @@ export function AssetsToCollect({ employee, employeeName }) {
 									: `Nothing is out with ${employeeName || employee}`}
 					</span>
 				</div>
-				{ready && held.length ? (
+				{ready && held.length && canOpenAssignments(s) ? (
 					<button type="button" className="k-btn k-btn-line k-btn-sm"
 						title="Open Assets Assignment on this person, with every handover they still hold listed."
 						onClick={() => openAssignments(employee)}>

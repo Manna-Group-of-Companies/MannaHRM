@@ -362,12 +362,12 @@ existing `Attendance Log` history should be migrated is still open.
   than the cursor and the machine is about to reuse those timestamps —
   re-sending a punch is free, losing one is somebody's day. A drift beyond six
   hours is refused and logged either way.
-- **Salary increments** (asked for 5 October 2026): Payroll → Increments takes
+- **Salary increments** (asked for 5 October 2026): Payroll → Increments (hidden from the menu on 9 November 2026, asked for by HR — not deleted; Settings → Security shows it again) takes
   HR's January Excel sheet — downloaded pre-filled with everybody's current
   base, one of New Base / Increment Amount / Increment % filled per person —
   previews every row, and on Apply makes each increment a new submitted
   **Salary Structure Assignment** on the same structure from the effective
-  date (default 1 January). The old assignment is not touched; it is what pays
+  date (default the 1st of this month — 1 January until 9 November 2026). The old assignment is not touched; it is what pays
   the months before. Every row says up or down; **a decrease is applied only
   when HR ticks for it**. An unknown code, two columns that disagree and a row
   already applied are each said and never written; re-uploading the same sheet
@@ -419,6 +419,15 @@ existing `Attendance Log` history should be migrated is still open.
   (`assignedOnly`), and says how many it left out. Somebody who already has a salary keeps it —
   Increments changes pay. Matching is by code only; every saved row is read
   back. `client/src/lib/salaryupload.js`.
+- **Managers are tagged** (asked for by HR, 9 November 2026): a **Manager**
+  tick on Create Employee's Role and reporting group, and on Employee Profile,
+  stored as `Employee.custom_is_manager` (`install.py`, **not on the site until
+  `tools/create_custom_fields.py Employee --apply`**). Create Employee's
+  Reporting Manager then offers only the active, tagged managers of the
+  company being typed in (`managerChoices` in `lib/newemp.js`); a company with
+  nobody tagged — and every company until the field is on the site — offers
+  everybody and says so under the box, so a new person can always be created.
+  A list, not a rule: hrms's `reports_to` still takes anybody.
 - **Employee import** (same day): Employee Master → Add New Employee ▾ → File
   Import now opens `/employees/upload` here instead of ERPNext's Data Import.
   The sheet's columns are Create Employee's own (`NEW_EMP_STEPS`, pinned by a
