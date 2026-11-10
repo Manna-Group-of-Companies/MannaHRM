@@ -125,12 +125,13 @@ void main() {
     expect(find.text('On leave (1)'), findsOneWidget);
   });
 
-  testWidgets('the sign-in screen asks for an email and a password, and says when either is missing', (t) async {
+  testWidgets('the sign-in screen asks for an Emp Code (or email) and a password, and says when either is missing', (t) async {
     await t.pumpWidget(const MannaHrApp(home: LoginScreen()));
     await t.pumpAndSettle();
+    await t.ensureVisible(find.text('Sign in'));
     await t.tap(find.text('Sign in'));
     await t.pump();
-    expect(find.text('Type your email and password.'), findsOneWidget);
+    expect(find.text('Type your Emp Code (or email) and password.'), findsOneWidget);
   });
 
   testWidgets("HR's home counts the group, the leave waiting, and who is in today", (t) async {

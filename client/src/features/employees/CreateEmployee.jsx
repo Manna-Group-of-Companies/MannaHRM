@@ -4,7 +4,7 @@ import { patch, set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { load } from "@/api/load";
 import { scoped, uniq } from "@/lib/scope";
-import { NEW_EMP_BLANK, appLoginDefault, appLoginProblem, isBlank, makesAppLogin, managerChoices, missing, problemsOf } from "@/lib/newemp";
+import { NEW_EMP_BLANK, appLoginDefault, appLoginProblem, dobPassword, isBlank, makesAppLogin, managerChoices, missing, problemsOf } from "@/lib/newemp";
 import { Desk } from "@/components/ui";
 import OnMachine from "@/components/OnMachine";
 import MachineNumber from "@/components/MachineNumber";
@@ -325,7 +325,11 @@ export default function CreateEmployee() {
 	   anything that outlives the page. The login follows the email boxes until
 	   somebody types over it. */
 	const [loginDraft, setLoginDraft] = useState({ email: "", password: "", typed: false });
-	const login = { email: loginDraft.typed ? loginDraft.email : appLoginDefault(f), password: loginDraft.password };
+	/* No password typed is the date of birth, DDMMYYYY — the first password HR
+	   gives everybody, which the phone app makes them change (dobPassword). */
+	const byBirth = !loginDraft.password && Boolean(dobPassword(f.date_of_birth));
+	const login = { email: loginDraft.typed ? loginDraft.email : appLoginDefault(f),
+		password: loginDraft.password || dobPassword(f.date_of_birth), byBirth };
 	const loginProblem = appLoginProblem(f, login);
 	const all = scoped(s);
 	const opts = optionsFor(s, all, f);
@@ -373,7 +377,7 @@ export default function CreateEmployee() {
 			let appLogin = null;
 			if (doc?.name && makesAppLogin(f, login)) {
 				patch("newemp", { busy: "making the app login" });
-				appLogin = await createAppLogin(doc, login);
+				appLogin = { ...(await createAppLogin(doc, login)), byBirth: login.byBirth };
 				setLoginDraft((d) => ({ ...d, password: "" }));
 			}
 			patch("newemp", {
@@ -442,7 +446,7 @@ export default function CreateEmployee() {
 								? <> Enrol finger number <b>{done.attendance_device_id}</b> on the machine.</> : null}
 							{done.custom_punch_method !== "Fingerprint Machine" ? (
 								app?.ok
-									? <> App login <b>{app.login}</b> {app.existed ? "was already on the site and is now linked — its password was not changed" : "is made and linked"}.</>
+									? <> App login <b>{app.login}</b> {app.existed ? "was already on the site and is now linked — its password was not changed" : <>is made and linked — they sign in with Emp Code <b>{done.employee_number || "—"}</b>{app.byBirth ? " and their date of birth (DDMMYYYY), and choose a new password the first time" : ""}</>}.</>
 									: app
 										? <> The app login <b>{app.login}</b> was not made: {app.error}</>
 										: <> No app login was made: no app password was typed.</>
@@ -575,9 +579,16 @@ export default function CreateEmployee() {
 										<label className="lab" htmlFor="ne-app-password">App password</label>
 										<span className="ctl">
 											<input id="ne-app-password" type="password" autoComplete="new-password" value={loginDraft.password}
+												placeholder="Date of birth, DDMMYYYY"
 												onChange={(e) => setLoginDraft({ ...loginDraft, password: e.target.value })} />
 										</span>
 									</div>
+									<p className="wizmgr muted wizlognote">
+										They sign in to the phone app with their Emp Code
+										{f.employee_number ? <> <b>{f.employee_number}</b></> : null} and, unless you type a
+										password, their date of birth as DDMMYYYY. The app makes them choose their own
+										password the first time.
+									</p>
 								</div>
 							) : null}
 							{/* Under Reporting Manager: when the company has nobody ticked

@@ -419,6 +419,19 @@ existing `Attendance Log` history should be migrated is still open.
   (`assignedOnly`), and says how many it left out. Somebody who already has a salary keeps it —
   Increments changes pay. Matching is by code only; every saved row is read
   back. `client/src/lib/salaryupload.js`.
+- **The phone app signs in with the Emp Code** (asked for by HR, 10 November
+  2026): Create Employee makes the login's `User.username` the Emp Code, and an
+  app password left blank is the date of birth as DDMMYYYY (`dobPassword` in
+  `lib/newemp.js`; 24-03-2005 is 24032005). The app's sign-in box takes the
+  Emp Code or the email, and **while the password is still that date the app
+  shows only Choose a new password** (`app/lib/core/first_password.dart`,
+  `Landing.newPassword`), asked again on every start. That check runs in the
+  app — the site does not know a password is a birthday — so it is a nudge on
+  the person's own login, not a rule; the site's own password policy still
+  applies to the new one. **Signing in with the Emp Code needs System Settings
+  → Allow Login using User Name**, which `tools/setup_phone_punch.py` reports
+  and never sets; until it is ticked only the email works. Logins made before
+  this keep their email and password — nothing re-keys them.
 - **Managers are tagged** (asked for by HR, 9 November 2026): a **Manager**
   tick on Create Employee's Role and reporting group, and on Employee Profile,
   stored as `Employee.custom_is_manager` (`install.py`, **not on the site until

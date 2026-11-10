@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signIn() async {
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
-      setState(() => _error = 'Type your email and password.');
+      setState(() => _error = 'Type your Emp Code (or email) and password.');
       return;
     }
     setState(() {
@@ -68,10 +68,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await Api.login(siteUrl: _siteUrl, email: _email.text.trim(), password: _password.text);
       final admin = await Api.isAdmin();
+      final first = await Api.onFirstPassword();
       if (!mounted) return;
       goTo(
         context,
-        landingFor(signedIn: true, isAdmin: admin),
+        landingFor(signedIn: true, isAdmin: admin, firstPassword: first),
       );
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
@@ -135,10 +136,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: kInk)),
                         const SizedBox(height: 20),
-                        const FieldLabel('Email / User ID'),
+                        const FieldLabel('Emp Code or email'),
                         TextField(
                           controller: _email,
-                          keyboardType: TextInputType.emailAddress,
+                          // Not an email keyboard: most people sign in with their
+                          // Emp Code, which is letters and digits.
+                          keyboardType: TextInputType.visiblePassword,
                           autocorrect: false,
                           autofillHints: const [AutofillHints.username],
                           textInputAction: TextInputAction.next,
@@ -160,7 +163,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 8),
+                        const Text('First time? Your password is your date of birth, DDMMYYYY.',
+                            style: TextStyle(fontSize: 12.5, color: kInk2)),
+                        const SizedBox(height: 18),
                         if (_error.isNotEmpty) Note(_error),
                         if (_said.isNotEmpty) Note(_said, kind: NoteKind.ok),
                         FilledButton(

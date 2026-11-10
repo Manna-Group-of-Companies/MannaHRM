@@ -21,6 +21,12 @@ void main() {
     test("HR lands on HR's side and is never asked to choose — their own punch and month are in its menu", () {
       expect(landingFor(signedIn: true, isAdmin: true), Landing.admin);
     });
+
+    test('anybody still on their birth-date password chooses a new one first, HR included', () {
+      expect(landingFor(signedIn: true, isAdmin: false, firstPassword: true), Landing.newPassword);
+      expect(landingFor(signedIn: true, isAdmin: true, firstPassword: true), Landing.newPassword);
+      expect(landingFor(signedIn: false, isAdmin: false, firstPassword: true), Landing.signIn);
+    });
   });
 
   group('rupees', () {

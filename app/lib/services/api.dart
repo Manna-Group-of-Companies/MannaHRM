@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:manna_hr_app/core/auth_store.dart';
 import 'package:manna_hr_app/core/constants.dart';
 import 'package:manna_hr_app/core/errors.dart';
+import 'package:manna_hr_app/core/first_password.dart';
 import 'package:manna_hr_app/core/leave_rules.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
@@ -73,6 +74,34 @@ class Api {
     await AuthStore.saveLogin(
         siteUrl: siteUrl, email: email, password: password);
     return _resolveQuietly();
+  }
+
+  /// This person's date of birth, as the site holds it (`YYYY-MM-DD`), or null.
+  ///
+  /// Read on its own rather than added to the employee lookup's field list: a
+  /// site that refused the one field would send that whole lookup to its short
+  /// list, and the person's shift and holiday list with it. Null means "could
+  /// not tell", which `mustChangePassword` reads as no first password to be on.
+  static Future<String?> birthDate() async {
+    final emp = Session.I.employeeId;
+    if (emp.isEmpty) return null;
+    try {
+      final rows = await _list('Employee', const ['name', 'date_of_birth'], filters: [
+        ['name', '=', emp]
+      ]);
+      final v = rows.isEmpty ? null : rows.first['date_of_birth'];
+      return v == null ? null : '$v';
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Whether the saved password is still the first one HR gave — this
+  /// person's date of birth as DDMMYYYY — so a new one must be chosen first.
+  static Future<bool> onFirstPassword() async {
+    final creds = await AuthStore.load();
+    if (creds.password.isEmpty) return false;
+    return mustChangePassword(creds.password, await birthDate());
   }
 
   /// The employee lookup, where a failure must not undo a sign-in that worked.

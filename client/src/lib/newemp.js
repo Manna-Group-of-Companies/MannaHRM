@@ -147,6 +147,20 @@ export function punchGaps(f) {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** The first password, when HR types none: the date of birth as DDMMYYYY
+    (asked for by HR, 10 November 2026) — 24-03-2005 is "24032005". "" when
+    there is no birth date to make one from.
+
+    **It is a first password only.** A birthday is a thing colleagues know, and
+    the app records the punches pay is made from, so the phone app makes the
+    person choose their own the first time they sign in with it
+    (app/lib/core/first_password.dart). The same DDMMYYYY rule is there; the
+    two are pinned together by tests/applogin.test.jsx. */
+export function dobPassword(iso) {
+	const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+	return m ? m[3] + m[2] + m[1] : "";
+}
+
 /** The login to offer: the email the matching tool would have joined on. */
 export const appLoginDefault = (f) => String(f.company_email || f.personal_email || "").trim();
 
@@ -166,11 +180,18 @@ export function appLoginProblem(f, login) {
 
 /** The User a phone login is. The Employee role is all the app needs; the
     site's own `create_user_permission` on the Employee then keeps the login to
-    that one record. No welcome email: the password was just given to them. */
+    that one record. No welcome email: the password was just given to them.
+
+    **`username` is the Emp Code** (10 November 2026), so the phone app signs in
+    with it instead of an email — which works once the site's System Settings
+    allow login by user name (tools/setup_phone_punch.py reports whether they
+    do). The email stays: a Frappe User is named by it. */
 export function appUserDoc(emp, login) {
 	const [first, ...rest] = String(emp.employee_name || emp.first_name || login.email).trim().split(/\s+/);
+	const code = String(emp.employee_number || "").trim();
 	return {
 		email: String(login.email).trim().toLowerCase(),
+		...(code ? { username: code } : {}),
 		first_name: first,
 		last_name: rest.join(" ") || undefined,
 		enabled: 1,

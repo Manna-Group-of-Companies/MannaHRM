@@ -4,6 +4,9 @@
     python tools/setup_phone_punch.py --apply          # link Employee.user_id
     python tools/setup_phone_punch.py --all            # everybody, not only the seventeen
 
+It also reports whether the site lets the phone app sign in with an Emp Code
+(System Settings → Allow Login using User Name) — read, never changed.
+
     ERP_URL / ERP_KEY / ERP_SECRET in the environment, as the other tools here.
 
 The phone app writes `Employee Checkin` as the person signed in, and four things
@@ -152,6 +155,25 @@ def app_installed():
 	return None
 
 
+def login_by_user_name():
+	"""Whether the site lets somebody sign in with their user name — the Emp
+	Code the phone app is signed into with (10 November 2026), set as
+	`User.username` by Create Employee. Frappe accepts an email always and a
+	user name only when System Settings say so; with it off, an Emp Code is a
+	wrong password every time.
+
+	Read, never written: it is a site-wide security setting, and the person who
+	turns it on should be the one who decided to. None when it cannot be read.
+	"""
+	try:
+		doc = req("/api/resource/System%20Settings/System%20Settings").get("data") or {}
+		if "allow_login_using_user_name" in doc:
+			return bool(doc.get("allow_login_using_user_name"))
+	except Exception:
+		pass
+	return None
+
+
 # ------------------------------------------------------------------ people ---
 
 def emails_of(emp):
@@ -224,6 +246,17 @@ def main():
 		print("  server is meant to be judging (CLAUDE.md §1). Until the three lines")
 		print("  above all read yes, nobody is judging, and a punch from home is")
 		print("  accepted exactly like a punch at the gate.")
+	print()
+
+	# ---- signing in with the Emp Code ----
+	by_name = login_by_user_name()
+	print("=== signing in with the Emp Code ===")
+	print("  System Settings → Allow Login using User Name : {0}".format(
+		{True: "yes", False: "NO", None: "could not tell"}[by_name]))
+	if by_name is not True:
+		print("  The phone app signs in with the Emp Code and, the first time, the date")
+		print("  of birth (DDMMYYYY). Until this reads yes, only the email works — tick it")
+		print("  on the desk: System Settings → Login → Allow Login using User Name.")
 	print()
 
 	# ---- the one this fixes ----

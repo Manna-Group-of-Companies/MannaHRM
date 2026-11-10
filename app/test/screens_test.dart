@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:manna_hr_app/screens/correction_sheet.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
+import 'package:manna_hr_app/screens/new_password_screen.dart';
 import 'package:manna_hr_app/ui/brand.dart' show initialsOf;
 
 /// The screens open, and the one control that can quietly lose somebody's day
@@ -26,10 +27,25 @@ void main() {
 
     expect(find.text('Manna HR'), findsOneWidget);
     // Each box is named over it, not inside it (the FlutterFlow design).
-    expect(find.text('Email / User ID'), findsOneWidget);
+    expect(find.text('Emp Code or email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+    // The first password, said where it is typed (10 November 2026).
+    expect(find.textContaining('your date of birth, DDMMYYYY'), findsOneWidget);
+  });
+
+  testWidgets('the new password screen refuses the date of birth before asking the site', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: NewPasswordScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a new password'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('new-password')), 'short');
+    await tester.enterText(find.byKey(const Key('new-password-again')), 'short');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save password'));
+    await tester.pumpAndSettle();
+    expect(find.text('Use at least 8 characters.'), findsOneWidget);
+    // Signing out is the only other way off this screen.
+    expect(find.widgetWithText(TextButton, 'Sign out'), findsOneWidget);
   });
 
   testWidgets('the site box is folded away until somebody asks for it',

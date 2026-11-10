@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 
-import { appLoginDefault, appLoginProblem, appUserDoc, employeeDoc, makesAppLogin } from "@/lib/newemp";
+import fs from "node:fs";
+import path from "node:path";
+
+import { appLoginDefault, appLoginProblem, appUserDoc, dobPassword, employeeDoc, makesAppLogin } from "@/lib/newemp";
 import { NEW_EMP_STEPS } from "@/data/employees";
 
 /* ---------------------------------------------------------------------------
@@ -38,6 +41,26 @@ describe("the app login's rules", () => {
 			email: "anu@manna.in", first_name: "Anu", last_name: "Mary K", enabled: 1, user_type: "System User",
 			send_welcome_email: 0, new_password: "secret123", roles: [{ role: "Employee" }],
 		});
+	});
+
+	it("makes the Emp Code the User's user name, so the app signs in with it", () => {
+		expect(appUserDoc({ employee_name: "Paul Sunny", employee_number: " MRP861 " },
+			{ email: "paul@manna.in", password: "24032005" })).toMatchObject({ username: "MRP861", email: "paul@manna.in" });
+		expect(appUserDoc({ employee_name: "Paul Sunny" }, { email: "paul@manna.in", password: "x" })).not.toHaveProperty("username");
+	});
+
+	it("gives the date of birth as DDMMYYYY for the first password — 24-03-2005 is 24032005", () => {
+		expect(dobPassword("2005-03-24")).toBe("24032005");
+		expect(dobPassword("1998-11-02")).toBe("02111998");
+		expect(dobPassword("")).toBe("");
+		expect(dobPassword(undefined)).toBe("");
+	});
+
+	it("is the same DDMMYYYY rule as the phone app's, which makes them change it", () => {
+		const dart = fs.readFileSync(path.resolve(__dirname, "../../app/lib/core/first_password.dart"), "utf8");
+		/* day, month, year — group 3, 2, 1 of the same YYYY-MM-DD match. */
+		expect(dart).toContain(String.raw`r'^(\d{4})-(\d{2})-(\d{2})'`);
+		expect(dart).toContain("'${m.group(3)}${m.group(2)}${m.group(1)}'");
 	});
 
 	it("never puts a login or a password on the Employee record", () => {
@@ -108,6 +131,12 @@ describe("Create Employee asks for the login beside Punch Method", () => {
 		await draw({ custom_punch_method: "Mobile App", company_email: "anu@manna.in" });
 		expect(screen.getByLabelText("App login").value).toBe("anu@manna.in");
 		expect(screen.getByLabelText("App password").type).toBe("password");
+	});
+
+	it("says the Emp Code signs in, and that a blank password is the date of birth", async () => {
+		await draw({ custom_punch_method: "Mobile App", company_email: "anu@manna.in", employee_number: "MRP861" });
+		expect(screen.getByLabelText("App password").placeholder).toBe("Date of birth, DDMMYYYY");
+		expect(document.querySelector(".wizlognote").textContent).toContain("Emp Code MRP861");
 	});
 
 	it("draws neither for somebody on the fingerprint machine", async () => {

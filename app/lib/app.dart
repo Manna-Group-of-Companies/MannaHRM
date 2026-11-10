@@ -6,6 +6,7 @@ import 'package:manna_hr_app/core/roster.dart';
 import 'package:manna_hr_app/screens/admin/admin_shell.dart';
 import 'package:manna_hr_app/screens/employee_shell.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
+import 'package:manna_hr_app/screens/new_password_screen.dart';
 import 'package:manna_hr_app/services/admin_api.dart';
 import 'package:manna_hr_app/services/api.dart';
 import 'package:manna_hr_app/ui/brand.dart';
@@ -154,6 +155,7 @@ class MannaHrApp extends StatelessWidget {
 /// The screen for a [Landing].
 Widget screenFor(Landing l) => switch (l) {
       Landing.signIn => const LoginScreen(),
+      Landing.newPassword => const NewPasswordScreen(),
       Landing.employee => const EmployeeShell(),
       Landing.admin => const AdminShell(),
     };
@@ -202,7 +204,10 @@ class _GateState extends State<_Gate> {
       // Asked again on every start, not only at sign-in: a login whose HR role
       // was taken away should stop seeing everybody's day.
       final admin = signedIn && await Api.isAdmin();
-      landing = landingFor(signedIn: signedIn, isAdmin: admin);
+      // Asked on every start too: somebody who closed the app on the new
+      // password screen is still on their date of birth.
+      final first = signedIn && await Api.onFirstPassword();
+      landing = landingFor(signedIn: signedIn, isAdmin: admin, firstPassword: first);
     } catch (_) {
       landing = Landing.signIn;
     }

@@ -4110,6 +4110,7 @@
   .wizbody > .fhtitle { @apply font-display text-norm tracking-normal normal-case pb-[.4rem]; }
   /* Under Reporting Manager when the company has no tagged Manager yet. */
   .wizmgr { @apply m-0 mt-[.5rem] text-fine text-ink-3; }
+  .wizlogin > .wizlognote { grid-column: 1 / -1; margin-top: 0; }
 
   /* A group of fields inside a step, with its own small heading. Steps 2 and 3
      have four each; step 1 has one with no heading, which is their screenshot.
