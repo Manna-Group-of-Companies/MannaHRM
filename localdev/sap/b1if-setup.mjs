@@ -5,7 +5,7 @@
 //     node localdev/sap/b1if-setup.mjs --apply --enable  ...and switches the scenario on (ENABLED = Y)
 //
 // Manna Treads: user table @MANNA_IC (Code = setting, U_Value) and OPOR.U_MannaMtSo, the sales order's DocEntry.
-// Hi-Tech:      user table @MANNA_IC and ORDR.U_MannaMtPo, the purchase order's DocEntry.
+// Hi-Tech:      user table @MANNA_IC, ORDR.U_MannaMtPo, the purchase order's DocEntry, and OPKL.U_Confirmed.
 //
 // A setting already in @MANNA_IC is never overwritten - somebody may have changed it on purpose - except
 // ENABLED by --enable. Test companies only, through sapguard; the live companies get the same by hand, from
@@ -39,6 +39,10 @@ const want = {
 			{ TableName: "ORDR", Name: "MannaMtPo", Description: "Manna Treads PO DocEntry (B1if)", Size: 11 },
 			// The number on Manna Treads' sales order, for people to search Hi-Tech's orders by.
 			{ TableName: "ORDR", Name: "MannaMtSoNo", Description: "Manna Treads SO No.", Size: 20 },
+			// 9 Nov 2026: nobody approves a pick list in ERPNext any more; Hi-Tech's store ticks this on the SAP
+			// pick list once it is picked, and B1if's step 3 and the status sync wait for it (sap-b1if/packages/SETUP.md).
+			{ TableName: "OPKL", Name: "Confirmed", Description: "Confirmed - invoice it", Size: 1, DefaultValue: "N",
+				ValidValuesMD: [{ Value: "Y", Description: "Yes" }, { Value: "N", Description: "No" }] },
 		],
 		settings: {
 			ENABLED: "N", CUSTOMER: "10118", SO_SERIES: "179", SO_WHS: "07",
