@@ -136,3 +136,32 @@ describe("a job on Recruitment", () => {
 		expect(screen.getByLabelText("Must have")).toBeTruthy();
 	});
 });
+
+describe("Bulk upload CVs on the Candidates page", () => {
+	const JOBS = [
+		{ ...OPENING },
+		{ name: "HR-OPN-0002", job_title: "Driver", company: "Manna Rubber", status: "Closed" },
+	];
+	const drawCandidates = () => {
+		act(() => set({
+			...loadedState(), section: "recruitment", subtab: "candidates",
+			rec: { state: "ok", jobs: JOBS, apps: [], criteria: true, detail: true, err: "" },
+		}));
+		return render(<Provider store={store}><Recruitment /></Provider>);
+	};
+
+	it("asks which job first, offering open jobs only, then opens that job's Resumes panel", async () => {
+		const view = drawCandidates();
+		await act(async () => { view.getByRole("button", { name: /Bulk upload CVs/ }).click(); });
+		const select = document.getElementById("bc-job");
+		expect([...select.options].map((o) => o.textContent)).toEqual(["Pick a job", "Accountant (Head Office) — Manna Rubber"]);
+		await act(async () => { view.getByRole("button", { name: "Continue" }).click(); });
+		expect(screen.queryByText(/Resumes —/)).toBeNull();
+		act(() => { fireEvent.change(select, { target: { value: "HR-OPN-0001" } }); });
+		await act(async () => { view.getByRole("button", { name: "Continue" }).click(); });
+		await act(async () => {});
+		expect(document.body.textContent).toContain("Resumes — Accountant");
+		expect(screen.getByLabelText("Must have").value).toBe("Tally");
+		expect(document.body.textContent).toContain("Upload Resumes");
+	});
+});

@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { set, useApp } from "@/store";
+import { getState, set, useApp } from "@/store";
 import { navigate } from "@/routes/router";
 import { createOpening, readCriteriaNote, scoreApplicant, storedScore } from "@/api/recruitment";
 import {
@@ -402,6 +402,42 @@ export function Job() {
 
 /* ----------------------------------------------------------- candidates --- */
 
+/** Bulk upload CVs from the Candidates page (asked for 11 November 2026): pick
+    the job the batch is for, then the same Resumes panel a job's own button
+    opens — one reader, one score, one add, so a CV is treated identically
+    wherever it is uploaded. Open jobs only: a closed one takes no applicants. */
+function BulkCvs({ jobs, onClose }) {
+	const open = (jobs || []).filter((j) => j.status !== "Closed");
+	const [pick, setPick] = useState("");
+	const [name, setName] = useState("");
+	const j = open.find((x) => x.name === name);
+	const done = () => { onClose(); void loadRecruitment({ fresh: true }); };
+	if (j) {
+		const seat = { title: j.job_title, label: j.designation || j.job_title, company: j.company, designation: j.designation || "", department: j.department || "", who: null };
+		return (
+			<SeatResumes seat={seat} openings={jobs} criteriaOk={getState().rec?.criteria}
+				onOpenings={() => loadRecruitment({ fresh: true })} onClose={done} />
+		);
+	}
+	return (
+		<KitModal title="Bulk upload CVs" sub="Which job are these CVs for?" onClose={onClose}>
+			<form noValidate onSubmit={(e) => { e.preventDefault(); if (pick) setName(pick); }}>
+			<div className="k-form-grid">
+				<div className="k-field k-full">
+					<label htmlFor="bc-job">Job</label>
+					<select id="bc-job" className="k-sel" value={pick} onChange={(e) => setPick(e.target.value)}>
+						<option value="">Pick a job</option>
+						{open.map((x) => <option key={x.name} value={x.name}>{x.job_title}{x.company ? ` — ${x.company}` : ""}</option>)}
+					</select>
+					{!open.length ? <small className="k-err">There is no open job. Post one first.</small> : null}
+				</div>
+			</div>
+			<ModalFoot ok="Continue" onCancel={onClose} />
+			</form>
+		</KitModal>
+	);
+}
+
 export function Candidates() {
 	const rec = useRec();
 	const s = useApp();
@@ -409,6 +445,7 @@ export function Candidates() {
 	const [job, setJob] = useState("");
 	const [stage, setStage] = useState("");
 	const [source, setSource] = useState("");
+	const [bulk, setBulk] = useState(false);
 	const jobs = new Map((rec.jobs || []).map((j) => [j.name, j]));
 	const all = (rec.apps || []).filter((a) => !s.company || jobs.get(a.job_title)?.company === s.company);
 	const shown = all.filter((a) => (!q || `${a.applicant_name} ${a.email_id}`.toLowerCase().includes(q.toLowerCase()))
@@ -418,7 +455,12 @@ export function Candidates() {
 	const openApp = (a) => { set({ recApp: a.name }); navigate("recruitment", "applicant"); };
 	return (
 		<div className="kit k-enter">
-			<PageHead title="Candidates" sub="Everyone who applied, across all jobs" />
+			<PageHead title="Candidates" sub="Everyone who applied, across all jobs">
+				<button type="button" className="k-btn k-btn-ink" onClick={() => setBulk(true)}>
+					<KitIcon name="upload" size={18} stroke={2} />Bulk upload CVs
+				</button>
+			</PageHead>
+			{bulk ? <BulkCvs jobs={rec.jobs || []} onClose={() => setBulk(false)} /> : null}
 			<div className="k-card">
 				<div className="k-filters">
 					<div className="k-inp-ic">
