@@ -165,3 +165,22 @@ describe("Bulk upload CVs on the Candidates page", () => {
 		expect(document.body.textContent).toContain("Upload Resumes");
 	});
 });
+
+describe("Delete on the applicant page", () => {
+	it("asks first, then removes the applicant and goes back to Candidates", async () => {
+		const removed = [];
+		const api = await import("@/api/recruitment");
+		vi.spyOn(api, "removeApplicant").mockImplementation(async (n) => { removed.push(n); });
+		act(() => set({
+			...loadedState(), section: "recruitment", subtab: "applicant", recApp: "HR-APP-9",
+			rec: { state: "ok", jobs: [], apps: [{ name: "HR-APP-9", applicant_name: "Paul sunny", email_id: "p@example.invalid", status: "Accepted", creation: "2026-09-24 10:00:00" }], criteria: true, detail: true, err: "" },
+		}));
+		render(<Provider store={store}><Recruitment /></Provider>);
+		await act(async () => {});
+		await act(async () => { screen.getByRole("button", { name: /^Delete$/ }).click(); });
+		expect(document.body.textContent).toContain("Delete Paul sunny?");
+		expect(removed).toEqual([]);
+		await act(async () => { screen.getAllByRole("button", { name: "Delete" }).at(-1).click(); });
+		expect(removed).toEqual(["HR-APP-9"]);
+	});
+});

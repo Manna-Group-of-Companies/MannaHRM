@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import { getState, set, useApp } from "@/store";
 import { navigate } from "@/routes/router";
-import { createOpening, readCriteriaNote, scoreApplicant, storedScore } from "@/api/recruitment";
+import { createOpening, readCriteriaNote, removeApplicant, scoreApplicant, storedScore } from "@/api/recruitment";
 import {
 	JOB_STATUS, REJECTED, STAGES, STAGE_LABEL, addCandidate, addNote, addSource, loadRecruitment, readNotes, readSources,
 	readTemplates, saveJob, editApplicant, setApplicantStatus, setJobStatus,
@@ -572,6 +572,7 @@ export function Applicant() {
 	const [notes, setNotes] = useState(null);
 	const [editing, setEditing] = useState(false);
 	const [scoring, setScoring] = useState(false);
+	const [asking, setAsking] = useState(false);
 	const [note, setNote] = useState("");
 	const a = (rec.apps || []).find((x) => x.name === s.recApp);
 	useEffect(() => {
@@ -594,6 +595,18 @@ export function Applicant() {
 		try { await scoreApplicant(a); await loadRecruitment({ fresh: true }); toast("Scored"); } catch (x) { toast(why(x)); }
 		setScoring(false);
 	};
+	/* Delete (asked for 11 November 2026): the one way to remove an applicant
+	   who has no job to open the Resumes panel from. The site has the last word
+	   — an applicant a Job Offer or onboarding still points at is refused, and
+	   its sentence is shown. */
+	const remove = async () => {
+		try {
+			await removeApplicant(a.name);
+			toast(`${a.applicant_name} deleted`);
+			navigate("recruitment", "candidates");
+			void loadRecruitment({ fresh: true });
+		} catch (x) { toast(why(x)); setAsking(false); }
+	};
 	const send = async (e) => {
 		e.preventDefault();
 		if (!note.trim()) return;
@@ -614,6 +627,9 @@ export function Applicant() {
 					<button type="button" className="k-btn k-btn-line" onClick={() => setEditing(true)}>
 						<KitIcon name="edit" size={18} stroke={2} />Edit
 					</button>
+					<button type="button" className="k-btn k-btn-line" style={{ color: "rgb(var(--bad))" }} onClick={() => setAsking(true)}>
+						<KitIcon name="trash" size={18} stroke={2} />Delete
+					</button>
 					{a.status === "Accepted" ? (
 						<button type="button" className="k-btn k-btn-green" onClick={() => navigate("employees", "new")}>
 							<KitIcon name="user" size={18} stroke={2} />Create profile
@@ -622,6 +638,8 @@ export function Applicant() {
 				</div>
 			</div>
 			{editing ? <EditApplicant a={a} onClose={() => setEditing(false)} /> : null}
+			{asking ? <Confirm title={`Delete ${a.applicant_name}?`} sub="This removes the applicant and their resume from the site. It cannot be undone." ok="Delete"
+				onClose={() => setAsking(false)} onOk={() => void remove()} /> : null}
 			<div className="k-split">
 				<div className="k-card k-profile-card">
 					<div style={{ display: "flex", justifyContent: "center", margin: "4px 0 14px" }}><KitAvatar name={a.applicant_name} size={96} /></div>
