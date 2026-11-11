@@ -45,7 +45,7 @@ const want = {
 				ValidValuesMD: [{ Value: "Y", Description: "Yes" }, { Value: "N", Description: "No" }] },
 		],
 		settings: {
-			ENABLED: "N", CUSTOMER: "10118", SO_SERIES: "179", SO_WHS: "07",
+			ENABLED: "N", CUSTOMER: "10118", SO_SERIES: "179", SO_WHS: "01",
 			HOME_STATE: "KL", TAX_IN_STATE: "CG+SG@18", TAX_OUT_STATE: "IGST@18",
 		},
 	},

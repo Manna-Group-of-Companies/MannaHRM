@@ -79,7 +79,8 @@ const config = {
 		po_status_gate: "PO Approved - Ready for SAP",
 		fixed_card_code: "10118",
 		send_line_unit_price: true,
-		line_warehouse: "07",
+		// 01 STORE, where the stock is and the stock step reads (11 Nov 2026); 07 is the aged-stock store.
+		line_warehouse: "01",
 		status_source: "document_status",
 		stamp_erpnext_name_in: "NumAtCard",
 		delivery_scan_days: 120,
