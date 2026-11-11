@@ -32,9 +32,10 @@ UNAPPLIED_AFTER_HOURS = 24
 NOTIFICATIONS = [
 	{
 		"name": "Manna: correction waiting too long",
-		"subject": "Attendance correction waiting {0} days: {{ doc.employee_name }}".format(
-			STALE_AFTER_DAYS
-		),
+		# Concatenated, not `.format`ted: `.format` reads `{{` as a literal `{`,
+		# so the subject went out as "{ doc.employee_name }" — the placeholder,
+		# not the person (seen in a real inbox, 8 November 2026).
+		"subject": "Attendance correction waiting " + str(STALE_AFTER_DAYS) + " days: {{ doc.employee_name }}",
 		"document_type": "Employee Attendance Regularization",
 		"event": "Days After",
 		"date_changed": "creation",
