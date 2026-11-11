@@ -32,6 +32,10 @@ UNAPPLIED_AFTER_HOURS = 24
 NOTIFICATIONS = [
 	{
 		"name": "Manna: correction waiting too long",
+		# Off (HR, 11 November 2026): it mailed every HR Manager login, nine
+		# addresses, about one person's undecided correction. The record stays
+		# so it can be switched back on from the desk.
+		"enabled": 0,
 		# Concatenated, not `.format`ted: `.format` reads `{{` as a literal `{`,
 		# so the subject went out as "{ doc.employee_name }" — the placeholder,
 		# not the person (seen in a real inbox, 8 November 2026).
@@ -86,10 +90,10 @@ def ensure_notifications():
 		doc.update(spec)
 		doc.doctype = "Notification"
 		doc.channel = "Email"
-		# On by default. A notification shipped disabled is a notification
-		# nobody switches on, and both of these only fire when something has
-		# gone wrong.
-		doc.enabled = 1
+		# On unless its definition says otherwise. A notification shipped
+		# disabled by accident is one nobody switches on, and these only fire
+		# when something has gone wrong; one HR asked to stop says "enabled": 0.
+		doc.enabled = spec.get("enabled", 1)
 		doc.set("recipients", [])
 		for r in recipients:
 			doc.append("recipients", r)

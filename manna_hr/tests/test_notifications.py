@@ -18,3 +18,10 @@ def test_every_subject_and_message_keeps_its_placeholders_as_jinja():
 def test_the_waiting_subject_names_the_person_and_the_days():
 	subject = NOTIFICATIONS[0]["subject"]
 	assert subject == "Attendance correction waiting %d days: {{ doc.employee_name }}" % STALE_AFTER_DAYS
+
+
+def test_the_correction_waiting_email_is_off_and_the_other_stays_on():
+	# HR asked for the waiting-too-long mail to stop (11 November 2026).
+	on = {n["name"]: n.get("enabled", 1) for n in NOTIFICATIONS}
+	assert on["Manna: correction waiting too long"] == 0
+	assert on["Manna: correction approved but the day was never rebuilt"] == 1
