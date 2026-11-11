@@ -810,3 +810,12 @@
   .k-filters.emfilters{grid-template-columns:minmax(0,1fr) auto auto !important}
   .k-filters.emfilters>.k-inp-ic:first-child{grid-column:1/-1}
 }
+
+/* A job's scoring criteria, under its heading on Recruitment (11 Nov 2026). */
+.k-critbar{display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:16px}
+.k-critbar .k-grow{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.k-critbar .k-grow b{font-size:14px}
+.k-critbar .k-grow span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-critbar .k-critnone{font-style:italic}
+.k-critbar .k-btn{flex-shrink:0}
+@media (max-width:640px){.k-critbar{flex-wrap:wrap}.k-critbar .k-grow span{white-space:normal}}

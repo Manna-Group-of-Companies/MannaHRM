@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import { set, useApp } from "@/store";
 import { navigate } from "@/routes/router";
-import { createOpening, scoreApplicant, storedScore } from "@/api/recruitment";
+import { createOpening, readCriteriaNote, scoreApplicant, storedScore } from "@/api/recruitment";
 import {
 	JOB_STATUS, REJECTED, STAGES, STAGE_LABEL, addCandidate, addNote, addSource, loadRecruitment, readNotes, readSources,
 	readTemplates, saveJob, editApplicant, setApplicantStatus, setJobStatus,
@@ -20,6 +20,7 @@ import {
 import { loadOpenings } from "@/api/recruitment";
 import { dmy, tidyDept } from "@/lib/format";
 import SeatResumes from "@/features/employees/SeatResumes";
+import SeatCriteria, { criteriaSummary } from "@/features/employees/SeatCriteria";
 import KitIcon from "@/components/kit/KitIcon";
 import KitAvatar from "@/components/kit/KitAvatar";
 import { EmptyState, PageHead, Pill, Seg, SegTabs, Who, stagger } from "@/components/kit/ui";
@@ -263,7 +264,15 @@ export function Job() {
 	const [edit, setEdit] = useState(false);
 	const [drag, setDrag] = useState("");
 	const [adding, setAdding] = useState("");
+	const [crit, setCrit] = useState(false);
+	/* The criteria comment, on a site without the criteria fields — read for
+	   this job so the strip below can say what they are. */
+	const [note, setNote] = useState({});
 	const j = (rec.jobs || []).find((x) => x.name === s.recJob);
+	const readNote = () => (j && !rec.criteria
+		? readCriteriaNote(j.name).then(setNote).catch(() => setNote({}))
+		: setNote({}));
+	useEffect(() => { void readNote(); }, [j?.name, rec.criteria]);
 	const back = () => navigate("recruitment", "overview");
 	if (rec.state === "ok" && !j) {
 		return <div className="kit"><div className="k-card"><EmptyState icon="brief" title="This job is not there" sub="It may have been closed or renamed."><button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={back}>Go to Jobs</button></EmptyState></div></div>;
@@ -295,6 +304,20 @@ export function Job() {
 					<Seg label="View" value={view} onChange={setView} options={[["table", "Table"], ["pipeline", "Pipeline"]]} />
 					<button type="button" className="icon-btn" aria-label="Edit job" title="Edit job" onClick={() => setEdit(true)}><KitIcon name="edit" size={20} stroke={2} /></button>
 				</div>
+			</div>
+			{/* What candidates on this job are scored against (asked for 11
+			    November 2026) — the same criteria as the chart's seat box and
+			    Bulk upload CVs, edited in one form (SeatCriteria.jsx). */}
+			<div className="k-card k-critbar" role="region" aria-label="Job scoring criteria">
+				<div className="k-grow">
+					<b>Scoring criteria</b>
+					<span className={"k-muted" + (criteriaSummary({ ...j, ...note }) ? "" : " k-critnone")}>
+						{criteriaSummary({ ...j, ...note }) || "None set — candidates on this job are not scored."}
+					</span>
+				</div>
+				<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => setCrit(true)}>
+					<KitIcon name="edit" size={16} stroke={2} />{criteriaSummary({ ...j, ...note }) ? "Edit criteria" : "Set criteria"}
+				</button>
 			</div>
 			{view === "table" ? (
 				<div className="k-card">
@@ -365,6 +388,11 @@ export function Job() {
 				<SeatResumes seat={seat} openings={rec.jobs || []} criteriaOk={rec.criteria}
 					onOpenings={() => loadRecruitment({ fresh: true })}
 					onClose={() => { setUpload(false); void loadRecruitment({ fresh: true }); }} />
+			) : null}
+			{crit ? (
+				<SeatCriteria seat={seat} openings={rec.jobs || []} criteriaOk={rec.criteria}
+					onOpenings={async () => { await loadRecruitment({ fresh: true }); await readNote(); }}
+					onClose={() => { setCrit(false); void loadRecruitment({ fresh: true }); void readNote(); }} />
 			) : null}
 			{edit ? <EditJob j={j} onClose={() => setEdit(false)} /> : null}
 			{adding ? <AddCandidate jobs={rec.jobs || []} job={j.name} stage={adding} onClose={() => setAdding("")} /> : null}

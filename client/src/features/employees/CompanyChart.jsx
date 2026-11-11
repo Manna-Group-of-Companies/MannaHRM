@@ -7,13 +7,14 @@ import { HEAD_OFFICE_CHART, LEVELS, flowOf, headOfficeOf, headOfficeSeats, peopl
 import { casualLeaveGroup } from "@/lib/monthlyleave";
 import { makeGrades, readGrades, saveSuggested } from "@/api/hierarchy";
 import { loadSeparations } from "@/api/load";
-import { applicantCounts, loadOpenings } from "@/api/recruitment";
+import { applicantCounts, loadOpenings, readCriteriaNotes } from "@/api/recruitment";
 import {
 	guessDesignation, openingFor, resigning, seatOfPerson, seatOfRole, seatTitle, vacatedSeats,
 } from "@/lib/vacancy";
 import { blankChart, cleanChart, hasChart, startFrom } from "@/lib/orgchart";
 import { readChart, saveChart } from "@/api/orgchart";
 import SeatResumes from "@/features/employees/SeatResumes";
+import SeatCriteria, { criteriaSummary } from "@/features/employees/SeatCriteria";
 import DrawnChart from "@/features/employees/DrawnChart";
 import { openEmployee } from "@/features/employees/openEmployee";
 import { Empty, Note } from "@/components/ui";
@@ -66,7 +67,21 @@ const resumesLabel = (n) => (n ? `Resumes (${fmt(n)})` : "Add resumes");
 /* A seat nobody fills: the card's shape with no person in it, so the row
    still shows every department HR named — and, where somebody left it, who.
    Its button opens the resumes for the seat. */
-const Vacant = ({ role, left, n, onResumes }) => (
+/* A seat's scoring criteria, in its box (asked for 11 November 2026): what
+   they ask for in one line, or that none are set, and the button that edits
+   them — the same criteria Add resumes scores against (SeatCriteria.jsx). */
+const SeatCrit = ({ crit, label, onCriteria }) => (
+	<span className="hccrit">
+		<span className={"hccritsum" + (crit ? "" : " none")} title={crit || "No scoring criteria — resumes are not scored."}>
+			{crit || "No scoring criteria"}
+		</span>
+		<button type="button" className="embtn hcseatbtn hccritbtn" aria-label={`Scoring criteria for ${label}`} onClick={onCriteria}>
+			Scoring criteria
+		</button>
+	</span>
+);
+
+const Vacant = ({ role, left, n, onResumes, crit, onCriteria }) => (
 	<div className="hcid hcvacant">
 		<span className="hcidava" aria-hidden="true">?</span>
 		<span className="hcidname">{left ? "Vacated" : "Not assigned"}</span>
@@ -75,13 +90,14 @@ const Vacant = ({ role, left, n, onResumes }) => (
 		<button type="button" className="embtn pri hcseatbtn" aria-label={`${resumesLabel(n)} for ${role}`} onClick={onResumes}>
 			{resumesLabel(n)}
 		</button>
+		{onCriteria ? <SeatCrit crit={crit} label={role} onCriteria={onCriteria} /> : null}
 		<span className="hcidfoot">{role}</span>
 	</div>
 );
 
 /* Somebody serving notice: their card as ever, and under it the way to start
    on their replacement. */
-const Leaving = ({ e, sep, role, dashed, n, onResumes }) => (
+const Leaving = ({ e, sep, role, dashed, n, onResumes, crit, onCriteria }) => (
 	<div className="hcslot">
 		<Person e={e} role={role} dashed={dashed} />
 		<span className="hcleave">Resigned{sep.relieving_date ? ` · leaves ${dmy(sep.relieving_date)}` : ""}</span>
@@ -89,6 +105,7 @@ const Leaving = ({ e, sep, role, dashed, n, onResumes }) => (
 			onClick={onResumes}>
 			{n ? resumesLabel(n) : "Find replacement"}
 		</button>
+		<SeatCrit crit={crit} label={`${e.employee_name || e.name}'s seat`} onCriteria={onCriteria} />
 	</div>
 );
 
@@ -97,7 +114,8 @@ function Card({ e, role, dashed, ctx }) {
 	const sep = ctx.sepOf[e.name];
 	if (!sep || !resigning(sep)) return <Person e={e} role={role} dashed={dashed} />;
 	const seat = seatOfPerson({ ...e, ...sep });
-	return <Leaving e={e} sep={sep} role={role} dashed={dashed} n={ctx.count(seat)} onResumes={() => ctx.open(seat)} />;
+	return <Leaving e={e} sep={sep} role={role} dashed={dashed} n={ctx.count(seat)} onResumes={() => ctx.open(seat)}
+		crit={ctx.crit(seat)} onCriteria={() => ctx.openCriteria(seat)} />;
 }
 
 /** The head office: HR's two rows, GM over the department heads. */
@@ -121,7 +139,8 @@ function HeadOffice({ company, employees, back, ctx, seats, edit }) {
 						{row.seats.map(({ role, e }) => {
 							if (e) return <Card key={role} e={e} role={role} ctx={ctx} />;
 							const seat = seats[role];
-							return <Vacant key={role} role={role} left={seat.who} n={ctx.count(seat)} onResumes={() => ctx.open(seat)} />;
+							return <Vacant key={role} role={role} left={seat.who} n={ctx.count(seat)} onResumes={() => ctx.open(seat)}
+									crit={ctx.crit(seat)} onCriteria={() => ctx.openCriteria(seat)} />;
 						})}
 					</Box>
 				</div>
@@ -153,13 +172,17 @@ export default function CompanyChart() {
 	/* The open seats: who is serving notice and who has left (the separations
 	   read, which carries every employee's dates), the openings they are
 	   recruited under, and how many resumes each holds. */
-	const [openings, setOpenings] = useState({ rows: [], criteria: false, counts: {} });
+	const [openings, setOpenings] = useState({ rows: [], criteria: false, counts: {}, notes: {} });
 	const [seat, setSeat] = useState(null);
+	const [critSeat, setCritSeat] = useState(null);
 	const readOpenings = async () => {
 		try {
 			const r = await loadOpenings();
 			const counts = await applicantCounts(r.rows).catch(() => ({}));
-			setOpenings({ rows: r.rows, criteria: r.criteria, counts });
+			/* A site without the criteria fields keeps them as a comment on each
+			   opening; read for the open ones, so their boxes can say them. */
+			const notes = r.criteria ? {} : await readCriteriaNotes(r.rows.filter((o) => o.status !== "Closed").map((o) => o.name));
+			setOpenings({ rows: r.rows, criteria: r.criteria, counts, notes });
 		} catch { /* no openings read; every seat still opens its panel */ }
 	};
 	useEffect(() => { void loadSeparations(); void readOpenings(); }, []);
@@ -175,10 +198,24 @@ export default function CompanyChart() {
 			return o ? openings.counts[o.name] || 0 : 0;
 		},
 		open: setSeat,
-		panel: seat ? (
-			<SeatResumes seat={seat} openings={openings.rows} criteriaOk={openings.criteria}
-				onOpenings={readOpenings} onClose={() => setSeat(null)} />
-		) : null,
+		/* The seat's criteria in one line for its box, or "" for none. */
+		crit: (st) => {
+			const o = openingFor(openings.rows, st.title, st.company);
+			return o ? criteriaSummary({ ...o, ...(openings.notes[o.name] || {}) }) : "";
+		},
+		openCriteria: setCritSeat,
+		panel: (
+			<>
+				{seat ? (
+					<SeatResumes seat={seat} openings={openings.rows} criteriaOk={openings.criteria}
+						onOpenings={readOpenings} onClose={() => { setSeat(null); void readOpenings(); }} />
+				) : null}
+				{critSeat ? (
+					<SeatCriteria seat={critSeat} openings={openings.rows} criteriaOk={openings.criteria}
+						onOpenings={readOpenings} onClose={() => setCritSeat(null)} />
+				) : null}
+			</>
+		),
 	};
 
 	/* Head-office seats with nobody Active on them, each with whoever last
@@ -267,14 +304,14 @@ export default function CompanyChart() {
 	const face = (c) => {
 		if (c.kind === "seat") {
 			const st = seatFor(c.role);
-			return <Vacant role={c.role} n={ctx.count(st)} onResumes={() => setSeat(st)} />;
+			return <Vacant role={c.role} n={ctx.count(st)} onResumes={() => setSeat(st)} crit={ctx.crit(st)} onCriteria={() => ctx.openCriteria(st)} />;
 		}
 		const e = byName[c.emp];
 		if (e && e.status === "Active") return <Card e={e} ctx={ctx} />;
 		const left = sepByName[c.emp] || e;
 		if (!left) return <Vacant role="Unknown" n={0} onResumes={() => setSeat(seatFor("Position"))} />;
 		const st = seatOfPerson(left);
-		return <Vacant role={left.designation || "Position"} left={left} n={ctx.count(st)} onResumes={() => setSeat(st)} />;
+		return <Vacant role={left.designation || "Position"} left={left} n={ctx.count(st)} onResumes={() => setSeat(st)} crit={ctx.crit(st)} onCriteria={() => ctx.openCriteria(st)} />;
 	};
 	const nameOf = (c) => (c.kind === "seat" ? `${c.role} (vacant)` : c.kind === "label" ? c.text
 		: byName[c.emp]?.employee_name || sepByName[c.emp]?.employee_name || c.emp);
@@ -384,7 +421,7 @@ export default function CompanyChart() {
 						{b.suggested.map((e) => <Card key={e.name} e={e} dashed ctx={ctx} />)}
 						{vacated.filter((v) => v.level === b.level).map(({ e }) => {
 							const st = seatOfPerson(e);
-							return <Vacant key={e.name} role={e.designation || b.level} left={e} n={ctx.count(st)} onResumes={() => setSeat(st)} />;
+							return <Vacant key={e.name} role={e.designation || b.level} left={e} n={ctx.count(st)} onResumes={() => setSeat(st)} crit={ctx.crit(st)} onCriteria={() => ctx.openCriteria(st)} />;
 						})}
 					</Box>
 				</div>
@@ -409,7 +446,7 @@ export default function CompanyChart() {
 						{flow.rest.map((e) => <Card key={e.name} e={e} ctx={ctx} />)}
 						{vacated.filter((v) => !v.level).map(({ e }) => {
 							const st = seatOfPerson(e);
-							return <Vacant key={e.name} role={e.designation || "Position"} left={e} n={ctx.count(st)} onResumes={() => setSeat(st)} />;
+							return <Vacant key={e.name} role={e.designation || "Position"} left={e} n={ctx.count(st)} onResumes={() => setSeat(st)} crit={ctx.crit(st)} onCriteria={() => ctx.openCriteria(st)} />;
 						})}
 					</Box>
 				</>

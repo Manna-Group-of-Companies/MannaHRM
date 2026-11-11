@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "@/store";
 import { deskUrl } from "@/lib/desk";
 import { dmy } from "@/lib/format";
-import { CRITERIA_FIELDS, criteriaOf, hasCriteria } from "@/lib/resumescore";
+import { criteriaOf, hasCriteria } from "@/lib/resumescore";
 import { ACCEPT } from "@/lib/resumetext";
 import { openingFor } from "@/lib/vacancy";
 import {
@@ -10,6 +10,7 @@ import {
 	problemOf, readCriteriaNote, readResume, removeApplicant, rescore, saveCriteria, storedScore,
 } from "@/api/recruitment";
 import { Empty, Modal, Scroll } from "@/components/ui";
+import { BLANK, CriteriaForm, draftOf, sameDraft } from "@/features/employees/SeatCriteria";
 
 /* ---------------------------------------------------------------------------
    Resumes for one open seat on the hierarchy chart (12 October 2026).
@@ -23,14 +24,8 @@ import { Empty, Modal, Scroll } from "@/components/ui";
    The score is lib/resumescore.js and the writes are api/recruitment.js.
    --------------------------------------------------------------------------- */
 
-const BLANK = { must: "", good: "", experience: "", qualification: "", location: "" };
-
-/* A position that never set a minimum reads back as 0, which is a box
-   showing "0" that nobody typed; it is drawn empty. */
-const draftOf = (o) => Object.fromEntries(Object.entries(CRITERIA_FIELDS)
-	.map(([k, f]) => [k, k === "experience" && !Number(o?.[f]) ? "" : o?.[f] ?? ""]));
-
-const sameDraft = (a, b) => Object.keys(BLANK).every((k) => String(a[k] ?? "").trim() === String(b[k] ?? "").trim());
+/* The criteria form, its blank and its comparison are SeatCriteria.jsx's — one
+   form wherever the criteria are edited. */
 
 const band = (score) => (score == null ? "" : score >= 7 ? "hi" : score >= 4 ? "mid" : "lo");
 
@@ -253,38 +248,7 @@ export default function SeatResumes({ seat, openings, criteriaOk, onOpenings, on
 				</div>
 			) : (
 				<>
-					<section className="rcrit" aria-label="Scoring criteria">
-						<h4>Scoring criteria</h4>
-						{(
-							<div className="rcgrid">
-								<label>Must have
-									<input aria-label="Must have" value={draft.must} placeholder="AutoCAD, Tally / Tally Prime"
-										onChange={(e) => setDraft({ ...draft, must: e.target.value })} />
-								</label>
-								<label>Good to have
-									<input aria-label="Good to have" value={draft.good} placeholder="SAP, GST"
-										onChange={(e) => setDraft({ ...draft, good: e.target.value })} />
-								</label>
-								<label>Minimum experience (years)
-									<input aria-label="Minimum experience (years)" type="number" min="0" step="0.5" value={draft.experience}
-										onChange={(e) => setDraft({ ...draft, experience: e.target.value })} />
-								</label>
-								<label>Qualification
-									<input aria-label="Qualification" value={draft.qualification} placeholder="B.Tech / Diploma / ITI"
-										onChange={(e) => setDraft({ ...draft, qualification: e.target.value })} />
-								</label>
-								<label>Location
-									<input aria-label="Location" value={draft.location} placeholder="Kottayam, Ernakulam"
-										onChange={(e) => setDraft({ ...draft, location: e.target.value })} />
-								</label>
-								<div className="racts">
-									<button className="embtn pri" disabled={!dirty || !!busy} onClick={() => void keepCriteria()}>
-										{busy === "criteria" ? "Saving…" : "Save"}
-									</button>
-								</div>
-							</div>
-						)}
-					</section>
+						<CriteriaForm draft={draft} setDraft={setDraft} dirty={dirty} busy={busy} onSave={keepCriteria} />
 
 					<div className="onbbar">
 						<span className="segs" role="group" aria-label="Source">

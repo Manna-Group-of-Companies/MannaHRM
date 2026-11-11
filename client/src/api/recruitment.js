@@ -160,6 +160,17 @@ export async function readCriteriaNote(name) {
 	return notes[0]?.fields || {};
 }
 
+/** The criteria comments of several openings at once, as `{ name: fields }` —
+    for the chart's seat boxes and a job's page, which summarise them on a site
+    without the fields. An opening whose comments cannot be read is left out,
+    which reads as "none set" rather than stopping the rest. */
+export async function readCriteriaNotes(names) {
+	const out = {};
+	await Promise.all([...new Set(names || [])].filter(Boolean).map((n) =>
+		readCriteriaNote(n).then((f) => { out[n] = f; }).catch(() => {})));
+	return out;
+}
+
 /** The position's criteria, as typed. Only what changed is sent. `inFields`
     false writes them as a comment instead — see above. */
 export async function saveCriteria(opening, draft, inFields = true) {

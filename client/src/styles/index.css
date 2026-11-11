@@ -4111,6 +4111,8 @@
   /* Under Reporting Manager when the company has no tagged Manager yet. */
   .wizmgr { @apply m-0 mt-[.5rem] text-fine text-ink-3; }
   .wizlogin > .wizlognote { grid-column: 1 / -1; margin-top: 0; }
+  .rcrescore { @apply mt-[.6rem] items-center; }
+  .rcrescore .rseat { @apply m-0; }
 
   /* A group of fields inside a step, with its own small heading. Steps 2 and 3
      have four each; step 1 has one with no heading, which is their screenshot.
@@ -7178,6 +7180,11 @@ kbd {
 /* An open seat's way to its resumes (lib/vacancy.js): inside a vacant card,
    and under the card of somebody serving notice, with what the record says. */
 .hcseatbtn { margin-top: .45rem; padding: .25rem .6rem; font-size: theme(fontSize.tiny); }
+/* A seat's scoring criteria in its box: one clipped line, the button under it. */
+.hccrit { display: flex; flex-direction: column; align-items: center; gap: .15rem; width: 100%; min-width: 0; margin-top: .35rem; }
+.hccritsum { max-width: 100%; font-size: theme(fontSize.tiny); color: rgb(var(--ink-2)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hccritsum.none { color: rgb(var(--ink-3)); font-style: italic; }
+.hccrit .hccritbtn { margin-top: 0; }
 .hcslot { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
 .hcleave { font-size: theme(fontSize.tiny); font-weight: 600; color: rgb(var(--bad)); }
 .hcrowfit .hcslot { min-width: 0; }
