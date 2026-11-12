@@ -228,6 +228,7 @@ The rest need more:
 | `flow.mjs`, `receive.mjs` | A local ERPNext, `Manna_CMMS` (running, for `receive`), and `localdev/TEST_LOGINS.md` |
 | `copy-items.mjs`, `items-check.mjs`, `erp-uom-test.mjs`, `retire-copied-requests.mjs` | `Manna_CMMS/server/.env`, for the local ERPNext key |
 | `make-test-logins.mjs` (in `localdev/`) | A local ERPNext |
+| `setup-b1if-erp.mjs` (in `localdev/`) | A local ERPNext, `Manna_CMMS/server/.env` for its key, `SALES_DASHBOARD` and Python (§8) |
 
 Both sync wrappers refuse to run unless ERPNext is local. **Never point them at
 the live ERPNext**: the sync reads its SAP company names from ERPNext, and the
@@ -248,7 +249,7 @@ PC's Windows user name** wherever it appears.
 |---|---|
 | `MannaHRM` | `git clone https://github.com/Manna-Group-of-Companies/MannaHRM` into `Documents\MANNA\`, then put `localdev` inside it. `setup_bench.sh` links `manna_hr` from this clone. |
 | `Manna_CMMS` | Its own repo, cloned beside `MannaHRM`. |
-| `SALES_DASHBOARD` | Its own repo, cloned beside them. Only needed for the sales order sync. **Check out `sap/manna-first-order-flow`** (`git checkout sap/manna-first-order-flow`): until it is merged, `main` has no `order_flow.mode = manna_first`, and `run-order-sync.mjs` needs it. |
+| `SALES_DASHBOARD` | Its own repo, cloned beside them. Needed for the sales order sync and for B1if (§8). **Check out `sap/order-flow-with-approval`, or `live-release`** (§7 says which): `main` has neither `order_flow.mode = manna_first`, which `run-order-sync.mjs` needs, nor `sap-b1if/`. |
 | A Frappe Cloud backup | *Sites → mannarubber → Backups → Download*: **database**, **public files** and **private files**. Downloaded by someone with Frappe Cloud access. |
 | `C:\Users\<user>\.wslconfig` | Two lines: `[wsl2]` and `networkingMode=mirrored`. Without them PyPI downloads crawl through the office gateway. |
 
@@ -280,8 +281,10 @@ PC's Windows user name** wherever it appears.
 
 **About the backup:** it is a full copy of production, with **real salaries,
 bank details and phone numbers**. It stays on the PC it was restored to, inside
-WSL. Never add a firewall rule for port 8000, and delete the downloaded backup
-files once the restore has worked.
+WSL. Port 8000 stays closed to the office network, with one exception: the two
+rules in §8, which open it to the SAP server's address and nothing else, for as
+long as B1if is posting to this PC. Delete the downloaded backup files once the
+restore has worked.
 
 ---
 
@@ -298,39 +301,165 @@ git -C SALES_DASHBOARD checkout sap/order-flow-with-approval
 git -C SALES_DASHBOARD pull origin sap/order-flow-with-approval
 ```
 
-**Which SALES_DASHBOARD branch (6 Nov 2026):** `sap/order-flow-with-approval`.
-It is the order flow (`sap/manna-first-order-flow`) with Paul's
-`feature/sales-targets-pick-list` merged in: production approves each pick list,
-Team Targets with the SAP invoice credit history, Product Sales, and the
-WhatsApp messages. **Only a pick list a production manager has approved goes to
-SAP**; until then PASS K logs "waiting for a production manager to approve it".
-`sap/manna-first-order-flow` is kept as it was, without approval.
+**Which SALES_DASHBOARD branch (12 Nov 2026):** `sap/order-flow-with-approval`
+holds the SAP side: the order sync, `sap-b1if/` and what B1if posts to. Every
+commit on it is also in **`live-release`**, the 14 Nov release, which adds the
+app's and the dashboard's own work. Take `live-release` to test the whole system
+as it will ship, and `sap/order-flow-with-approval` for the SAP side alone; the
+commands above work with either name.
+
+The branch's name is older than its rule. Since 9 Nov 2026 **nobody approves a
+pick list in ERPNext**: every submitted pick list goes to Hi-Tech's SAP, and the
+store confirms it there (the pick list's *Confirmed* field, `OPKL.U_Confirmed`).
+The dashboard's Pick List Approval page and `manna_pick_list_approve` still
+exist and nothing reads them.
 
 `sap.local.json`, `TEST_LOGINS.md` and the `.env` files are gitignored, so a
 pull never touches them. Then, with the local ERPNext started (§6 step 4), from
 `MannaHRM`, each a dry run first and then with `--apply`:
 
-1. `node localdev/apply-sales-erp.mjs`: creates any sales doctype or Server
-   Script the local site lacks, and updates a script whose code changed (the
-   `SAP Invoice` doctype came this way on 5 Nov 2026, `manna_pick_list_approve`
-   on 6 Nov). It never changes a doctype that exists.
-2. `node localdev/add-sales-fields.mjs`: adds the fields an existing sales
-   doctype lacks (the three approval fields on `Manna Pick List`, 6 Nov 2026).
-   It only adds; a field already on the site is never changed.
-3. `node localdev/sap/run-credit-sync.mjs`: credit limits, outstanding, payment
+1. `node localdev/setup-b1if-erp.mjs`: everything the local site needs from the
+   sales repo, in one run. It runs `apply-sales-erp.mjs` (a missing doctype or
+   Server Script, a script whose code changed) and `add-sales-fields.mjs` (a
+   field an existing doctype lacks), which can still be run on their own, and
+   then adds what those two do not cover: the order-seen fields, the WhatsApp
+   doctypes and scripts held in test mode, what B1if posts to, the sync user's
+   key and the write switch. §8 says what each is for. A doctype or field
+   already on the site is never changed.
+2. `node localdev/sap/run-credit-sync.mjs`: credit limits, outstanding, payment
    terms and SAP invoices from `TEST_MANNA_TREADS`.
-4. `node localdev/sap/run-order-sync.mjs`: the order flow (PASS M, P, H, K).
+3. `node localdev/sap/run-order-sync.mjs`: the order flow (PASS M, P, H, K).
    `--apply` posts to the TEST companies.
 
 To test a pick list end to end: the order must be manager-approved
-(`PO Approved - Ready for SAP`) before a pick list can be made, and the pick list
-production-approved (the dashboard's Pick List Approval page, or
-`manna_pick_list_approve` as a production manager or System Manager) before
-PASS K sends it. A customer the credit sync has given real SAP figures may send
-a new order to Pending Approval first; that is the credit rule working.
+(`PO Approved - Ready for SAP`) before a pick list can be made. PASS K sends
+every submitted pick list to Hi-Tech's SAP, and B1if invoices it once the store
+has set *Confirmed* to Yes on that SAP pick list (Inventory → Pick and Pack →
+Pick List, the header field). Until then PASS K logs that it is waiting for the
+store, however long that takes. A customer the credit sync has given real SAP
+figures may send a new order to Pending Approval first; that is the credit rule
+working.
 
 B1if and the TEST companies are on the SAP server and shared by every PC, while
 each PC's ERPNext is its own. Two PCs therefore number orders and pick lists the
 same (both can make `PICK-00426`), and Hi-Tech's SAP would get two pick lists
 with one name; only the first is invoiced. Test the pick-list flow from one PC
 at a time.
+
+---
+
+## 8. B1if posting to this PC (the end-to-end test)
+
+B1if on the SAP server sends customers, items, stock, order status, payments,
+invoices, credit and prices to **one** ERPNext address. This section moves that
+address to this PC. It needs §6 (a local ERPNext restored from a live backup)
+and §7 (the latest code) first.
+
+**Only one PC receives at a time.** The moment B1if is pointed here, the PC it
+was pointed at stops getting anything. When it is pointed back, that PC gets
+what the next runs send and nothing of what it missed.
+
+### On this PC
+
+1. Start ERPNext (`localdev/start.sh`) and make the site the bench's default, or
+   a request that names the PC by its IP address is answered "not found":
+
+   ```bash
+   cd ~/frappe-bench && bench use manna.localhost
+   ```
+
+2. From `MannaHRM`, a dry run and then for real:
+
+   ```powershell
+   node localdev/setup-b1if-erp.mjs
+   ```
+
+   ```powershell
+   node localdev/setup-b1if-erp.mjs --apply
+   ```
+
+   What it makes, and what goes wrong without each:
+
+   | Step | Without it |
+   |---|---|
+   | Sales doctypes, scripts, fields | `SAP Invoice` and `SAP Payment` do not exist, so the invoice and payment posts fail |
+   | Order-seen fields | the manager's "seen" tick on an order is refused |
+   | WhatsApp doctypes and scripts, **test mode forced on** | no "payment received" message is queued; with test mode off, a copy of live could message real customers |
+   | What B1if posts to (`install_local.py`) | every post answers "method not found" |
+   | Sync user `sapsync@mannarubber.com` and its key | B1if has nothing to sign in with |
+   | Write switch (`custom_b1if_writes = all`) | every post is answered as a dry run and nothing changes |
+
+   The key goes to `SALES_DASHBOARD\sap-b1if\erpnext\.sapsync-local-key.txt`,
+   which git ignores. It is this PC's own: **never copy the file from another
+   PC, never paste it into chat, never use the live site's key.** The script
+   keeps a key that still signs in. Making a new one kills the old one that
+   second, so use `--new-key` only when B1if is about to be given the new one.
+
+3. In an **administrator** PowerShell, open port 8000 to the SAP server only.
+   The first rule is for WSL's own firewall, the second for Windows':
+
+   ```powershell
+   New-NetFirewallHyperVRule -Name "ERPNext-from-SAP" -DisplayName "ERPNext 8000 from SAP server" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 8000 -RemoteAddresses 192.168.100.200 -Action Allow
+   ```
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "ERPNext 8000 from SAP server" -Direction Inbound -Protocol TCP -LocalPort 8000 -RemoteAddress 192.168.100.200 -Action Allow
+   ```
+
+4. Note this PC's office IP address (`ipconfig`, the `192.168.…` one).
+
+### On the SAP server (over RDP)
+
+5. Check the PC answers, in PowerShell there; it must say `pong`:
+
+   ```powershell
+   Invoke-RestMethod http://<this PC's IP>:8000/api/method/ping
+   ```
+
+6. B1if console (`http://127.0.0.1:8080`) → **SLD** → the system
+   **`ERPNEXT_LOCAL`**. Change three things and save: the **host** to this PC's
+   IP, the **user** to the key and the **password** to the secret from step 2's
+   file (the two halves of `token <key>:<secret>`). Nothing is imported or
+   rebuilt: every package names that system by its id.
+
+### Check it
+
+7. Within five minutes the timer syncs have run. On this PC, **SAP Sync
+   Control → "B1iF: last answers"** shows each kind with a time of now and
+   `age_seconds` near 0. A kind that is missing was refused: B1if's **Monitoring
+   → Message Log** has the answer ERPNext gave.
+8. Then the order flow, from this PC: an order in the app or dashboard,
+   `node localdev/sap/run-order-sync.mjs --apply`, the pick list, *Confirmed* in
+   SAP, and the status coming back by itself.
+
+### What to expect
+
+- **A burst at the start.** B1if keeps every post that failed while the address
+  did not answer and delivers them all when it does (931 after one night). Stock,
+  status, credit, invoices, payments, prices and weights older than ten minutes
+  are answered `"stale": true` and ignored; customers and items are applied.
+- **Orders are matched by name, and two PCs number them the same.** The TEST
+  companies are shared, so SAP holds orders named like `SAL-ORD-2026-00174` that
+  came from another PC, and the status sync writes their status onto whichever
+  order has that name here. Judge only orders made on this PC after the switch,
+  and send orders and pick lists from one PC at a time.
+- **A bulk change to items delays purchase orders.** A new order and an item
+  change share B1if's event queue, which clears about 155 item events an hour.
+  On 11 Nov 2026 a change to 675 items held an order's purchase order back
+  3 hours 45 minutes. Do not test orders while somebody is bulk-updating items
+  in a TEST company.
+- **The two nightly steps** (all customers at 01:10, all items at 01:20) only
+  reach a PC that is on at that hour.
+
+### When the test ends
+
+Point `ERPNEXT_LOCAL` back (the host, user and password of the PC that had it),
+and close the port on this PC, in an administrator PowerShell:
+
+```powershell
+Remove-NetFirewallHyperVRule -Name "ERPNext-from-SAP"
+```
+
+```powershell
+Remove-NetFirewallRule -DisplayName "ERPNext 8000 from SAP server"
+```
