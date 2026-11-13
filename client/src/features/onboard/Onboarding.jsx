@@ -265,11 +265,14 @@ export default function Onboarding() {
 	   creating a duplicate on every upload. */
 	const canUpload = s.candState === "ok" && (s.candTier === "full" || s.candTier === "extra");
 
+	/* Which cards a phone has opened out — see `.onbpage .onbgrid` in index.css. */
+	const [open, setOpen] = useState({});
+
 	const rows = s.cands || [];
 	const noDesig = up.plan ? up.plan.creates.filter((d) => !d.designation).length : 0;
 
 	return (
-		<div className="fhcat onbtab">
+		<div className="fhcat onbtab onbpage">
 			<header>
 				<h3>Onboarding</h3>
 				<span className="n">
@@ -277,7 +280,7 @@ export default function Onboarding() {
 				</span>
 			</header>
 
-			<div className="onbbar" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
+			<div className="onbbar">
 				<label className={"embtn" + (canUpload && !up.busy ? "" : " off")}
 					title={canUpload
 						? "The Form's responses as a file: in the responses Google Sheet, File → Download → .xlsx or .csv, then choose it here. Nothing is written until you press Import."
@@ -291,7 +294,8 @@ export default function Onboarding() {
 			</div>
 
 			{up.plan ? (
-				<div className="onbmsg">
+				<div className="onbmsg onbplan">
+					<p>
 					<b>{up.file}</b>: {up.plan.creates.length} new, {up.plan.updates.length} to update
 					{up.plan.skipped.length ? `, skipped — ${up.plan.skipped.map((k) => k.email ? `${k.email} (${k.why})` : k.why).join("; ")}` : ""}.
 					{up.plan.unstored ? (
@@ -303,15 +307,16 @@ export default function Onboarding() {
 						<> No column for: <b>{up.plan.missing.join(", ")}</b> — the Sheet's column titles have to be
 						these Form questions word for word.</>
 					) : null}
-					{" "}
+					</p>
+					<div className="acts">
 					{noDesig ? (
 						<label className="lbl">
-							{" "}{noDesig} with no Designation — use:{" "}
+							{noDesig} with no Designation — use:
 							<select aria-label="Designation for responses without one" value={desig}
 								onChange={(e) => setDesig(e.target.value)}>
 								<option value="">— choose —</option>
 								{(s.designations || []).map((d) => <option key={d.name} value={d.name}>{d.name}</option>)}
-							</select>{" "}
+							</select>
 						</label>
 					) : null}
 					<button className="embtn pri"
@@ -320,11 +325,11 @@ export default function Onboarding() {
 						onClick={() => void runImport()}>
 						{up.busy ? "Importing…" : "Import"}
 					</button>
-					{" "}
 					<button className="embtn" disabled={up.busy}
 						onClick={() => setUp({ busy: false, file: "", plan: null, msg: "", err: "" })}>
 						Cancel
 					</button>
+					</div>
 				</div>
 			) : null}
 			{up.msg ? <div className="onbmsg">{up.msg}</div> : null}
@@ -359,13 +364,16 @@ export default function Onboarding() {
 										{[c.designation, c.department].filter(Boolean).join(" · ") || "-"}
 									</span>
 								</span>
-								<span className={"cov " + (c.employee ? "live" : c.boarding_status === "In Process" ? "part" : "off")}>
-									{c.employee ? "Pulled" : (c.boarding_status || "Pending")}
+								<span className="tags">
+									<span className={"cov " + (c.employee ? "live" : c.boarding_status === "In Process" ? "part" : "off")}>
+										{c.employee ? "Pulled" : (c.boarding_status || "Pending")}
+									</span>
 								</span>
 								{/* Gone once they are an employee — a second record for one
 								    person is the mistake this queue exists to stop. */}
+								<span className="acts">
 								{!c.employee ? (
-									<button className="embtn pri ml-auto"
+									<button className="embtn pri"
 										aria-label={`Create Employee from ${c.employee_name || c.name}`}
 										title="Open Create Employee filled in from this candidate. Add the Emp Code, Machine Code and anything else missing, then Create."
 										onClick={() => toWizard(c)}>
@@ -376,15 +384,21 @@ export default function Onboarding() {
 									   them is the laptop and the ID card. Assets Assignment opens
 									   on this person, ready for a new handover — offered only to a
 									   login whose menu reaches that page. */
-									<button className="embtn ml-auto"
+									<button className="embtn"
 										aria-label={`Hand over assets to ${c.employee_name || c.name}`}
 										title="Open Assets Assignment on this employee, to hand over what goes out with them."
 										onClick={() => openAssignments(c.employee)}>
 										Hand over assets
 									</button>
 								) : null}
+								</span>
 							</div>
-							<div className="onbgrid">
+							{/* Every answer is in the card at every width; a phone shows the
+							    first twelve until asked, because twenty-eight cells one
+							    under another is a scroll per candidate. CSS hides them, so
+							    nothing is missing from the page — see `.onbpage .onbgrid`
+							    in index.css. */}
+							<div className={"onbgrid" + (open[c.name] ? " open" : "")}>
 								{DETAILS.map(([label, key, kind, doctype]) => {
 									const fromSheet = sheet[String(c.personal_email || "").toLowerCase()]?.["custom_" + key];
 									const v = c[key] || (EXTRA_FIELDS.includes("custom_" + key) ? fromSheet : "");
@@ -408,6 +422,10 @@ export default function Onboarding() {
 									);
 								})}
 							</div>
+							<button type="button" className="onbmore" aria-expanded={!!open[c.name]}
+								onClick={() => setOpen((o) => ({ ...o, [c.name]: !o[c.name] }))}>
+								{open[c.name] ? "Show less" : "Show all details"}
+							</button>
 						</article>
 					))}
 				</div>
