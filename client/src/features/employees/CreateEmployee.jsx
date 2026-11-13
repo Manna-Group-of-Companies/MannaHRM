@@ -324,12 +324,14 @@ export default function CreateEmployee() {
 	   lib/newemp.js. Kept here, not in the store, so a password is never in
 	   anything that outlives the page. The login follows the email boxes until
 	   somebody types over it. */
-	const [loginDraft, setLoginDraft] = useState({ email: "", password: "", typed: false });
-	/* No password typed is the date of birth, DDMMYYYY — the first password HR
-	   gives everybody, which the phone app makes them change (dobPassword). */
-	const byBirth = !loginDraft.password && Boolean(dobPassword(f.date_of_birth));
-	const login = { email: loginDraft.typed ? loginDraft.email : appLoginDefault(f),
-		password: loginDraft.password || dobPassword(f.date_of_birth), byBirth };
+	const [loginDraft, setLoginDraft] = useState({ email: "", password: "", typed: false, pwTyped: false });
+	/* The password box shows the date of birth as DDMMYYYY — the first password
+	   HR gives everybody, which the phone app makes them change (dobPassword) —
+	   and follows Date Of Birth until somebody types over it. Typed empty is an
+	   answer: no login now (lib/newemp.js). */
+	const password = loginDraft.pwTyped ? loginDraft.password : dobPassword(f.date_of_birth);
+	const byBirth = Boolean(password) && password === dobPassword(f.date_of_birth);
+	const login = { email: loginDraft.typed ? loginDraft.email : appLoginDefault(f), password, byBirth };
 	const loginProblem = appLoginProblem(f, login);
 	const all = scoped(s);
 	const opts = optionsFor(s, all, f);
@@ -345,7 +347,7 @@ export default function CreateEmployee() {
 		patch("newemp", { step: Math.max(0, Math.min(NEW_EMP_STEPS.length - 1, i)) });
 
 	const blank = isBlank(f);
-	const reset = () => { set({ newemp: NEW_EMP_BLANK() }); setLoginDraft({ email: "", password: "", typed: false }); };
+	const reset = () => { set({ newemp: NEW_EMP_BLANK() }); setLoginDraft({ email: "", password: "", typed: false, pwTyped: false }); };
 	const leave = () => go({ section: "employees", subtab: "overview" });
 
 	async function create() {
@@ -568,26 +570,36 @@ export default function CreateEmployee() {
 							    somebody's at the gate. */}
 							{rows.some((r) => r[0] === "custom_punch_method") && punchesOnApp(f.custom_punch_method) ? (
 								<div className="wizform wizlogin">
+									{/* The Emp Code is the user name the app signs in with
+									    (appUserDoc), so it is shown here and changed there. */}
 									<div className="lvf wizf" style={{ "--w": 8 }}>
 										<label className="lab" htmlFor="ne-app-login">App login</label>
 										<span className="ctl">
-											<input id="ne-app-login" type="email" autoComplete="off" value={login.email}
-												onChange={(e) => setLoginDraft({ ...loginDraft, email: e.target.value, typed: true })} />
+											<input id="ne-app-login" type="text" readOnly value={f.employee_number || ""}
+												placeholder="Emp Code" />
 										</span>
 									</div>
+									{/* Text, not dots: HR reads it out or writes it down for the
+									    person, and the app makes them replace it. */}
 									<div className="lvf wizf" style={{ "--w": 8 }}>
 										<label className="lab" htmlFor="ne-app-password">App password</label>
 										<span className="ctl">
-											<input id="ne-app-password" type="password" autoComplete="new-password" value={loginDraft.password}
-												placeholder="Date of birth, DDMMYYYY"
-												onChange={(e) => setLoginDraft({ ...loginDraft, password: e.target.value })} />
+											<input id="ne-app-password" type="text" autoComplete="off" spellCheck={false}
+												value={password} placeholder="Date of birth, DDMMYYYY"
+												onChange={(e) => setLoginDraft({ ...loginDraft, password: e.target.value, pwTyped: true })} />
+										</span>
+									</div>
+									{/* A Frappe User is named by an email, so one is still needed
+									    behind the Emp Code. */}
+									<div className="lvf wizf" style={{ "--w": 8 }}>
+										<label className="lab" htmlFor="ne-app-email">Login email</label>
+										<span className="ctl">
+											<input id="ne-app-email" type="email" autoComplete="off" value={login.email}
+												onChange={(e) => setLoginDraft({ ...loginDraft, email: e.target.value, typed: true })} />
 										</span>
 									</div>
 									<p className="wizmgr muted wizlognote">
-										They sign in to the phone app with their Emp Code
-										{f.employee_number ? <> <b>{f.employee_number}</b></> : null} and, unless you type a
-										password, their date of birth as DDMMYYYY. The app makes them choose their own
-										password the first time.
+										The app makes them choose their own password the first time.
 									</p>
 								</div>
 							) : null}

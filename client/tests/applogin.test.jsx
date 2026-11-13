@@ -127,16 +127,27 @@ describe("Create Employee asks for the login beside Punch Method", () => {
 		await act(async () => { render(<Provider store={store}><CreateEmployee /></Provider>); });
 	};
 
-	it("draws a login and a password for somebody on the phone, the login filled from their email", async () => {
-		await draw({ custom_punch_method: "Mobile App", company_email: "anu@manna.in" });
-		expect(screen.getByLabelText("App login").value).toBe("anu@manna.in");
-		expect(screen.getByLabelText("App password").type).toBe("password");
+	it("shows the Emp Code as the app login and the date of birth as DDMMYYYY as the password", async () => {
+		await draw({ custom_punch_method: "Mobile App", company_email: "anu@manna.in",
+			employee_number: "MRP861", date_of_birth: "2005-03-24" });
+		expect(screen.getByLabelText("App login").value).toBe("MRP861");
+		expect(screen.getByLabelText("App login").readOnly).toBe(true);
+		expect(screen.getByLabelText("App password").value).toBe("24032005");
+		expect(screen.getByLabelText("App password").type).toBe("text");
+		expect(screen.getByLabelText("Login email").value).toBe("anu@manna.in");
 	});
 
-	it("says the Emp Code signs in, and that a blank password is the date of birth", async () => {
-		await draw({ custom_punch_method: "Mobile App", company_email: "anu@manna.in", employee_number: "MRP861" });
+	it("fills both as the Emp Code and Date Of Birth are typed, and keeps a password HR typed over it", async () => {
+		await draw({ custom_punch_method: "Mobile App", company_email: "anu@manna.in" });
+		expect(screen.getByLabelText("App login").value).toBe("");
+		expect(screen.getByLabelText("App password").value).toBe("");
 		expect(screen.getByLabelText("App password").placeholder).toBe("Date of birth, DDMMYYYY");
-		expect(document.querySelector(".wizlognote").textContent).toContain("Emp Code MRP861");
+		act(() => set({ newemp: { ...getState().newemp, f: { ...getState().newemp.f, employee_number: "MRP900", date_of_birth: "1996-06-03" } } }));
+		expect(screen.getByLabelText("App login").value).toBe("MRP900");
+		expect(screen.getByLabelText("App password").value).toBe("03061996");
+		fireEvent.change(screen.getByLabelText("App password"), { target: { value: "mypass123" } });
+		act(() => set({ newemp: { ...getState().newemp, f: { ...getState().newemp.f, date_of_birth: "1996-06-04" } } }));
+		expect(screen.getByLabelText("App password").value).toBe("mypass123");
 	});
 
 	it("draws neither for somebody on the fingerprint machine", async () => {

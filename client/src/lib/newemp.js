@@ -173,7 +173,7 @@ export const makesAppLogin = (f, login) => punchesOnApp(f.custom_punch_method) &
     on how strong a password must be. */
 export function appLoginProblem(f, login) {
 	if (!makesAppLogin(f, login)) return "";
-	if (!EMAIL.test(String(login.email || "").trim())) return "The app login has to be an email address.";
+	if (!EMAIL.test(String(login.email || "").trim())) return "Login email has to be an email address.";
 	if (String(login.password).length < 8) return "The app password needs at least 8 characters.";
 	return "";
 }
