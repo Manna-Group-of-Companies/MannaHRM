@@ -327,8 +327,9 @@ export default function CreateEmployee() {
 	const [loginDraft, setLoginDraft] = useState({ email: "", password: "", typed: false, pwTyped: false });
 	/* The password box shows the date of birth as DDMMYYYY — the first password
 	   HR gives everybody, which the phone app makes them change (dobPassword) —
-	   and follows Date Of Birth until somebody types over it. Typed empty is an
-	   answer: no login now (lib/newemp.js). */
+	   and follows Date Of Birth until somebody types over it. Clearing the box
+	   gives it back to Date Of Birth (HR, 13 November 2026): an empty box that
+	   stays empty reads as a form that forgot the password, not as a choice. */
 	const password = loginDraft.pwTyped ? loginDraft.password : dobPassword(f.date_of_birth);
 	const byBirth = Boolean(password) && password === dobPassword(f.date_of_birth);
 	const login = { email: loginDraft.typed ? loginDraft.email : appLoginDefault(f), password, byBirth };
@@ -586,7 +587,7 @@ export default function CreateEmployee() {
 										<span className="ctl">
 											<input id="ne-app-password" type="text" autoComplete="off" spellCheck={false}
 												value={password} placeholder="Date of birth, DDMMYYYY"
-												onChange={(e) => setLoginDraft({ ...loginDraft, password: e.target.value, pwTyped: true })} />
+												onChange={(e) => setLoginDraft({ ...loginDraft, password: e.target.value, pwTyped: e.target.value !== "" })} />
 										</span>
 									</div>
 									{/* A Frappe User is named by an email, so one is still needed

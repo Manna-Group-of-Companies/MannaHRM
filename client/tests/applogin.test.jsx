@@ -150,6 +150,13 @@ describe("Create Employee asks for the login beside Punch Method", () => {
 		expect(screen.getByLabelText("App password").value).toBe("mypass123");
 	});
 
+	it("goes back to the date of birth when HR clears the password", async () => {
+		await draw({ custom_punch_method: "Mobile App", company_email: "anu@manna.in", date_of_birth: "2009-06-09" });
+		fireEvent.change(screen.getByLabelText("App password"), { target: { value: "mypass123" } });
+		fireEvent.change(screen.getByLabelText("App password"), { target: { value: "" } });
+		expect(screen.getByLabelText("App password").value).toBe("09062009");
+	});
+
 	it("draws neither for somebody on the fingerprint machine", async () => {
 		await draw({ custom_punch_method: "Fingerprint Machine" });
 		expect(screen.queryByLabelText("App login")).toBeNull();
