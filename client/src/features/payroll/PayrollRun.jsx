@@ -332,7 +332,8 @@ export default function PayrollRun() {
 
 	/* The five-tab workbook uses the attached register layout. Its Salary/Cash
 	   tabs follow Employee Salary Mode; Diff Cash is a full-pay reconciliation
-	   view, and the Soorya/Labour tabs follow branch and employment fields. */
+	   view, the Soorya tab follows company and branch, and Labour supply is
+	   the (BMS) codes only (lib/payrolldesign.js labourRow). */
 	/* Which EPF calculation a company's salary structures use, off the
 	   assignments' structure names (Salary Setup's upload writes it there). */
 	const methodIn = (assignments) => companyMethod((assignments || []).map((a) => ({ name: a.salary_structure })), "");

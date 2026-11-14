@@ -38,9 +38,11 @@ function sooryaRow(r) {
 const BMS = /\(\s*bms\s*\)/i;
 export const bmsRow = (r) => BMS.test(`${r.code || ""} ${r.oldCode || ""}`);
 
-export function labourRow(r) {
-	return bmsRow(r) || has(`${r.employmentType} ${r.department} ${r.designation} ${r.branch}`, /contract|labou?r|manpower/);
-}
+/** Who goes on a Labour supply tab: the BMS codes and nobody else (HR, 14
+    November 2026). It used to take anybody whose employment type, department,
+    designation or branch said contract, labour or manpower as well, which put
+    the company's own people on a tab that is paid in cash by hand. */
+export const labourRow = bmsRow;
 
 /** Whether a person takes any of their net pay home in cash, by their own
     salary structure — what Salary Setup's upload put on their Employee record:
