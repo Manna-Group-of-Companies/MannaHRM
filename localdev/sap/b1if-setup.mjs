@@ -5,7 +5,8 @@
 //     node localdev/sap/b1if-setup.mjs --apply --enable  ...and switches the scenario on (ENABLED = Y)
 //
 // Manna Treads: user table @MANNA_IC (Code = setting, U_Value) and OPOR.U_MannaMtSo, the sales order's DocEntry.
-// Hi-Tech:      user table @MANNA_IC, ORDR.U_MannaMtPo, the purchase order's DocEntry, and OPKL.U_Confirmed.
+// Hi-Tech:      user table @MANNA_IC, ORDR.U_MannaMtPo, the purchase order's DocEntry, OPKL.U_Confirmed and
+//               PKL1.U_ActualKg.
 //
 // A setting already in @MANNA_IC is never overwritten - somebody may have changed it on purpose - except
 // ENABLED by --enable. Test companies only, through sapguard; the live companies get the same by hand, from
@@ -32,6 +33,10 @@ const want = {
 			// Stage 4 (5 Nov 2026), step 3's delivery: Manna Treads had no delivery series of its own, so KL-DN
 			// (Kerala, FY26-27) was added on TEST as series 211. Live needs one made in Administration first.
 			DN_SERIES: "211",
+			// Step 6 (13 Nov 2026): Hi-Tech's delivery dates onto Manna Treads' sales order and purchase order.
+			// A switch of its own, so the order flow can run with the date step off. Y here because TEST is
+			// where the step is tried; live gets N (b1if-setup-live.mjs) and a person turns it on.
+			DATE_SYNC: "Y",
 		},
 	},
 	[HT]: {
@@ -43,10 +48,16 @@ const want = {
 			// pick list once it is picked, and B1if's step 3 and the status sync wait for it (sap-b1if/packages/SETUP.md).
 			{ TableName: "OPKL", Name: "Confirmed", Description: "Confirmed - invoice it", Size: 1, DefaultValue: "N",
 				ValidValuesMD: [{ Value: "Y", Description: "Yes" }, { Value: "N", Description: "No" }] },
+			// 16 Nov 2026: a roll's weight is an average, and SAP's pick list will not take more than it released.
+			// The store types what it weighed here, over or under; step 3 invoices, receives and delivers that.
+			{ TableName: "PKL1", Name: "ActualKg", Description: "Actual kg (weighed)", Type: "db_Float", SubType: "st_Quantity" },
 		],
 		settings: {
 			ENABLED: "N", CUSTOMER: "10118", SO_SERIES: "179", SO_WHS: "01",
 			HOME_STATE: "KL", TAX_IN_STATE: "CG+SG@18", TAX_OUT_STATE: "IGST@18",
+			// 16 Nov 2026: step 3 refuses a pick list line whose actual kg is more than this % over what was
+			// released - 215 typed for 21.5 must not be invoiced.
+			OVER_PCT: "15",
 		},
 	},
 };
@@ -75,7 +86,7 @@ for (const db of [MT, HT]) {
 			const link = (await s.get("UserFieldsMD?$select=Name&$filter=" + encodeURIComponent(`TableName eq '${f.TableName}' and Name eq '${f.Name}'`))).value;
 			if (link.length) say(`field ${f.TableName}.U_${f.Name} is there`);
 			else if (!apply) say(`WOULD add field ${f.TableName}.U_${f.Name}`);
-			else { await s.request("POST", "UserFieldsMD", { ...f, Type: "db_Alpha" }); say(`added field ${f.TableName}.U_${f.Name}`); }
+			else { await s.request("POST", "UserFieldsMD", { Type: "db_Alpha", ...f }); say(`added field ${f.TableName}.U_${f.Name}`); }
 		}
 
 		// Rows can only be read once the table exists. A read that fails is not an empty table: the Service
