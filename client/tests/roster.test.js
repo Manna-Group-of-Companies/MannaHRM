@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	ROSTER_STATES, dayAfter, dayPunches, daysOf, monthRoster, spanHours, workDateOf, workDayPunches,
+	ROSTER_STATES, dayAfter, dayMinutes, dayPunches, daysOf, monthRoster, spanHours, workDateOf, workDayPunches,
 } from "../src/lib/roster.js";
 
 /* ---------------------------------------------------------------------------
@@ -89,6 +89,43 @@ describe("dayPunches", () => {
 		const gate = (t) => ({ time: t });
 		expect(dayPunches([gate("2026-08-03 08:29:00"), gate("2026-08-03 08:33:00")]))
 			.toEqual({ inAt: "2026-08-03 08:29:00", outAt: "" });
+	});
+
+	it("a leaving punched with the IN key is still the day's out", () => {
+		/* Hi-Tech's gate, HRI-053, 3 November 2026: 08:25 IN and 18:02 IN. Read
+		   by the key it was "in, never out"; Factor HR paid it as a full day. */
+		expect(dayPunches([IN("2026-11-03 08:25:39"), IN("2026-11-03 18:02:21")]))
+			.toEqual({ inAt: "2026-11-03 08:25:39", outAt: "2026-11-03 18:02:21" });
+	});
+
+	it("an arrival punched with the OUT key is still the day's in", () => {
+		expect(dayPunches([OUT("2026-11-03 08:25:00"), OUT("2026-11-03 18:02:00")]))
+			.toEqual({ inAt: "2026-11-03 08:25:00", outAt: "2026-11-03 18:02:00" });
+	});
+
+	it("an IN pressed just before the OUT at the end of the day does not move the out earlier", () => {
+		/* HRI-053, 10 November 2026: IN at 18:03, then OUT at 18:04. */
+		expect(dayPunches([IN("2026-11-10 08:25:18"), IN("2026-11-10 18:03:33"), OUT("2026-11-10 18:04:07")]))
+			.toEqual({ inAt: "2026-11-10 08:25:18", outAt: "2026-11-10 18:04:07" });
+	});
+
+	it("an IN and an OUT a few minutes apart are one finger read twice, not a four-minute day", () => {
+		expect(dayPunches([IN("2026-11-03 08:25:00"), OUT("2026-11-03 08:28:00")]))
+			.toEqual({ inAt: "2026-11-03 08:25:00", outAt: "" });
+	});
+
+	it("total hours count a part-minute as a whole one, as Factor HR does", () => {
+		/* HRI-053's week: Factor HR shows 09:35, 09:38 and 09:36. */
+		expect(spanHours("2026-11-04 08:26:23", "2026-11-04 18:00:44")).toBe("09:35");
+		expect(spanHours("2026-11-05 08:26:22", "2026-11-05 18:03:48")).toBe("09:38");
+		expect(spanHours("2026-11-06 08:26:21", "2026-11-06 18:01:49")).toBe("09:36");
+		expect(spanHours("2026-11-03 08:25:00", "2026-11-03 18:02:00")).toBe("09:37");
+		expect(dayMinutes("2026-11-04 08:26:23", "2026-11-04 18:00:44", null).workMin).toBe(575);
+	});
+
+	it("a lone OUT stays a leaving with its arrival missing", () => {
+		/* With one punch the key is all there is to go on. */
+		expect(dayPunches([OUT("2026-11-04 08:29:00")])).toEqual({ inAt: "", outAt: "2026-11-04 08:29:00" });
 	});
 });
 

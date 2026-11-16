@@ -125,6 +125,17 @@ describe("missed punches", () => {
 		expect(c.missing).toBe("IN");
 	});
 
+	it("a leaving punched with the IN key is not a missed punch-out", () => {
+		/* HRI-053, 3 November 2026: 08:25 IN and 18:02 IN — a full day. */
+		const sachin = [P("A", "2026-11-03 08:25:39"), P("A", "2026-11-03 18:02:21")];
+		expect(missedPunches(PEOPLE, sachin, ["2026-11-03"])).toEqual([]);
+	});
+
+	it("an extra punch at the gate does not turn a whole day into a missed punch", () => {
+		const tea = [P("A", "2026-11-10 08:25:00"), P("A", "2026-11-10 18:03:00"), P("A", "2026-11-10 18:04:00", "OUT")];
+		expect(missedPunches(PEOPLE, tea, ["2026-11-10"])).toEqual([]);
+	});
+
 	it("walks the window a day at a time rather than subtracting two dates", () => {
 		// Every off-by-one in this kind of code lives in the subtraction.
 		expect(daysBetween("2026-09-07", "2026-09-09")).toEqual(["2026-09-07", "2026-09-08", "2026-09-09"]);

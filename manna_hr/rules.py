@@ -97,6 +97,40 @@ def is_payroll_ready(statuses):
 	return ON_FLOOR not in set(statuses)
 
 
+# ------------------------------------------------------------ day's pair ---
+
+# Two punches this close are one finger read twice, not a day.
+DOUBLE_READ_SECONDS = 10 * 60
+
+
+def day_pair(punches):
+	"""The day's in and out from its punches: `(in_time, out_time)`, `None` for
+	a side it does not have.
+
+	**The first punch is the in and the last is the out, whatever key was
+	pressed** (16 November 2026). Keys are pressed wrong: Hi-Tech's gate sent
+	SACHIN THITHIO's 18:02 leaving as IN on four days of one week, and Factor
+	HR, reading the same machine, paid each as a full day. The dashboard's
+	`dayPunches` (client/src/lib/roster.js) and the phone app's `pair` are the
+	same rule.
+
+	A last punch within DOUBLE_READ_SECONDS of the first leaves one side: the
+	in, unless every punch says OUT — a lone leaving is the only time the key
+	is all there is to go on.
+
+	`punches` is `(time, log_type)` pairs, any order; `time` is a datetime.
+	"""
+	rows = sorted((p for p in punches if p[0] is not None), key=lambda p: p[0])
+	if not rows:
+		return None, None
+	first, last = rows[0][0], rows[-1][0]
+	if (last - first).total_seconds() > DOUBLE_READ_SECONDS:
+		return first, last
+	if all(key == "OUT" for _, key in rows):
+		return None, last
+	return first, None
+
+
 # ------------------------------------------------------------ punch window ---
 
 

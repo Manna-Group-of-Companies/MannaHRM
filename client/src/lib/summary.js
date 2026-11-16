@@ -1,7 +1,8 @@
 /* ---------------------------------------------------------------------------
    What the dashboard's numbers actually are.
 
-   Pure, and importing nothing but itself — same bargain as `lib/rules.js` and
+   Pure, and importing nothing but `roster.js`'s pairing of a day, which is
+   pure too — same bargain as `lib/rules.js` and
    `routes/paths.js`, and for the same reason: **these are the figures somebody
    quotes in a meeting**, so the argument about whether "present" includes a
    person who only punched out should be settleable by reading a test, not by
@@ -10,6 +11,8 @@
    Relative imports only, no `@` alias and no React. `npm test` runs these in
    Node. CLAUDE.md §3.
    --------------------------------------------------------------------------- */
+
+import { dayPunches } from "./roster.js";
 
 /**
  * Today's punches, resolved into the four states a working day can be in.
@@ -22,22 +25,27 @@
  * punched in and out is Completed, not Completed *and* still in.
  */
 export function attendanceToday(checkins, leaveRows, headcount) {
-	const ins = new Set();
-	const outs = new Set();
+	const byPerson = new Map();
 	for (const c of checkins || []) {
-		if (c.log_type === "OUT") outs.add(c.employee);
-		else ins.add(c.employee);
+		if (!byPerson.has(c.employee)) byPerson.set(c.employee, []);
+		byPerson.get(c.employee).push(c);
 	}
 
+	/* Completed is a day with a first punch and a last one, whatever key was
+	   pressed (16 November 2026, lib/roster.js `dayPunches`): somebody who
+	   punched IN on leaving has gone home, not "still in". */
 	let done = 0;
-	for (const e of ins) if (outs.has(e)) done++;
+	for (const list of byPerson.values()) {
+		const p = dayPunches(list);
+		if (p.inAt && p.outAt) done++;
+	}
 
 	/* **An OUT with no IN is a person who was here.** It happens for two real
 	   reasons — a morning punch that failed to deliver, and a night shift that
 	   started yesterday — and the alternative is telling somebody standing at
 	   their machine that they are absent. Errors round in the safe direction;
 	   see CLAUDE.md §4. */
-	const present = new Set([...ins, ...outs]).size;
+	const present = byPerson.size;
 
 	/* People, not applications. One person with two overlapping applications is
 	   one person on leave, and counting rows would push the ring past the

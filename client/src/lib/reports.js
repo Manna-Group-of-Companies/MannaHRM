@@ -26,6 +26,8 @@
      because one person with two applications or six punches is one person.
    --------------------------------------------------------------------------- */
 
+import { dayPunches } from "./roster.js";
+
 const day = (v) => String(v || "").slice(0, 10);
 
 /** Punches on one day, grouped by employee, in time order. The shape every
@@ -156,14 +158,17 @@ export function present(rows, checkins, on) {
 		.filter((e) => by.has(e.name))
 		.map((e) => {
 			const list = by.get(e.name);
+			const { inAt } = dayPunches(list);
 			return {
 				...e,
 				first: list[0].time,
 				last: list[list.length - 1].time,
 				punches: list.length,
 				/* The punch itself, not only its time, so the report can say where
-				   it was made. Null for somebody whose only punch was an OUT. */
-				punchIn: list.find((p) => p.log_type === "IN") || null,
+				   it was made: the day's first punch, whatever key was pressed
+				   (lib/roster.js `dayPunches`). Null for somebody whose only punch
+				   was an OUT. */
+				punchIn: (inAt && list.find((p) => String(p.time) === inAt)) || null,
 			};
 		});
 }
@@ -187,8 +192,11 @@ export function absent(rows, checkins, leaveRows, on) {
 /**
  * MSP Report — missed punches.
  *
- * An odd count is a missing punch: somebody came in and never went out, or the
- * reverse. **This is the attendance report worth having first** — a missed
+ * A day with only one side is a missing punch: somebody came in and never went
+ * out, or the reverse. The sides are the day's first and last punch, whatever
+ * key was pressed (16 November 2026, lib/roster.js `dayPunches`) — counting
+ * keys called 08:25 IN, 18:02 IN a missed punch-out, and an extra punch at
+ * the gate turned a whole day into one. **This is the attendance report worth having first** — a missed
  * punch is somebody's pay, and it is the input to every correction, so it is
  * the one list HR can act on the same morning.
  *
@@ -199,14 +207,15 @@ export function missedPunches(rows, checkins, days) {
 	const out = [];
 	for (const on of days || []) {
 		for (const [id, list] of punchesByEmployee(checkins, on)) {
-			if (list.length % 2 === 0) continue;
+			const p = dayPunches(list);
+			if (Boolean(p.inAt) === Boolean(p.outAt)) continue;
 			const e = byName.get(id);
 			if (!e) continue;
 			out.push({
 				...e,
 				on,
 				punches: list.length,
-				missing: list[list.length - 1].log_type === "IN" ? "OUT" : "IN",
+				missing: p.inAt ? "OUT" : "IN",
 				first: list[0].time,
 				last: list[list.length - 1].time,
 			});

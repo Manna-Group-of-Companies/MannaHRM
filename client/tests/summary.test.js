@@ -33,6 +33,12 @@ describe("attendanceToday", () => {
 		expect(a.present).toBe(1);
 	});
 
+	it("counts somebody who punched IN on leaving as completed, not still in", () => {
+		/* HRI-053, 3 November 2026: 08:25 IN and 18:02 IN — gone home. */
+		const a = attendanceToday([IN("e1", "2026-11-03 08:25:39"), IN("e1", "2026-11-03 18:02:21")], [], 10);
+		expect(a).toMatchObject({ done: 1, still: 0, present: 1 });
+	});
+
 	it("treats a punch out with no punch in as somebody who was here", () => {
 		/* The morning punch failed to deliver, or the shift began yesterday. The
 		   expensive mistake is refusing somebody who did turn up — CLAUDE.md §4. */

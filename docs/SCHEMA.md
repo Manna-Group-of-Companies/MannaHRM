@@ -255,6 +255,17 @@ rest of that day.
 
 Decide this per device, once, and write down which it is.
 
+**Decided 16 November 2026: the first punch is the in and the last is the
+out, whatever key was pressed** — Factor HR's rule. Hi-Tech's gate sent HRI-053's
+18:02 leaving as IN on four days of one week; Strictly based on Log Type reads
+each as an arrival with no leaving, and Factor HR, reading the same machine,
+paid them full. The dashboard (`dayPunches`), the phone app (`dayPunches`,
+`pair`) and the server (`rules.day_pair`) all pair this way. The hrms setting
+that matches is *Alternating entries as IN and OUT during the same shift* with
+*First Check-in and Last Check-out*: with that calculation alternating takes
+the first and last log of the shift, so the extra-punch trap above does not
+apply. The tea-break reversal is only *Every Valid Check-in and Check-out*.
+
 ---
 
 ## 5. Roles

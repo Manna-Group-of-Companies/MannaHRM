@@ -159,4 +159,40 @@ describe("the punches an approved time replaces", () => {
 	it("nothing on a side the request leaves empty", () => {
 		expect(supersededBy(day, "", "2026-09-10 20:00:00")).toEqual([]);
 	});
+
+	it("a leaving punched with the IN key after the requested Time Out is replaced too", () => {
+		/* HRI-053, 3 November 2026: 08:25 IN, 18:02 IN. Out moved to 17:30 —
+		   left alone, the 18:02 would still be read as the out. */
+		const sachin = [
+			{ name: "A", time: "2026-11-03 08:25:39", log_type: "IN", skip_auto_attendance: 0 },
+			{ name: "B", time: "2026-11-03 18:02:21", log_type: "IN", skip_auto_attendance: 0 },
+		];
+		expect(supersededBy(sachin, "2026-11-03 08:25:00", "2026-11-03 17:30:00").map((c) => c.name)).toEqual(["B"]);
+	});
+});
+
+describe("editing a day whose leaving was punched with the IN key", () => {
+	const SACHIN = [
+		{ name: "EMP-CKIN-A", time: "2026-11-03 08:25:39", log_type: "IN", skip_auto_attendance: 0 },
+		{ name: "EMP-CKIN-B", time: "2026-11-03 18:02:21", log_type: "IN", skip_auto_attendance: 0 },
+	];
+	beforeEach(() => {
+		lists = (label) => (label === "Employee Checkin" ? SACHIN : []);
+	});
+
+	it("clearing Time Out sets the 18:02 aside as the out, and keeps the morning's in", async () => {
+		const res = await saveDayEdit(EMP, "2026-11-03", { in: "08:25", out: "", reason: "" });
+		expect(res.ok).toBe(true);
+		expect(calls.wrote).toContainEqual(["Employee Checkin", "EMP-CKIN-B", { skip_auto_attendance: 1 }]);
+		expect(calls.wrote).not.toContainEqual(["Employee Checkin", "EMP-CKIN-A", { skip_auto_attendance: 1 }]);
+		expect(res.msg).toContain("Time Out cleared");
+	});
+
+	it("clearing Time In leaves the day a leaving, keyed OUT, so it is not read back as an arrival", async () => {
+		const res = await saveDayEdit(EMP, "2026-11-03", { in: "", out: "18:02", reason: "" });
+		expect(res.ok).toBe(true);
+		expect(calls.made).toContainEqual(["Employee Checkin", expect.objectContaining({ time: "2026-11-03 18:02:00", log_type: "OUT" })]);
+		expect(calls.wrote).toContainEqual(["Employee Checkin", "EMP-CKIN-A", { skip_auto_attendance: 1 }]);
+		expect(res.msg).toContain("Time In cleared");
+	});
 });

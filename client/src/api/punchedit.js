@@ -76,7 +76,9 @@ export async function saveDayEdit(emp, day, next) {
 /** The punches of each cleared side, set aside and each given a comment.
     @returns {Promise<string>} what happened, as the page says it */
 async function clearSides(emp, day, plan, reason, user) {
-	const sides = plan.skip.filter((c) => (c.log_type === "OUT" ? plan.cleared.out : plan.cleared.in));
+	/* By the side the plan set it aside for, not its key: a leaving punched as
+	   IN is cleared with Time Out. */
+	const sides = plan.skip.filter((c) => (c.side === "out" ? plan.cleared.out : plan.cleared.in));
 	const done = [];
 	const stuck = [];
 	for (const c of sides) {

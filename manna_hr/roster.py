@@ -14,7 +14,7 @@ nobody has marked.
 import frappe
 from frappe.utils import getdate
 
-from manna_hr.rules import LABELS, resolve_day_status
+from manna_hr.rules import LABELS, day_pair, resolve_day_status
 
 
 @frappe.whitelist()
@@ -80,27 +80,34 @@ def roster(date=None, company=None):
 
 
 def _punches_on(employee_ids, on):
-	"""First IN and last OUT per employee, from the raw checkins.
+	"""The day's in and out per employee, from the raw checkins.
 
 	Read from `Employee Checkin` rather than `Attendance` on purpose: this has
 	to answer for the day that is still running, and `Attendance` for today does
 	not exist until the shift job has run.
+
+	The first punch and the last, whatever key was pressed — `day_pair`.
+	A punch HR set aside is not part of the day.
 	"""
 	rows = frappe.db.sql(
 		"""
-		SELECT
-			employee,
-			MIN(CASE WHEN log_type = 'IN'  THEN time END) AS first_in,
-			MAX(CASE WHEN log_type = 'OUT' THEN time END) AS last_out
+		SELECT employee, time, log_type
 		FROM `tabEmployee Checkin`
 		WHERE DATE(time) = %(on)s
 		  AND employee IN %(ids)s
-		GROUP BY employee
+		  AND IFNULL(skip_auto_attendance, 0) = 0
 		""",
 		{"on": on, "ids": employee_ids},
 		as_dict=True,
 	)
-	return {r.employee: r for r in rows}
+	by = {}
+	for r in rows:
+		by.setdefault(r.employee, []).append((r.time, r.log_type))
+	out = {}
+	for employee, punches in by.items():
+		first_in, last_out = day_pair(punches)
+		out[employee] = {"first_in": first_in, "last_out": last_out}
+	return out
 
 
 def _leave_on(employee_ids, on):

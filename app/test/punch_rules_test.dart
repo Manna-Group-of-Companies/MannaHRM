@@ -83,11 +83,34 @@ void main() {
       final pair = dayPunches([punch('2026-09-09 08:30:00', '')]);
       expect(pair.inAt, '2026-09-09 08:30:00');
     });
+
+    test('a leaving punched with the IN key is still the day\'s out', () {
+      // HRI-053, 3 November 2026: 08:25 IN and 18:02 IN — a full day.
+      final pair = dayPunches([
+        punch('2026-11-03 08:25:39', 'IN'),
+        punch('2026-11-03 18:02:21', 'IN'),
+      ]);
+      expect(pair.inAt, '2026-11-03 08:25:39');
+      expect(pair.outAt, '2026-11-03 18:02:21');
+    });
+
+    test('an IN and an OUT minutes apart are one finger read twice', () {
+      final pair = dayPunches([
+        punch('2026-11-03 08:25:00', 'IN'),
+        punch('2026-11-03 08:28:00', 'OUT'),
+      ]);
+      expect(pair.inAt, '2026-11-03 08:25:00');
+      expect(pair.outAt, '');
+    });
   });
 
   group('hours on a day', () {
     test('nine hours and seven minutes reads as 09:07', () {
       expect(spanHours('2026-09-09 08:30:00', '2026-09-09 17:37:00'), '09:07');
+    });
+
+    test('a part-minute counts as a whole one, as Factor HR does', () {
+      expect(spanHours('2026-11-04 08:26:23', '2026-11-04 18:00:44'), '09:35');
     });
 
     test('an out before the in is not negative hours, it is no answer', () {

@@ -97,33 +97,33 @@ const stampMs = (t) => Date.parse(String(t).replace(" ", "T"));
     four rows on a day, and a pair taken in arrival order would report the
     second read as the punch-out — a nine-hour day as four minutes.
 
-    **A day with no direction on any punch is its first and its last.** Most
-    gates here report every punch as `0` and the bridge sends no log type
-    (CLAUDE.md §5); read as all arrivals, a whole day at the gate was "in, never
-    out". First and last is what hrms's own default pairing does with them —
-    except that a last within DOUBLE_READ_MS of the first is the same finger
-    read twice, and the day stays in-only: a missing leaving shown as missing
-    gets corrected, and one hidden inside a full day does not. */
+    **The first punch is the in and the last is the out, whatever key was
+    pressed** (16 November 2026, as the phone app's `pair` has since 1 October).
+    Keys are pressed wrong: Hi-Tech's gate sent SACHIN THITHIO's 18:02 leaving
+    as IN on four days of one week, and trusting the key drew each of them as
+    "in, never out" while Factor HR, reading the same machine, paid them full.
+    Which day a punch belongs to is settled before this, by `workDateOf`, so
+    inside the day only the order is needed.
+
+    A last punch within DOUBLE_READ_MS of the first is the same finger read
+    twice, and the day keeps one side only: a missing leaving shown as missing
+    gets corrected, and one hidden inside a full day does not. That one side is
+    the in, unless every punch says OUT — a lone leaving is the only time the
+    key is all there is to go on. */
 export function dayPunches(rows) {
-	let inAt = "";
-	let outAt = "";
 	/* A punch HR superseded on Attendance Regularization. It is kept — a
 	   punch is evidence and is never deleted — but marked the way hrms's
 	   shift job reads it, so the day is built without it. See
 	   lib/punchedit.js. */
-	const live = rows.filter((c) => c.time && !Number(c.skip_auto_attendance));
-	const typed = live.some((c) => c.log_type === "IN" || c.log_type === "OUT");
-	for (const c of live) {
-		const t = String(c.time);
-		if (typed && c.log_type === "OUT") {
-			if (!outAt || t > outAt) outAt = t;
-		} else if (!inAt || t < inAt) {
-			inAt = t;
-		}
-		if (!typed && (!outAt || t > outAt)) outAt = t;
-	}
-	if (!typed && outAt && stampMs(outAt) - stampMs(inAt) <= DOUBLE_READ_MS) outAt = "";
-	return { inAt, outAt };
+	const live = rows
+		.filter((c) => c.time && !Number(c.skip_auto_attendance))
+		.map((c) => ({ t: String(c.time), out: c.log_type === "OUT" }))
+		.sort((a, b) => a.t.localeCompare(b.t));
+	if (!live.length) return { inAt: "", outAt: "" };
+	const first = live[0].t;
+	const last = live[live.length - 1].t;
+	if (stampMs(last) - stampMs(first) > DOUBLE_READ_MS) return { inAt: first, outAt: last };
+	return live.every((c) => c.out) ? { inAt: "", outAt: last } : { inAt: first, outAt: "" };
 }
 
 /** `dayPunches` for the work day `iso`. Where the earliest punch it holds is
@@ -174,13 +174,19 @@ export function workDateOf(punch, shiftOn) {
 
     Their column reads `09:07` for nine hours and seven minutes, which is the
     same shape as a clock time and is not one — worth knowing before somebody
-    compares it against Time In. */
+    compares it against Time In.
+
+    **A part-minute counts as a whole one** (16 November 2026, asked for by HR):
+    Factor HR shows 08:26:23 to 18:00:44 as 09:35, not 09:34, and so does this.
+    Rounding up is also the safe direction — it can only credit the worker. */
+const workedMinutes = (ms) => Math.ceil(ms / 60000);
+
 export function spanHours(inAt, outAt) {
 	if (!inAt || !outAt) return "";
 	const a = Date.parse(String(inAt).replace(" ", "T"));
 	const b = Date.parse(String(outAt).replace(" ", "T"));
 	if (!isFinite(a) || !isFinite(b) || b <= a) return "";
-	const mins = Math.round((b - a) / 60000);
+	const mins = workedMinutes(b - a);
 	return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
 
@@ -239,7 +245,7 @@ export function dayMinutes(inAt, outAt, window) {
 	const outM = outAt ? clockMinutes(String(outAt).slice(11, 16)) : null;
 	const a = inAt ? Date.parse(String(inAt).replace(" ", "T")) : NaN;
 	const b = outAt ? Date.parse(String(outAt).replace(" ", "T")) : NaN;
-	const work = isFinite(a) && isFinite(b) && b > a ? Math.round((b - a) / 60000) : 0;
+	const work = isFinite(a) && isFinite(b) && b > a ? workedMinutes(b - a) : 0;
 	const paired = work > 0;
 	return {
 		workMin: work,

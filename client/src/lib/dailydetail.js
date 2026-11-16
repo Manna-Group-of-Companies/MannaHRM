@@ -46,12 +46,13 @@ export const clockOf = (t) => {
 /** Minutes as `H:MM`, or "" for none. */
 export const hm = (mins) => (mins > 0 ? `${Math.floor(mins / 60)}:${two(Math.round(mins % 60))}` : "");
 
-/** Minutes between two `YYYY-MM-DD HH:MM:SS` stamps; null when out is not after in. */
+/** Minutes between two `YYYY-MM-DD HH:MM:SS` stamps; null when out is not after in.
+    A part-minute counts as a whole one, as on Factor HR and `spanHours`. */
 function spanMinutes(a, b) {
 	if (!a || !b) return null;
 	const x = Date.parse(String(a).replace(" ", "T"));
 	const y = Date.parse(String(b).replace(" ", "T"));
-	return isFinite(x) && isFinite(y) && y > x ? Math.round((y - x) / 60000) : null;
+	return isFinite(x) && isFinite(y) && y > x ? Math.ceil((y - x) / 60000) : null;
 }
 
 const STATUS_WORD = {

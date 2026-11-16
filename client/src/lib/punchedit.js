@@ -22,9 +22,10 @@
         the day is built without them and they stay on the record.
 
    Only the punches that would still win are marked. The day's Time In is its
-   earliest IN, so moving it earlier needs nothing marked; moving it later has
-   to set aside every IN before the new time, or the old one still wins. Time
-   Out mirrors that with the latest OUT.
+   first punch and its Time Out its last, whatever key was pressed (16 November
+   2026), so moving the in earlier needs nothing marked; moving it later has to
+   set aside every IN before the new time, or the old one still wins. Time Out
+   mirrors that with every punch after it — a leaving punched as IN included.
 
    **Any time may be typed** (22 October 2026, asked for by HR). A Time Out at
    or before the Time In is the next morning — a night shift, which belongs to
@@ -34,6 +35,8 @@
 
    Everything here is pure, so the plan can be tested without a site.
    --------------------------------------------------------------------------- */
+
+import { dayPunches } from "./roster.js";
 
 const hhmm = (t) => String(t || "").slice(11, 16);
 const at = (day, v) => `${day} ${v}:00`;
@@ -59,8 +62,12 @@ export function editPlan(day, punches, next) {
 		&& !Number(c.skip_auto_attendance));
 	const ins = live.filter((c) => c.log_type !== "OUT");
 	const outs = live.filter((c) => c.log_type === "OUT");
-	const curIn = ins.map((c) => c.time).sort()[0] || "";
-	const curOut = outs.map((c) => c.time).sort().slice(-1)[0] || "";
+	const t19 = (c) => String(c.time).slice(0, 19);
+	/* What the page shows for the day — its first punch and its last, whatever
+	   key was pressed (lib/roster.js `dayPunches`, 16 November 2026) — so a
+	   leaving punched as IN is the Time Out being edited. */
+	const cur = dayPunches(live);
+	const keyOf = (t) => (live.find((c) => String(c.time) === t) || {}).log_type || "";
 
 	const wantIn = String(next.in || "").trim();
 	const wantOut = String(next.out || "").trim();
@@ -74,30 +81,48 @@ export function editPlan(day, punches, next) {
 	const overnight = Boolean(wantIn && wantOut && wantOut <= wantIn);
 	const outDay = overnight ? nextDay(day) : day;
 
-	const inChanged = wantIn !== hhmm(curIn);
-	const outChanged = overnight || wantOut !== hhmm(curOut);
+	/* A side left on its own keeps only its key to go on (`dayPunches`): a lone
+	   IN reads as an arrival and a lone OUT as a leaving. So a lone side whose
+	   punch carries the other key is rewritten with the right one, or clearing
+	   the other side would turn it round. */
+	const inChanged = wantIn !== hhmm(cur.inAt)
+		|| Boolean(wantIn && !wantOut && cur.inAt && keyOf(cur.inAt) === "OUT");
+	const outChanged = overnight || wantOut !== hhmm(cur.outAt)
+		|| Boolean(wantOut && !wantIn && cur.outAt && keyOf(cur.outAt) !== "OUT");
 	if (!inChanged && !outChanged) return { ...out, why: "Nothing changed." };
+
+	const skip = (side, rows) => rows.forEach((c) => out.skip.push({ ...c, side }));
+	/* The in that stays: the new one, or the punch already there. */
+	const keptIn = wantIn ? (inChanged ? at(day, wantIn) : t19({ time: cur.inAt })) : "";
 
 	if (inChanged) {
 		if (wantIn) {
 			const t = at(day, wantIn);
-			if (!ins.some((c) => String(c.time).slice(0, 19) === t)) out.add.push({ log_type: "IN", time: t });
-			out.skip.push(...ins.filter((c) => String(c.time).slice(0, 19) < t));
+			if (!ins.some((c) => t19(c) === t)) out.add.push({ log_type: "IN", time: t });
+			out.skip.push(...ins.filter((c) => t19(c) < t).map((c) => ({ ...c, side: "in" })));
 		} else {
-			out.skip.push(...ins);
+			skip("in", ins);
 		}
 	}
 	if (outChanged) {
 		if (wantOut) {
 			const t = at(outDay, wantOut);
-			if (!outs.some((c) => String(c.time).slice(0, 19) === t)) out.add.push({ log_type: "OUT", time: t });
+			if (!outs.some((c) => t19(c) === t)) out.add.push({ log_type: "OUT", time: t });
 			/* Overnight, every OUT on the day itself is earlier than the new one
-			   and would still end the day there. */
-			out.skip.push(...outs.filter((c) => overnight || String(c.time).slice(0, 19) > t));
+			   and would still end the day there. A punch keyed IN after the new
+			   out — or, overnight, after the in — would be read as the out
+			   instead, so it goes too. An OUT before the in is not touched: it
+			   may be last night's leaving. */
+			skip("out", outs.filter((c) => overnight || t19(c) > t));
+			skip("out", ins.filter((c) => (overnight ? keptIn && t19(c) > keptIn : t19(c) > t)));
 		} else {
-			out.skip.push(...outs);
+			skip("out", outs);
+			skip("out", ins.filter((c) => keptIn && t19(c) > keptIn));
 		}
 	}
+	/* One punch, set aside once, under the side that took it first. */
+	const seen = new Set();
+	out.skip = out.skip.filter((c) => !seen.has(c.name) && seen.add(c.name));
 	if (!out.add.length && !out.skip.length) return { ...out, why: "Nothing changed." };
 
 	return {
@@ -105,8 +130,11 @@ export function editPlan(day, punches, next) {
 		ok: true,
 		changed: true,
 		overnight,
-		cleared: { in: inChanged && !wantIn && ins.length > 0, out: outChanged && !wantOut && outs.length > 0 },
-		skip: out.skip.map((c) => ({ name: c.name, time: c.time, log_type: c.log_type || "IN" })),
+		cleared: {
+			in: inChanged && !wantIn && out.skip.some((c) => c.side === "in"),
+			out: outChanged && !wantOut && out.skip.some((c) => c.side === "out"),
+		},
+		skip: out.skip.map((c) => ({ name: c.name, time: c.time, log_type: c.log_type || "IN", side: c.side })),
 		requestedIn: wantIn ? at(day, wantIn) : "",
 		requestedOut: wantOut ? at(outDay, wantOut) : "",
 	};
@@ -114,9 +142,13 @@ export function editPlan(day, punches, next) {
 
 /**
  * The punches an approved correction replaces: every live IN before the
- * requested Time In, every live OUT after the requested Time Out. A side the
- * request leaves empty replaces nothing — that is a missed punch being added,
- * not a time being moved.
+ * requested Time In, and every live punch after the requested Time Out on its
+ * day — an IN as well as an OUT, because the day's last punch is its out
+ * whatever key was pressed (16 November 2026), and a leaving punched as IN
+ * would otherwise still end the day. On a same-day correction an OUT before
+ * the Time In is not replaced: it may be last night's leaving. A side the request leaves empty
+ * replaces nothing — that is a missed punch being added, not a time being
+ * moved.
  *
  * @param {object[]} punches  the day's punches (`name`, `time`, `log_type`, `skip_auto_attendance`)
  * @param {string} requestedIn  `YYYY-MM-DD HH:MM:SS` or ""
@@ -131,6 +163,7 @@ export function supersededBy(punches, requestedIn, requestedOut) {
 		.filter((c) => !Number(c.skip_auto_attendance))
 		.filter((c) => (c.log_type === "OUT"
 			? Boolean(requestedOut) && (t(c) > requestedOut || requestedOut.slice(0, 10) > t(c).slice(0, 10))
-			: Boolean(requestedIn) && t(c) < requestedIn))
+			: (Boolean(requestedIn) && t(c) < requestedIn)
+				|| (Boolean(requestedOut) && t(c) > requestedOut && t(c).slice(0, 10) === requestedOut.slice(0, 10))))
 		.map((c) => ({ name: c.name, time: c.time, log_type: c.log_type || "IN" }));
 }

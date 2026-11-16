@@ -77,6 +77,12 @@ direction reliably**, so the shift can be set to *Strictly based on Log Type*
 rather than alternating. That removes the trap where one extra punch reverses
 the pairing for the rest of the day.
 
+**Superseded 16 November 2026.** Reliable in total is not reliable per day:
+Hi-Tech's gate sent HRI-053's leaving as IN on four days of one week, and
+strictly by key each of those days had no leaving. The first punch is the in
+and the last the out, whatever key was pressed — see `docs/SCHEMA.md`,
+"Pairing mode".
+
 **The OT punch types are effectively unused** — 51 records out of 79,067. So
 overtime is not captured at the gate. That is consistent with the planned-
 overtime workflow being a separate, manager-driven thing.

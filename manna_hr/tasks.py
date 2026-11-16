@@ -23,29 +23,35 @@ DEVICE_LOOKBACK_DAYS = 30
 
 
 def flag_open_shifts():
-	"""Employees who punched IN on a past day and never punched OUT.
+	"""Employees who punched in on a past day and never punched out.
 
 	Today's open punches are deliberately excluded: somebody still on the floor
 	has not missed anything yet, and a system that nags them at 3pm is a system
 	people learn to dismiss.
+
+	In and out are the day's first and last punch, whatever key was pressed
+	(`rules.day_pair`, 16 November 2026). Counting keys told somebody who
+	punched IN on leaving that they never left.
 	"""
-	rows = frappe.db.sql(
+	punches = frappe.db.sql(
 		"""
-		SELECT
-			c.employee,
-			c.employee_name,
-			DATE(c.time) AS on_date,
-			MAX(c.time)  AS last_punch
+		SELECT c.employee, c.employee_name, DATE(c.time) AS on_date, c.time, c.log_type
 		FROM `tabEmployee Checkin` c
 		WHERE DATE(c.time) < %(today)s
 		  AND DATE(c.time) >= %(since)s
-		GROUP BY c.employee, c.employee_name, DATE(c.time)
-		HAVING SUM(CASE WHEN c.log_type = 'OUT' THEN 1 ELSE 0 END) = 0
-		   AND SUM(CASE WHEN c.log_type = 'IN'  THEN 1 ELSE 0 END) > 0
+		  AND IFNULL(c.skip_auto_attendance, 0) = 0
 		""",
 		{"today": today(), "since": add_to_date(today(), days=-21, as_string=True)},
 		as_dict=True,
 	)
+	days = {}
+	for p in punches:
+		days.setdefault((p.employee, p.employee_name, p.on_date), []).append((p.time, p.log_type))
+	rows = [
+		frappe._dict(employee=k[0], employee_name=k[1], on_date=k[2])
+		for k, day in days.items()
+		if rules.day_pair(day)[0] and not rules.day_pair(day)[1]
+	]
 
 	for row in rows:
 		if _already_regularized(row.employee, row.on_date):

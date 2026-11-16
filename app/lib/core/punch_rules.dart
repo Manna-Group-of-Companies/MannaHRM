@@ -79,19 +79,35 @@ String nextLogType(List<Map<String, dynamic>> punches) {
 /// **Earliest and latest, not first and second.** A gate that double-reads puts
 /// four rows on a day, and a pair taken in arrival order would report the
 /// second read as the punch-out — a nine-hour day as four minutes.
+///
+/// **The first punch is the in and the last is the out, whatever key was
+/// pressed** (16 November 2026) — the website's `dayPunches` and the HR side's
+/// `pair` in `day.dart`. A gate sent one worker's 18:02 leaving as IN on four
+/// days of one week, and read by the key each was "in, never out".
+///
+/// A last punch within ten minutes of the first is one finger read twice and
+/// leaves one side: the in, unless every punch says OUT — a lone leaving is
+/// the only time the key is all there is to go on. A punch HR set aside is not
+/// part of the day.
 ({String inAt, String outAt}) dayPunches(List<Map<String, dynamic>> rows) {
-  var inAt = '';
-  var outAt = '';
-  for (final c in rows) {
-    final t = '${c['time'] ?? ''}';
-    if (t.isEmpty) continue;
-    if ('${c['log_type'] ?? ''}'.toUpperCase() == kLogOut) {
-      if (outAt.isEmpty || t.compareTo(outAt) > 0) outAt = t;
-    } else if (inAt.isEmpty || t.compareTo(inAt) < 0) {
-      inAt = t;
-    }
+  final live = rows
+      .where((c) => '${c['time'] ?? ''}'.isNotEmpty)
+      .where((c) => !(c['skip_auto_attendance'] == 1 ||
+          c['skip_auto_attendance'] == true ||
+          c['skip_auto_attendance'] == '1'))
+      .toList()
+    ..sort((a, b) => '${a['time']}'.compareTo('${b['time']}'));
+  if (live.isEmpty) return (inAt: '', outAt: '');
+  final first = '${live.first['time']}';
+  final last = '${live.last['time']}';
+  final a = DateTime.tryParse(first.replaceFirst(' ', 'T'));
+  final b = DateTime.tryParse(last.replaceFirst(' ', 'T'));
+  if (a != null && b != null && b.difference(a).inSeconds > 10 * 60) {
+    return (inAt: first, outAt: last);
   }
-  return (inAt: inAt, outAt: outAt);
+  final allOut = live
+      .every((c) => '${c['log_type'] ?? ''}'.toUpperCase() == kLogOut);
+  return allOut ? (inAt: '', outAt: last) : (inAt: first, outAt: '');
 }
 
 /// Hours between two stamps, as `HH:MM`, or "" when the pair says nothing.
@@ -104,7 +120,9 @@ String spanHours(String inAt, String outAt) {
   final a = DateTime.tryParse(inAt.replaceFirst(' ', 'T'));
   final b = DateTime.tryParse(outAt.replaceFirst(' ', 'T'));
   if (a == null || b == null || !b.isAfter(a)) return '';
-  final mins = b.difference(a).inMinutes;
+  // A part-minute counts as a whole one, as on Factor HR and the website
+  // (16 November 2026): 08:26:23 to 18:00:44 is 09:35.
+  final mins = (b.difference(a).inSeconds + 59) ~/ 60;
   return '${(mins ~/ 60).toString().padLeft(2, '0')}:'
       '${(mins % 60).toString().padLeft(2, '0')}';
 }
