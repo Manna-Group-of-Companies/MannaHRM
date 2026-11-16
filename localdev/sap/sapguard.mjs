@@ -17,6 +17,23 @@
 //
 // SAP locks a user after three wrong passwords (Manna_CMMS/sap-sync, 13 Oct
 // 2026), so a failed login is reported and never retried.
+//
+// ONE EXCEPTION to rule 1, the user's decision on 13 Nov 2026, for going live:
+// `openLiveSetupSession` may reach MANNA_TREADS_LIVE and HITECH_PRETREADS_LIVE,
+// and nothing else may. It is kept this narrow on purpose:
+//   - those two names only, written here and not read from any config;
+//   - it can read anything, and ADD only a user table, a user field and a row
+//     of @MANNA_IC. No change, no delete, no document, whatever the caller
+//     asks (`liveSetupAllows`) - except ONE change, added on the evening of
+//     13 Nov 2026 at the user's explicit word, to switch the order flow on
+//     and off without opening SAP: @MANNA_IC's ENABLED row set to "Y" or "N",
+//     that row, that field and those two values only;
+//   - it signs in with its own login, `live_setup` in sap.local.json, which a
+//     person types there - never the test login, tried against live to see;
+//   - the door itself is a value this file does not export, so no other
+//     script can open it by passing an option.
+// Every other tool here is as shut out of live as before. Used by
+// b1if-setup-live.mjs and b1if-enable-live.mjs.
 
 import https from "node:https";
 import fs from "node:fs";
@@ -46,6 +63,42 @@ export const refusalFor = (db, testDbs) => {
 	return "";
 };
 
+/** The two live companies the go-live set-up may reach (13 Nov 2026). */
+export const LIVE_SETUP_DBS = new Set(["MANNA_TREADS_LIVE", "HITECH_PRETREADS_LIVE"]);
+
+/** Why the live set-up may not use this database, or "" when it may. Pure. */
+export const liveSetupRefusal = (db) => {
+	const name = String(db || "").trim().toUpperCase();
+	if (!name) return "no company database given";
+	if (!LIVE_SETUP_DBS.has(name)) return `${name} is not one of the two companies the live set-up may reach`;
+	return "";
+};
+
+const LIVE_SETUP_ADDS = new Set(["Login", "Logout", "UserTablesMD", "UserFieldsMD", "U_MANNA_IC"]);
+
+/** The one change the live set-up may make: the order flow's switch, on or off (the user's decision, 13 Nov 2026 evening). */
+const LIVE_SETUP_SWITCH = "U_MANNA_IC('ENABLED')";
+
+/** May the live set-up send this? It reads anything, adds three kinds of thing, and changes one value - ENABLED, to
+ * Y or N - and deletes nothing. The body is checked too: a PATCH carrying any other field or value is refused. Pure. */
+export const liveSetupAllows = (method, rel, body) => {
+	const m = String(method || "").toUpperCase();
+	if (m === "GET") return true;
+	const path = String(rel || "").replace(/^\/+/, "");
+	if (m === "PATCH") {
+		if (path !== LIVE_SETUP_SWITCH) return false;
+		if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+		const keys = Object.keys(body);
+		return keys.length === 1 && keys[0] === "U_Value" && (body.U_Value === "Y" || body.U_Value === "N");
+	}
+	if (m !== "POST") return false;
+	const first = path.split(/[?(/]/)[0];
+	return LIVE_SETUP_ADDS.has(first);
+};
+
+/** Not exported: only `openLiveSetupSession` below can hand this to a session. */
+const LIVE_SETUP = Symbol("the live set-up's door");
+
 export const loadConfig = () => {
 	if (!fs.existsSync(CONFIG_PATH)) {
 		throw new Error(`No ${CONFIG_PATH}. Copy sap.local.example.json to it and fill it in.`);
@@ -73,8 +126,9 @@ const verified = new WeakSet();
 const normalise = (fp) => String(fp).replace(/[^0-9A-F]/gi, "").toUpperCase();
 
 export class SapSession {
-	constructor(cfg, db) {
-		const why = refusalFor(db, cfg.test_dbs);
+	constructor(cfg, db, door) {
+		this.liveSetup = door === LIVE_SETUP;
+		const why = this.liveSetup ? liveSetupRefusal(db) : refusalFor(db, cfg.test_dbs);
 		if (why) throw new Error(`Refusing SAP company: ${why}`);
 		this.cfg = cfg;
 		this.db = db;
@@ -93,6 +147,9 @@ export class SapSession {
 	}
 
 	request(method, rel, body, { raw = false } = {}) {
+		if (this.liveSetup && !liveSetupAllows(method, rel, body)) {
+			return Promise.reject(new Error(`Refused on a live company: ${method} ${String(rel).split("?")[0]} - the live set-up reads, adds a user table, a user field or a @MANNA_IC row, sets ENABLED to Y or N, and nothing else`));
+		}
 		const url = new URL(rel.replace(/^\/+/, ""), this.base);
 		const payload = body === undefined ? undefined : JSON.stringify(body);
 		return new Promise((resolve, reject) => {
@@ -158,6 +215,10 @@ export class SapSession {
 	}
 
 	async login() {
+		if (this.liveSetup) {
+			const l = this.cfg.live_setup;
+			return this.request("POST", "Login", { CompanyDB: this.db, UserName: l.username, Password: l.passwords[this.db] });
+		}
 		const pw = this.cfg.password_overrides?.[this.db] ?? this.cfg.password;
 		return this.request("POST", "Login", { CompanyDB: this.db, UserName: this.cfg.username, Password: pw });
 	}
@@ -175,3 +236,20 @@ export class SapSession {
 		try { await this.request("POST", "Logout"); } catch { /* the session dies on its own after 30 minutes */ }
 	}
 }
+
+/**
+ * A session on one of the two live companies, for the go-live set-up only (see the top of this file).
+ * Needs `live_setup` in sap.local.json: { "username": "...", "passwords": { "<company>": "..." } } - a password
+ * for each company by its own name, with no fallback, so nothing is ever tried against live on a guess.
+ */
+export const openLiveSetupSession = (cfg, db) => {
+	const name = String(db || "").trim().toUpperCase();
+	const why = liveSetupRefusal(name);
+	if (why) throw new Error(`Refusing SAP company: ${why}`);
+	const l = cfg.live_setup;
+	const pw = l?.passwords?.[name];
+	if (!String(l?.username || "").trim() || !String(pw || "").trim() || /PUT_.*_HERE/.test(`${l.username}${pw}`)) {
+		throw new Error(`No live login for ${name}: add "live_setup": { "username": "...", "passwords": { "${name}": "..." } } to sap.local.json`);
+	}
+	return new SapSession(cfg, name, LIVE_SETUP);
+};
