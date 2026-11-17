@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	ROSTER_STATES, dayAfter, dayMinutes, dayPunches, daysOf, monthRoster, spanHours, workDateOf, workDayPunches,
+	ROSTER_STATES, dayAfter, dayMinutes, dayPunches, daysOf, placeLateOuts, monthRoster, spanHours, workDateOf, workDayPunches,
 } from "../src/lib/roster.js";
 
 /* ---------------------------------------------------------------------------
@@ -121,6 +121,24 @@ describe("dayPunches", () => {
 		expect(spanHours("2026-11-06 08:26:21", "2026-11-06 18:01:49")).toBe("09:36");
 		expect(spanHours("2026-11-03 08:25:00", "2026-11-03 18:02:00")).toBe("09:37");
 		expect(dayMinutes("2026-11-04 08:26:23", "2026-11-04 18:00:44", null).workMin).toBe(575);
+	});
+
+	it("a punch after midnight by somebody who worked the day before is that day's Time Out", () => {
+		/* HPT-015, 3–4 November 2026: Factor HR shows 3 Nov as 05:15–01:12. */
+		const P = (t) => ({ employee: "E", time: t });
+		const out = monthRoster({ ...base, ym: "2026-11", today: "2026-11-17",
+			punches: [P("2026-11-03 05:15:00"), P("2026-11-03 16:58:00"), P("2026-11-04 01:12:00"), P("2026-11-05 08:29:00"), P("2026-11-05 20:30:00")] });
+		const day = (iso) => out.rows.find((r) => r.iso === iso);
+		expect([day("2026-11-03").inAt, day("2026-11-03").outAt]).toEqual(["2026-11-03 05:15:00", "2026-11-04 01:12:00"]);
+		expect(day("2026-11-04").inAt).toBe("");
+		expect([day("2026-11-05").inAt, day("2026-11-05").outAt]).toEqual(["2026-11-05 08:29:00", "2026-11-05 20:30:00"]);
+	});
+
+	it("an early punch with nothing the day before stays an arrival on its own day", () => {
+		const P = (t) => ({ employee: "E", time: t });
+		expect(placeLateOuts([P("2026-11-04 03:30:00")])[0].work_day).toBeUndefined();
+		expect(placeLateOuts([P("2026-11-03 09:00:00"), P("2026-11-04 04:10:00")])[1].work_day).toBeUndefined();
+		expect(placeLateOuts([P("2026-11-03 09:00:00"), P("2026-11-04 03:59:00")])[1].work_day).toBe("2026-11-03");
 	});
 
 	it("a lone OUT stays a leaving with its arrival missing", () => {

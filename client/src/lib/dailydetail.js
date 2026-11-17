@@ -20,7 +20,7 @@
    --------------------------------------------------------------------------- */
 
 import { resolveDayStatus, ABSENT, HOLIDAY, LEAVE_PENDING, ON_FLOOR, ON_LEAVE, PRESENT, UNMARKED } from "./rules.js";
-import { workDateOf, workDayPunches } from "./roster.js";
+import { placeLateOuts, workDateOf, workDayPunches } from "./roster.js";
 import { periodOf } from "./format.js";
 
 const two = (n) => String(n).padStart(2, "0");
@@ -107,7 +107,7 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 	   the day where it has, else the person's own. */
 	const who = new Map((people || []).map((e) => [e.name, e]));
 	const byDay = new Map();
-	for (const c of punches || []) {
+	for (const c of placeLateOuts(punches || [])) {
 		const e = who.get(c.employee);
 		const shiftOn = (iso) => {
 			const a = att.get(c.employee + "|" + iso);

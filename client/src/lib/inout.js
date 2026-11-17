@@ -1,5 +1,5 @@
 import { periodOf, spanOf } from "@/lib/format";
-import { workDateOf } from "@/lib/roster";
+import { placeLateOuts, workDateOf } from "@/lib/roster";
 
 /* The In / Out report's arithmetic on a list of Employee Checkin rows. Pure, so
    the rules can be argued about in a test rather than in front of a payslip. */
@@ -13,7 +13,7 @@ import { workDateOf } from "@/lib/roster";
     Attendance, which the shift job decides. */
 function byPersonDay(rows, shiftOn) {
 	const m = new Map();
-	for (const r of rows) {
+	for (const r of placeLateOuts(rows)) {
 		const date = workDateOf(r, shiftOn ? (iso) => shiftOn(r.employee, iso) : null);
 		const k = `${r.employee}|${date}`;
 		if (!m.has(k)) m.set(k, { date, list: [] });

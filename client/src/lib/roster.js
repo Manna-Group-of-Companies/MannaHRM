@@ -170,6 +170,43 @@ export function workDateOf(punch, shiftOn) {
 	return s != null && e != null && e <= s ? prev : iso;
 }
 
+/** Before this hour, a punch is the night's late leaving, not a morning arrival. */
+export const LATE_OUT_BEFORE = "04:00";
+
+/**
+ * A punch after midnight, by somebody who worked the day before, ends that
+ * day (17 November 2026, as Factor HR has it).
+ *
+ * In at 08:30 and out at 01:12 the next morning: Factor HR shows 08:30–01:12
+ * on the first day. Left on its own date, 01:12 became the next day's
+ * "arrival" and the first day lost its leaving — HPT-015, 069, 079, 095,
+ * 099(BMS) and 108 in the first two weeks of November. So a punch before
+ * LATE_OUT_BEFORE is placed on the previous day (`work_day`, which
+ * `workDateOf` honours) when that person has a punch at or after
+ * LATE_OUT_BEFORE on the previous day, whatever key was pressed. A night
+ * shift's leaving is already placed by its shift window; this is for the
+ * day worker who stayed late. Anything already placed is left alone.
+ *
+ * Any number of people, any order; hands back the same rows, those it moved
+ * with `work_day` set. Anything that is not a list is handed back.
+ */
+export function placeLateOuts(rows) {
+	if (!Array.isArray(rows)) return rows;
+	const worked = new Set();
+	for (const r of rows) {
+		const t = String((r && r.time) || "");
+		if (t.length >= 16 && t.slice(11, 16) >= LATE_OUT_BEFORE && !Number(r.skip_auto_attendance)) {
+			worked.add(`${r.employee || ""}|${t.slice(0, 10)}`);
+		}
+	}
+	return rows.map((r) => {
+		const t = String((r && r.time) || "");
+		if (!r || r.work_day || t.length < 16 || t.slice(11, 16) >= LATE_OUT_BEFORE) return r;
+		const prev = nextIso(t.slice(0, 10), -1);
+		return worked.has(`${r.employee || ""}|${prev}`) ? { ...r, work_day: prev } : r;
+	});
+}
+
 /** Hours between two `YYYY-MM-DD HH:MM:SS` stamps, as `H:MM`.
 
     Their column reads `09:07` for nine hours and seven minutes, which is the
@@ -282,7 +319,7 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 		return a ? (windows || {})[a.shift_type] || null : window;
 	};
 	const byDay = new Map();
-	for (const c of punches || []) {
+	for (const c of placeLateOuts(punches || [])) {
 		const d = workDateOf(c, shiftOf);
 		if (!d) continue;
 		if (!byDay.has(d)) byDay.set(d, []);

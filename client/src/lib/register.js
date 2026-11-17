@@ -17,7 +17,7 @@
    --------------------------------------------------------------------------- */
 
 import { LEAVE_TYPE_NAME, monthCarry } from "@/lib/monthlyleave";
-import { workDateOf, workDayPunches } from "@/lib/roster";
+import { placeLateOuts, workDateOf, workDayPunches } from "@/lib/roster";
 
 const n = (v) => Number(v) || 0;
 const cents = (v) => Math.round(n(v) * 100) / 100;
@@ -76,7 +76,7 @@ export function fillFromPunches(attendance, punches, { people, ym, shifts = null
 	const out = new Map([...(attendance || new Map())].map(([k, v]) => [k, { ...v }]));
 	const who = people instanceof Map ? people : new Map((people || []).map((p) => [p.name, p]));
 	const byDay = new Map();
-	for (const c of punches || []) {
+	for (const c of placeLateOuts(punches || [])) {
 		const e = who.get(c.employee);
 		if (!e) continue;
 		const own = shifts && e.default_shift ? shifts.get(e.default_shift) || null : null;
