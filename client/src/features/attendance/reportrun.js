@@ -17,6 +17,9 @@
    --------------------------------------------------------------------------- */
 
 import { getState } from "@/store";
+import { listAll } from "@/api/client";
+import { loadHolidayDates } from "@/api/load";
+import { shiftReportSheet } from "@/lib/fhreport";
 import { loadDda, loadShiftWindows } from "@/api/attendance";
 import { sheetsPdf, sheetsXlsx } from "@/lib/export";
 import { askText, reportFor, reportInput, specSheet } from "@/data/reports";
@@ -36,7 +39,8 @@ export const ATT_REPORTS = [
 	["absent", "Absent Report", "day"],
 	["msp", "MSP Report", "today"],
 	["iocount", "In / Out Count Report", "today"],
-	["shiftrep", "Employee Shift Report", "none"],
+	/* A range since 17 November 2026: Factor HR's has a column per day. */
+	["shiftrep", "Employee Shift Report", "range"],
 	["headcount", "Head Count And Attendance", "today"],
 	["ot", "OT Report", "range"],
 	["weekly", "Weekly Report", "week"],
@@ -55,6 +59,23 @@ async function rangeRows(from, to) {
 	const r = rangeRowsFrom(getState(), from, to);
 	if (r.err) throw new Error(r.err);
 	return r;
+}
+
+/** Employee Shift Report in Factor HR's layout (lib/fhreport.js): everybody in
+    scope, and the dated shifts and holiday calendars the range needs. */
+async function shiftSheet(s, from, to) {
+	if (s.holidayLists.some((h) => !s.holidays[h.name])) await loadHolidayDates();
+	const asg = await listAll("Shift Assignment", ["employee", "shift_type", "start_date", "end_date"],
+		[["docstatus", "=", 1], ["status", "=", "Active"], ["start_date", "<=", to]]);
+	const st = getState();
+	return shiftReportSheet({
+		emps: reportInput(st, "attendance").rows,
+		companies: st.companies,
+		holidays: st.holidays,
+		assignments: asg.filter((a) => !a.end_date || String(a.end_date) >= from),
+		from, to,
+		company: st.company,
+	});
 }
 
 /**
@@ -77,7 +98,9 @@ export async function runReport(key, kind, ask) {
 	if (key === "summary") return msDownload(ask.from, ask.to, kind);
 
 	let sheet;
-	if (key === "absent") {
+	if (key === "shiftrep") {
+		sheet = await shiftSheet(s, ask.from, ask.to);
+	} else if (key === "absent") {
 		const { rows } = await rangeRows(ask.day, ask.day);
 		sheet = absentSheet(rows, ask.day);
 	} else if (key === "ot") {

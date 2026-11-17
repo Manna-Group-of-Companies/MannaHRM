@@ -52,6 +52,36 @@ export function sheetNames(titles) {
    half hours early, with no zone to say so. */
 const stamp = nowStamp;
 
+/* A sheet the way Factor HR writes one (lib/fhreport.js): its bold lines,
+   two empty rows, a bold centred heading row frozen under it, then the rows —
+   Calibri 11, no fills, no borders. `formats` is a number format per column
+   index, `headFormat` the one for a heading that is a Date. */
+const CALIBRI = { name: "Calibri", size: 11 };
+function factohrSheet(ws, sh) {
+	for (const line of sh.lines || []) ws.addRow([line]).getCell(1).font = { ...CALIBRI, bold: true };
+	ws.addRow([""]);
+	ws.addRow([]);
+	const head = ws.addRow(sh.head);
+	head.eachCell((c) => {
+		c.font = { ...CALIBRI, bold: true };
+		c.alignment = { horizontal: "center" };
+		if (c.value instanceof Date && sh.headFormat) c.numFmt = sh.headFormat;
+	});
+	ws.views = [{ state: "frozen", ySplit: head.number }];
+	for (const cells of sh.rows) {
+		ws.addRow(cells).eachCell((c, ci) => {
+			c.font = CALIBRI;
+			const f = sh.formats && sh.formats[ci - 1];
+			if (f && c.value instanceof Date) c.numFmt = f;
+		});
+	}
+	sh.head.forEach((h, i) => {
+		let w = h instanceof Date ? 14 : String(h).length;
+		for (const r of sh.rows) w = Math.max(w, r[i] instanceof Date ? 12 : String(r[i] ?? "").length);
+		ws.getColumn(i + 1).width = Math.min(Math.max(w + 2, 9), 50);
+	});
+}
+
 /** One workbook, one worksheet per sheet. */
 export async function sheetsXlsx(sheets, name) {
 	const ExcelJS = (await import("exceljs")).default;
@@ -65,6 +95,7 @@ export async function sheetsXlsx(sheets, name) {
 		const ws = wb.addWorksheet(names[si], {
 			pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
 		});
+		if (sh.factohr) return factohrSheet(ws, sh);
 		const banner = (text, font) => {
 			const r = ws.addRow([text]);
 			if (width > 1) ws.mergeCells(r.number, 1, r.number, width);
@@ -191,7 +222,14 @@ export async function sheetsPdf(sheets, name) {
 /* jsPDF's built-in fonts are WinAnsi only. A character outside it — an emoji,
    a Tamil or Malayalam name — prints as a run of garbage glyphs rather than
    failing, so it is swapped for `?`, which at least reads as "not shown". */
+const PDF_DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const PDF_MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function pdfText(v) {
+	/* A Factor HR style sheet carries real dates (lib/fhreport.js); the PDF
+	   writes them as Excel shows them, not as a JavaScript Date prints. */
+	if (v instanceof Date) {
+		return `${PDF_DAY[v.getDay()]} ${String(v.getDate()).padStart(2, "0")}-${PDF_MON[v.getMonth()]}-${String(v.getFullYear()).slice(2)}`;
+	}
 	return String(v ?? "").replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
 		.replace(/[^\x09\x0a\x0d\x20-\x7e\xa0-\xff–—•…]/g, "?");
 }
