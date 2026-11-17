@@ -28,7 +28,20 @@ void main() {
       );
     });
 
-    test('a punch in with no punch out is still in, not a full day', () {
+    test('a punch in today with no punch out yet is still in, not a full day', () {
+      expect(
+        resolveDayStatus(
+          hasPunchIn: true,
+          hasPunchOut: false,
+          leaveStatus: '',
+          isHoliday: false,
+          isPastDay: false,
+        ),
+        DayStatus.onFloor,
+      );
+    });
+
+    test('a past day with only a punch in is absent, as on Factor HR', () {
       expect(
         resolveDayStatus(
           hasPunchIn: true,
@@ -37,7 +50,7 @@ void main() {
           isHoliday: false,
           isPastDay: true,
         ),
-        DayStatus.onFloor,
+        DayStatus.absent,
       );
     });
 

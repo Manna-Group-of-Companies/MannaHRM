@@ -53,9 +53,11 @@ def resolve_day_status(
 	  1. **A punch beats everything.** Somebody who turned up worked, whatever
 	     leave record exists. A worker who cancelled their leave and came in
 	     must not be marked absent because the request was never withdrawn.
-	  2. **Both punches, or they are still in.** A day counts as worked only
-	     with a punch in *and* out; an open shift is not a complete day and is
-	     not payroll-ready.
+	  2. **Both punches, or they are still in — today only.** A day counts as
+	     worked only with a punch in *and* out. Today an arrival with no
+	     leaving is still in; **a past day with only a punch-in is explained
+	     like a day with no punch, and is absent if nothing else explains it**
+	     (HR, 17 November 2026, as Factor HR does — payroll follows it).
 	  3. **Granted leave, then requested leave.** These are different facts. A
 	     request nobody has decided is not time off, and treating it as such
 	     would let unapproved absence disappear into the leave column.
@@ -66,8 +68,10 @@ def resolve_day_status(
 
 	Only what survives all five is absent.
 	"""
-	if has_punch_in:
-		return PRESENT if has_punch_out else ON_FLOOR
+	if has_punch_in and has_punch_out:
+		return PRESENT
+	if has_punch_in and not is_past_day:
+		return ON_FLOOR
 
 	if leave_status == "Approved":
 		return ON_LEAVE

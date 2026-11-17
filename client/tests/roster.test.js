@@ -216,12 +216,19 @@ describe("the month", () => {
 		expect(out.counts.full).toBe(1);
 	});
 
-	it("counts a day with one punch as partial, not as a full day", () => {
-		/* A day counts as worked only with a punch in *and* out. An open shift is
-		   not a complete day and is not payroll-ready. */
+	it("counts a past day with only a punch-in as absent, as Factor HR does", () => {
+		/* A day counts as worked only with a punch in *and* out. HR, 17 November
+		   2026: a past day with an arrival and no leaving is Absent, as on Factor
+		   HR, which payroll follows. */
 		const out = monthRoster({ ...base, punches: [IN("2026-08-03 08:22:00")] });
-		expect(dayOn(out, "2026-08-03").display).toBe("partial");
+		expect(dayOn(out, "2026-08-03").display).toBe("absent");
 		expect(dayOn(out, "2026-08-03").hours).toBe("");
+		expect(dayOn(out, "2026-08-03").inAt).toBe("2026-08-03 08:22:00");
+	});
+
+	it("counts today with only a punch-in as partial — they have not left yet", () => {
+		const out = monthRoster({ ...base, today: "2026-08-03", punches: [IN("2026-08-03 08:22:00")] });
+		expect(dayOn(out, "2026-08-03").display).toBe("partial");
 	});
 
 	it("separates a weekly off from a named holiday, which the rule does not", () => {

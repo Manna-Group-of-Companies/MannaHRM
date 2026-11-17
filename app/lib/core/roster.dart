@@ -49,8 +49,10 @@ const List<String> kUndecidedLeave = ['Open', 'Applied'];
 ///
 ///   1. **A punch beats everything.** Somebody who turned up worked, whatever
 ///      leave record exists.
-///   2. **Both punches, or they are still in.** A day counts as worked only
-///      with a punch in *and* out.
+///   2. **Both punches, or they are still in — today only.** A day counts as
+///      worked only with a punch in *and* out. A past day with only a punch-in
+///      is explained like a day with no punch, and is absent if nothing else
+///      explains it (HR, 17 November 2026, as Factor HR does).
 ///   3. **Granted leave, then requested leave.** A request nobody has decided
 ///      is not time off, and treating it as such would let unapproved absence
 ///      disappear into the leave column.
@@ -65,7 +67,8 @@ DayStatus resolveDayStatus({
   required bool isHoliday,
   required bool isPastDay,
 }) {
-  if (hasPunchIn) return hasPunchOut ? DayStatus.present : DayStatus.onFloor;
+  if (hasPunchIn && hasPunchOut) return DayStatus.present;
+  if (hasPunchIn && !isPastDay) return DayStatus.onFloor;
   if (leaveStatus == 'Approved') return DayStatus.onLeave;
   // A rejected request is decided, and the answer was no — so it explains
   // nothing and must not sit in the pending column.

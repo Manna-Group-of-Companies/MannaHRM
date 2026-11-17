@@ -48,7 +48,8 @@ describe("the register", () => {
 		const [e1, e2] = monthRegister(base);
 		const day = (r, iso) => r.rows.find((d) => d.iso === iso);
 		expect(day(e1, "2026-08-03").display).toBe("full");
-		expect(day(e2, "2026-08-03").display).toBe("partial");
+		// Only a punch-in on a past day: absent, as on Factor HR (17 November 2026).
+		expect(day(e2, "2026-08-03").display).toBe("absent");
 		expect(day(e2, "2026-08-04").display).toBe("leave");
 		expect(day(e1, "2026-08-04").display).toBe("absent");
 		expect(day(e1, "2026-08-05").ar.status).toBe("Pending Approval");
@@ -132,10 +133,10 @@ describe("late coming and early going on the register", () => {
 		expect(counts).toMatchObject({ lateDays: 1, lateMin: 10, earlyDays: 2, earlyMin: 45 });
 	});
 
-	it("does not call a day with only a punch-in early — that is ½, not early", () => {
+	it("does not call a day with only a punch-in early — that is absent, not early", () => {
 		const { rows, counts } = monthRoster({ ym: "2026-08", today: "2026-08-10", window: W,
 			punches: [IN("E1", "2026-08-03 09:00:00")] });
-		expect(rows[2]).toMatchObject({ display: "partial", earlyMin: 0 });
+		expect(rows[2]).toMatchObject({ display: "absent", earlyMin: 0 });
 		expect(counts.earlyDays).toBe(0);
 	});
 

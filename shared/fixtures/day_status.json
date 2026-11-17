@@ -31,8 +31,20 @@
       "then": "present"
     },
     {
-      "name": "one punch is still in rather than present",
-      "why": "A day counts as worked only with a punch in and out. An open shift is not a complete day and is not payroll-ready, and calling it present pays for hours nobody has measured.",
+      "name": "a punch-in today with no punch-out yet is still in",
+      "why": "A day counts as worked only with a punch in and out, and today is not over: somebody who arrived this morning has not missed their leaving yet.",
+      "given": {
+        "has_punch_in": true,
+        "has_punch_out": false,
+        "leave_status": "",
+        "is_holiday": false,
+        "is_past_day": false
+      },
+      "then": "on_floor"
+    },
+    {
+      "name": "a past day with only a punch-in is absent, as on Factor HR",
+      "why": "HR, 17 November 2026: Factor HR marks a past day with an arrival and no leaving Absent, and payroll follows it. Before then it was 'still in' (Partial) and left as an open question.",
       "given": {
         "has_punch_in": true,
         "has_punch_out": false,
@@ -40,7 +52,31 @@
         "is_holiday": false,
         "is_past_day": true
       },
-      "then": "on_floor"
+      "then": "absent"
+    },
+    {
+      "name": "a past day with only a punch-in on approved leave is leave, not absent",
+      "why": "One punch is not a worked day, so the day is explained the way a day with no punch is: granted leave first.",
+      "given": {
+        "has_punch_in": true,
+        "has_punch_out": false,
+        "leave_status": "Approved",
+        "is_holiday": false,
+        "is_past_day": true
+      },
+      "then": "on_leave"
+    },
+    {
+      "name": "a past day with only a punch-in on a holiday is a holiday",
+      "why": "A holiday is nobody's absence, with one punch on it or none.",
+      "given": {
+        "has_punch_in": true,
+        "has_punch_out": false,
+        "leave_status": "",
+        "is_holiday": true,
+        "is_past_day": true
+      },
+      "then": "holiday"
     },
     {
       "name": "a punch out with no punch in is not a worked day",

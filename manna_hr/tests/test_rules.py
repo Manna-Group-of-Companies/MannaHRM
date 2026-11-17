@@ -36,7 +36,7 @@ def test_a_punch_beats_an_approved_leave_record():
 	)
 
 
-def test_one_punch_is_still_in_not_present():
+def test_one_punch_today_is_still_in_not_present():
 	# An open shift has no measured end, so counting it as a full day would pay
 	# somebody on the strength of a missing punch.
 	assert (
@@ -45,9 +45,23 @@ def test_one_punch_is_still_in_not_present():
 			has_punch_out=False,
 			leave_status=None,
 			is_holiday=False,
-			is_past_day=True,
+			is_past_day=False,
 		)
 		== rules.ON_FLOOR
+	)
+
+
+def test_a_past_day_with_only_a_punch_in_is_absent_as_on_factor_hr():
+	# HR, 17 November 2026: Factor HR marks it Absent and payroll follows it.
+	assert (
+		rules.resolve_day_status(
+			has_punch_in=True,
+			has_punch_out=False,
+			leave_status=None,
+			is_holiday=False,
+			is_past_day=True,
+		)
+		== rules.ABSENT
 	)
 
 
