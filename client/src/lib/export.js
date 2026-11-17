@@ -57,27 +57,43 @@ const stamp = nowStamp;
    Calibri 11, no fills, no borders. `formats` is a number format per column
    index, `headFormat` the one for a heading that is a Date. */
 const CALIBRI = { name: "Calibri", size: 11 };
+/* Each report's own variations, as their files have them: `lines` are strings
+   (all bold) or `{text, bold}`; `lineCol` is the column they sit in (In / Out
+   Activities puts them in C); `gap` the empty rows before the heading (two
+   unless said); `borders` draws thin borders on the heading and the rows. A
+   `{text, hyperlink}` cell is a link. */
 function factohrSheet(ws, sh) {
-	for (const line of sh.lines || []) ws.addRow([line]).getCell(1).font = { ...CALIBRI, bold: true };
-	ws.addRow([""]);
-	ws.addRow([]);
+	const col = sh.lineCol || 1;
+	for (const line of sh.lines || []) {
+		const l = typeof line === "string" ? { text: line, bold: true } : line;
+		const row = ws.addRow([]);
+		row.getCell(col).value = l.text;
+		row.getCell(col).font = { ...CALIBRI, bold: Boolean(l.bold) };
+	}
+	for (let i = 0; i < (sh.gap ?? 2); i++) ws.addRow(i === 0 ? [""] : []);
+	const edge = { style: "thin" };
+	const box = { top: edge, left: edge, bottom: edge, right: edge };
 	const head = ws.addRow(sh.head);
 	head.eachCell((c) => {
 		c.font = { ...CALIBRI, bold: true };
-		c.alignment = { horizontal: "center" };
+		c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+		if (sh.borders) c.border = box;
 		if (c.value instanceof Date && sh.headFormat) c.numFmt = sh.headFormat;
 	});
 	ws.views = [{ state: "frozen", ySplit: head.number }];
 	for (const cells of sh.rows) {
-		ws.addRow(cells).eachCell((c, ci) => {
-			c.font = CALIBRI;
+		ws.addRow(cells).eachCell({ includeEmpty: Boolean(sh.borders) }, (c, ci) => {
+			c.font = c.value && c.value.hyperlink ? { ...CALIBRI, underline: true, color: { argb: "FF0563C1" } } : CALIBRI;
+			if (sh.borders) c.border = box;
+			if (typeof c.value === "string" && c.value.includes("\n")) c.alignment = { wrapText: true, vertical: "top" };
 			const f = sh.formats && sh.formats[ci - 1];
 			if (f && c.value instanceof Date) c.numFmt = f;
 		});
 	}
+	const len = (v) => (v instanceof Date ? 12 : v && v.text ? v.text.length : Math.max(...String(v ?? "").split("\n").map((s) => s.length)));
 	sh.head.forEach((h, i) => {
-		let w = h instanceof Date ? 14 : String(h).length;
-		for (const r of sh.rows) w = Math.max(w, r[i] instanceof Date ? 12 : String(r[i] ?? "").length);
+		let w = h instanceof Date ? 14 : Math.min(String(h).length, 18);
+		for (const r of sh.rows) w = Math.max(w, len(r[i]));
 		ws.getColumn(i + 1).width = Math.min(Math.max(w + 2, 9), 50);
 	});
 }
@@ -228,8 +244,12 @@ function pdfText(v) {
 	/* A Factor HR style sheet carries real dates (lib/fhreport.js); the PDF
 	   writes them as Excel shows them, not as a JavaScript Date prints. */
 	if (v instanceof Date) {
-		return `${PDF_DAY[v.getDay()]} ${String(v.getDate()).padStart(2, "0")}-${PDF_MON[v.getMonth()]}-${String(v.getFullYear()).slice(2)}`;
+		const day = `${PDF_DAY[v.getDay()]} ${String(v.getDate()).padStart(2, "0")}-${PDF_MON[v.getMonth()]}-${String(v.getFullYear()).slice(2)}`;
+		const t = v.getHours() || v.getMinutes() || v.getSeconds()
+			? ` ${[v.getHours(), v.getMinutes(), v.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":")}` : "";
+		return day + t;
 	}
+	if (v && typeof v === "object" && "text" in v) return pdfText(v.text);
 	return String(v ?? "").replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
 		.replace(/[^\x09\x0a\x0d\x20-\x7e\xa0-\xff–—•…]/g, "?");
 }

@@ -15,6 +15,7 @@
    --------------------------------------------------------------------------- */
 
 import { assignmentOn } from "./roster.js";
+import { coordOf, coordText, mapLink, placeText } from "./punchplace.js";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -121,5 +122,72 @@ export function shiftReportSheet({ emps, companies, holidays, assignments, from,
 		/* Factor HR's own formats: the joining date, and the day headings. */
 		formats: { 3: "dd-mmm-yyyy" },
 		headFormat: "ddd dd-mmm-yy",
+	};
+}
+
+/* A stamp as a local Date, so Excel shows it without moving it a time zone. */
+const stampDate = (t) => {
+	const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(t || ""));
+	return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : "";
+};
+const hms = (sec) => [Math.floor(sec / 3600), Math.floor((sec % 3600) / 60), sec % 60].map((n) => String(n).padStart(2, "0")).join(":");
+
+/**
+ * In / Out Activities Report, as Factor HR's (their file of 17 November 2026):
+ * the company in bold, the title, an empty row, the date range, then the
+ * heading at row 6 and one bordered row per punch — by person, then time.
+ *
+ * Selfie Image is drawn empty: Factor HR puts the phone's photo there, and
+ * this sheet carries text only. Generation Time / Upload Time is when the
+ * punch reached the site, where the read carried it.
+ *
+ * @param {{punches: object[], byName: Object<string, object>, places: object[],
+ *          from: string, to: string, company: string}} a
+ */
+export function inOutSheet({ punches, byName, places, from, to, company }) {
+	const who = (r) => byName[r.employee] || {};
+	const list = (punches || []).slice().sort((a, b) =>
+		String(who(a).employee_number || a.employee).localeCompare(String(who(b).employee_number || b.employee))
+		|| String(a.time).localeCompare(String(b.time)));
+	const rows = list.map((r, i) => {
+		const e = who(r);
+		const prev = list[i - 1];
+		const sameDay = prev && prev.employee === r.employee && String(prev.time).slice(0, 10) === String(r.time).slice(0, 10);
+		const gap = sameDay ? Math.round((stampDate(r.time) - stampDate(prev.time)) / 1000) : 0;
+		const c = coordOf(r);
+		return [
+			i + 1,
+			e.employee_number || r.employee,
+			e.employee_name || r.employee_name || "",
+			r.device_id || "",
+			placeText(r, places) || coordText(r),
+			r.creation ? stampDate(r.creation) : "",
+			stampDate(r.time),
+			stampDate(r.time),
+			gap > 0 ? hms(gap) : "",
+			"",
+			r.log_type || "",
+			c ? `Lat: ${c.lat}\nLong: ${c.lng}` : "",
+			c ? { text: "View Map", hyperlink: mapLink(c.lat, c.lng) } : "",
+		];
+	});
+	const lines = [
+		{ text: String(company || "Manna Group").toUpperCase(), bold: true },
+		{ text: "In / Out Activities Report" },
+		{ text: "" },
+		{ text: `Date From: ${fhDate(from)} - Date Till: ${fhDate(to)}` },
+	];
+	return {
+		factohr: true,
+		title: "In Out Activities Report",
+		lines,
+		lineCol: 3,
+		gap: 1,
+		borders: true,
+		sub: lines[3].text,
+		head: ["S#", "Emp Code", "Emp Name", "Terminal", "Location", "Generation Time / Upload Time", "Punch Date",
+			"Punch Time", "Duration From Previous Punch", "Selfie Image", "Remarks", "Punch Info", "Location Link"],
+		rows,
+		formats: { 5: "dd-mm-yyyy hh:mm:ss", 6: "ddd dd-mmm-yy", 7: "hh:mm:ss AM/PM" },
 	};
 }

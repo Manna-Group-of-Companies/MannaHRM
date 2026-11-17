@@ -16,6 +16,7 @@ import { CAT_FIELDS, CAT_GROUP_BY, IO_MAXDAYS } from "@/data/attendance";
 import { Empty, Gap, Modal, Scroll } from "@/components/ui";
 import { save } from "@/lib/csv";
 import { sheetsPdf, sheetsXlsx } from "@/lib/export";
+import { inOutSheet } from "@/lib/fhreport";
 import { esc, paper, printPaper } from "@/lib/doc";
 
 /* Factor HR's newer report chrome, photographed 28 Aug 2026: the title, a row
@@ -329,7 +330,12 @@ function ioRun(s, kind) {
 		   construction. */
 		const cols = ioCols(s.io).filter((c) => c[1]);
 		const f = s.io;
-		const sheet = {
+		/* One row per punch is Factor HR's report, so it is laid out as
+		   theirs (17 November 2026, lib/fhreport.js). First & last is ours. */
+		const sheet = f.view !== "day" ? inOutSheet({
+			punches: rows, byName: s.byName, places: s.workLocs,
+			from: f.from || todayIso(), to: f.till || f.from || todayIso(), company: f.co || s.company,
+		}) : {
 			title: "In Out Activities Report",
 			sub: `${f.co || s.company || "All companies"} · ${dmy(f.from || todayIso())} to ${dmy(f.till || f.from || todayIso())}`,
 			headFill: HEAD_FILL,
