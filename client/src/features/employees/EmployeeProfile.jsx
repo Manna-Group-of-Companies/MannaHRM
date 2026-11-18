@@ -988,7 +988,7 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto,
 								{/* Which day it took effect — kept as the Leaving Date (18 Nov 2026). */}
 								<label className="prodeactdate">
 									<span>Deactivated from</span>
-									<input className="k-inp" type="date" required value={deact.date} disabled={deact.busy}
+									<input className="k-inp" type="date" required aria-label="Deactivated from" value={deact.date} disabled={deact.busy}
 										onChange={(e) => deact.onDate(e.target.value)} aria-invalid={Boolean(deact.bad)} />
 								</label>
 								<button className="k-btn k-btn-danger k-btn-sm" disabled={deact.busy || Boolean(deact.bad)} onClick={deact.onYes}

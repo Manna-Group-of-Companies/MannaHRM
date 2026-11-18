@@ -302,6 +302,11 @@ scheduler_events = {
 		# quietly, and a silent bridge is indistinguishable from a workforce
 		# that stopped coming in until payroll runs.
 		"manna_hr.tasks.alert_on_silent_devices",
+		# Next year's Holiday List, 60 days before this one ends, assigned to
+		# every company ahead of time and switched to on its first day — so the
+		# calendar, weekly offs and leave carry on into the new year by
+		# themselves (18 Nov 2026). manna_hr/holidayroll.py.
+		"manna_hr.holidayroll.run",
 	],
 }
 
