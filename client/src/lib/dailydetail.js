@@ -124,8 +124,16 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 	let capped = 0;
 	for (const e of people || []) {
 		const hol = new Map((holidaysOf ? holidaysOf(e) : []).map((h) => [String(h.holiday_date).slice(0, 10), h]));
+		const joined = String(e.date_of_joining || "").slice(0, 10);
+		const left = String(e.relieving_date || "").slice(0, 10);
 		for (const d = new Date(from + "T00:00:00"); ymdOf(d) <= to; d.setDate(d.getDate() + 1)) {
 			const iso = ymdOf(d);
+			/* Only the days somebody worked here (18 Nov 2026): not before they
+			   joined, and not after the date they were deactivated or left. A
+			   day outside those was being drawn as Absent, which is what payroll
+			   is read off. */
+			if (joined && iso < joined) continue;
+			if (left && iso > left) continue;
 			const h = hol.get(iso);
 			if (dow.length && !dow.includes(d.getDay())) continue;
 			if (punch === "req" && h) continue;

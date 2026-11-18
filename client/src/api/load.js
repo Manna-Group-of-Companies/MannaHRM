@@ -30,6 +30,9 @@ export const EMP_FIELDS = EMP_FIELDS_MIN.concat([
 	/* The login, for Apply Leave's Leave Approver list — hrms takes a User
 	   there, not an Employee. Stock on Employee. */
 	"user_id",
+	/* The Leaving Date — where Deactivate keeps its date (18 Nov 2026), and
+	   where Daily Detail stops a person's days. Stock on Employee. */
+	"relieving_date",
 ]);
 
 /* Tried before EMP_FIELDS: `custom_needs_details` is ours (3 October 2026) and

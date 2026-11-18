@@ -11,6 +11,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import { Desk, Empty, Scroll } from "@/components/ui";
 import { saveEmployee, saveEmployeePhoto } from "@/api/employee";
+import { activatePatch, deactivateDateProblem, deactivatePatch } from "@/lib/deactivate";
 import {
 	CHOICES, LINK_LISTS, boxValue, changedCount, controlFor, patchFrom, whyNotEditable, withEdit,
 } from "@/lib/profedit";
@@ -984,7 +985,14 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto,
 						    person's details going off every screen here. */}
 						{!editing && on && deact && (deact.ask ? (
 							<span className="prodeact" role="group" aria-label="Confirm deactivation">
-								<button className="k-btn k-btn-danger k-btn-sm" disabled={deact.busy} onClick={deact.onYes}>
+								{/* Which day it took effect — kept as the Leaving Date (18 Nov 2026). */}
+								<label className="prodeactdate">
+									<span>Deactivated from</span>
+									<input className="k-inp" type="date" required value={deact.date} disabled={deact.busy}
+										onChange={(e) => deact.onDate(e.target.value)} aria-invalid={Boolean(deact.bad)} />
+								</label>
+								<button className="k-btn k-btn-danger k-btn-sm" disabled={deact.busy || Boolean(deact.bad)} onClick={deact.onYes}
+									title={deact.bad || "Set the status to Inactive from this date"}>
 									{deact.busy ? "Deactivating…" : "Yes, deactivate"}
 								</button>
 								<button className="k-btn k-btn-line k-btn-sm" disabled={deact.busy} onClick={deact.onNo}>Cancel</button>
@@ -1103,7 +1111,7 @@ function NotActive({ doc, deskHref, deact }) {
 				</div>
 				<p className="prooffnote">
 					{inactive
-						? "This person has been deactivated, so their details are hidden. Activate them to see their details again."
+						? `This person has been deactivated${doc.relieving_date ? ` from ${dmy(doc.relieving_date)}` : ""}, so their details are hidden. Activate them to see their details again.`
 						: `This person's status is ${doc.status || "not Active"}, so their details are hidden. It is changed on the site.`}
 				</p>
 			</div>
@@ -1157,6 +1165,7 @@ export default function EmployeeProfile() {
 	const doc = picked ? s.empDoc[picked] : null;
 	const [deactAsk, setDeactAsk] = useState(false);
 	const [deactBusy, setDeactBusy] = useState(false);
+	const [deactDate, setDeactDate] = useState(todayIso());
 
 	const refresh = () => {
 		if (picked) forgetEmployeeDoc(picked);
@@ -1208,13 +1217,16 @@ export default function EmployeeProfile() {
 		if (getState().empSel !== who) return;
 		set({ profmsg: { ok: true, text: said } });
 	}
-	const setStatus = (status) => writeOne({ status }, status === "Active"
+	const setStatus = (status) => writeOne(status === "Active" ? activatePatch() : deactivatePatch(deactDate), status === "Active"
 		? "Activated. Their details are shown again."
-		: "Deactivated. Their details are hidden until they are activated again.");
+		: `Deactivated from ${dmy(deactDate)}. Their details are hidden until they are activated again.`);
 	const deact = {
 		ask: deactAsk,
 		busy: deactBusy,
-		onAsk: () => setDeactAsk(true),
+		date: deactDate,
+		bad: deactivateDateProblem(deactDate, doc && doc.date_of_joining),
+		onDate: setDeactDate,
+		onAsk: () => { setDeactDate(todayIso()); setDeactAsk(true); },
 		onNo: () => setDeactAsk(false),
 		onYes: () => void setStatus("Inactive"),
 		onActivate: () => void setStatus("Active"),

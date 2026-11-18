@@ -7,6 +7,7 @@ import EmployeeCard from "@/components/EmployeeCard";
 import EmployeeMaster from "@/features/employees/EmployeeMaster";
 import { store, set, getState, resetStore } from "@/store";
 import { loadedState } from "./fixture";
+import { todayIso } from "@/lib/format";
 
 /* ---------------------------------------------------------------------------
    Employees → Employee Profile → Deactivate (3 October 2026).
@@ -84,11 +85,13 @@ describe("Deactivate on the profile", () => {
 		expect(button(v, "Deactivate")).toBeTruthy();
 	});
 
-	it("writes_the_status_inactive_and_nothing_else", async () => {
+	it("writes_the_status_inactive_and_the_date_it_took_effect_as_the_leaving_date", async () => {
 		const v = draw();
 		await click(button(v, "Deactivate"));
+		/* Asked for 18 Nov 2026: the date, today unless changed. */
+		expect(v.container.querySelector('.prodeact input[type="date"]').value).toBe(todayIso());
 		await click(button(v, "Yes, deactivate"));
-		expect(wrote).toEqual([["Employee", "HR-EMP-00001", { status: "Inactive" }]]);
+		expect(wrote).toEqual([["Employee", "HR-EMP-00001", { status: "Inactive", relieving_date: todayIso() }]]);
 	});
 
 	it("marks_the_card_row_inactive_without_a_reload", async () => {
@@ -136,7 +139,8 @@ describe("somebody who is not active", () => {
 		set({ empDoc: { "HR-EMP-00001": { ...DOC, status: "Inactive" } } });
 		const v = draw();
 		await click(button(v, "Activate"));
-		expect(wrote).toEqual([["Employee", "HR-EMP-00001", { status: "Active" }]]);
+		/* The Leaving Date goes with it: somebody brought back is not cut off at it. */
+		expect(wrote).toEqual([["Employee", "HR-EMP-00001", { status: "Active", relieving_date: null }]]);
 		siteNowSays("Active");
 		expect(text(v)).toContain("MR001");
 		expect(button(v, "Deactivate")).toBeTruthy();

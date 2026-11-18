@@ -86,12 +86,14 @@ export function ModalFoot({ ok = "Save", onCancel, busy = false, danger = false 
 
 /** "Are you sure?", the reference's way: a title, what will happen, and the
     one button that does it. */
-export function Confirm({ title, sub, ok, onOk, onClose, danger = true }) {
+export function Confirm({ title, sub, ok, onOk, onClose, danger = true, children = null, blocked = false }) {
 	const [busy, setBusy] = useState(false);
 	return (
 		<KitModal title={title} sub={sub} onClose={onClose}>
-			<form onSubmit={async (e) => { e.preventDefault(); setBusy(true); try { await onOk(); } finally { setBusy(false); } }}>
-				<ModalFoot ok={ok} danger={danger} busy={busy} onCancel={onClose} />
+			<form onSubmit={async (e) => { e.preventDefault(); if (blocked) return; setBusy(true); try { await onOk(); } finally { setBusy(false); } }}>
+				{/* What the one question needs answered first — Deactivate's date. */}
+				{children}
+				<ModalFoot ok={ok} danger={danger} busy={busy || blocked} onCancel={onClose} />
 			</form>
 		</KitModal>
 	);

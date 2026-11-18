@@ -5,7 +5,7 @@ import { load } from "@/api/load";
 import { saveEmployee } from "@/api/employee";
 import { forgetEmployeeDoc } from "@/features/employees/useEmployeeDoc";
 import { isOn, needsDetails, scoped, uniq } from "@/lib/scope";
-import { fmt, tidyDept } from "@/lib/format";
+import { fmt, tidyDept, todayIso } from "@/lib/format";
 import EmployeeCard from "@/components/EmployeeCard";
 import { NO_SITE } from "@/components/ui";
 import { deskImport, deskUrl } from "@/lib/desk";
@@ -17,6 +17,7 @@ import { employeesLocked } from "@/data/menus";
 import KitIcon from "@/components/kit/KitIcon";
 import { EmptyState, PageHead, Pager, Pill, Seg, Who } from "@/components/kit/ui";
 import { Confirm, DotsMenu, KitDrawer, toast } from "@/components/kit/overlay";
+import { activatePatch, deactivateDateProblem, deactivatePatch } from "@/lib/deactivate";
 
 /* Employee Master, in the HRDashboard reference's Employees layout
    (21 October 2026): its heading with Filter and Add new profile, its search
@@ -309,6 +310,7 @@ export default function EmployeeMaster() {
 	const [sel, setSel] = useState(() => new Set());
 	const [drawer, setDrawer] = useState(false);
 	const [ask, setAsk] = useState("");
+	const [offDate, setOffDate] = useState(todayIso());
 	const [busy, setBusy] = useState(false);
 	const [err, setErr] = useState("");
 	/* Records the bridge made from a fingerprint punch, still to be completed. */
@@ -339,17 +341,23 @@ export default function EmployeeMaster() {
 	/* Deactivate or Activate everybody ticked: the profile's own write, one
 	   field, `status`, as the signed-in person — the site decides whether they
 	   may, and a refusal names who it was. Never a delete (D11). */
+	/* Deactivate asks which day it took effect (18 Nov 2026) — one date for
+	   everybody ticked, stored as their Leaving Date; see lib/deactivate.js. */
 	async function setStatusAll(status) {
 		setBusy(true);
 		setErr("");
 		const refused = [];
 		let done = 0;
 		for (const name of sel) {
-			const r = await saveEmployee(name, { status });
-			if (!r.ok) { refused.push(`${s.byName[name]?.employee_name || name}: ${r.error}`); continue; }
+			const who = s.byName[name]?.employee_name || name;
+			const bad = status === "Inactive" ? deactivateDateProblem(offDate, s.byName[name]?.date_of_joining) : "";
+			if (bad) { refused.push(`${who}: ${bad}`); continue; }
+			const patch = status === "Inactive" ? deactivatePatch(offDate) : activatePatch();
+			const r = await saveEmployee(name, patch);
+			if (!r.ok) { refused.push(`${who}: ${r.error}`); continue; }
 			done++;
 			const { employees, byName } = getState();
-			const row = { ...byName[name], status };
+			const row = { ...byName[name], ...patch };
 			set({ employees: employees.map((e) => (e.name === name ? row : e)), byName: { ...byName, [name]: row } });
 			forgetEmployeeDoc(name);
 		}
@@ -578,12 +586,23 @@ export default function EmployeeMaster() {
 				<Confirm
 					title={`${ask === "Inactive" ? "Deactivate" : "Activate"} ${sel.size} ${sel.size === 1 ? "person" : "people"}?`}
 					sub={ask === "Inactive"
-						? "Their status is set to Inactive and their details are hidden until they are activated again. Nothing is deleted."
+						? "Their status is set to Inactive from the date below, which is kept as their Leaving Date: attendance and pay stop after it. Their details are hidden until they are activated again. Nothing is deleted."
 						: "Their status is set to Active and their details are shown again."}
 					ok={busy ? "Working…" : ask === "Inactive" ? "Deactivate" : "Activate"}
 					danger={ask === "Inactive"}
 					onClose={() => { if (!busy) { setAsk(""); } }}
-					onOk={() => setStatusAll(ask)} />
+					blocked={ask === "Inactive" && !/^\d{4}-\d{2}-\d{2}$/.test(offDate)}
+					onOk={() => setStatusAll(ask)}>
+					{ask === "Inactive" ? (
+						<div className="k-form-grid">
+							<div className="k-field k-full">
+								<label htmlFor="deact-date">Deactivated from</label>
+								<input id="deact-date" className="k-inp" type="date" required value={offDate}
+									onChange={(e) => setOffDate(e.target.value)} />
+							</div>
+						</div>
+					) : null}
+				</Confirm>
 			) : null}
 			{s.exp.open ? (
 				<ExportEmployees onClose={() => set({ exp: { ...s.exp, open: false } })} />

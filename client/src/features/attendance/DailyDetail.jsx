@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { decideOvertime } from "@/api/overtime";
 import { hm } from "@/lib/dailydetail";
 import { parseOtInput } from "@/lib/overtime";
+import { workedIn } from "@/lib/deactivate";
 import { LocCell } from "@/components/PunchMap";
 import ReportForm, { Tiles, pickable } from "@/components/ReportForm";
 import { HEAD_FILL, LATE_FILL, ZEBRA_FILL, statusFill } from "@/lib/fills";
@@ -46,7 +47,12 @@ function ddaPeople(s) {
 	const f = s.dda;
 	const co = f.co || s.company;
 	let people = co ? s.employees.filter((e) => e.company === co) : scoped(s);
-	if (f.status) people = people.filter((e) => e.status === f.status);
+	/* Active means "worked here in the range" (18 Nov 2026): somebody
+	   deactivated on the 15th is in the month's report up to the 15th, because
+	   it is the report their last pay is worked out from. */
+	const from = f.from || todayIso();
+	if (f.status === "Active") people = people.filter((e) => workedIn(e, from));
+	else if (f.status) people = people.filter((e) => e.status === f.status);
 	if (f.emp) people = people.filter((e) => e.name === f.emp);
 	return people.slice().sort((a, b) => (a.employee_name || "").localeCompare(b.employee_name || ""));
 }

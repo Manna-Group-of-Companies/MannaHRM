@@ -6,6 +6,7 @@ import { store, set, getState, resetStore } from "@/store";
 import { http } from "@/api/client";
 import EmployeeMaster from "@/features/employees/EmployeeMaster";
 import { loadedState } from "./fixture";
+import { todayIso } from "@/lib/format";
 
 /* ---------------------------------------------------------------------------
    Employee Master, on a site with more people on it than a screen.
@@ -164,7 +165,7 @@ describe("the reference's Employees controls", () => {
 		expect(head.closest("th").getAttribute("aria-sort")).toBe("descending");
 	});
 
-	it("deactivates the people ticked by writing their status and nothing else", async () => {
+	it("deactivates the people ticked by writing their status and the date it took effect", async () => {
 		set(loadedState());
 		const wrote = [];
 		vi.spyOn(http, "put").mockImplementation((url, body) => { wrote.push([decodeURIComponent(url), body]); return Promise.resolve({ data: {} }); });
@@ -173,8 +174,9 @@ describe("the reference's Employees controls", () => {
 		await act(async () => { first.querySelector('input[type="checkbox"]').click(); });
 		expect(r.container.textContent).toContain("1 selected");
 		await act(async () => { [...r.container.querySelectorAll("button")].find((b) => b.textContent === "Deactivate").click(); });
+		expect(document.querySelector("#deact-date").value).toBe(todayIso());
 		await act(async () => { fireEvent.submit(document.querySelector(".k-modal form")); });
-		expect(wrote).toEqual([[`/api/resource/Employee/${first.dataset.emp}`, { status: "Inactive" }]]);
+		expect(wrote).toEqual([[`/api/resource/Employee/${first.dataset.emp}`, { status: "Inactive", relieving_date: todayIso() }]]);
 		expect(getState().byName[first.dataset.emp].status).toBe("Inactive");
 	});
 

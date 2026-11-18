@@ -4774,7 +4774,9 @@
   .proacts { @apply ml-auto flex flex-wrap gap-[.3rem]; }
   /* Deactivate's "are you sure", the two buttons held together so a wrap on a
      narrow header cannot put Cancel on a line of its own. */
-  .prodeact { @apply inline-flex gap-[.3rem]; }
+  .prodeact { @apply inline-flex flex-wrap items-center gap-[.3rem]; }
+  .prodeactdate { @apply inline-flex items-center gap-[.4rem] text-fine text-ink-2; }
+  .prodeactdate .k-inp { @apply w-auto py-[.2rem]; }
   /* Somebody who is not Active: the header alone, quieter than a live one. */
   .prohead.prooff { @apply bg-wash; }
   .prohead.prooff .ava { @apply opacity-60 grayscale; }
