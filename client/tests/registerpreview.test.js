@@ -97,6 +97,16 @@ describe("what the site puts in each row", () => {
 		expect([a.otHours, b.otHours, c.otHours]).toEqual([4, 3, ""]);
 	});
 
+	it("pays only approved overtime, never a pending or rejected day", () => {
+		const overtime = [
+			{ employee: "E-001", ot_date: "2026-09-02", hours: 2, status: "Approved" },
+			{ employee: "E-001", ot_date: "2026-09-03", hours: 5, status: "Pending Approval" },
+			{ employee: "E-001", ot_date: "2026-09-04", hours: 3, status: "Rejected" },
+		];
+		const [a] = rowsOf({ people: [person("E-001")], overtime });
+		expect(a.otHours).toBe(2);
+	});
+
 	it("measures a shift from its start to its end, past midnight for a night shift", () => {
 		expect(shiftHours({ start_time: "08:00:00", end_time: "20:00:00" })).toBe(12);
 		expect(shiftHours({ start_time: "20:00:00", end_time: "08:00:00" })).toBe(12);

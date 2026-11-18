@@ -25,6 +25,7 @@ import { kindOf } from "@/lib/salarysheet";
 import { LEAVE_TYPE_NAME, monthCarry } from "@/lib/monthlyleave";
 import { ESIC, PF, UAN } from "@/lib/statutory";
 import { isInsurance, ratesOf } from "@/lib/salaryupload";
+import { otCounts } from "@/lib/overtime";
 
 const n = (v) => Number(v) || 0;
 /* Leave days and hours as the site wrote them, without the float dust a sum of
@@ -138,7 +139,8 @@ export function previewRows({
 		for (const r of rows || []) (out.get(r[key]) || out.set(r[key], []).get(r[key])).push(r);
 		return out;
 	};
-	const ot = by(overtime);
+	/* Approved OT only: a pending or rejected row is not pay (lib/overtime.js). */
+	const ot = by((overtime || []).filter(otCounts));
 	const cl = by((ledger || []).filter((e) => !e.leave_type || e.leave_type === LEAVE_TYPE_NAME));
 	const live = (extras || []).filter((x) => Number(x.docstatus) === 1);
 	const extra = by(live);

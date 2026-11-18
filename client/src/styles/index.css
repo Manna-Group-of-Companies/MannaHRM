@@ -4723,6 +4723,16 @@
   .ddamore:hover { @apply text-accent; }
 
   .ddaout  { @apply flex flex-col gap-[.6rem] mt-[.8rem]; }
+  /* Overtime on Daily Detail (18 Nov 2026): approved in the Overtime cell,
+     what the punches earned waiting in OT Pending, with the decision beside it. */
+  .otcell { @apply inline-flex items-center gap-[.25rem] whitespace-nowrap; }
+  .otcell .embtn { @apply px-[.35rem] py-0 text-fine font-semibold; min-height: 1.6rem; border-radius: 6px; }
+  .otwait { @apply text-part font-semibold; }
+  .otno   { @apply text-ink-3 text-fine; }
+  .otbar  { @apply flex flex-wrap items-center justify-between gap-[.6rem] px-[.9rem] py-[.6rem] rounded-md
+                   bg-part-wash border border-line text-fine text-ink-2; }
+  .otform { @apply flex flex-col gap-[.7rem]; }
+  .otform #ot-hours { @apply max-w-[10rem]; }
   .ddalogo { @apply flex items-center gap-[.8rem] bg-card border border-line rounded-md px-[.9rem] py-[.6rem] text-fine text-ink-2; }
   /* The rail's `.mark` is a fixed square for two letters; this one carries
      five, so the square and its fill are undone rather than inherited. */

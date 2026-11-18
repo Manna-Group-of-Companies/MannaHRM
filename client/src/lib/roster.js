@@ -41,6 +41,7 @@ import {
 	resolveDayStatus, UNDECIDED_LEAVE,
 	ABSENT, HOLIDAY, LEAVE_PENDING, ON_FLOOR, ON_LEAVE, PRESENT, UNMARKED,
 } from "./rules.js";
+import { otCounts } from "./overtime.js";
 
 /** The seven Factor HR prints under this screen, plus the two states this side
     can be in that theirs cannot show. `key` is what the dot is classed with;
@@ -248,10 +249,12 @@ export function dayMinutes(inAt, outAt, window) {
 	};
 }
 
-/** HR's overtime rows by day, `YYYY-MM-DD` → the row. */
+/** The paid overtime rows by day, `YYYY-MM-DD` → the row. Pending and
+    rejected rows are left out: they are not overtime anybody is paid for
+    (lib/overtime.js). */
 export function overtimeByDay(rows) {
 	const m = new Map();
-	for (const r of rows || []) m.set(String(r.ot_date || "").slice(0, 10), r);
+	for (const r of (rows || []).filter(otCounts)) m.set(String(r.ot_date || "").slice(0, 10), r);
 	return m;
 }
 

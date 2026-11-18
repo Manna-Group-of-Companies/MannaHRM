@@ -10,7 +10,10 @@ import { CAT_GROUP_BY, DDA_CAT_COLS, DDA_COLS, DDA_MONTH_COLS } from "@/data/att
 import { Empty, Modal, Scroll } from "@/components/ui";
 import { loadDda, loadShiftWindows } from "@/api/attendance";
 import { dailyRows, daySummary, monthRollup } from "@/lib/dailydetail";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { decideOvertime } from "@/api/overtime";
+import { hm } from "@/lib/dailydetail";
+import { parseOtInput } from "@/lib/overtime";
 import { LocCell } from "@/components/PunchMap";
 import ReportForm, { Tiles, pickable } from "@/components/ReportForm";
 import { HEAD_FILL, LATE_FILL, ZEBRA_FILL, statusFill } from "@/lib/fills";
@@ -291,7 +294,160 @@ function DdaForm({ s }) {
 	);
 }
 
-const Table = ({ list, cols }) => (
+/* ---------------------------------------------------------------------------
+   Approving overtime, on the report payroll is read from (asked for 18 Nov
+   2026). Overtime is the approved figure and the only one paid; OT Pending is
+   what the punches earned and nobody has decided. Both are cells of the one
+   table, so the decision is made beside the day it is about — its in, out and
+   hours — rather than on a page that has to repeat them. The buttons are on
+   the screen only: the file and the printout carry the figures.
+
+   Anybody signed in here may decide: a company login is locked to its own
+   company by the site (docs/COMPANY_USERS.md), so it can only write its own
+   people's overtime, and that is the rule HR asked for.
+   --------------------------------------------------------------------------- */
+
+/** The saved row into the read the report is drawn from, so the cell changes
+    without reading the whole range again. One row per person per day. */
+function putOt(row) {
+	const d = getState().ddaData;
+	const day = String(row.ot_date).slice(0, 10);
+	const rest = (d.overtime || []).filter((x) => !(x.employee === row.employee && String(x.ot_date).slice(0, 10) === day));
+	set({ ddaData: { ...d, overtime: rest.concat([{ ...row, ot_date: day }]) } });
+}
+
+/** Decide one day and say how it went on the form's message line. */
+async function otDecide(r, minutes, reason) {
+	const res = await decideOvertime(r.emp, r.date, { minutes, autoMin: r.otAutoMin, reason });
+	if (res.ok && res.row) putOt(res.row);
+	patch("dda", { msg: res.msg });
+	return res.ok;
+}
+
+function OtCell({ r, head, busy, onBusy, onEdit }) {
+	const run = async (minutes) => {
+		onBusy(r.emp.name + r.date);
+		await otDecide(r, minutes, "");
+		onBusy("");
+	};
+	const mine = busy === r.emp.name + r.date;
+	const who = `${r.emp.employee_name} on ${r.date}`;
+	if (head === "Overtime") {
+		return (
+			<span className="otcell">
+				<span>{r.ot || "—"}</span>
+				{r.otState === "approved" || r.otState === "rejected" ? (
+					<button type="button" className="embtn" disabled={Boolean(busy)} onClick={() => onEdit(r)}
+						title="Change the approved OT for this day" aria-label={`Edit OT for ${who}`}>✎</button>
+				) : null}
+			</span>
+		);
+	}
+	if (r.otState === "rejected") return <span className="otcell otno" title="OT for this day was rejected">rejected</span>;
+	if (r.otState !== "pending") return <span>—</span>;
+	return (
+		<span className="otcell">
+			<span className="otwait" title="Worked out from the punches: time beyond the shift, in half hours. Not paid until approved.">{r.otPending}</span>
+			<button type="button" className="embtn" disabled={Boolean(busy)} onClick={() => run(r.otPendingMin)}
+				title={`Approve ${r.otPending} OT`} aria-label={`Approve ${r.otPending} OT for ${who}`}>{mine ? "…" : "✓"}</button>
+			<button type="button" className="embtn" disabled={Boolean(busy)} onClick={() => onEdit(r)}
+				title="Change the hours, then approve" aria-label={`Edit OT for ${who}`}>✎</button>
+			<button type="button" className="embtn" disabled={Boolean(busy)} onClick={() => run(0)}
+				title="Reject this OT" aria-label={`Reject OT for ${who}`}>✗</button>
+		</span>
+	);
+}
+
+/** Change a day's OT: type the hours, then approve them. 0 rejects. */
+function OtDialog({ r, onClose }) {
+	const start = r.otState === "approved" ? r.otMin : r.otPendingMin;
+	const [text, setText] = useState(hm(start) || "0:00");
+	const [reason, setReason] = useState((r.otEntry && r.otEntry.reason) || "");
+	const [busy, setBusy] = useState(false);
+	const [err, setErr] = useState("");
+	const mins = parseOtInput(text);
+	const save = async (m) => {
+		setBusy(true);
+		const ok = await otDecide(r, m, reason);
+		setBusy(false);
+		if (ok) onClose();
+		else setErr(getState().dda.msg);
+	};
+	return (
+		<Modal
+			title={`Overtime — ${r.emp.employee_name}, ${r.date.split("-").reverse().join("-")}`}
+			onClose={onClose}
+			why={`In ${r.in || "—"} · Out ${r.out || "—"} · Worked ${r.work || "—"} · Shift ${r.shift || "—"}${r.shiftWindow ? ` (${r.shiftWindow})` : ""}`
+				+ ` · From the punches: ${hm(r.otAutoMin) || "none"}`}
+			msg={err || undefined}
+			extra={
+				<div className="otform">
+					<div className="lvf">
+						<label className="lab" htmlFor="ot-hours">OT hours (H:MM)</label>
+						<span className="ctl">
+							<input id="ot-hours" type="text" inputMode="decimal" value={text} autoFocus
+								onChange={(e) => setText(e.target.value)} aria-invalid={mins == null} />
+						</span>
+					</div>
+					<div className="lvf">
+						<label className="lab" htmlFor="ot-reason">Reason (optional)</label>
+						<span className="ctl">
+							<input id="ot-reason" type="text" value={reason} onChange={(e) => setReason(e.target.value)} />
+						</span>
+					</div>
+					{mins == null ? <p className="otno">Type the hours as 2:30 or 2.5.</p> : null}
+				</div>
+			}
+			foot={
+				<>
+					<button type="button" className="embtn" disabled={busy} onClick={() => save(0)}>Reject</button>
+					<button type="button" className="btn tpl" disabled={busy || mins == null || mins > 16 * 60} onClick={() => save(mins)}>
+						{busy ? "Saving…" : mins ? `Approve ${hm(mins)}` : "Save as no OT"}
+					</button>
+				</>
+			}
+		/>
+	);
+}
+
+/** Approve every pending day shown, at the punches' figure. Asked once, then
+    one at a time, so a refusal halfway says which day it stopped on. */
+function OtBulk({ rows, onDone }) {
+	const pend = rows.filter((r) => r.otState === "pending");
+	const total = pend.reduce((n, r) => n + r.otPendingMin, 0);
+	const [busy, setBusy] = useState(false);
+	const [done, setDone] = useState(0);
+	const go = async () => {
+		setBusy(true);
+		let n = 0;
+		for (const r of pend) {
+			if (!(await otDecide(r, r.otPendingMin, ""))) break;
+			n++;
+			setDone(n);
+		}
+		setBusy(false);
+		if (n === pend.length) patch("dda", { msg: `Approved OT on ${fmt(n)} days, ${hm(total)} in all.` });
+		onDone();
+	};
+	return (
+		<Modal
+			title="Approve all pending OT"
+			onClose={busy ? () => {} : onDone}
+			why={`${fmt(pend.length)} days, ${hm(total)} in all, each at the figure the punches earned. `
+				+ "It goes on the pay register as approved overtime. Edit or reject the days you want to change first."}
+			msg={busy ? `Approving… ${fmt(done)} of ${fmt(pend.length)}` : undefined}
+			foot={
+				<button type="button" className="btn tpl" disabled={busy || !pend.length} onClick={go}>
+					{busy ? "Approving…" : `Approve ${fmt(pend.length)} days`}
+				</button>
+			}
+		/>
+	);
+}
+
+const OT_HEADS = new Set(["Overtime", "OT Pending"]);
+
+const Table = ({ list, cols, ot }) => (
 	<Scroll>
 		<table style={{ minWidth: 90 * cols.length }}>
 			<thead>
@@ -306,7 +462,9 @@ const Table = ({ list, cols }) => (
 					<tr key={r.emp.name + (r.date || r.month)}>
 						{cols.map((c) => (
 							<td key={c[0]} className={c[2] || undefined}>
-								{c[3] ? <LocCell r={c[3](r)} e={r.emp} /> : String(c[1](r))}
+								{c[3] ? <LocCell r={c[3](r)} e={r.emp} />
+									: ot && r.date && OT_HEADS.has(c[0]) ? <OtCell r={r} head={c[0]} {...ot} />
+									: String(c[1](r))}
 							</td>
 						))}
 					</tr>
@@ -338,6 +496,9 @@ function DdaReport({ s }) {
 		if (to >= from) void loadDda(from, to, f.emp);
 	}, [from, to, f.emp]);
 	const { rows, people, capped, bad, waiting, err } = ddaRows(s);
+	const [otBusy, setOtBusy] = useState("");
+	const [otEdit, setOtEdit] = useState(null);
+	const [otAll, setOtAll] = useState(false);
 
 	if (waiting) {
 		return <div className="regload">Reading attendance and punches for {longDate(from)} – {longDate(to)}…</div>;
@@ -372,7 +533,9 @@ function DdaReport({ s }) {
 	   on. The Excel, PDF and printed copies were always one table; now the
 	   screen matches them. Emp Code and Employee lead every row, so a person's
 	   days still read together. */
-	const body = (rows2) => <Table list={rows2} cols={cols} />;
+	const ot = month ? null : { busy: otBusy, onBusy: setOtBusy, onEdit: setOtEdit };
+	const body = (rows2) => <Table list={rows2} cols={cols} ot={ot} />;
+	const pending = month ? [] : rows.filter((r) => r.otState === "pending");
 
 	/* One nested walk for any number of section levels, so Group By and Filter By
 	   read the same whether one of them is set or both are. */
@@ -418,7 +581,22 @@ function DdaReport({ s }) {
 
 			<DdaSummary rows={rows} />
 
+			{pending.length ? (
+				<div className="otbar">
+					<span>
+						<b>{fmt(pending.length)}</b> {pending.length === 1 ? "day has" : "days have"} OT from the punches waiting
+						for approval ({hm(pending.reduce((n, r) => n + r.otPendingMin, 0))}). It is not paid until approved.
+					</span>
+					<button type="button" className="embtn" disabled={Boolean(otBusy)} onClick={() => setOtAll(true)}>
+						Approve all pending OT
+					</button>
+				</div>
+			) : null}
+
 			{sections(ddaSplit(list, ddaSections(f)))}
+
+			{otEdit ? <OtDialog r={otEdit} onClose={() => setOtEdit(null)} /> : null}
+			{otAll ? <OtBulk rows={rows} onDone={() => setOtAll(false)} /> : null}
 
 		</div>
 	);

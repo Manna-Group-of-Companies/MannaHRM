@@ -2,7 +2,7 @@
  "actions": [],
  "autoname": "naming_series:",
  "creation": "2026-09-16 00:00:00.000000",
- "description": "Overtime HR has granted a person for one day. OT on every attendance report is these rows and nothing else — a late punch-out is hours worked until HR enters it here.",
+ "description": "Overtime for one person and one day. Approved rows are the OT every attendance report and the pay register count; OT worked out from punches is pending until it is approved here or on Daily Detail.",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -13,9 +13,13 @@
   "column_break_who",
   "ot_date",
   "hours",
+  "status",
+  "auto_hours",
   "section_break_why",
   "reason",
-  "entered_by"
+  "entered_by",
+  "approved_by",
+  "approved_on"
  ],
  "fields": [
   {
@@ -74,6 +78,24 @@
    "reqd": 1
   },
   {
+   "default": "Approved",
+   "description": "Only Approved OT is paid. OT worked out from the punches shows as pending on Daily Detail until somebody using the dashboard for that company approves it. A row with no status was entered before approval existed and counts as Approved.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Approved\nPending Approval\nRejected"
+  },
+  {
+   "description": "What the punches made of the day when it was decided: time worked beyond the shift's length, counted from 30 minutes and in half hours. OT Hours is what was approved, which may differ.",
+   "fieldname": "auto_hours",
+   "fieldtype": "Float",
+   "label": "Auto OT Hours (from punches)",
+   "precision": "6",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_why",
    "fieldtype": "Section Break"
   },
@@ -88,11 +110,24 @@
    "label": "Entered By",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved / Rejected By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "label": "Decided On",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-16 00:00:00.000000",
+ "modified": "2026-11-18 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Manna HR",
  "name": "Employee Overtime",

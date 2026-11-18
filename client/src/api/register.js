@@ -8,7 +8,7 @@
    Still read only — nothing here writes, and nothing here works out pay. */
 
 import { getDoc, listAll } from "@/api/client";
-import { OT_FIELDS } from "@/api/attendance";
+import { OT_FIELDS, OT_FIELDS_MIN } from "@/api/attendance";
 import { loadLoansDue } from "@/api/salarysheet";
 import { LEAVE_TYPE_NAME } from "@/lib/monthlyleave";
 import { fillFromPunches } from "@/lib/register";
@@ -186,9 +186,11 @@ export async function loadPreviewReads(company, ym, start, end) {
 		safe("Attendance", "the day cells are empty", () => readAttendance(company, start, end), null),
 		safe("The holiday list", "only Sundays are marked off", () => readCalendar(company, ym), { off: new Set(), holiday: new Set() }),
 		safe("The shifts", "every OT rate divides a day's pay by 8 hours", readShifts, null),
-		/* HR's own overtime entries — the only overtime this app counts (16 Sep 2026). */
+		/* Overtime rows; only the approved ones are paid (lib/overtime.js, 18 Nov 2026). */
 		safe("Overtime", "the OT hours are empty", () => listAll("Employee Overtime", OT_FIELDS,
-			[["ot_date", ">=", start], ["ot_date", "<=", end]], 1000), null),
+			[["ot_date", ">=", start], ["ot_date", "<=", end]], 1000)
+			.catch(() => listAll("Employee Overtime", OT_FIELDS_MIN,
+				[["ot_date", ">=", start], ["ot_date", "<=", end]], 1000)), null),
 		/* Casual Leave's ledger up to the month's end, submitted only: lib/monthlyleave.js
 		   monthCarry reads what came in before the month and what the month added. */
 		safe("The Casual Leave ledger", "the Casual Leave columns are empty", () => listSome("Leave Ledger Entry", LEDGER_WIDE, LEDGER_NARROW,

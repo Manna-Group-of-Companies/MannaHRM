@@ -1,7 +1,8 @@
-import { apiCreate, apiDelete, apiWrite, listAll } from "@/api/client";
+import { apiCreate, apiWrite, listAll } from "@/api/client";
 import { REG_DOCTYPE } from "@/api/load";
 import { getState, set } from "@/store";
-import { dmy } from "@/lib/format";
+import { dmy, nowStamp } from "@/lib/format";
+import { OT_APPROVED, OT_REJECTED } from "@/lib/overtime";
 import { editPlan } from "@/lib/punchedit";
 import { byMachine } from "@/lib/direction";
 import { correctionSummary, localStamp, writeCorrection } from "@/features/approvals/decide";
@@ -171,7 +172,12 @@ async function saveTimes(emp, day, plan, reason, open, dt, user) {
    per person per day: the day's existing row is read first and changed rather
    than a second one added (the doctype's controller refuses a second once the
    app is installed; until then this read is what stops a day being paid twice).
-   Zero hours removes the row.
+
+   Since 18 November 2026 OT needs approval (lib/overtime.js), and HR typing
+   hours here is that approval — so the row is written Approved, with who and
+   when. Zero hours on a day that has a row rejects it rather than deleting it:
+   a deleted row would bring the punches' OT straight back as pending on Daily
+   Detail.
    --------------------------------------------------------------------------- */
 export async function saveOvertime(emp, day, hours, reason) {
 	/* Six places: the OT clock has seconds, and two places is 36 of them. */
@@ -185,12 +191,17 @@ export async function saveOvertime(emp, day, hours, reason) {
 	}
 	const cur = rows[0];
 	try {
+		if (!h && !cur) return { ok: true, msg: "" };
+		const user = getState().user || null;
+		const doc = {
+			hours: h, reason: String(reason || "").trim() || null, entered_by: user,
+			status: h ? OT_APPROVED : OT_REJECTED, approved_by: user, approved_on: nowStamp() + ":00",
+		};
 		if (!h) {
-			if (!cur) return { ok: true, msg: "" };
-			await apiDelete("Employee Overtime", cur.name);
+			const r = await apiWrite("Employee Overtime", cur.name, doc);
+			if (!r.ok) return { ok: false, msg: `The site refused the OT change: ${r.error}` };
 			return { ok: true, msg: `OT for ${dmy(day)} removed.` };
 		}
-		const doc = { hours: h, reason: String(reason || "").trim() || null, entered_by: getState().user || null };
 		if (cur) {
 			const r = await apiWrite("Employee Overtime", cur.name, doc);
 			if (!r.ok) return { ok: false, msg: `The site refused the OT change: ${r.error}` };

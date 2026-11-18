@@ -1737,6 +1737,25 @@ export const SCHEMA = {
 				list: 1
 			},
 			{
+				name: "status",
+				label: "Status",
+				kind: "select",
+				choices: [
+					"Approved",
+					"Pending Approval",
+					"Rejected"
+				],
+				def: "Approved",
+				hint: "Only Approved OT is paid. OT worked out from the punches shows as pending on Daily Detail until somebody using the dashboard for that company approves it. A row with no status was entered before approval existed and counts as Approved.",
+				list: 1
+			},
+			{
+				name: "auto_hours",
+				label: "Auto OT Hours (from punches)",
+				kind: "readonly",
+				hint: "What the punches made of the day when it was decided: time worked beyond the shift's length, counted from 30 minutes and in half hours. OT Hours is what was approved, which may differ."
+			},
+			{
 				name: "reason",
 				label: "Reason",
 				kind: "long"
@@ -1746,6 +1765,17 @@ export const SCHEMA = {
 				label: "Entered By",
 				kind: "readonly",
 				link: "User"
+			},
+			{
+				name: "approved_by",
+				label: "Approved / Rejected By",
+				kind: "readonly",
+				link: "User"
+			},
+			{
+				name: "approved_on",
+				label: "Decided On",
+				kind: "readonly"
 			}
 		]
 	},

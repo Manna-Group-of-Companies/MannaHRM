@@ -47,8 +47,11 @@ import { byMachine } from "@/lib/direction";
 const PUNCH_FIELDS = ["name", "employee", "time", "log_type", "device_id", "shift", "skip_auto_attendance"];
 const PUNCH_MIN = ["name", "employee", "time", "log_type"];
 
-/** Employee Overtime — one row per person per day HR granted overtime. */
-export const OT_FIELDS = ["name", "employee", "ot_date", "hours", "reason", "entered_by"];
+/** Employee Overtime — one row per person per day. The short list is a site
+    without the approval fields (18 November 2026); every row there counts as
+    approved, which is what it was when it was entered (lib/overtime.js). */
+export const OT_FIELDS_MIN = ["name", "employee", "ot_date", "hours", "reason", "entered_by"];
+export const OT_FIELDS = OT_FIELDS_MIN.concat(["status", "auto_hours", "approved_by", "approved_on"]);
 
 /** Shift Assignment — a shift for a person between two dates. */
 export const ASG_FIELDS = ["name", "employee", "shift_type", "start_date", "end_date", "status", "docstatus"];
@@ -123,7 +126,7 @@ export async function loadRegMonth(emp, ym, force) {
 			[["employee", "=", emp], ["attendance_date", ">=", from], ["attendance_date", "<=", to]]),
 
 		/* Overtime HR has granted — the only OT this app shows (16 Sep 2026). */
-		read("Employee Overtime", OT_FIELDS, OT_FIELDS,
+		read("Employee Overtime", OT_FIELDS, OT_FIELDS_MIN,
 			[["employee", "=", emp], ["ot_date", ">=", from], ["ot_date", "<=", to]]),
 
 		/* Dated shifts that touch the month: submitted, active, started by its end. */
@@ -191,7 +194,7 @@ export async function loadRegGrid(ym, force) {
 			[["from_date", "<=", to], ["to_date", ">=", from]]),
 		read(doctype, AR_FIELDS, AR_MIN,
 			[["attendance_date", ">=", from], ["attendance_date", "<=", to]]),
-		read("Employee Overtime", OT_FIELDS, OT_FIELDS,
+		read("Employee Overtime", OT_FIELDS, OT_FIELDS_MIN,
 			[["ot_date", ">=", from], ["ot_date", "<=", to]]),
 	]);
 
@@ -295,7 +298,7 @@ export async function loadDda(from, to, emp, force) {
 			who.concat([["time", ">=", from + " 00:00:00"], ["time", "<=", punchesTill(to)]])).then(byMachine),
 		read("Leave Application", LEAVE_FIELDS, LEAVE_MIN,
 			who.concat([["from_date", "<=", to], ["to_date", ">=", from]])),
-		read("Employee Overtime", OT_FIELDS, OT_FIELDS,
+		read("Employee Overtime", OT_FIELDS, OT_FIELDS_MIN,
 			who.concat([["ot_date", ">=", from], ["ot_date", "<=", to]])),
 	]);
 
@@ -306,7 +309,8 @@ export async function loadDda(from, to, emp, force) {
 		ddaData: {
 			key, state: "ok",
 			err: refused.length ? `The site would not answer for ${refused.join(", ")}.` : "",
-			attendance: attendance || [], punches: punches || [], leave: leave || [], overtime: overtime || [],
+			attendance: attendance || [], punches: punches || [], leave: leave || [],
+			overtime: overtime || [],
 		},
 	});
 }

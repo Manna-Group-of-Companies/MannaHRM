@@ -22,6 +22,7 @@
 import { resolveDayStatus, ABSENT, HOLIDAY, LEAVE_PENDING, ON_FLOOR, ON_LEAVE, PRESENT, UNMARKED } from "./rules.js";
 import { workDateOf, workDayPunches } from "./roster.js";
 import { periodOf } from "./format.js";
+import { autoOtMinutes, otDay, shiftMinutes } from "./overtime.js";
 
 const two = (n) => String(n).padStart(2, "0");
 const ymdOf = (d) => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
@@ -90,7 +91,8 @@ const byEmp = (rows) => {
  * @param {number} [a.limit]
  */
 export function dailyRows({ people, from, to, attendance, punches, leave, holidaysOf, windows, today, dow = [], punch = "", limit = 1500, overtime }) {
-	/* Overtime is HR's Employee Overtime rows only (16 Sep 2026). */
+	/* Overtime (18 Nov 2026): the punches' OT is shown as pending, and only an
+	   approved Employee Overtime row is paid — see lib/overtime.js. */
 	const otRow = new Map((overtime || []).map((r) => [r.employee + "|" + String(r.ot_date).slice(0, 10), r]));
 	if (!from || !to || to < from) return { rows: [], capped: 0, bad: true };
 	const att = new Map();
@@ -174,7 +176,10 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 			const late = startM != null && inM != null && inM > startM && inM - startM < 360 ? inM - startM : 0;
 			const early = endM != null && outM != null && !crossed && outM < endM && endM - outM < 360 ? endM - outM : 0;
 			const otR = otRow.get(e.name + "|" + iso);
-			const ot = otR ? Math.round(Number(otR.hours || 0) * 60) : 0;
+			/* A pair with no duration earns no automatic OT: its hours are not
+			   known, and OT off a guess is pay off a guess. */
+			const od = otDay(otR, crossed ? 0 : autoOtMinutes(mins || 0, shiftMinutes(w)));
+			const ot = od.paidMin;
 
 			rows.push({
 				emp: e,
@@ -201,6 +206,11 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 				ot: hm(ot),
 				otMin: ot,
 				otEntry: otR || null,
+				/* Waiting for approval — shown, never paid. */
+				otPending: hm(od.pendingMin),
+				otPendingMin: od.pendingMin,
+				otAutoMin: od.autoMin,
+				otState: od.state,
 				crossed,
 				status,
 				dayType: h ? (h.weekly_off ? "weekoff" : "holiday") : "",
@@ -217,7 +227,7 @@ export function monthRollup(rows) {
 	for (const r of rows) {
 		const key = r.emp.name + "|" + r.date.slice(0, 7);
 		const g = m.get(key) || { emp: r.emp, month: r.date.slice(0, 7), days: 0, off: 0, hol: 0, punched: 0,
-			present: 0, absent: 0, leave: 0, half: 0, ms: 0, lateMin: 0, earlyMin: 0, otMin: 0, lateDays: 0 };
+			present: 0, absent: 0, leave: 0, half: 0, ms: 0, lateMin: 0, earlyMin: 0, otMin: 0, otPendingMin: 0, lateDays: 0 };
 		g.days++;
 		if (r.dayType === "weekoff") g.off++;
 		else if (r.dayType === "holiday") g.hol++;
@@ -231,6 +241,7 @@ export function monthRollup(rows) {
 		g.lateMin += r.lateMin || 0;
 		g.earlyMin += r.earlyMin || 0;
 		g.otMin += r.otMin || 0;
+		g.otPendingMin += r.otPendingMin || 0;
 		m.set(key, g);
 	}
 	return [...m.values()].map((g) => ({
@@ -240,6 +251,7 @@ export function monthRollup(rows) {
 		late: g.lateMin ? `${hm(g.lateMin)} (${g.lateDays} days)` : "",
 		early: hm(g.earlyMin),
 		ot: hm(g.otMin),
+		otPending: hm(g.otPendingMin),
 	}));
 }
 
