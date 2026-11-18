@@ -485,7 +485,7 @@ export default function EmployeeMaster() {
 					</EmptyState>
 				) : view === "grid" ? (
 					<div className="cards">
-						{shown.map((e) => <EmployeeCard key={e.name} e={e} onOpen={() => openEmployee(e.name)} />)}
+						{shown.map((e) => <EmployeeCard key={e.name} e={e} boss={e.reports_to ? s.byName[e.reports_to] : null} onOpen={() => openEmployee(e.name)} />)}
 					</div>
 				) : (
 					<div className="k-tbl-wrap">
