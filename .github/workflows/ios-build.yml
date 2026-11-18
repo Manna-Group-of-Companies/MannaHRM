@@ -1,0 +1,30 @@
+# Builds the Manna HR phone app for iOS on a Mac, unsigned — the check that the
+# iOS project compiles, since the developers' PCs are Windows. Run by hand from
+# the Actions tab; it never runs by itself, so it costs macOS minutes only when
+# somebody asks for it.
+#
+# This does NOT make an installable app. A phone only runs a signed build, which
+# needs Apple Developer Program membership, a distribution certificate and a
+# provisioning profile for com.mannagroup.mannaHrApp (app/README.md, iOS).
+name: iOS build (unsigned)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze lib test
+      - run: flutter test
+      - run: flutter build ios --release --no-codesign

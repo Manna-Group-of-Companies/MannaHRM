@@ -167,4 +167,17 @@ costs a flag on a report a human reads. So:
   Open draft to `kLeaveApprover`; approving it is on the dashboard.
 - **A payslip is read, not downloaded.** The screen shows the submitted slip's
   own figures; the PDF is on the website.
-- **Android only.** iOS was not set up, matching the field-sales app next door.
+- **iOS is set up but unbuilt and unsigned** (18 November 2026). `ios/` exists
+  (bundle id `com.mannagroup.mannaHrApp`, name "Manna HR", location and camera
+  permission texts, alpha-free icon), made on a Windows PC that cannot compile
+  it. **Nothing has been built or run on an iPhone.** To get it onto phones:
+  1. Apple Developer Program membership (paid, yearly), and an App Store Connect
+     record for the bundle id;
+  2. a Mac with Xcode — open `ios/Runner.xcworkspace`, set the Team under
+     Signing & Capabilities, then `flutter build ipa` and upload with Transporter
+     (or use a CI service with a Mac and signing set up);
+  3. TestFlight to put it on staff phones, App Store review for the public store.
+  `.github/workflows/ios-build.yml` (run by hand) checks that it compiles on a
+  Mac, unsigned. **Offline punches on iOS**: the app sends a kept punch only while
+  open, the same as Android — iOS also suspends apps harder, so it is sent when
+  the app is next opened.

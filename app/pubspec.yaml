@@ -68,7 +68,9 @@ flutter:
 # the generator directly.
 flutter_launcher_icons:
   android: true
-  ios: false
+  # iOS rejects an icon with transparency, so the alpha channel is removed.
+  ios: true
+  remove_alpha_ios: true
   image_path: "assets/icon/app_icon.png"
   # Android 8+ crops the foreground to whatever shape the launcher uses, so the
   # logo is drawn smaller and a white plate sits behind it. Orange behind a
