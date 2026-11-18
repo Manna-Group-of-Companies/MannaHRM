@@ -1104,6 +1104,7 @@
   .ecard.ecard-off { @apply bg-wash shadow-none; }
   .ecard.ecard-off .ava { @apply opacity-60 grayscale; }
   .ecard .eoff { @apply text-fine text-ink-3 py-[.1rem]; }
+  .ecard .emgr { @apply ml-[.4rem] px-[.45rem] py-[.05rem] rounded-full text-tiny font-semibold bg-live-wash text-live-dark; }
   .ecard .eneeds { @apply ml-[.4rem] px-[.45rem] py-[.05rem] rounded-full text-tiny font-semibold bg-part-wash text-part; }
   .empneeds {
     @apply flex flex-wrap items-center justify-between gap-[.6rem] px-[.9rem] py-[.6rem] rounded-md

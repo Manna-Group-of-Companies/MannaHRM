@@ -20,7 +20,12 @@ function Eline({ k, text, alt, title }) {
 	);
 }
 
-export default function EmployeeCard({ e, onOpen }) {
+/** `boss` is this person's Reporting Manager, as the directory already loaded
+    holds them — passed in, so the card stays a plain component that needs no
+    store (the Manager tick itself is `custom_is_manager`, asked for 9 November
+    2026). */
+export default function EmployeeCard({ e, onOpen, boss = null }) {
+	const isManager = Number(e.custom_is_manager) === 1;
 	const name = (e.salutation ? e.salutation + " " : "") + (e.employee_name || "—");
 	/* Somebody who is not Active — deactivated, suspended, left — is a name
 	   and a status and nothing else (3 October 2026). The details come back
@@ -50,7 +55,12 @@ export default function EmployeeCard({ e, onOpen }) {
 				<div className="estat">
 					<i className={"sdot " + (on ? "on" : "off")} />
 					{e.status || "—"}
-					{/* Made by the bridge from a fingerprint punch, and not yet
+					{on && isManager && (
+							<span className="emgr" title="Tagged as a Manager: offered as Reporting Manager to new people in the same company.">
+								Manager
+							</span>
+						)}
+						{/* Made by the bridge from a fingerprint punch, and not yet
 					    completed by HR — see lib/scope.js needsDetails. */}
 					{on && needsDetails(e) && (
 						<span className="eneeds" title="Created automatically from a fingerprint punch. Gender and date of birth are placeholders.">
@@ -58,18 +68,22 @@ export default function EmployeeCard({ e, onOpen }) {
 						</span>
 					)}
 				</div>
-				{on ? <Details e={e} /> : <div className="eoff">Details are hidden while this person is not active.</div>}
+				{on ? <Details e={e} boss={boss} /> : <div className="eoff">Details are hidden while this person is not active.</div>}
 			</div>
 		</article>
 	);
 }
 
-function Details({ e }) {
+function Details({ e, boss }) {
 	return (
 		<>
 			<Eline k="code" text={e.employee_number} />
 			<Eline k="role" text={e.designation} />
 			<Eline k="dept" text={e.department ? tidyDept(e.department) : ""} />
+				{/* Who they report to. Blank is a real answer here (nobody is set),
+				    so it reads as a dash rather than being left out. */}
+				<Eline k="mgr" text={boss ? `Reports to ${boss.employee_name || boss.name}` : ""}
+					title={boss ? `Reporting Manager: ${boss.employee_name || boss.name}` : "No Reporting Manager is set for this person."} />
 			{/* Location is blank for everybody in Factor HR too — it is not a
 			    gap in the migration, it is a field nobody there has ever filled. */}
 			<Eline k="where" text={e.branch} />
