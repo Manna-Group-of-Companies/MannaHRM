@@ -303,7 +303,7 @@ const initial = {
 	    Print, PDF and Word are handed. */
 	ddaDoc: "",
 	/** Daily Detail's range, as read on Generate — see api/attendance.js loadDda. */
-	ddaData: { key: "", state: "", err: "", attendance: [], punches: [], leave: [] },
+	ddaData: { key: "", state: "", err: "", attendance: [], punches: [], leave: [], overtime: [] },
 
 	/* Factor HR's Salary Master is one person at a time, like their
 	   regularization screen — who is picked is state, not a scroll position.
