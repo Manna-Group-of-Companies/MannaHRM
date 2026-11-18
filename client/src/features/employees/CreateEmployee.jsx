@@ -607,13 +607,13 @@ export default function CreateEmployee() {
 								</div>
 							) : null}
 							{/* Under Reporting Manager: when the company has nobody ticked
-							    as a Manager yet, the list is everybody, and says so. */}
+							    as a Manager yet, the list is empty, and says why. */}
 							{rows.some((r) => r[0] === "reports_to") && f.company
 								&& !managerChoices(s.employees.filter((e) => e.company === f.company)).tagged ? (
 								<p className="wizmgr muted">
-									Nobody in {f.company} is tagged as a Manager yet, so Reporting Manager lists
-									everybody. Tick Manager on someone's Employee Profile, or below when creating
-									a manager.
+									Nobody in {f.company} is tagged as a Manager yet, so Reporting Manager has
+									nobody to offer. Tick Manager on someone's Employee Profile, or below when
+									creating a manager.
 								</p>
 							) : null}
 							{/* Under Approving Manager: an empty list is a company whose

@@ -37,9 +37,9 @@ describe("who Reporting Manager offers", () => {
 		expect(r.tagged).toBe(true);
 	});
 
-	it("is everybody active when nobody is tagged, and says nobody is", () => {
+	it("is nobody when nobody is tagged, and says nobody is", () => {
 		const r = managerChoices([person("Biju", "Manna Rubber"), person("Dev", "Manna Rubber", { custom_is_manager: 0 })]);
-		expect(r.list.map((e) => e.name)).toEqual(["Biju", "Dev"]);
+		expect(r.list).toEqual([]);
 		expect(r.tagged).toBe(false);
 	});
 
@@ -86,12 +86,12 @@ describe("Create Employee's Reporting Manager", () => {
 		expect(view.container.querySelector(".wizmgr")).toBeNull();
 	});
 
-	it("offers everybody in the company, and says why, when nobody there is tagged", () => {
+	it("offers nobody, and says why, when nobody in the company is tagged", () => {
 		const view = drawOrgStep([
 			person("HR-EMP-2", "Manna Rubber"),
 			person("HR-EMP-3", "Manna Treads", { custom_is_manager: 1 }),
 		], "Manna Rubber");
-		expect(offered(view)).toEqual(["HR-EMP-2"]);
+		expect(offered(view)).toEqual([]);
 		expect(view.container.querySelector(".wizmgr").textContent).toContain("Nobody in Manna Rubber is tagged as a Manager");
 	});
 });

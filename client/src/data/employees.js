@@ -266,7 +266,7 @@ export const NEW_EMP_STEPS = [
 			["leave_approver", "Approving Manager", "select", 0, "approver",    8],
 			/* Asked for by HR, 9 November 2026: a manager is tagged when they
 			   are created, and Reporting Manager above offers only the tagged
-			   managers of the company being typed in (managerChoices in
+			   managers of the company being typed in, and nobody else (managerChoices in
 			   lib/newemp.js). */
 			["custom_is_manager", "Manager", "check", 0, "", 24],
 		]],

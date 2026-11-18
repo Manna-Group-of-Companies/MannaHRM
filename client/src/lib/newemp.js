@@ -81,13 +81,14 @@ export const NEW_EMP_FIELDS = NEW_EMP_STEPS
     on validate, and a value sent here would be overwritten on the way in. A
     field that looks set and is not is worse than one that is plainly derived. */
 /** Who Reporting Manager offers: the active people of `pool` ticked as a
-    Manager. When nobody there is ticked yet — a company before anybody has
-    been tagged, or a site without the field — everybody active, and `tagged`
-    says so, so the form can tell HR rather than offer an empty list. Pure. */
+    Manager, and nobody else (18 November 2026 — the earlier fallback to
+    everybody, for a company with nobody tagged, put the whole shop floor in
+    the list). `tagged` is false when that leaves nobody, so the form can say
+    why the list is empty rather than look broken. Pure. */
 export function managerChoices(pool) {
 	const active = (pool || []).filter((e) => e.status === "Active");
 	const tagged = active.filter((e) => Number(e.custom_is_manager) === 1);
-	return { list: tagged.length ? tagged : active, tagged: tagged.length > 0 };
+	return { list: tagged, tagged: tagged.length > 0 };
 }
 
 /** Who Approving Manager offers: the same people as Reporting Manager, but

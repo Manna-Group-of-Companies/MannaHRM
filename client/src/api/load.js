@@ -41,7 +41,7 @@ export const EMP_FIELDS_WIDE = EMP_FIELDS.concat(["date_of_birth", "custom_needs
 /* Tried first: `custom_is_manager` is ours (9 November 2026) — the Manager tick
    behind Create Employee's Reporting Manager list. Not on the site until
    `tools/create_custom_fields.py Employee --apply`; until then the read falls
-   to EMP_FIELDS_WIDE and nobody is tagged, so the list offers everybody. */
+   to EMP_FIELDS_WIDE and nobody is tagged, so the list offers nobody. */
 export const EMP_FIELDS_TAGGED = EMP_FIELDS_WIDE.concat(["custom_is_manager"]);
 
 /* The Create Letters register — see features/onboard/CreateLetters.jsx, which
