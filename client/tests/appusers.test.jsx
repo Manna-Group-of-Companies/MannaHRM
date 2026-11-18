@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 
-import { appUserCounts, appUserRows, toggleQuestion, toggleWhy } from "@/lib/appusers";
+import { appUserCounts, appUserRows, appsUsed, toggleQuestion, toggleWhy } from "@/lib/appusers";
 
 /* ---------------------------------------------------------------------------
    Settings → App users (22 October 2026): everybody who can use the phone app,
@@ -41,7 +41,7 @@ describe("who the app users are", () => {
 	});
 
 	it("counts with a login, active, stopped and who punched from the app", () => {
-		expect(appUserCounts(rows())).toEqual({ all: 3, active: 2, stopped: 1, usedApp: 1 });
+		expect(appUserCounts(rows())).toEqual({ all: 3, active: 2, stopped: 1, usedApp: 1, bothApps: 0 });
 	});
 
 	it("does not know whether a login is HR's when the site would not show roles", () => {
@@ -125,5 +125,39 @@ describe("Settings → App users", () => {
 	it("offers no switch on the signed-in login's own row", async () => {
 		await draw();
 		expect(screen.queryByRole("button", { name: "Stop Pradeep A K" })).toBeNull();
+	});
+});
+
+describe("which app a login is used in", () => {
+	const LOGS = [
+		{ owner: "Anand@x.in", punch_in_time: "2026-10-23 09:00:00" },
+		{ owner: "pradeep@x.in", punch_in_time: "2026-10-22 10:00:00" },
+		{ owner: "pradeep@x.in", punch_in_time: "2026-10-24 10:00:00", remarks: "Corrected by HR on 2026-10-24" },
+	];
+	const withLogs = (salesLogs) => appUserRows({ employees: EMPLOYEES, users: USERS, roles: ROLES, punches: PUNCHES, salesLogs, me: "hr@x.in" });
+	const byName = (rs, n) => rs.find((r) => r.name === n);
+
+	it("names the HR app from a phone punch and the Sales app from an Attendance Log the login owns", () => {
+		const rs = withLogs(LOGS);
+		expect(byName(rs, "Anand Raghavan").apps).toEqual([
+			{ app: "HR app", last: "2026-10-22 08:31:00" },
+			{ app: "Sales app", last: "2026-10-23 09:00:00" },
+		]);
+		expect(byName(rs, "Pradeep A K").apps).toEqual([{ app: "Sales app", last: "2026-10-22 10:00:00" }]);
+	});
+
+	it("does not count a row HR corrected on the desk as the rep's phone", () => {
+		expect(byName(withLogs(LOGS), "Pradeep A K").apps.map((a) => a.last)).toEqual(["2026-10-22 10:00:00"]);
+	});
+
+	it("shows no app for a login used in neither, and counts those used in both", () => {
+		const rs = withLogs(LOGS);
+		expect(byName(rs, "Old Hand").apps).toEqual([]);
+		expect(appUserCounts(rs).bothApps).toBe(1);
+	});
+
+	it("leaves the Sales app out when its records could not be read, rather than calling it unused", () => {
+		expect(appsUsed("2026-10-22 08:31:00", null)).toEqual([{ app: "HR app", last: "2026-10-22 08:31:00" }]);
+		expect(byName(withLogs(null), "Anand Raghavan").apps.map((a) => a.app)).toEqual(["HR app"]);
 	});
 });

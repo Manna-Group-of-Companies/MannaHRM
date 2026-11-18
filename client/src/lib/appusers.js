@@ -31,9 +31,11 @@ const later = (a, b) => (String(a || "") > String(b || "") ? a : b);
  * @param {object[]} d.users      User rows: name, enabled, last_login, last_active
  * @param {object[]|null} d.roles Has Role rows: parent, role — null when the site would not say
  * @param {object[]} d.punches    phone punches: employee, time
+ * @param {object[]|null} d.salesLogs Attendance Log rows (owner, punch_in_time, remarks) — the Sales app's
+ *                                    punches; null when the site would not say
  * @param {string} d.me           the signed-in login
  */
-export function appUserRows({ employees = [], users = [], roles = null, punches = [], me = "" }) {
+export function appUserRows({ employees = [], users = [], roles = null, punches = [], salesLogs = null, me = "" }) {
 	const byLogin = new Map(users.map((u) => [String(u.name).toLowerCase(), u]));
 	const rolesOf = new Map();
 	for (const r of roles || []) {
@@ -42,6 +44,15 @@ export function appUserRows({ employees = [], users = [], roles = null, punches 
 	}
 	const lastPunch = new Map();
 	for (const p of punches) lastPunch.set(p.employee, later(lastPunch.get(p.employee), p.time));
+	/* The Sales app, by what it writes: an Attendance Log is owned by whoever
+	   was signed in when it was made. A row HR corrected on the desk is HR's
+	   hand and not the rep's phone, so it does not count as the app. */
+	const lastSales = new Map();
+	for (const l of salesLogs || []) {
+		if (/^Corrected by HR/i.test(String(l.remarks || ""))) continue;
+		const k = String(l.owner || "").toLowerCase();
+		lastSales.set(k, later(lastSales.get(k), l.punch_in_time || l.creation));
+	}
 
 	return employees
 		.filter((e) => String(e.user_id || "").trim())
@@ -63,12 +74,26 @@ export function appUserRows({ employees = [], users = [], roles = null, punches 
 				enabled: u ? Number(u.enabled) === 1 : null,
 				lastSignIn: u ? later(u.last_login, u.last_active) || "" : "",
 				lastAppPunch: lastPunch.get(e.name) || "",
+				/* Which app, from what it wrote (APPS): in the order they are
+				   named, each with when it was last used. null: not known. */
+				apps: appsUsed(lastPunch.get(e.name) || "", salesLogs === null ? null : lastSales.get(key) || ""),
 				/* null: the site would not say what the login can do. */
 				website: roles === null ? null : r.some((x) => WEBSITE_ROLES.includes(x)),
 				self,
 			};
 		})
 		.sort((a, b) => Number(b.enabled === true) - Number(a.enabled === true) || String(a.name).localeCompare(String(b.name)));
+}
+
+/** The apps a login is used in, by name, each with its last use — `[]` when it
+    is in none of them in the window, so the row can say "not used" rather
+    than leave a gap. `sales` null means the Sales app's records could not be
+    read, which is "not known" and shown so, never as unused. */
+export function appsUsed(hr, sales) {
+	const out = [];
+	if (hr) out.push({ app: "HR app", last: hr });
+	if (sales) out.push({ app: "Sales app", last: sales });
+	return out;
 }
 
 /** Whether the switch is offered on a row, and if not, why. */
@@ -94,5 +119,8 @@ export function appUserCounts(rows) {
 		active: rows.filter((r) => r.enabled === true).length,
 		stopped: rows.filter((r) => r.enabled === false).length,
 		usedApp: rows.filter((r) => r.lastAppPunch).length,
+		/* Used in more than one app — the logins worth knowing about before one
+		   is stopped, since Stop ends all of them. */
+		bothApps: rows.filter((r) => r.apps.length > 1).length,
 	};
 }

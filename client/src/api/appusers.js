@@ -18,9 +18,9 @@ export async function loadAppUsers() {
 	const employees = await listAll("Employee",
 		["name", "employee_name", "employee_number", "company", "status", "user_id"], [["user_id", "is", "set"]], 1000);
 	const logins = [...new Set(employees.map((e) => String(e.user_id || "").trim()).filter(Boolean))];
-	if (!logins.length) return { employees, users: [], roles: [], punches: [] };
+	if (!logins.length) return { employees, users: [], roles: [], punches: [], salesLogs: [] };
 
-	const [users, roles, punches] = await Promise.all([
+	const [users, roles, punches, salesLogs] = await Promise.all([
 		listAll("User", ["name", "enabled", "last_login", "last_active"], [["name", "in", logins]], 1000)
 			.catch(() => listAll("User", ["name", "enabled"], [["name", "in", logins]], 1000))
 			.catch(() => []),
@@ -34,8 +34,14 @@ export async function loadAppUsers() {
 		listAll("Employee Checkin", ["employee", "time"],
 			[["device_id", "like", `${PHONE_PREFIX}%`], ["time", ">=", `${isoAgo(PUNCH_DAYS)} 00:00:00`]], 20000)
 			.catch(() => []),
+		/* The Sales app's punches (an Attendance Log is owned by the login that
+		   made it), for which app each login is used in. null when the site has
+		   no such doctype or would not say — "not known", not "unused". */
+		listAll("Attendance Log", ["owner", "punch_in_time", "remarks", "creation"],
+			[["owner", "in", logins], ["attendance_date", ">=", isoAgo(PUNCH_DAYS)]], 20000)
+			.catch(() => null),
 	]);
-	return { employees, users, roles, punches };
+	return { employees, users, roles, punches, salesLogs };
 }
 
 /** Switch a login off (`on` false) or back on. Frappe ends a disabled login's

@@ -74,7 +74,7 @@ export default function AppUsers() {
 				) : (
 					<div className="k-tbl-wrap">
 						<table className="k-rt" aria-label="App users">
-							<thead><tr>{["Employee", "Login", "Last sign-in", "Last app punch", "", ""].map((c, i) => <th key={i}><span>{c}</span></th>)}</tr></thead>
+							<thead><tr>{["Employee", "Login", "App", "Last sign-in", "Last app punch", "", ""].map((c, i) => <th key={i}><span>{c}</span></th>)}</tr></thead>
 							<tbody>
 								{shown.map((r) => {
 									const blocked = toggleWhy(r);
