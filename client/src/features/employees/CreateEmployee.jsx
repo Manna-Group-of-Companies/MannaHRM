@@ -4,7 +4,7 @@ import { patch, set, useApp } from "@/store";
 import { go } from "@/routes/router";
 import { load } from "@/api/load";
 import { scoped, uniq } from "@/lib/scope";
-import { NEW_EMP_BLANK, appLoginDefault, appLoginProblem, dobPassword, isBlank, makesAppLogin, managerChoices, missing, problemsOf } from "@/lib/newemp";
+import { NEW_EMP_BLANK, appLoginDefault, appLoginProblem, approverChoices, dobPassword, isBlank, makesAppLogin, managerChoices, missing, problemsOf } from "@/lib/newemp";
 import { Desk } from "@/components/ui";
 import OnMachine from "@/components/OnMachine";
 import MachineNumber from "@/components/MachineNumber";
@@ -112,6 +112,8 @@ function optionsFor(s, all, f) {
 		shift:           [s.shiftTypes.map((x) => x.name), true],
 		holiday:         [s.holidayLists.map((x) => x.name), true],
 		reports_to:      [managers, true],
+		/* The same managers, with a login — leave_approver is a User. */
+		approver:        [approverChoices(f.company ? s.employees.filter((e) => e.company === f.company) : all), true],
 		/* Casual Leave is offered even on a site that has not got it yet —
 		   giving it is what creates it (api/monthlyleave.js). */
 		leavetype:       [uniq([{ n: LEAVE_TYPE_NAME }, ...s.leaveTypes.map((t) => ({ n: t.name }))], "n"), true],
@@ -612,6 +614,15 @@ export default function CreateEmployee() {
 									Nobody in {f.company} is tagged as a Manager yet, so Reporting Manager lists
 									everybody. Tick Manager on someone's Employee Profile, or below when creating
 									a manager.
+								</p>
+							) : null}
+							{/* Under Approving Manager: an empty list is a company whose
+							    managers have no login yet, which is worth saying. */}
+							{rows.some((r) => r[0] === "leave_approver") && f.company
+								&& !approverChoices(s.employees.filter((e) => e.company === f.company)).length ? (
+								<p className="wizmgr muted">
+									No manager in {f.company} has a login yet, so Approving Manager has nobody to
+									offer.
 								</p>
 							) : null}
 							{rows.some((r) => r[0] === "attendance_device_id") && f.custom_punch_method !== "Mobile App" ? (

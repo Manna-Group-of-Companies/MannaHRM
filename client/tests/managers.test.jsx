@@ -6,7 +6,7 @@ import CreateEmployee from "@/features/employees/CreateEmployee";
 import { NEW_EMP_STEPS } from "@/data/employees";
 import { PROFILE_CHECKS } from "@/data/profile";
 import { EMP_FIELDS_TAGGED } from "@/api/load";
-import { NEW_EMP_BLANK, employeeDoc, managerChoices } from "@/lib/newemp";
+import { NEW_EMP_BLANK, approverChoices, employeeDoc, managerChoices } from "@/lib/newemp";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 
@@ -78,7 +78,7 @@ describe("Create Employee's Reporting Manager", () => {
 
 	it("offers only the tagged managers of the company being typed in", () => {
 		const view = drawOrgStep([
-			person("HR-EMP-1", "Manna Rubber", { custom_is_manager: 1 }),
+			person("HR-EMP-1", "Manna Rubber", { custom_is_manager: 1, user_id: "asha@manna.test" }),
 			person("HR-EMP-2", "Manna Rubber"),
 			person("HR-EMP-3", "Manna Treads", { custom_is_manager: 1 }),
 		], "Manna Rubber");
@@ -93,5 +93,43 @@ describe("Create Employee's Reporting Manager", () => {
 		], "Manna Rubber");
 		expect(offered(view)).toEqual(["HR-EMP-2"]);
 		expect(view.container.querySelector(".wizmgr").textContent).toContain("Nobody in Manna Rubber is tagged as a Manager");
+	});
+});
+
+describe("Create Employee's Approving Manager", () => {
+	beforeEach(() => resetStore());
+
+	const drawOrgStep = (employees, company) => {
+		const step = NEW_EMP_STEPS.findIndex((st) => st[0] === "org");
+		const blank = NEW_EMP_BLANK();
+		act(() => set({ ...loadedState(), employees,
+			newemp: { ...blank, step, f: { ...blank.f, company } } }));
+		return render(<Provider store={store}><CreateEmployee /></Provider>);
+	};
+	const offered = (view) => [...view.container.querySelectorAll("#ne-leave_approver option")]
+		.map((o) => o.value).filter(Boolean);
+
+	it("offers the company's tagged managers by their login, since leave_approver is a User", () => {
+		const view = drawOrgStep([
+			person("HR-EMP-1", "Manna Rubber", { custom_is_manager: 1, user_id: "asha@manna.test" }),
+			person("HR-EMP-2", "Manna Rubber", { user_id: "biju@manna.test" }),
+			person("HR-EMP-3", "Manna Treads", { custom_is_manager: 1, user_id: "dev@manna.test" }),
+		], "Manna Rubber");
+		expect(offered(view)).toEqual(["asha@manna.test"]);
+	});
+
+	it("leaves out a manager with no login, and says so when that leaves nobody", () => {
+		const view = drawOrgStep([
+			person("HR-EMP-1", "Manna Rubber", { custom_is_manager: 1 }),
+		], "Manna Rubber");
+		expect(offered(view)).toEqual([]);
+		expect(view.container.textContent).toContain("No manager in Manna Rubber has a login yet");
+	});
+
+	it("is the same pure list the form draws", () => {
+		expect(approverChoices([
+			person("A", "X", { custom_is_manager: 1, user_id: "a@x.test", designation: "Head" }),
+			person("B", "X", { custom_is_manager: 1 }),
+		])).toEqual([["a@x.test", "A · Head"]]);
 	});
 });

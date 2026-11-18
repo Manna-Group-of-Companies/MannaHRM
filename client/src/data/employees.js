@@ -263,7 +263,7 @@ export const NEW_EMP_STEPS = [
 		["Role and reporting", [
 			["designation",    "Designation",       "select", 0, "designation", 8],
 			["reports_to",     "Reporting Manager", "select", 0, "reports_to",  8],
-			["leave_approver", "Approving Manager", "text",   0, "",            8],
+			["leave_approver", "Approving Manager", "select", 0, "approver",    8],
 			/* Asked for by HR, 9 November 2026: a manager is tagged when they
 			   are created, and Reporting Manager above offers only the tagged
 			   managers of the company being typed in (managerChoices in
@@ -390,8 +390,8 @@ export const NEW_EMP_HINT = {
 		+ "HR's value in a second one, custom_confirmation_date, and that column is history — this "
 		+ "form leaves it alone.",
 	"Reporting Manager": "Approvals route on this. Left empty, this person's requests reach nobody.",
-	"Approving Manager": "ERPNext holds this as a User rather than an Employee, so it is a login — "
-		+ "usually an email address — and not the name in the box beside it.",
+	"Approving Manager": "The managers of this company who have a login. ERPNext holds this as a "
+		+ "User rather than an Employee, so a manager with no login cannot be chosen here.",
 	"Default Shift": "What decides whether a punch is late, and which day a night shift belongs to. "
 		+ "Left empty, nothing generates attendance for this person.",
 	"Work Location": "The gate a phone punch is measured against. Left empty, a mobile punch is "

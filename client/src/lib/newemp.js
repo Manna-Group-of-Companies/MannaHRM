@@ -90,6 +90,16 @@ export function managerChoices(pool) {
 	return { list: tagged.length ? tagged : active, tagged: tagged.length > 0 };
 }
 
+/** Who Approving Manager offers: the same people as Reporting Manager, but
+    only those with a login, as `[user_id, label]`. `leave_approver` is a Link
+    to User, so a manager with no login is not a value the site would take
+    (asked for 18 November 2026). Pure. */
+export function approverChoices(pool) {
+	return managerChoices(pool).list
+		.filter((e) => e.user_id)
+		.map((e) => [e.user_id, e.employee_name + (e.designation ? ` · ${e.designation}` : "")]);
+}
+
 export function employeeDoc(f) {
 	const doc = {};
 	for (const k of NEW_EMP_FIELDS) {
