@@ -16,6 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
+from manna_hr import rules
 from manna_hr.geo import format_distance, is_real_coordinate, metres_between
 from manna_hr.settings import hr_settings
 
@@ -125,6 +126,19 @@ def _apply_server_clock(doc, settings):
 		return
 	if not _is_self_service(doc):
 		return
+
+	# A punch the phone kept while it had no signal and sent later keeps the time
+	# it was made, within limits (rules.queued_punch_time) — stamping it with the
+	# moment it arrived would put an 8am punch-in at 2pm. Marked, so HR can see
+	# on the punch itself that it did not arrive when it happened.
+	if rules.is_queued_device(doc.device_id):
+		now = now_datetime()
+		kept = rules.queued_punch_time(get_datetime(doc.time) if doc.time else None, now)
+		if kept is not None:
+			doc.time = kept
+			note = _("saved offline, sent {0}").format(now.strftime("%d-%b %H:%M"))
+			doc.custom_device_info = " · ".join(x for x in ((doc.get("custom_device_info") or "").strip(), note) if x)
+			return
 
 	doc.time = now_datetime()
 

@@ -47,6 +47,11 @@ class Session {
   /// nothing to punch against. See `Api.resolveEmployee`.
   Map<String, dynamic>? employee;
 
+  /// The app opened with no signal and is running on what it remembered about
+  /// this phone's owner. Cleared by `Api.goOnline` once the site answers. While
+  /// it is set there is no live session, so nothing but a punch is offered.
+  bool offlineStart = false;
+
   /// Whether the site lets this login create an Employee — HR. Asked on every
   /// sign-in and every start (`Api.isAdmin`), so a login whose HR role was
   /// taken away stops seeing everybody's day. **A menu, not the security**:

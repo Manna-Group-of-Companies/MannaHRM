@@ -1057,3 +1057,47 @@ def field_access_problem(text):
 		if not isinstance(rows, dict) or any(v not in FIELD_ACCESS_LEVELS for v in rows.values()):
 			return "Employee Field Access may only say \"read\" or \"hidden\", under " + form + "."
 	return ""
+
+
+# ------------------------------------------------------- punches sent later ---
+
+#: A phone that had no signal keeps the punch and sends it when it can. The
+#: site normally stamps a phone punch with *its own* "now" (checkin.py), which
+#: for a punch sent hours later would be the wrong time — so a queued punch
+#: carries this marker on its `device_id` and is allowed to keep the time it
+#: was made, within the limit below.
+QUEUED_DEVICE_SUFFIX = "-Q"
+
+#: How old a queued punch may be and still keep its time. Past it the time is
+#: not trusted: it becomes "now" like any other phone punch, and the person is
+#: told to ask for a correction (the app does not send a punch this old).
+QUEUED_PUNCH_MAX_HOURS = 48
+
+#: How far past "now" a queued time may be and still be taken as made. A phone
+#: clock a few minutes ahead is not a lie; a time hours ahead is, and gets "now".
+QUEUED_PUNCH_SKEW_MINUTES = 5
+
+
+def is_queued_device(device_id):
+	"""Whether a `device_id` is a phone punch that was kept and sent later."""
+	return str(device_id or "").strip().endswith(QUEUED_DEVICE_SUFFIX)
+
+
+def queued_punch_time(requested, now, max_hours=QUEUED_PUNCH_MAX_HOURS):
+	"""The time a queued punch keeps, or None when it must take `now`.
+
+	Errors round the safe way: a punch made while offline is the one thing this
+	exists to keep, so a time that is plausible is kept as made — and one that
+	is missing, in the future or older than `max_hours` is not believed, and the
+	caller stamps it `now` (what a phone punch gets anyway). Never refused here:
+	refusing somebody who did turn up is the expensive mistake.
+	"""
+	if requested is None:
+		return None
+	age = now - requested
+	if age.total_seconds() < -QUEUED_PUNCH_SKEW_MINUTES * 60:
+		return None
+	if age.total_seconds() > max_hours * 3600:
+		return None
+	# A few minutes ahead of the clock is clipped to it, never kept in the future.
+	return min(requested, now)

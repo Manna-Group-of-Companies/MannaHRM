@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// What the app keeps so that somebody at a gate is not asked to type.
@@ -41,6 +43,48 @@ class AuthStore {
     await p.setString(_kSiteUrl, siteUrl);
     await p.setString(_kEmail, email);
     await p.setString(_kPassword, password);
+  }
+
+  // What the app opens on with no signal (asked for 18 November 2026): who this
+  // phone belongs to, how far the phone's clock is from the site's, and the
+  // day's punches as last read. None of it is a credential, and none of it is
+  // trusted for anything but showing the screen — the site decides every punch.
+  static const _kEmployee = 'cachedEmployee';
+  static const _kSkewMs = 'skewMs';
+  static const _kDayPunches = 'cachedDayPunches';
+
+  static Future<void> saveEmployee(Map<String, dynamic> emp) async =>
+      (await _prefs).setString(_kEmployee, jsonEncode(emp));
+
+  static Future<Map<String, dynamic>?> loadEmployee() async {
+    try {
+      final j = jsonDecode((await _prefs).getString(_kEmployee) ?? '');
+      return j is Map ? j.cast<String, dynamic>() : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> saveSkew(Duration d) async =>
+      (await _prefs).setInt(_kSkewMs, d.inMilliseconds);
+
+  static Future<Duration?> loadSkew() async {
+    final ms = (await _prefs).getInt(_kSkewMs);
+    return ms == null ? null : Duration(milliseconds: ms);
+  }
+
+  static Future<void> saveDayPunches(String iso, List<Map<String, dynamic>> rows) async =>
+      (await _prefs).setString(_kDayPunches, jsonEncode({'iso': iso, 'rows': rows}));
+
+  /// The punches last read for [iso], or null when the cache is for another day.
+  static Future<List<Map<String, dynamic>>?> loadDayPunches(String iso) async {
+    try {
+      final j = jsonDecode((await _prefs).getString(_kDayPunches) ?? '');
+      if (j is! Map || j['iso'] != iso || j['rows'] is! List) return null;
+      return (j['rows'] as List).whereType<Map>().map((m) => m.cast<String, dynamic>()).toList();
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> saveSid(String sid) async =>

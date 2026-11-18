@@ -21,6 +21,20 @@ class ServerClock {
 
   Duration _skew = Duration.zero;
   bool _synced = false;
+  DateTime _savedAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Told the skew at most once a minute, to be kept — so a phone started with
+  /// no signal still knows how far its clock is from the site's, and a punch
+  /// kept offline is stamped by the site's clock as last known, not the phone's.
+  void Function(Duration skew)? onSkew;
+
+  /// Puts back the skew kept from the last run. Not [syncFromHeader]: nothing
+  /// was heard just now, so the next real response still replaces it.
+  void restore(Duration skew) {
+    if (_synced) return;
+    _skew = skew;
+    _synced = true;
+  }
 
   /// Whether the site has ever answered. Until it has, [now] is the phone's own
   /// clock and screens that care say so rather than implying otherwise.
@@ -38,6 +52,11 @@ class ServerClock {
     try {
       _skew = HttpDate.parse(httpDate).difference(DateTime.now().toUtc());
       _synced = true;
+      final now = DateTime.now();
+      if (onSkew != null && now.difference(_savedAt) > const Duration(minutes: 1)) {
+        _savedAt = now;
+        onSkew!(_skew);
+      }
     } catch (_) {
       // Unparseable header — keep whatever skew we already had. A bad header is
       // not a reason to fall back to a clock we trust less.

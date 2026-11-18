@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:manna_hr_app/app.dart';
 import 'package:manna_hr_app/core/activity.dart';
+import 'package:manna_hr_app/services/punch_queue.dart';
 import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -93,6 +94,8 @@ class _HomeTabState extends State<_HomeTab> {
   @override
   void initState() {
     super.initState();
+    // Sends the punches kept while there was no signal, as soon as there is one.
+    PunchQueue.I.start();
     _load();
   }
 

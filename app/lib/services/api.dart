@@ -7,6 +7,7 @@ import 'package:manna_hr_app/core/constants.dart';
 import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/first_password.dart';
 import 'package:manna_hr_app/core/leave_rules.dart';
+import 'package:manna_hr_app/core/offline_punches.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -44,11 +45,23 @@ class Api {
     Session.I.sid = creds.sid;
     _wireReauth();
     if (creds.sid.isEmpty && !creds.canReauth) return null;
+    ServerClock.I.onSkew = (d) => AuthStore.saveSkew(d);
+    final kept = await AuthStore.loadSkew();
+    if (kept != null) ServerClock.I.restore(kept);
 
     final who = await whoami();
     if (who.isEmpty || who == 'Guest') {
       if (!creds.canReauth) return null;
-      final ok = await _passwordLogin(creds.email, creds.password);
+      bool ok;
+      try {
+        ok = await _passwordLogin(creds.email, creds.password);
+      } catch (e) {
+        // No signal. Somebody at a gate with no network is still somebody who
+        // has to punch: open on what this phone remembers about its owner, and
+        // keep the punch until the site can be reached (core/offline_punches).
+        if (isNetworkFailure(e)) return _startOffline(creds.email);
+        rethrow;
+      }
       if (!ok) return null;
     } else {
       Session.I.user = who;
@@ -74,6 +87,36 @@ class Api {
     await AuthStore.saveLogin(
         siteUrl: siteUrl, email: email, password: password);
     return _resolveQuietly();
+  }
+
+  /// Opens on the remembered employee, with no session. Null when this phone
+  /// has never been signed in far enough to remember one: then the sign-in
+  /// screen is the right answer.
+  static Future<Map<String, dynamic>?> _startOffline(String email) async {
+    final emp = await AuthStore.loadEmployee();
+    if (emp == null) return null;
+    Session.I.employee = emp;
+    Session.I.user = email;
+    Session.I.offlineStart = true;
+    return emp;
+  }
+
+  /// Gets a live session back after an offline start (or any time the token is
+  /// missing): signs in with the kept login. False while the site cannot be
+  /// reached, which is not an error: the punches simply keep waiting.
+  static Future<bool> goOnline() async {
+    try {
+      final creds = await AuthStore.load();
+      if (!creds.canReauth) return false;
+      final ok = await _passwordLogin(creds.email, creds.password);
+      if (ok) {
+        Session.I.offlineStart = false;
+        await _resolveQuietly();
+      }
+      return ok;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// This person's date of birth, as the site holds it (`YYYY-MM-DD`), or null.
@@ -358,6 +401,8 @@ class Api {
     rows.sort((a, b) =>
         (a['status'] == 'Active' ? 0 : 1).compareTo(b['status'] == 'Active' ? 0 : 1));
     Session.I.employee = rows.first;
+    // Remembered, for opening with no signal. Not read back for anything else.
+    await AuthStore.saveEmployee(rows.first);
     return rows.first;
   }
 
@@ -381,7 +426,30 @@ class Api {
       ],
       orderBy: 'time asc',
     );
-    return rows ?? const [];
+    if (rows == null) {
+      // The site did not answer. Show the day as last read rather than an empty
+      // one: an empty day offers IN to somebody already in.
+      punchesFromCache = true;
+      return await AuthStore.loadDayPunches(iso) ?? const [];
+    }
+    punchesFromCache = false;
+    await AuthStore.saveDayPunches(iso, rows);
+    return rows;
+  }
+
+  /// Whether the last [punchesOn] was answered from what the phone remembered.
+  static bool punchesFromCache = false;
+
+  /// Whether a punch with this time and direction is already on the site, asked
+  /// before a kept punch is sent again, so a send whose answer was lost on the
+  /// way back is not made twice.
+  static Future<bool> punchExists(String employee, String time, String logType) async {
+    final rows = await _list(kCheckinDoctype, const ['name'], filters: [
+      ['employee', '=', employee],
+      ['time', '=', time],
+      ['log_type', '=', logType],
+    ], limit: 1);
+    return rows.isNotEmpty;
   }
 
   /// One month of punches, leave and corrections, in one go.
@@ -595,6 +663,8 @@ class Api {
     String? address,
     String? photoUrl,
     String? device,
+    String? at,
+    bool queued = false,
   }) async {
     final emp = Session.I.employeeId;
     if (emp.isEmpty) {
@@ -606,8 +676,11 @@ class Api {
     final doc = <String, dynamic>{
       'employee': emp,
       'log_type': logType,
-      'time': stampOf(ServerClock.I.now()),
-      'device_id': deviceIdFor(emp),
+      // [at] is the moment a kept punch was made. The site lets a punch marked
+      // [queued] keep it (manna_hr/rules.py queued_punch_time), within limits;
+      // anything else it stamps with its own clock.
+      'time': at ?? stampOf(ServerClock.I.now()),
+      'device_id': queued ? queuedDeviceId(emp) : deviceIdFor(emp),
     };
     if (latitude != null && longitude != null) {
       doc['latitude'] = latitude;
@@ -620,6 +693,13 @@ class Api {
 
     final r = await Session.I.dio.post(_res(kCheckinDoctype), data: doc);
     final ok = (r.statusCode ?? 0) >= 200 && (r.statusCode ?? 0) < 300;
+    if ((r.statusCode ?? 0) >= 500) {
+      // The site is up and failing (a restart, a gateway). For a punch that is
+      // "could not reach it", not a refusal: kept and tried again, never
+      // dropped, because nothing judged it.
+      throw DioException.badResponse(
+          statusCode: r.statusCode ?? 500, requestOptions: r.requestOptions, response: r);
+    }
     if (!ok) {
       // The site's own sentence. `checkin.py` refuses with the distance and the
       // gate's name in it, and that is the whole of what somebody can act on.

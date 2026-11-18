@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:manna_hr_app/core/landing.dart';
 import 'package:manna_hr_app/core/roster.dart';
+import 'package:manna_hr_app/core/session.dart';
 import 'package:manna_hr_app/screens/admin/admin_shell.dart';
 import 'package:manna_hr_app/screens/employee_shell.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
@@ -196,6 +197,17 @@ class _GateState extends State<_Gate> {
     var landing = Landing.signIn;
     try {
       await Api.restore();
+      // No signal at start: open on the punch screen, with what this phone
+      // remembers, rather than on a sign-in form for somebody who is signed in.
+      // Only the employee's side — HR's reads need the site.
+      if (Session.I.offlineStart) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(PageRouteBuilder(
+          pageBuilder: (_, _, _) => screenFor(Landing.employee),
+          transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+        ));
+        return;
+      }
       // Signed in is a live session, not a resolved employee: somebody whose
       // Employee record carries no `user_id` is legitimately signed in and has
       // nothing to punch against, and their home says so and names the fix.

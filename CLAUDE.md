@@ -419,6 +419,25 @@ existing `Attendance Log` history should be migrated is still open.
   (`assignedOnly`), and says how many it left out. Somebody who already has a salary keeps it —
   Increments changes pay. Matching is by code only; every saved row is read
   back. `client/src/lib/salaryupload.js`.
+- **The phone app punches with no signal** (asked for by HR, 18 November
+  2026). A punch that cannot reach the site is **kept on the phone** and sent by
+  itself later (`app/lib/core/offline_punches.dart`, `services/punch_queue.dart`):
+  on opening, on coming back to the front, and every 30 seconds while open — **not
+  while the app is closed** (that needs a background service the app does not
+  have). The app also *opens* with no signal, on the employee and clock skew it
+  remembered, instead of on the sign-in page. A kept punch carries the time it was
+  made and a `-Q` on its `device_id`; **the site honours that time only for such a
+  punch, within 48 hours and not in the future** (`rules.queued_punch_time`,
+  `checkin.py`), otherwise stamps it now as before, and adds "saved offline, sent
+  …" to the punch's `custom_device_info` so HR can see it did not arrive when it
+  happened. It never refuses one for being late. Only "could not reach the site"
+  (and a 5xx) is kept; a refusal (too far, outside the window) is shown with the
+  site's own sentence and not retried; one older than 48 hours is not sent and
+  says to ask for a correction. **The one trust trade**: the made-at time comes
+  from the phone's clock plus its last-known skew, so a phone whose clock is moved
+  while offline can back-date a punch by up to 48 hours — flagged on the punch,
+  not prevented. **That rule runs on the site only once `manna_hr` is installed**;
+  until then the site keeps whatever time the app sends.
 - **The phone app signs in with the Emp Code** (asked for by HR, 10 November
   2026): Create Employee makes the login's `User.username` the Emp Code, and an
   app password left blank is the date of birth as DDMMYYYY (`dobPassword` in

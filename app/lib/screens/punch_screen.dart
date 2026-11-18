@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:manna_hr_app/core/errors.dart';
+import 'package:manna_hr_app/core/offline_punches.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -12,6 +13,7 @@ import 'package:manna_hr_app/services/api.dart';
 import 'package:manna_hr_app/services/device.dart';
 import 'package:manna_hr_app/services/location.dart';
 import 'package:manna_hr_app/services/photo.dart';
+import 'package:manna_hr_app/services/punch_queue.dart';
 import 'package:manna_hr_app/ui/brand.dart';
 
 /// Punch in, punch out.
@@ -52,11 +54,25 @@ class _PunchScreenState extends State<PunchScreen> {
   String _triedFor = '';
 
   String get _iso => isoDay(ServerClock.I.now());
-  String get _next => widget.direction ?? nextLogType(_today);
+
+  /// The day as the site holds it plus the punches kept on this phone and not
+  /// sent yet. Which way the button points has to count a waiting punch, or
+  /// somebody who punched IN with no signal is offered IN again.
+  List<Map<String, dynamic>> get _shown =>
+      withPending(_today, PunchQueue.I.items, _iso, Session.I.employeeId);
+
+  String get _next => widget.direction ?? nextLogType(_shown);
+
+  void _onQueue() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
+    PunchQueue.I.count.addListener(_onQueue);
+    PunchQueue.I.problems.addListener(_onQueue);
+    PunchQueue.I.load().then((_) => _onQueue());
     _load();
     // The clock on screen is the site's, so it has to move. One second is the
     // resolution somebody watching a punch land expects.
@@ -72,6 +88,8 @@ class _PunchScreenState extends State<PunchScreen> {
 
   @override
   void dispose() {
+    PunchQueue.I.count.removeListener(_onQueue);
+    PunchQueue.I.problems.removeListener(_onQueue);
     _tick?.cancel();
     super.dispose();
   }
@@ -150,15 +168,51 @@ class _PunchScreenState extends State<PunchScreen> {
       final device = got[2] as String;
       if (mounted) setState(() => _fix = fix);
 
-      await Api.punch(
-        logType: direction,
-        latitude: fix.latitude,
-        longitude: fix.longitude,
-        accuracy: fix.accuracy,
-        address: address,
-        photoUrl: photoUrl,
-        device: device,
-      );
+      // When it was made, fixed now: a punch kept for later must say 08:02, not
+      // the moment the signal came back.
+      final madeAt = stampOf(ServerClock.I.now());
+      try {
+        await Api.punch(
+          logType: direction,
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          accuracy: fix.accuracy,
+          address: address,
+          photoUrl: photoUrl,
+          device: device,
+        );
+      } catch (e) {
+        // Only "could not reach the site" is kept. A refusal is the site's
+        // answer, and its sentence is what the person has to read.
+        if (!isNetworkFailure(e)) rethrow;
+        await PunchQueue.I.add(PendingPunch(
+          id: '${DateTime.now().microsecondsSinceEpoch}',
+          employee: Session.I.employeeId,
+          logType: direction,
+          time: madeAt,
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          accuracy: fix.accuracy,
+          address: address,
+          device: device,
+          photoPath: snap.path,
+        ));
+        if (!mounted) return;
+        final kept = ServerClock.I.now();
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (_) => PunchDoneScreen(
+            direction: direction,
+            at: clockOf(madeAt),
+            iso: isoDay(kept),
+            where: address.isNotEmpty ? address : (fix.has ? 'Location saved' : fix.problem),
+            note: 'No signal, so this punch is saved on this phone. It is sent by itself '
+                'when you are online, with the time you pressed.',
+          ),
+        ));
+        return;
+      }
+      // Online evidently: send anything that was waiting from before.
+      unawaited(PunchQueue.I.flush());
       if (!mounted) return;
       final now = ServerClock.I.now();
       final photoNote = photoUrl != null
@@ -209,7 +263,7 @@ class _PunchScreenState extends State<PunchScreen> {
       ),
     );
     if (take != true || !mounted) return;
-    final pair = dayPunches(_today);
+    final pair = dayPunches(_shown);
     final made = await showCorrectionSheet(
       context,
       iso: _iso,
@@ -276,6 +330,7 @@ class _PunchScreenState extends State<PunchScreen> {
                 'Ask HR to set your user on your Employee record.',
                 kind: NoteKind.warn,
               ),
+            _waitingNotes(),
             _detailsCard(),
             const SizedBox(height: 16),
             if (_error.isNotEmpty) Note(_error),
@@ -290,6 +345,44 @@ class _PunchScreenState extends State<PunchScreen> {
         ),
       ),
     );
+  }
+
+  /// What is kept on this phone and what could not be sent — said at the top,
+  /// where somebody looks first, because a punch they believe was recorded and
+  /// was not is the failure this exists to prevent.
+  Widget _waitingNotes() {
+    final n = PunchQueue.I.count.value;
+    final bad = PunchQueue.I.problems.value;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (Api.punchesFromCache && !_loading)
+        const Note(
+          'No signal. Today is shown as last seen, and a punch you make is saved on this phone '
+          'and sent when you are online.',
+          kind: NoteKind.warn,
+        ),
+      if (n > 0) ...[
+        Note(waitingText(n), kind: NoteKind.warn),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () async {
+              final sent = await PunchQueue.I.flush();
+              if (!mounted) return;
+              _say(sent > 0 ? 'Sent $sent ✓' : 'Still no signal. It will be sent when you are online.');
+              await _load();
+            },
+            child: const Text('Send now'),
+          ),
+        ),
+      ],
+      for (final m in bad) Note(m),
+      if (bad.isNotEmpty)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(onPressed: PunchQueue.I.dismissProblems, child: const Text('Dismiss')),
+        ),
+      if (n > 0 || bad.isNotEmpty || (Api.punchesFromCache && !_loading)) const SizedBox(height: 8),
+    ]);
   }
 
   Widget _detailsCard() {
@@ -343,7 +436,8 @@ class _PunchScreenState extends State<PunchScreen> {
   }
 
   Widget _todayCard() {
-    final pair = dayPunches(_today);
+    final shown = _shown;
+    final pair = dayPunches(shown);
     final hours = spanHours(pair.inAt, pair.outAt);
     return Panel(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
@@ -354,7 +448,7 @@ class _PunchScreenState extends State<PunchScreen> {
           if (hours.isNotEmpty) Text('$hours worked', style: const TextStyle(color: kInk2)),
         ]),
         const SizedBox(height: 6),
-        if (_today.isEmpty)
+        if (shown.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Text('No punch yet today.', style: TextStyle(color: kInk2)),
@@ -363,7 +457,7 @@ class _PunchScreenState extends State<PunchScreen> {
           // Every punch, not a pair. A gate that double-reads puts four rows
           // on a day, and a screen that showed two of them would look like
           // the machine was fine.
-          ..._today.map((p) {
+          ...shown.map((p) {
             final out = '${p['log_type']}'.toUpperCase() == kLogOut;
             return ListTile(
               dense: true,
@@ -374,6 +468,7 @@ class _PunchScreenState extends State<PunchScreen> {
               subtitle: Text(
                 [
                   '${p['log_type'] ?? ''}'.isEmpty ? 'no direction recorded' : '${p['log_type']}',
+                  if (p['pending'] == true) 'waiting to send',
                   if ('${p['device_id'] ?? ''}'.isNotEmpty) '${p['device_id']}',
                 ].join(' · '),
                 style: const TextStyle(fontSize: 12),
