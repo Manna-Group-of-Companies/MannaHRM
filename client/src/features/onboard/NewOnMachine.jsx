@@ -83,11 +83,11 @@ export default function NewOnMachine() {
 	if (!st.rows.length) return null;
 
 	return (
-		<section aria-label="New on the machine">
+		<section className="onbsec" aria-label="New on the machine">
 			<header>
 				<h3>New on the machine</h3>
 				<span className="n">{st.rows.length}</span>
-				<button className="embtn ml-auto" onClick={checkForm} disabled={sent.state === "reading" || !GOOGLE_CLIENT_ID}>
+				<button className="embtn" onClick={checkForm} disabled={sent.state === "reading" || !GOOGLE_CLIENT_ID}>
 					{sent.state === "reading" ? "Checking…" : sent.state === "ok" ? "Check again" : "Check form"}
 				</button>
 			</header>
@@ -114,20 +114,24 @@ export default function NewOnMachine() {
 										{[r.device_name, `No. ${r.pin}`, `${r.punches} punch(es) since ${dmy(String(r.first).slice(0, 10))}`].join(" · ")}
 									</span>
 								</span>
-								<span className="cov part">Waiting</span>
-								{sent.state === "ok" ? (back
-									? <span className="cov live" title={back.name}>Form submitted {dmy(back.at.slice(0, 10))} {back.at.slice(11)}</span>
-									: <span className="cov none">Form not submitted</span>) : null}
-								<button className="embtn ml-auto"
-									aria-label={`Share the form on WhatsApp, no. ${r.pin}`}
-									onClick={() => shareForm(r)}>
-									Share form
-								</button>
-								<button className="embtn pri"
-									aria-label={`Create Employee for machine no. ${r.pin}`}
-									onClick={() => toWizardFromMachine(r)}>
-									Create Employee
-								</button>
+								<span className="tags">
+									<span className="cov part">Waiting</span>
+									{sent.state === "ok" ? (back
+										? <span className="cov live" title={back.name}>Form submitted {dmy(back.at.slice(0, 10))} {back.at.slice(11)}</span>
+										: <span className="cov none">Form not submitted</span>) : null}
+								</span>
+								<span className="acts">
+									<button className="embtn"
+										aria-label={`Share the form on WhatsApp, no. ${r.pin}`}
+										onClick={() => shareForm(r)}>
+										Share form
+									</button>
+									<button className="embtn pri"
+										aria-label={`Create Employee for machine no. ${r.pin}`}
+										onClick={() => toWizardFromMachine(r)}>
+										Create Employee
+									</button>
+								</span>
 							</div>
 						</article>
 					);

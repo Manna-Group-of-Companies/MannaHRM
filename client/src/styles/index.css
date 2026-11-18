@@ -1629,6 +1629,62 @@
   .onbc .v .dash { @apply not-italic text-ink-3; }
   .onbc .v.gone { @apply italic text-ink-3; }
 
+  /* ---- On Board → Onboarding (features/onboard/Onboarding.jsx) ------------
+     The same cards as Import From Onboarding, with a second list above them
+     (New on the machine) and up to two buttons a card. Scoped to `.onbpage`
+     so the import page keeps its own bar. The status chips and the buttons
+     are each one group, so a narrow window moves a group rather than leaving
+     one button behind on a line of its own. */
+  .onbpage .onbcard > .top .tags { @apply flex flex-wrap gap-[.35rem] items-center; }
+  .onbpage .onbcard > .top .acts { @apply flex-wrap justify-end; }
+  .onbpage .onbcard > .top .acts:empty { @apply hidden; }
+  .onbpage .cov.off { @apply bg-wash text-ink-3; }
+  .onbsec { @apply border-b border-line; }
+  .onbsec > header { @apply flex flex-wrap gap-[.5rem] items-center px-[.9rem] pt-[.8rem]; }
+  .onbsec > header h3 { @apply font-display text-read font-bold text-ink; }
+  .onbsec > header .n {
+    @apply text-tiny font-semibold text-ink-2 bg-wash border border-line rounded-full px-[.5rem] py-[.05rem];
+  }
+  .onbsec > header .embtn { @apply ml-auto; }
+  .onbplan { @apply flex-col items-stretch gap-[.6rem]; }
+  .onbplan code { @apply font-mono text-fine break-all; }
+  .onbplan > .acts { @apply flex flex-wrap gap-[.5rem] items-center; }
+  .onbplan .lbl select {
+    @apply text-read px-[.6rem] py-[.35rem] border border-line-ctl rounded bg-card text-ink;
+    min-height: 2.1rem; max-width: 100%;
+  }
+  /* A wide window shows every answer; the button only exists for a phone. */
+  .onbmore { @apply hidden; }
+
+  @media (max-width: 640px) {
+    .onbpage > header, .onbpage .onbbar, .onbpage .onbmsg, .onbsec > header { @apply px-[.75rem]; }
+    .onbpage .onblist { @apply p-[.6rem] gap-[.6rem]; }
+    .onbpage .onbbar > .embtn { @apply flex-1; }
+    /* Avatar beside the name, the chips under the name, and the buttons a
+       full-width row under both — sized for a thumb, and never one button
+       stranded on a line by itself. */
+    .onbpage .onbcard > .top {
+      @apply grid gap-x-[.6rem] gap-y-[.5rem] items-center;
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+    .onbpage .onbcard > .top .tags { grid-column: 2; }
+    .onbpage .onbcard > .top .acts { @apply ml-0 flex-nowrap; grid-column: 1 / -1; }
+    .onbpage .onbcard > .top .acts .embtn { @apply flex-1 min-w-0 whitespace-nowrap; }
+    .onbpage .onbgrid {
+      @apply gap-x-[.8rem];
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    /* Twelve answers — who, how to reach them, the job and the joining date —
+       and the rest behind Show all details. */
+    .onbpage .onbgrid:not(.open) > .onbc:nth-child(n+13) { @apply hidden; }
+    .onbmore {
+      @apply block w-full border-t border-line px-[.8rem] py-[.6rem]
+             text-fine font-semibold text-brand-deep text-center bg-transparent cursor-pointer;
+    }
+    .onbplan .lbl { @apply flex-col items-stretch w-full; }
+    .onbplan > .acts > .embtn { @apply flex-1; }
+  }
+
   /* The code boxes, in both dialogs. One row per candidate: who, the box, and
      the clash under it when there is one. */
   /* The count beside the title, which `.emhead` styles for Employee Master and

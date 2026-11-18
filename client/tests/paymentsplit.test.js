@@ -299,16 +299,38 @@ describe("BMS's workers (HR, 29 October 2026)", () => {
 
 describe("the Labour supply tab in a month with slips (HR, 30 October 2026)", () => {
 	it("is BMS's workers' attendance, though they have no slip, and everybody else stays on their slip", () => {
-		const slipRows = [{ employee: "E3", code: "MRP-293" }, { employee: "E9", code: "HPT-050", department: "Labour supply" }];
+		const slipRows = [{ employee: "E3", code: "MRP-293" }];
 		const preview = [
 			{ employee: "E1", code: "HPT-103(BMS)", kind: "Salary" },
 			{ employee: "E3", code: "MRP-293", kind: "Salary" },
-			{ employee: "E9", code: "HPT-050", department: "Labour supply", kind: "Salary" },
 		];
 		const rows = withLabourPreview(slipRows, preview);
-		expect(rows.map((r) => [r.code, Boolean(r.kind)])).toEqual([["MRP-293", false], ["HPT-103(BMS)", true], ["HPT-050", true]]);
+		expect(rows.map((r) => [r.code, Boolean(r.kind)])).toEqual([["MRP-293", false], ["HPT-103(BMS)", true]]);
 		const parts = payrollDesignParts([{ company: "Manna Rubber Products Pvt.Ltd", rows }], { bankCap: 20000 });
 		const tab = parts.find((x) => x.sheet === "Labour supply");
-		expect([tab.rows.map((r) => r.code), tab.preview]).toEqual([["HPT-103(BMS)", "HPT-050"], true]);
+		expect([tab.rows.map((r) => r.code), tab.preview]).toEqual([["HPT-103(BMS)"], true]);
+	});
+});
+
+describe("the Labour supply tab holds only BMS codes (HR, 14 November 2026)", () => {
+	const MR = "Manna Rubber Products Pvt.Ltd";
+	it("leaves somebody whose department, designation, branch or employment type says labour or contract on the pay tabs", () => {
+		const rows = [
+			slip("MRP-251(BMS)", 15000, { employee: "E1" }),
+			slip("MRP-300", 15000, { employee: "E2", department: "Labour supply" }),
+			slip("MRP-301", 15000, { employee: "E3", employmentType: "Contract" }),
+			slip("MRP-302", 15000, { employee: "E4", designation: "Manpower helper", branch: "Labour" }),
+		];
+		const parts = payrollDesignParts([{ company: MR, rows }], { bankCap: 20000 });
+		expect(parts.find((x) => x.sheet === "Labour supply").rows.map((r) => r.code)).toEqual(["MRP-251(BMS)"]);
+		expect(parts.find((x) => x.sheet === "MRPPL Salary-1").rows.map((r) => r.code)).toEqual(["MRP-300", "MRP-301", "MRP-302"]);
+	});
+
+	it("takes a slipless month's labour off the attendance for BMS codes only", () => {
+		const rows = withLabourPreview([{ employee: "E2", code: "MRP-300", department: "Labour supply" }], [
+			{ employee: "E1", code: "MRP-251(BMS)", kind: "Salary" },
+			{ employee: "E2", code: "MRP-300", department: "Labour supply", kind: "Salary" },
+		]);
+		expect(rows.map((r) => [r.code, Boolean(r.kind)])).toEqual([["MRP-300", false], ["MRP-251(BMS)", true]]);
 	});
 });

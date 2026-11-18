@@ -102,6 +102,27 @@ describe("a card shows every Form answer", () => {
 	});
 });
 
+describe("a card on a phone", () => {
+	/* The CSS hides cells past the twelfth at phone width; jsdom has no layout,
+	   so what is pinned here is that hiding is all it is — every answer stays in
+	   the page — and that the button opens and closes that one card. */
+	it("keeps every answer in the card and opens out with Show all details", async () => {
+		const view = await draw();
+		act(() => set({ candState: "ok", candTier: "extra", cands: [
+			{ name: "ONB-1", employee_name: "Anu", highest_qualification: "B.Com", docstatus: 0 },
+			{ name: "ONB-2", employee_name: "Binu", docstatus: 0 },
+		] }));
+		const grids = view.container.querySelectorAll(".onbgrid");
+		expect(grids[0].textContent).toContain("B.Com");
+		const more = view.getAllByRole("button", { name: "Show all details" })[0];
+		act(() => { more.click(); });
+		expect(grids[0].classList.contains("open")).toBe(true);
+		expect(more.getAttribute("aria-expanded")).toBe("true");
+		expect(more.textContent).toBe("Show less");
+		expect(grids[1].classList.contains("open")).toBe(false);
+	});
+});
+
 import { wizardFromCandidate } from "@/api/candidate";
 
 describe("Create Employee from a candidate", () => {
