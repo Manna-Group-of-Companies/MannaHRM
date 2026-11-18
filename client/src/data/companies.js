@@ -53,3 +53,11 @@ export const COMPANY_PAGES = [
 /** The company a dashboard slug names, or `""` for a slug with no page. */
 export const companyForSlug = (slug) =>
 	(COMPANY_PAGES.find((c) => c.slug === slug) || {}).company || "";
+
+/** A demo company the site holds for trying things out — `Hi-Tech Rubber DEMO`.
+    Kept off every company list here (asked for 18 November 2026): nobody is
+    paid from it, and offering it beside the real ones invites somebody to
+    file a real person under it. The record stays on the site; only this
+    dashboard stops offering it. Matched on the word, so a real name that
+    merely contains the letters is not caught. */
+export const isDemoCompany = (name) => /\bdemo\b/i.test(String(name || ""));

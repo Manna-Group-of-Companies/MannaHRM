@@ -8,6 +8,7 @@ import { LEAVE_TYPE_NAME } from "@/lib/monthlyleave";
 import { credited } from "@/lib/sundayleave";
 import { byMachine } from "@/lib/direction";
 import { leaveAdmin } from "@/data/menus";
+import { isDemoCompany } from "@/data/companies";
 
 export const EMP_FIELDS_MIN = [
 	"name", "employee_name", "employee_number", "company", "department", "designation",
@@ -222,6 +223,8 @@ export async function load() {
 			listAll("Work Location", ["name", "location_name", "is_active"]).catch(() => []),
 		]);
 
+		// The demo company is never offered — see isDemoCompany.
+		const realCompanies = (companies || []).filter((c) => !isDemoCompany(c.name));
 		set({
 			employees: emps,
 			byName: Object.fromEntries(emps.map((e) => [e.name, e])),
@@ -232,12 +235,12 @@ export async function load() {
 			letterTypes: (ltypes || []).filter((t) => t.is_active !== 0),
 			letters: letters.rows || [],
 			letterCols: letters.full,
-			companies: companies || [],
+			companies: realCompanies,
 			/* A company-locked login (tools/create_company_users.py) gets exactly one
 			   Company back, so the picker is set to it rather than left on "All" —
 			   which for that login would read the same rows and say the wrong name
 			   above them. The lock itself is the site's User Permission. */
-			...((companies || []).length === 1 ? { company: companies[0].name } : {}),
+			...(realCompanies.length === 1 ? { company: realCompanies[0].name } : {}),
 			holidayLists: holidays || [],
 			/* The names as well as the count: Apply Leave fills its type dropdown
 			   from this, and the six in Factor HR are not necessarily the six here. */
