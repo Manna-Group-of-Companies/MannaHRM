@@ -2408,6 +2408,300 @@ export const SCHEMA = {
 			}
 		]
 	},
+	"Manna Attendance Policy": {
+		name: "Manna Attendance Policy",
+		module: "Manna HR",
+		istable: 0,
+		issingle: 0,
+		submittable: 0,
+		autoname: "field:policy_name",
+		title: "policy_name",
+		fields: [
+			{
+				name: "policy_name",
+				label: "Policy Name",
+				kind: "text",
+				reqd: 1,
+				list: 1
+			},
+			{
+				name: "is_active",
+				label: "Active",
+				kind: "check",
+				def: "1",
+				list: 1
+			},
+			{
+				name: "is_default",
+				label: "Default for Everybody Else",
+				kind: "check",
+				hint: "Applies to anybody no other policy names. At most one active default."
+			},
+			{
+				name: "company",
+				label: "Company",
+				kind: "link",
+				link: "Company",
+				hint: "Blank: any company in the group."
+			},
+			{
+				name: "priority",
+				label: "Priority",
+				kind: "int",
+				def: "0",
+				hint: "Between two policies equally specific for a person, the higher wins."
+			},
+			{
+				name: "description",
+				label: "Description",
+				kind: "long"
+			},
+			{
+				name: "scopes",
+				label: "Applies To",
+				kind: "table",
+				link: "Manna Attendance Policy Scope"
+			},
+			{
+				name: "shift_types",
+				label: "Shift Types It Sets",
+				kind: "table",
+				link: "Manna Attendance Policy Shift",
+				hint: "Saving the policy writes its thresholds and grace onto these Shift Types, so hrms's first reading of a day agrees with it. A Shift Type can be set by one active policy only."
+			},
+			{
+				name: "check_in_out_mode",
+				label: "Punch Direction",
+				kind: "select",
+				choices: [
+					"",
+					"Alternating entries as IN and OUT during the same shift",
+					"Strictly based on Log Type in Employee Checkin"
+				],
+				hint: "Blank leaves each Shift Type's own. Strict needs machines that send IN and OUT; most here send neither."
+			},
+			{
+				name: "hours_based_on",
+				label: "Hours Worked From",
+				kind: "select",
+				choices: [
+					"",
+					"First Check-in and Last Check-out",
+					"Every Valid Check-in and Check-out"
+				]
+			},
+			{
+				name: "full_day_hours",
+				label: "Full Day Hours",
+				kind: "float",
+				hint: "Under this, a day is flagged Short hours. Pay is decided by the two below."
+			},
+			{
+				name: "half_day_below_hours",
+				label: "Half Day Below (Hours)",
+				kind: "float",
+				hint: "0 = off"
+			},
+			{
+				name: "absent_below_hours",
+				label: "Absent Below (Hours)",
+				kind: "float",
+				hint: "0 = off"
+			},
+			{
+				name: "break_minutes",
+				label: "Break (Minutes)",
+				kind: "int",
+				hint: "Taken off the hours of a day at least as long as the next field."
+			},
+			{
+				name: "break_after_hours",
+				label: "Break Taken After (Hours)",
+				kind: "float"
+			},
+			{
+				name: "msp_status",
+				label: "One Punch Only Counts As",
+				kind: "select",
+				choices: [
+					"",
+					"Present",
+					"Half Day",
+					"Absent"
+				],
+				hint: "Blank: as hrms decides from the hours (0)."
+			},
+			{
+				name: "late_grace_minutes",
+				label: "Grace (Minutes)",
+				kind: "int"
+			},
+			{
+				name: "late_half_day_after_minutes",
+				label: "Half Day When Later Than (Minutes)",
+				kind: "int",
+				hint: "0 = off"
+			},
+			{
+				name: "late_forgiven_per_month",
+				label: "Forgiven per Month",
+				kind: "int",
+				def: "-1",
+				hint: "-1 = no frequency rule. 3: the 4th late costs a penalty."
+			},
+			{
+				name: "late_penalty_every",
+				label: "Then a Penalty Every",
+				kind: "int",
+				def: "1",
+				hint: "1: every late past the forgiven ones. 3: every third."
+			},
+			{
+				name: "late_penalty_days",
+				label: "Penalty (Days)",
+				kind: "select",
+				choices: [
+					"0.5",
+					"1"
+				],
+				def: "0.5"
+			},
+			{
+				name: "early_grace_minutes",
+				label: "Grace (Minutes)",
+				kind: "int"
+			},
+			{
+				name: "early_half_day_after_minutes",
+				label: "Half Day When Earlier Than (Minutes)",
+				kind: "int",
+				hint: "0 = off"
+			},
+			{
+				name: "early_forgiven_per_month",
+				label: "Forgiven per Month",
+				kind: "int",
+				def: "-1"
+			},
+			{
+				name: "early_penalty_every",
+				label: "Then a Penalty Every",
+				kind: "int",
+				def: "1"
+			},
+			{
+				name: "early_penalty_days",
+				label: "Penalty (Days)",
+				kind: "select",
+				choices: [
+					"0.5",
+					"1"
+				],
+				def: "0.5"
+			},
+			{
+				name: "penalty_deduct_from",
+				label: "Deduct From",
+				kind: "select",
+				choices: [
+					"Leave Without Pay",
+					"Casual Leave, then Leave Without Pay"
+				],
+				def: "Leave Without Pay"
+			},
+			{
+				name: "casual_leave_type",
+				label: "Casual Leave Type",
+				kind: "link",
+				link: "Leave Type"
+			},
+			{
+				name: "ot_enabled",
+				label: "Overtime Counted",
+				kind: "check"
+			},
+			{
+				name: "ot_min_minutes",
+				label: "Minimum (Minutes)",
+				kind: "int"
+			},
+			{
+				name: "ot_round_minutes",
+				label: "Rounded Down To (Minutes)",
+				kind: "int"
+			},
+			{
+				name: "ot_max_minutes",
+				label: "Most in a Day (Minutes)",
+				kind: "int",
+				hint: "0 = no cap"
+			},
+			{
+				name: "holiday_work",
+				label: "Work on a Weekly Off or Holiday",
+				kind: "select",
+				choices: [
+					"Nothing",
+					"Overtime",
+					"Comp off"
+				],
+				def: "Nothing"
+			}
+		]
+	},
+	"Manna Attendance Policy Scope": {
+		name: "Manna Attendance Policy Scope",
+		module: "Manna HR",
+		istable: 1,
+		issingle: 0,
+		submittable: 0,
+		autoname: "",
+		title: "",
+		fields: [
+			{
+				name: "applies_on",
+				label: "Applies On",
+				kind: "select",
+				choices: [
+					"Employee",
+					"Shift Type",
+					"Designation",
+					"Department",
+					"Company"
+				],
+				reqd: 1,
+				def: "Department",
+				list: 1
+			},
+			{
+				name: "value",
+				label: "Value",
+				kind: "text",
+				reqd: 1,
+				hint: "The Employee ID, Shift Type, Designation, Department or Company it applies to, exactly as the site names it.",
+				list: 1
+			}
+		]
+	},
+	"Manna Attendance Policy Shift": {
+		name: "Manna Attendance Policy Shift",
+		module: "Manna HR",
+		istable: 1,
+		issingle: 0,
+		submittable: 0,
+		autoname: "",
+		title: "",
+		fields: [
+			{
+				name: "shift_type",
+				label: "Shift Type",
+				kind: "link",
+				link: "Shift Type",
+				reqd: 1,
+				list: 1
+			}
+		]
+	},
 	"Manna HR Settings": {
 		name: "Manna HR Settings",
 		module: "Manna HR",

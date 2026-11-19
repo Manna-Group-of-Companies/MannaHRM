@@ -181,12 +181,23 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 
 			const inM = stampMinutes(inAt);
 			const outM = stampMinutes(outAt);
-			const late = startM != null && inM != null && inM > startM && inM - startM < 360 ? inM - startM : 0;
-			const early = endM != null && outM != null && !crossed && outM < endM && endM - outM < 360 ? endM - outM : 0;
+			/* A day the attendance policy read on the site (19 Nov 2026) carries
+			   its own figures, and those are the ones payroll is paid from — so
+			   they are shown, not worked out again here. A day made before the
+			   policy existed has no punch count on it and is worked out as before. */
+			const judged = Boolean(a) && Number(a.custom_punch_count) > 0;
+			const late = judged ? Number(a.custom_late_minutes) || 0
+				: startM != null && inM != null && inM > startM && inM - startM < 360 ? inM - startM : 0;
+			const early = judged ? Number(a.custom_early_minutes) || 0
+				: endM != null && outM != null && !crossed && outM < endM && endM - outM < 360 ? endM - outM : 0;
+			if (judged && Number(a.custom_net_hours) > 0) mins = Math.round(Number(a.custom_net_hours) * 60);
 			const otR = otRow.get(e.name + "|" + iso);
 			/* A pair with no duration earns no automatic OT: its hours are not
-			   known, and OT off a guess is pay off a guess. */
-			const od = otDay(otR, crossed ? 0 : autoOtMinutes(mins || 0, shiftMinutes(w)));
+			   known, and OT off a guess is pay off a guess. Under a policy the
+			   site's own figure is the one, nought included. */
+			const auto = judged && a.custom_attendance_policy ? Number(a.custom_ot_minutes) || 0
+				: crossed ? 0 : autoOtMinutes(mins || 0, shiftMinutes(w));
+			const od = otDay(otR, auto);
 			const ot = od.paidMin;
 
 			rows.push({
@@ -223,6 +234,10 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 				status,
 				dayType: h ? (h.weekly_off ? "weekoff" : "holiday") : "",
 				source,
+				/* The policy's own words for the day, when it read it. */
+				exceptions: judged ? a.custom_exceptions || "" : "",
+				policyNote: judged ? a.custom_policy_note || "" : "",
+				missedPunch: judged ? Number(a.custom_missed_punch) === 1 : false,
 			});
 		}
 	}

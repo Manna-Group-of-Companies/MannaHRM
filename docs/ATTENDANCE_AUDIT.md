@@ -321,3 +321,39 @@ Bench: `~/bench-att` in WSL, site `att.localhost` (frappe 16.55.2, erpnext 16.53
 3. HR sets the night partner on Hi-Tech's day shifts, once a night Shift Type exists for them. `Production shift1` has none today, so HPT-012 and the others get no night until one is named.
 4. Duplicates: `dedupe_site.preview` for November, read, then `apply`.
 5. The ~650 Absents: `reprocess_site.preview` for the affected people and November, read, then `apply`. This overlaps the 384 being repaired by hand; run the preview after that repair.
+
+## 10. Phase 1: the attendance policy engine (19 Nov 2026)
+
+Branch `feature/attendance-policy`, stacked on Phase 0.
+
+| Piece | Where |
+|---|---|
+| The policy master: thresholds, break, missed-punch status, late and early grace, half-day limits, monthly forgiveness and penalties, Casual Leave before LWP, overtime rules. Every rule off until set. | `Manna Attendance Policy` (+ `… Scope`, `… Shift`) |
+| Which policy a person is on: Employee, then Shift Type, Designation, Department, Company, then the default; priority, then name, breaks a tie | `attpolicy.resolve` |
+| Saving a policy writes its thresholds and grace onto the Shift Types it names, so hrms's own first reading agrees | `attpolicy_site.push_to_shifts` |
+| The day: as hrms's shift job makes each row, the hook writes late and early minutes, net hours, overtime, punch count, missed punch, exceptions and the policy's status (penalty or hard-limit half day, single punch, hours) onto it. A Half Day it makes has `half_day_status` Absent, which is what hrms payroll counts as half unpaid. Never raises. | `attpolicy.evaluate_day`, `attpolicy_site.on_attendance_validate` |
+| Overtime: the policy's figure becomes a pending `Employee Overtime` row; approval on Daily Detail as before | `attpolicy_site.on_attendance_submit` |
+| The month, nightly: a penalty that moved (a corrected late) has its days rebuilt; a penalty the policy takes from Casual Leave first becomes a half-day Casual Leave, paid, while the balance lasts | `attpolicy.month_plan`, `attpolicy_site.settle` |
+| Attendance → **Attendance Policy** page (Manage and Assign Attendance Policy) | `client/src/features/attendance/AttendancePolicy.jsx` |
+| Daily Detail shows the site's figures for any day the policy read | `client/src/lib/dailydetail.js` |
+
+**Tested.**
+- 33 scenario tests on the rules.
+- 9 bench scenarios through hrms's own shift job, all passing:
+  - the policy sets its shifts;
+  - on time;
+  - the 4th late is a Half Day with `half_day_status` Absent;
+  - a single punch;
+  - 4 h is a Half Day and 3 h Absent;
+  - overtime becomes a pending row at 1.5 h;
+  - a night crossing midnight;
+  - a corrected late moves the penalty to the right day;
+  - a penalty is taken from Casual Leave and paid.
+- Phase 0's 7 still pass.
+- 1,109 Python, 5,038 client.
+
+**Not in this phase.** Comp off is a policy choice with no effect yet (P2). Session mode (pre/post break judged apart) is not built. The pay register and Monthly reports still read days their own way (P2/P3).
+
+**What changes on the live site once installed: nothing, until HR makes a policy.** Then:
+1. HR makes the policy from factoHR's numbers.
+2. Rebuild the open month with scope `days`.
