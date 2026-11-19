@@ -44,6 +44,7 @@ import Regularization from "@/features/attendance/Regularization";
 import TeamAttendance from "@/features/attendance/TeamAttendance";
 import EmployeeAttendance from "@/features/attendance/EmployeeAttendance";
 import AttendanceSettings from "@/features/attendance/AttendanceSettings";
+import AttendancePolicy from "@/features/attendance/AttendancePolicy";
 import { AbsentReport, OtReport, WeeklyReport } from "@/features/attendance/RangeReports";
 import SubmitAttendance from "@/features/attendance/SubmitAttendance";
 import InOut from "@/features/attendance/InOut";
@@ -195,7 +196,7 @@ const TABS = {
 	   Team and Employee came off the menu again the same day, asked for by HR;
 	   Download report stays on Employee Attendance Regularization. */
 	attendance: [["team", "Team Attendance"], ["employee", "Employee Attendance"],
-		["overview", "Employee Attendance Regularization"], ["settings", "Attendance Settings"], ["submit", "Submit Attendance"],
+		["overview", "Employee Attendance Regularization"], ["settings", "Attendance Settings"], ["policy", "Attendance Policy"], ["submit", "Submit Attendance"],
 		["inout", "In Out Activities Report"], ["daily", "Daily Detail Attendance Report"],
 		["monthly", "Monthly Basic Attendance"], ["summary", "Monthly Summary Attendance"],
 		["statutory", "Statutory Reports"],
@@ -310,7 +311,7 @@ const PAGES = {
 		chart: CompanyChart,
 		all: moduleAll("employees", "Employees"),
 		...managedPages("employees"), ...blueprintPages("employees") },
-	attendance: { team: TeamAttendance, employee: EmployeeAttendance, settings: AttendanceSettings,
+	attendance: { team: TeamAttendance, employee: EmployeeAttendance, settings: AttendanceSettings, policy: AttendancePolicy,
 		/* My Attendance (D3): the same page, fixed to the signed-in person. */
 		mine: () => <EmployeeAttendance mine />,
 		overview: Regularization, submit: SubmitAttendance, inout: InOut,

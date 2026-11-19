@@ -557,3 +557,78 @@ kind of blocked it is. Forty-nine of Payroll's are reports over a `Salary Slip`
 and one payroll run unblocks nearly all of them at once. Leave's are waiting on
 a ledger that is stock hrms and empty here. `Manage Attendance Policy` is
 waiting on somebody writing the policy down.
+
+---
+
+## 8 · Manage Attendance Policy, read 19 Nov 2026
+
+Read off the tenant's edit form, field by field, without saving. **There is one
+policy, "Manna General Attendance Policy", and it is the default for everybody.**
+Late coming and early going are treated separately.
+
+### Work hours (step 2)
+
+- The day is judged on **net working minutes** (personal breaks taken off) as a
+  **percentage of the shift's duration**, over the whole day, not by half-day
+  sessions:
+  - worked up to **12%** of the shift: **1 day** deducted;
+  - worked up to **99%**: **0.5 day** deducted.
+
+  Late and early are both ignored on those days.
+- **All personal breaks are taken off** the day's hours. Canteen punches are not
+  excluded.
+- **A missed punch gets the same rule.** "Do not apply work duration policy for
+  MSP" is off, so a single punch is under 12% and costs a day.
+- Leave for short hours comes **from paid leave first: Casual Leave, then Leave
+  Without Pay**.
+- Session settings exist (late grace 5, late limit 60, early grace 5, early
+  limit 120, minimum 120 min per half) but are **not used**: day status is
+  "total worked hours against shift duration".
+
+### Late coming (step 3)
+
+- **No grace**: counted from the shift start time. Rounding, "ignore up to 5
+  min, 6 times" and per-day deduction are all off.
+- **Monthly count is on**:
+
+  | Lates in the month | Days deducted (total) |
+  |---|---|
+  | up to 5 | 0 |
+  | 6 | 0.5 |
+  | 7 | 1 |
+  | 8 | 1.5 |
+
+  So 5 are forgiven, and each late after that costs half a day.
+- Deducted **from Casual Leave, then Leave Without Pay**.
+- Not counted late on a day that is half present, half on leave.
+
+### Early going (step 4)
+
+- Counted from the shift end. **Per-day rule on**:
+
+  | Left early by | Days deducted |
+  |---|---|
+  | up to 119 min | 0 |
+  | 120 min | 0.5 |
+
+- The monthly count is off.
+- Deducted as **Loss of Pay**, not from leave.
+
+### Overtime (step 5)
+
+- **Working days**:
+  - on, counted as **in before the shift plus out after it**;
+  - **manager approval required**;
+  - checked against the actual work duration;
+  - **minimum 30 min**, no maximum;
+  - rounding off.
+- **Weekly offs and holidays**:
+  - on, counted as **the total duration**;
+  - approval required;
+  - minimum 30 min.
+
+### Approval workflow
+
+- The predefined workflow, with **levels 1 and 2** ticked for web and mobile.
+- Leave arising from attendance is auto-approved.
+- Regularization limits (days before or after, reason or remarks mandatory) are all off.

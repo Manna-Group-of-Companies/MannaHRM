@@ -277,6 +277,11 @@ export function shiftLabel(name, windows) {
 const DDA_ATT_FIELDS = ["name", "employee", "attendance_date", "status", "in_time", "out_time",
 	"working_hours", "late_entry", "early_exit", "shift", "docstatus"];
 const DDA_ATT_MIN = ["name", "employee", "attendance_date", "status", "docstatus"];
+/* What the attendance policy wrote on the day (manna_hr/attpolicy_site.py).
+   Asked for first; a site without the fields yet answers the list above. */
+const DDA_ATT_POLICY = DDA_ATT_FIELDS.concat(["custom_attendance_policy", "custom_late_minutes",
+	"custom_early_minutes", "custom_net_hours", "custom_ot_minutes", "custom_punch_count",
+	"custom_missed_punch", "custom_penalty", "custom_exceptions", "custom_policy_note"]);
 
 export async function loadDda(from, to, emp, force) {
 	if (!from || !to || to < from) return;
@@ -292,8 +297,10 @@ export async function loadDda(from, to, emp, force) {
 			.catch(() => null);
 
 	const [attendance, punches, leave, overtime] = await Promise.all([
-		read("Attendance", DDA_ATT_FIELDS, DDA_ATT_MIN,
-			who.concat([["attendance_date", ">=", from], ["attendance_date", "<=", to], ["docstatus", "=", 1]])),
+		listAll("Attendance", DDA_ATT_POLICY,
+			who.concat([["attendance_date", ">=", from], ["attendance_date", "<=", to], ["docstatus", "=", 1]]), 1000)
+			.catch(() => read("Attendance", DDA_ATT_FIELDS, DDA_ATT_MIN,
+				who.concat([["attendance_date", ">=", from], ["attendance_date", "<=", to], ["docstatus", "=", 1]]))),
 		read("Employee Checkin", PUNCH_MIN.concat(["skip_auto_attendance", "device_id", "latitude", "longitude"]), PUNCH_MIN,
 			who.concat([["time", ">=", from + " 00:00:00"], ["time", "<=", punchesTill(to)]])).then(byMachine),
 		read("Leave Application", LEAVE_FIELDS, LEAVE_MIN,

@@ -126,8 +126,9 @@ describe("their whole menu", () => {
 		// Not a threshold to pass — a number to look at. If this fails because
 		// somebody built a page, change it and be pleased.
 		const built = FACTOHR_MENU.filter((r) => r[5]).length;
-		expect(built).toBe(55);
-		expect(FACTOHR_MENU.length - built).toBe(105);
+		// 57 since 19 Nov 2026: Manage and Assign Attendance Policy.
+		expect(built).toBe(57);
+		expect(FACTOHR_MENU.length - built).toBe(103);
 	});
 
 	it("gives every module on the rail an All page carrying its menu", () => {

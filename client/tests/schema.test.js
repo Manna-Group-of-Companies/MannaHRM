@@ -47,8 +47,10 @@ describe("what the schema carries", () => {
 		// Festival Bonus on 22 October — a festival's bonus, paid apart too.
 		// Attendance Device Punch on 19 October — every punch a machine pushes
 		// over ADMS, stored before the machine is told OK.
-		expect(Object.keys(SCHEMA)).toHaveLength(29);
-		expect(RECORD_DOCTYPES).toHaveLength(23);
+		// Manna Attendance Policy on 19 November, with its two child tables —
+		// what a day's punches mean for that day's pay.
+		expect(Object.keys(SCHEMA)).toHaveLength(32);
+		expect(RECORD_DOCTYPES).toHaveLength(24);
 	});
 
 	it("keeps child tables and Singles out of the record list", () => {

@@ -178,7 +178,10 @@ def test_the_freeze_never_refuses_a_punch():
 
 def test_every_door_into_a_month_is_guarded():
 	events = _literal("hooks.py", "doc_events")
-	assert events["Attendance"]["validate"] == "manna_hr.freeze.guard_attendance"
+	# First of the Attendance validate hooks: a frozen day is refused before
+	# the attendance policy spends anything reading it.
+	validate = events["Attendance"]["validate"]
+	assert (validate[0] if isinstance(validate, list) else validate) == "manna_hr.freeze.guard_attendance"
 	assert events["Attendance"]["before_cancel"] == "manna_hr.freeze.guard_attendance_cancel"
 	assert events["Leave Application"]["before_submit"] == "manna_hr.freeze.guard_leave"
 	assert events["Leave Application"]["before_cancel"] == "manna_hr.freeze.guard_leave"
