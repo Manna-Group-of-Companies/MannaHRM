@@ -22,6 +22,8 @@
   "full_day_hours",
   "half_day_below_hours",
   "absent_below_hours",
+  "half_day_upto_percent",
+  "absent_upto_percent",
   "column_break_day",
   "break_minutes",
   "break_after_hours",
@@ -42,9 +44,12 @@
   "early_penalty_days",
   "section_penalty",
   "penalty_deduct_from",
+  "early_deduct_from",
+  "hours_deduct_from",
   "casual_leave_type",
   "section_ot",
   "ot_enabled",
+  "ot_basis",
   "ot_min_minutes",
   "ot_round_minutes",
   "column_break_ot",
@@ -151,6 +156,18 @@
    "fieldname": "absent_below_hours",
    "fieldtype": "Float",
    "label": "Absent Below (Hours)"
+  },
+  {
+   "description": "factoHR's own rule: 99 means anybody short of the full shift is a half day. 0 = off. Replaces the hours above.",
+   "fieldname": "half_day_upto_percent",
+   "fieldtype": "Float",
+   "label": "Half Day When Worked Up To (% of Shift)"
+  },
+  {
+   "description": "0 = off.",
+   "fieldname": "absent_upto_percent",
+   "fieldtype": "Float",
+   "label": "Absent When Worked Up To (% of Shift)"
   },
   {
    "fieldname": "column_break_day",
@@ -263,11 +280,25 @@
    "default": "Leave Without Pay",
    "fieldname": "penalty_deduct_from",
    "fieldtype": "Select",
-   "label": "Deduct From",
+   "label": "Late Penalties Come From",
    "options": "Leave Without Pay\nCasual Leave, then Leave Without Pay"
   },
   {
-   "depends_on": "eval:doc.penalty_deduct_from!='Leave Without Pay'",
+   "default": "Leave Without Pay",
+   "fieldname": "early_deduct_from",
+   "fieldtype": "Select",
+   "label": "Early Going Penalties Come From",
+   "options": "Leave Without Pay\nCasual Leave, then Leave Without Pay"
+  },
+  {
+   "default": "Leave Without Pay",
+   "fieldname": "hours_deduct_from",
+   "fieldtype": "Select",
+   "label": "Short Hours Come From",
+   "options": "Leave Without Pay\nCasual Leave, then Leave Without Pay"
+  },
+  {
+   "depends_on": "eval:doc.penalty_deduct_from!='Leave Without Pay' || doc.early_deduct_from!='Leave Without Pay' || doc.hours_deduct_from!='Leave Without Pay'",
    "fieldname": "casual_leave_type",
    "fieldtype": "Link",
    "label": "Casual Leave Type",
@@ -282,6 +313,14 @@
    "fieldname": "ot_enabled",
    "fieldtype": "Check",
    "label": "Overtime Counted"
+  },
+  {
+   "default": "Hours past the shift's length",
+   "depends_on": "ot_enabled",
+   "fieldname": "ot_basis",
+   "fieldtype": "Select",
+   "label": "Overtime on a Working Day Is",
+   "options": "Hours past the shift's length\nBefore the start and after the end"
   },
   {
    "depends_on": "ot_enabled",

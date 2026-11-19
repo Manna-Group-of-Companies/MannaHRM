@@ -571,7 +571,7 @@ CUSTOM_FIELDS = {
 		 "insert_after": "custom_missed_punch", "read_only": 1},
 		{"fieldname": "custom_early_counted", "label": "Early Counted", "fieldtype": "Check",
 		 "insert_after": "custom_late_counted", "read_only": 1},
-		{"fieldname": "custom_penalty", "label": "Penalty", "fieldtype": "Select", "options": "\nlate\nearly",
+		{"fieldname": "custom_penalty", "label": "Penalty", "fieldtype": "Select", "options": "\nlate\nearly\nhours\nlate-limit\nearly-limit",
 		 "insert_after": "custom_early_counted", "read_only": 1},
 		{"fieldname": "custom_exceptions", "label": "Exceptions", "fieldtype": "Small Text",
 		 "insert_after": "custom_penalty", "read_only": 1},

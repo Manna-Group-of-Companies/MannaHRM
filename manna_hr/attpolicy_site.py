@@ -75,9 +75,11 @@ def push_to_shifts(policy):
 	frappe.local.flags.manna_policies = None
 	if not policy.is_active:
 		return
-	values = ap.shift_settings(policy.as_dict())
 	for row in policy.shift_types or []:
-		frappe.db.set_value("Shift Type", row.shift_type, values)
+		times = frappe.db.get_value("Shift Type", row.shift_type, ["start_time", "end_time"], as_dict=True)
+		window = ap.shift_window("2026-01-01", times.start_time, times.end_time) if times else None
+		hours = (window[1] - window[0]).total_seconds() / 3600 if window else None
+		frappe.db.set_value("Shift Type", row.shift_type, ap.shift_settings(policy.as_dict(), hours))
 		frappe.get_doc("Shift Type", row.shift_type).add_comment(
 			"Comment", _("Thresholds and grace set by attendance policy {0}.").format(policy.name)
 		)
@@ -289,8 +291,10 @@ def _settle_person(employee, days, policy):
 		reprocess_site.run([employee], min(plan["rebuild"]), max(plan["rebuild"]), write=True,
 		                   rebuild=plan["rebuild"])
 		return  # the leave step runs on the rebuilt days tomorrow night
-	if policy.penalty_deduct_from == ap.DEDUCT_CL_FIRST and policy.casual_leave_type:
+	if policy.casual_leave_type:
 		for d in days:
+			if ap.deduct_from(dict(policy), d.custom_penalty) != ap.DEDUCT_CL_FIRST:
+				continue
 			if d.custom_penalty and not d.leave_application and d.status in (ap.HALF_DAY, ap.ABSENT):
 				# One day hrms refuses (no allocation, a holiday) never costs
 				# the rest of the month its leave.

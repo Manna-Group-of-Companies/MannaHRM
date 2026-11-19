@@ -203,3 +203,74 @@ class TestPhase1(IntegrationTestCase):
 			self.assertEqual((d.status, d.leave_type, d.half_day_status), ("Half Day", CL, "Present"))
 		finally:
 			_policy()
+
+
+# ------------------------------------------------- factoHR's own numbers --
+
+
+class TestFactohrPolicy(IntegrationTestCase):
+	"""Manna General Attendance Policy as read off factoHR on 19 Nov 2026
+	(docs/FACTOHR_SCREENS.md §8), for three people, through hrms's own job."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+		create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
+		frappe.db.set_single_value("Manna HR Settings", "trusted_device_prefix", "BIO-")
+		_shift(SHIFT, "08:30:00", "17:00:00")
+		_shift(NIGHT, "20:30:00", "08:30:00")
+		_policy()
+		if not frappe.db.exists("Leave Type", CL):
+			frappe.get_doc({"doctype": "Leave Type", "leave_type_name": CL, "max_leaves_allowed": 12}).insert()
+		cls.people = {}
+		for code in ("_T-FH-SHORT", "_T-FH-EARLY", "_T-FH-OT"):
+			emp = _employee(code, shift=SHIFT)
+			frappe.db.set_value("Employee", emp.name, "leave_approver", "Administrator")
+			frappe.get_doc({"doctype": "Leave Allocation", "employee": emp.name, "leave_type": CL,
+			                "from_date": "2026-01-01", "to_date": "2026-12-31", "new_leaves_allocated": 3}).submit()
+			cls.people[code] = emp.name
+		name = "_T factoHR General"
+		if frappe.db.exists("Manna Attendance Policy", name):
+			frappe.delete_doc("Manna Attendance Policy", name, force=1)
+		frappe.get_doc({
+			"doctype": "Manna Attendance Policy", "policy_name": name, "is_active": 1, "priority": 10,
+			"company": COMPANY,
+			"absent_upto_percent": 12, "half_day_upto_percent": 99, "msp_status": "Absent",
+			"late_forgiven_per_month": 5, "late_penalty_every": 1, "late_penalty_days": "0.5",
+			"early_half_day_after_minutes": 119,
+			"penalty_deduct_from": "Casual Leave, then Leave Without Pay",
+			"early_deduct_from": "Leave Without Pay",
+			"hours_deduct_from": "Casual Leave, then Leave Without Pay",
+			"casual_leave_type": CL,
+			"ot_enabled": 1, "ot_basis": "Before the start and after the end", "ot_min_minutes": 30,
+			"holiday_work": "Overtime",
+			"scopes": [{"applies_on": "Employee", "value": v} for v in cls.people.values()],
+		}).insert()
+		frappe.local.flags.manna_policies = None
+		# Every punch before any job runs: hrms marks a day with no punches
+		# Absent, and punches that arrive after that are not looked at again
+		# (the live site's November, and reprocess_site's reason to exist).
+		_worked(cls.people["_T-FH-SHORT"], "2026-11-16", "08:40", "17:00")
+		_worked(cls.people["_T-FH-EARLY"], "2026-11-16", "08:28", "14:55")
+		_worked(cls.people["_T-FH-OT"], "2026-11-16", "08:00", "17:20")
+		reprocess_site.process_shifts([SHIFT])
+		attpolicy_site.settle("2026-11-19")
+
+	def test_ten_minutes_short_is_a_half_day_taken_from_casual_leave(self):
+		emp = self.people["_T-FH-SHORT"]
+		d = _day(emp, "2026-11-16")
+		self.assertEqual((d.status, d.leave_type, d.half_day_status), ("Half Day", CL, "Present"))
+
+	def test_leaving_two_hours_early_is_short_hours_before_it_is_early_going(self):
+		# Under 99% of the shift is a half day first, and factoHR ignores late and
+		# early on such a day: so the half comes from Casual Leave, not Loss of
+		# Pay. The early-going rule can only ever bite on a day the hours are met.
+		d = _day(self.people["_T-FH-EARLY"], "2026-11-16")
+		self.assertEqual((d.status, d.leave_type), ("Half Day", CL))
+
+	def test_overtime_is_time_before_the_start_and_after_the_end(self):
+		emp = self.people["_T-FH-OT"]
+		self.assertEqual(_day(emp, "2026-11-16").custom_ot_minutes, 50)
+		self.assertEqual(frappe.db.get_value("Employee Overtime", {"employee": emp, "ot_date": "2026-11-16"}, "hours"),
+		                 round(50 / 60, 2))

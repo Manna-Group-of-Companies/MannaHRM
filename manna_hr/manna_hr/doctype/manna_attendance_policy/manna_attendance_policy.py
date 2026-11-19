@@ -16,7 +16,8 @@ class MannaAttendancePolicy(Document):
 		self._check_scopes()
 		self._one_default()
 		self._one_policy_per_shift()
-		if self.penalty_deduct_from != attpolicy.DEDUCT_LWP and not self.casual_leave_type:
+		sources = (self.penalty_deduct_from, self.early_deduct_from, self.hours_deduct_from)
+		if any(x and x != attpolicy.DEDUCT_LWP for x in sources) and not self.casual_leave_type:
 			frappe.throw(_("Name the Casual Leave type penalties come from first."), title=_("Which leave?"))
 
 	def on_update(self):
@@ -34,6 +35,17 @@ class MannaAttendancePolicy(Document):
 					_("Row {0}: there is no {1} called {2}.").format(row.idx, row.applies_on, value),
 					title=_("Not on the site"),
 				)
+			# Frappe fills an empty Company from the signer's own default, so a
+			# policy meant for everybody can arrive scoped to one company — and
+			# then applies to nobody it names. Said here rather than found in pay.
+			if self.company and row.applies_on in ("Employee", "Department"):
+				theirs = frappe.db.get_value(row.applies_on, value, "company")
+				if theirs and theirs != self.company:
+					frappe.throw(
+						_("Row {0}: {1} is in {2}, but this policy is for {3} only. Clear Company, or change the row.")
+						.format(row.idx, value, theirs, self.company),
+						title=_("Another company"),
+					)
 			if (row.applies_on, value) in seen:
 				frappe.throw(_("Row {0} repeats {1} {2}.").format(row.idx, row.applies_on, value))
 			seen.add((row.applies_on, value))

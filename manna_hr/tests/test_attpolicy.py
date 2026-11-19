@@ -76,7 +76,7 @@ def test_the_fourth_late_of_the_month_is_a_half_day():
 
 def test_more_than_two_hours_late_is_a_half_day_and_not_also_a_counted_late():
 	got = evaluate_day(POLICY, DAY, day("10:45", "17:30", prior_lates=3))
-	assert got["status"] == HALF_DAY and not got["late_counted"] and got["penalty"] is None
+	assert got["status"] == HALF_DAY and not got["late_counted"] and got["penalty"] == "late-limit"
 
 
 def test_leaving_early_past_the_grace_is_counted():
@@ -262,3 +262,75 @@ def test_numbers_that_contradict_each_other_are_named():
 
 def test_the_example_policy_is_consistent():
 	assert policy_problems(POLICY) == []
+
+
+# ------------------------------------------------- factoHR's own policy --
+#
+# "Manna General Attendance Policy", read off the tenant on 19 Nov 2026
+# (docs/FACTOHR_SCREENS.md §8).
+
+from manna_hr.attpolicy import OT_OUTSIDE_SHIFT, deduct_from  # noqa: E402
+
+FACTOHR = {
+	"absent_upto_percent": 12, "half_day_upto_percent": 99, "msp_status": ABSENT,
+	"late_grace_minutes": 0, "late_forgiven_per_month": 5, "late_penalty_every": 1, "late_penalty_days": 0.5,
+	"early_grace_minutes": 0, "early_half_day_after_minutes": 119,
+	"penalty_deduct_from": "Casual Leave, then Leave Without Pay",
+	"early_deduct_from": "Leave Without Pay",
+	"hours_deduct_from": "Casual Leave, then Leave Without Pay",
+	"ot_enabled": 1, "ot_basis": OT_OUTSIDE_SHIFT, "ot_min_minutes": 30, "holiday_work": "Overtime",
+}
+TWELVE = {"start_time": "08:30:00", "end_time": "20:30:00"}
+
+
+def test_a_full_shift_is_present():
+	assert evaluate_day(FACTOHR, DAY, day("08:30", "17:00"))["status"] == PRESENT
+
+
+def test_a_few_minutes_short_of_the_shift_is_a_half_day_and_ignores_the_lateness():
+	got = evaluate_day(FACTOHR, DAY, day("08:40", "17:00", prior_lates=9))
+	assert got["status"] == HALF_DAY and got["penalty"] == "hours" and not got["late_counted"]
+
+
+def test_the_percentage_is_of_the_persons_own_shift():
+	# 8.5 h is a full day on the 8.5 h shift and 71% of a 12 h one.
+	assert evaluate_day(FACTOHR, TWELVE, day("08:30", "17:00"))["status"] == HALF_DAY
+	assert evaluate_day(FACTOHR, TWELVE, day("08:30", "20:30"))["status"] == PRESENT
+
+
+def test_an_hour_in_is_absent_and_a_single_punch_is_absent():
+	assert evaluate_day(FACTOHR, DAY, day("08:30", "09:30"))["status"] == ABSENT
+	assert evaluate_day(FACTOHR, DAY, day("08:30", None, punches=1))["status"] == ABSENT
+
+
+def test_a_late_arrival_who_stays_on_to_make_the_hours_up_is_counted_late():
+	got = evaluate_day(FACTOHR, DAY, day("08:31", "17:10", prior_lates=0))
+	assert got["status"] == PRESENT and got["late_counted"]
+
+
+def test_the_sixth_late_of_the_month_costs_half_a_day():
+	assert evaluate_day(FACTOHR, DAY, day("08:31", "17:10", prior_lates=4))["penalty"] is None
+	got = evaluate_day(FACTOHR, DAY, day("08:31", "17:10", prior_lates=5))
+	assert got["status"] == HALF_DAY and got["penalty"] == "late"
+
+
+def test_overtime_is_time_before_the_start_and_after_the_end():
+	got = evaluate_day(FACTOHR, DAY, day("08:00", "17:20"))
+	assert got["ot_minutes"] == 50  # 30 before, 20 after
+
+
+def test_each_kind_of_penalty_comes_from_its_own_place():
+	assert deduct_from(FACTOHR, "late").startswith("Casual")
+	assert deduct_from(FACTOHR, "hours").startswith("Casual")
+	assert deduct_from(FACTOHR, "early-limit") == "Leave Without Pay"
+
+
+def test_the_twelve_hour_shift_gets_its_own_thresholds_in_hours():
+	from manna_hr.attpolicy import shift_settings
+
+	got = shift_settings(FACTOHR, shift_hours=12)
+	assert (got["working_hours_threshold_for_half_day"], got["working_hours_threshold_for_absent"]) == (11.88, 1.44)
+
+
+def test_factohrs_policy_is_consistent():
+	assert policy_problems(FACTOHR) == []

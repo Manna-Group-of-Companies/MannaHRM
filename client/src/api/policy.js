@@ -18,6 +18,7 @@ export const HOURS_FROM = ["", "First Check-in and Last Check-out", "Every Valid
 export const MSP = ["", "Present", "Half Day", "Absent"];
 export const DEDUCT = ["Leave Without Pay", "Casual Leave, then Leave Without Pay"];
 export const HOLIDAY = ["Nothing", "Overtime", "Comp off"];
+export const OT_BASIS = ["Hours past the shift's length", "Before the start and after the end"];
 
 /** A new policy: every rule off, as the site's own defaults. */
 export const blank = () => ({
@@ -25,18 +26,19 @@ export const blank = () => ({
 	scopes: [], shift_types: [],
 	check_in_out_mode: "", hours_based_on: "",
 	full_day_hours: 0, half_day_below_hours: 0, absent_below_hours: 0,
+	half_day_upto_percent: 0, absent_upto_percent: 0,
 	break_minutes: 0, break_after_hours: 0, msp_status: "",
 	late_grace_minutes: 0, late_half_day_after_minutes: 0, late_forgiven_per_month: -1,
 	late_penalty_every: 1, late_penalty_days: "0.5",
 	early_grace_minutes: 0, early_half_day_after_minutes: 0, early_forgiven_per_month: -1,
 	early_penalty_every: 1, early_penalty_days: "0.5",
-	penalty_deduct_from: DEDUCT[0], casual_leave_type: "",
-	ot_enabled: 0, ot_min_minutes: 0, ot_round_minutes: 0, ot_max_minutes: 0, holiday_work: HOLIDAY[0],
+	penalty_deduct_from: DEDUCT[0], early_deduct_from: DEDUCT[0], hours_deduct_from: DEDUCT[0], casual_leave_type: "",
+	ot_enabled: 0, ot_basis: OT_BASIS[0], ot_min_minutes: 0, ot_round_minutes: 0, ot_max_minutes: 0, holiday_work: HOLIDAY[0],
 });
 
 export const loadPolicies = () =>
 	listAll(POLICY, ["name", "policy_name", "is_active", "is_default", "company", "priority", "modified",
-		"half_day_below_hours", "absent_below_hours", "break_minutes", "msp_status", "late_grace_minutes",
+		"half_day_below_hours", "absent_below_hours", "half_day_upto_percent", "absent_upto_percent", "break_minutes", "msp_status", "late_grace_minutes",
 		"late_forgiven_per_month", "late_penalty_days", "early_forgiven_per_month", "ot_enabled"], []);
 
 export const loadPolicy = (name) => getDoc(POLICY, name);
@@ -68,7 +70,9 @@ export async function savePolicy(doc) {
 /** One plain sentence of what a policy does, for its card. Only what is set. */
 export function summary(p) {
 	const parts = [];
-	if (Number(p.half_day_below_hours) || Number(p.absent_below_hours)) {
+	if (Number(p.half_day_upto_percent) || Number(p.absent_upto_percent)) {
+		parts.push(`absent up to ${Number(p.absent_upto_percent) || "—"}% of the shift, half day up to ${Number(p.half_day_upto_percent) || "—"}%`);
+	} else if (Number(p.half_day_below_hours) || Number(p.absent_below_hours)) {
 		parts.push(`half day under ${Number(p.half_day_below_hours) || "—"} h, absent under ${Number(p.absent_below_hours) || "—"} h`);
 	}
 	if (Number(p.break_minutes)) parts.push(`${p.break_minutes} min break`);

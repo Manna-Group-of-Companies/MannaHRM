@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "@/store";
 import {
-	DEDUCT, HOLIDAY, HOURS_FROM, MODES, MSP, SCOPES, blank, loadPolicies, loadPolicy, savePolicy, summary,
+	DEDUCT, HOLIDAY, HOURS_FROM, MODES, MSP, OT_BASIS, SCOPES, blank, loadPolicies, loadPolicy, savePolicy, summary,
 } from "@/api/policy";
 import KitIcon from "@/components/kit/KitIcon";
 import { EmptyState, PageHead } from "@/components/kit/ui";
@@ -158,6 +158,10 @@ function Editor({ start, onDone }) {
 					onChange={up("half_day_below_hours")} hint="0 = off" />
 				<Num id="ap-abs" label="Absent below (hours)" step="0.25" value={p.absent_below_hours}
 					onChange={up("absent_below_hours")} hint="0 = off" />
+				<Num id="ap-halfp" label="Half day when worked up to (% of shift)" step="1" value={p.half_day_upto_percent}
+					onChange={up("half_day_upto_percent")} hint="factoHR: 99. Replaces the hours above. 0 = off" />
+				<Num id="ap-absp" label="Absent when worked up to (% of shift)" step="1" value={p.absent_upto_percent}
+					onChange={up("absent_upto_percent")} hint="factoHR: 12. 0 = off" />
 				<Num id="ap-brk" label="Break (minutes)" value={p.break_minutes} onChange={up("break_minutes")} />
 				<Num id="ap-brka" label="Break taken after (hours)" step="0.25" value={p.break_after_hours}
 					onChange={up("break_after_hours")} />
@@ -184,9 +188,13 @@ function Editor({ start, onDone }) {
 
 			<div className="k-sec-h" style={{ marginTop: 20 }}><h3>Penalties and overtime</h3></div>
 			<div className="k-form-grid">
-				<Pick id="ap-ded" label="Penalties come from" value={p.penalty_deduct_from} options={DEDUCT}
+				<Pick id="ap-ded" label="Late penalties come from" value={p.penalty_deduct_from} options={DEDUCT}
 					onChange={up("penalty_deduct_from")} />
-				{p.penalty_deduct_from !== DEDUCT[0] ? (
+				<Pick id="ap-dede" label="Early going penalties come from" value={p.early_deduct_from} options={DEDUCT}
+					onChange={up("early_deduct_from")} />
+				<Pick id="ap-dedh" label="Short hours come from" value={p.hours_deduct_from} options={DEDUCT}
+					onChange={up("hours_deduct_from")} />
+				{[p.penalty_deduct_from, p.early_deduct_from, p.hours_deduct_from].some((x) => x && x !== DEDUCT[0]) ? (
 					<Pick id="ap-cl" label="Casual Leave type" value={p.casual_leave_type || ""} options={["", ...leaveTypes]}
 						onChange={up("casual_leave_type")} blankLabel="Choose…" />
 				) : null}
@@ -196,6 +204,8 @@ function Editor({ start, onDone }) {
 				</div>
 				{Number(p.ot_enabled) ? (
 					<>
+						<Pick id="ap-otb" label="Overtime on a working day is" value={p.ot_basis} options={OT_BASIS}
+							onChange={up("ot_basis")} />
 						<Num id="ap-otmin" label="Overtime minimum (minutes)" value={p.ot_min_minutes} onChange={up("ot_min_minutes")} />
 						<Num id="ap-otr" label="Rounded down to (minutes)" value={p.ot_round_minutes} onChange={up("ot_round_minutes")} />
 						<Num id="ap-otmax" label="Most in a day (minutes)" value={p.ot_max_minutes} onChange={up("ot_max_minutes")}

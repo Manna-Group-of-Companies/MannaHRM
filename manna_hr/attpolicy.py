@@ -37,6 +37,10 @@ HOLIDAY_NOTHING = "Nothing"
 HOLIDAY_OT = "Overtime"
 HOLIDAY_COMP_OFF = "Comp off"
 
+#: How a working day's overtime is measured.
+OT_PAST_LENGTH = "Hours past the shift's length"
+OT_OUTSIDE_SHIFT = "Before the start and after the end"
+
 # Exceptions written on the day, for the exceptions page and the reports.
 EX_LATE = "Late"
 EX_EARLY = "Early"
@@ -52,6 +56,11 @@ DEFAULTS = {
 	"full_day_hours": 0.0,
 	"half_day_below_hours": 0.0,
 	"absent_below_hours": 0.0,
+	# The same two as a share of the person's own shift, inclusive: factoHR's
+	# own form ("worked up to 12% of the shift: a day; up to 99%: half").
+	# When set they replace the hours above, shift by shift.
+	"half_day_upto_percent": 0.0,
+	"absent_upto_percent": 0.0,
 	"break_minutes": 0,
 	"break_after_hours": 0.0,
 	"msp_status": MSP_KEEP,
@@ -67,10 +76,13 @@ DEFAULTS = {
 	"early_forgiven_per_month": -1,
 	"early_penalty_every": 1,
 	"early_penalty_days": 0.5,
-	# where penalties come from
+	# where penalties come from: lates, early goings, and days short of hours
 	"penalty_deduct_from": DEDUCT_LWP,
+	"early_deduct_from": DEDUCT_LWP,
+	"hours_deduct_from": DEDUCT_LWP,
 	# overtime
 	"ot_enabled": 0,
+	"ot_basis": OT_PAST_LENGTH,
 	"ot_min_minutes": 0,
 	"ot_round_minutes": 0,
 	"ot_max_minutes": 0,
@@ -195,38 +207,65 @@ def evaluate_day(policy, shift, day):
 	if punches % 2:
 		out["missed_punch"] = 1
 		out["exceptions"].append(EX_MSP)
+	short = False
+	pct_abs, pct_half = float(p["absent_upto_percent"] or 0), float(p["half_day_upto_percent"] or 0)
 	if punches == 1 and p["msp_status"] in JUDGED:
 		_set(out, p["msp_status"], "one punch: the policy's missed-punch status")
+		short = p["msp_status"] != PRESENT
+	elif punches >= 2 and window and (pct_abs or pct_half):
+		# -- the day as a share of this person's own shift
+		length = (window[1] - window[0]).total_seconds() / 3600
+		pct = 100.0 * net / length if length else 100.0
+		if pct_abs and pct <= pct_abs:
+			_set(out, ABSENT, "{0:.0f}% of the shift worked, up to {1:g}%".format(pct, pct_abs))
+			short = True
+		elif pct_half and pct <= pct_half:
+			_set(out, HALF_DAY, "{0:.0f}% of the shift worked, up to {1:g}%".format(pct, pct_half))
+			short = True
+		elif status != PRESENT:
+			_set(out, PRESENT, "{0:.0f}% of the shift worked".format(pct))
 	elif punches >= 2:
 		# -- the day by net hours, as hrms judged it by gross ones
 		if p["absent_below_hours"] and net < float(p["absent_below_hours"]):
 			_set(out, ABSENT, "{0:.2f} h worked, under {1} h".format(net, p["absent_below_hours"]))
+			short = True
 		elif p["half_day_below_hours"] and net < float(p["half_day_below_hours"]):
 			_set(out, HALF_DAY, "{0:.2f} h worked, under {1} h".format(net, p["half_day_below_hours"]))
+			short = True
 		elif (p["half_day_below_hours"] or p["absent_below_hours"]) and status != PRESENT:
 			_set(out, PRESENT, "{0:.2f} h worked".format(net))
+	if short and out["status"] in (HALF_DAY, ABSENT):
+		# Paid for by the hours rule: the day's lateness is part of the same
+		# shortfall, and factoHR ignores late and early on such a day.
+		out["penalty"] = "hours"
 	if p["full_day_hours"] and net < float(p["full_day_hours"]) and punches >= 2:
 		out["exceptions"].append(EX_SHORT)
 
 	# -- late and early: counted past the grace; a hard limit is a half day
 	hard_late = hard_early = False
-	if out["late_minutes"] > int(p["late_grace_minutes"] or 0):
+	if out["penalty"] == "hours":
+		pass
+	elif out["late_minutes"] > int(p["late_grace_minutes"] or 0):
 		out["exceptions"].append(EX_LATE)
 		limit = int(p["late_half_day_after_minutes"] or 0)
 		if limit and out["late_minutes"] > limit:
 			hard_late = _down(out, "{0} min late, over {1}".format(out["late_minutes"], limit))
+			if hard_late:
+				out["penalty"] = "late-limit"
 		else:
 			out["late_counted"] = 1
-	if out["early_minutes"] > int(p["early_grace_minutes"] or 0):
+	if out["penalty"] != "hours" and out["early_minutes"] > int(p["early_grace_minutes"] or 0):
 		out["exceptions"].append(EX_EARLY)
 		limit = int(p["early_half_day_after_minutes"] or 0)
 		if limit and out["early_minutes"] > limit:
 			hard_early = _down(out, "left {0} min early, over {1}".format(out["early_minutes"], limit))
+			if hard_early:
+				out["penalty"] = "early-limit"
 		else:
 			out["early_counted"] = 1
 
 	# -- frequency: the Nth late past the forgiven ones costs a penalty
-	if not (hard_late or hard_early):
+	if not (hard_late or hard_early or out["penalty"] == "hours"):
 		for kind, prior in (("late", day.get("prior_lates")), ("early", day.get("prior_earlies"))):
 			if out[kind + "_counted"] and _penalised(p, kind, int(prior or 0) + 1):
 				days = float(p[kind + "_penalty_days"] or 0.5)
@@ -237,7 +276,7 @@ def evaluate_day(policy, shift, day):
 				break  # one penalty a day
 
 	# -- overtime
-	out["ot_minutes"] = overtime_minutes(p, window, net, day.get("is_holiday"), out["status"])
+	out["ot_minutes"] = overtime_minutes(p, window, net, day.get("is_holiday"), out["status"], in_at, out_at)
 
 	if out["status"] == HALF_DAY:
 		# No leave behind it: the other half is unpaid. hrms's own default
@@ -276,7 +315,7 @@ def _nth(n):
 	return "{0}{1}".format(n, suffix)
 
 
-def overtime_minutes(policy, window, net_hours, is_holiday=False, status=PRESENT):
+def overtime_minutes(policy, window, net_hours, is_holiday=False, status=PRESENT, in_at=None, out_at=None):
 	"""Overtime a day earns, after the minimum, the rounding and the cap.
 
 	On a weekly off or holiday every hour is overtime when the policy says so;
@@ -293,7 +332,14 @@ def overtime_minutes(policy, window, net_hours, is_holiday=False, status=PRESENT
 	else:
 		if status != PRESENT or not window:
 			return 0
-		ot = worked - _minutes(window[1] - window[0])
+		if p["ot_basis"] == OT_OUTSIDE_SHIFT:
+			# factoHR's "in before shift, out after shift": time outside the
+			# window at either end, whatever the hours in between.
+			if not (in_at and out_at):
+				return 0
+			ot = _minutes(window[0] - in_at) + _minutes(out_at - window[1])
+		else:
+			ot = worked - _minutes(window[1] - window[0])
 	if ot <= 0 or ot < int(p["ot_min_minutes"] or 0):
 		return 0
 	step = int(p["ot_round_minutes"] or 0)
@@ -350,14 +396,18 @@ def _neg(name):
 # -------------------------------------------------------- the Shift Type ---
 
 
-def shift_settings(policy):
+def shift_settings(policy, shift_hours=None):
 	"""The Shift Type fields this policy decides, so hrms's own first reading
 	of the day agrees with it. Only what the policy sets; the rest is the
-	shift's own."""
+	shift's own. Percentage thresholds become hours of `shift_hours`."""
 	p = with_defaults(policy)
+	half, absent = float(p["half_day_below_hours"] or 0), float(p["absent_below_hours"] or 0)
+	if shift_hours and (p["half_day_upto_percent"] or p["absent_upto_percent"]):
+		half = round(shift_hours * float(p["half_day_upto_percent"] or 0) / 100, 2)
+		absent = round(shift_hours * float(p["absent_upto_percent"] or 0) / 100, 2)
 	out = {
-		"working_hours_threshold_for_half_day": float(p["half_day_below_hours"] or 0),
-		"working_hours_threshold_for_absent": float(p["absent_below_hours"] or 0),
+		"working_hours_threshold_for_half_day": half,
+		"working_hours_threshold_for_absent": absent,
 		"late_entry_grace_period": int(p["late_grace_minutes"] or 0),
 		"enable_late_entry_marking": 1 if int(p["late_grace_minutes"] or 0) or int(p["late_forgiven_per_month"]) >= 0 else 0,
 		"early_exit_grace_period": int(p["early_grace_minutes"] or 0),
@@ -379,6 +429,11 @@ def policy_problems(policy):
 		out.append("Absent below must not be more than half day below.")
 	if p["full_day_hours"] and p["half_day_below_hours"] and float(p["half_day_below_hours"]) > float(p["full_day_hours"]):
 		out.append("Half day below must not be more than the full day.")
+	if p["absent_upto_percent"] and p["half_day_upto_percent"] and float(p["absent_upto_percent"]) > float(p["half_day_upto_percent"]):
+		out.append("Absent up to % must not be more than half day up to %.")
+	for k in ("absent_upto_percent", "half_day_upto_percent"):
+		if not 0 <= float(p[k] or 0) <= 100:
+			out.append("A percentage of the shift is between 0 and 100.")
 	for kind in ("late", "early"):
 		if float(p[kind + "_penalty_days"] or 0.5) not in (0.5, 1.0):
 			out.append("A {0} penalty is half a day or a whole day.".format(kind))
@@ -419,6 +474,18 @@ def month_plan(days, policy):
 				want = "early"
 		elif d.get("early_counted"):
 			earlies += 1
-		if (d.get("penalty") or None) != want:
+		have = d.get("penalty") or None
+		if have in ("hours", "late-limit", "early-limit"):
+			continue  # decided by the day itself, not by the month's count
+		if have != want:
 			wrong.append(_day(d["attendance_date"]))
 	return {"lates": lates, "earlies": earlies, "rebuild": wrong}
+
+
+def deduct_from(policy, penalty):
+	"""Where one kind of penalty is taken from: a late, an early going, or a
+	day short of hours (the half-day limits count with their kind)."""
+	p = with_defaults(policy)
+	kind = (penalty or "").split("-")[0]
+	key = {"late": "penalty_deduct_from", "early": "early_deduct_from", "hours": "hours_deduct_from"}.get(kind)
+	return p[key] if key else DEDUCT_LWP

@@ -2509,6 +2509,18 @@ export const SCHEMA = {
 				hint: "0 = off"
 			},
 			{
+				name: "half_day_upto_percent",
+				label: "Half Day When Worked Up To (% of Shift)",
+				kind: "float",
+				hint: "factoHR's own rule: 99 means anybody short of the full shift is a half day. 0 = off. Replaces the hours above."
+			},
+			{
+				name: "absent_upto_percent",
+				label: "Absent When Worked Up To (% of Shift)",
+				kind: "float",
+				hint: "0 = off."
+			},
+			{
 				name: "break_minutes",
 				label: "Break (Minutes)",
 				kind: "int",
@@ -2601,7 +2613,27 @@ export const SCHEMA = {
 			},
 			{
 				name: "penalty_deduct_from",
-				label: "Deduct From",
+				label: "Late Penalties Come From",
+				kind: "select",
+				choices: [
+					"Leave Without Pay",
+					"Casual Leave, then Leave Without Pay"
+				],
+				def: "Leave Without Pay"
+			},
+			{
+				name: "early_deduct_from",
+				label: "Early Going Penalties Come From",
+				kind: "select",
+				choices: [
+					"Leave Without Pay",
+					"Casual Leave, then Leave Without Pay"
+				],
+				def: "Leave Without Pay"
+			},
+			{
+				name: "hours_deduct_from",
+				label: "Short Hours Come From",
 				kind: "select",
 				choices: [
 					"Leave Without Pay",
@@ -2619,6 +2651,16 @@ export const SCHEMA = {
 				name: "ot_enabled",
 				label: "Overtime Counted",
 				kind: "check"
+			},
+			{
+				name: "ot_basis",
+				label: "Overtime on a Working Day Is",
+				kind: "select",
+				choices: [
+					"Hours past the shift's length",
+					"Before the start and after the end"
+				],
+				def: "Hours past the shift's length"
 			},
 			{
 				name: "ot_min_minutes",
