@@ -45,6 +45,71 @@ def validate(doc, method=None):
 	_check_punch_window(doc, settings)
 	_check_geofence(doc, settings)
 	_check_photo(doc)
+	_refuse_duplicate(doc)
+	_day_or_night(doc)
+
+
+# ------------------------------------------------------------- night shift ---
+
+
+def _day_or_night(doc):
+	"""A machine punch that starts a night gives the night shift first.
+
+	Here rather than in `adms_site`, so the bridge's punches get it too, and
+	before hrms's validation, which is what gives the checkin its shift.
+	**Never holds up the punch**: the punch is the pay, and its shift can be
+	put right after (reprocess_site). A failure is rolled back alone and logged.
+	"""
+	if not doc.is_new() or doc.custom_source != SOURCE_BIOMETRIC or not doc.employee:
+		return
+	from manna_hr import rota_site
+
+	frappe.db.savepoint("manna_rota")
+	try:
+		rota_site.before_deliver(doc.employee, get_datetime(doc.time), doc.log_type or None)
+	except Exception:
+		frappe.db.rollback(save_point="manna_rota")
+		frappe.log_error(title="Day or night not decided for {0} at {1}".format(doc.employee, doc.time))
+
+
+# --------------------------------------------------------------- duplicates ---
+
+#: hrms's own words for this refusal. The bridge reads them as "delivered"
+#: (bridge/mannabridge/sink.py ALREADY_THERE), and so must every sender.
+DUPLICATE_MESSAGE = "This employee already has a log with the same timestamp."
+
+
+class DuplicatePunchError(frappe.ValidationError):
+	"""The same person at the same second, already on the site."""
+
+
+def _refuse_duplicate(doc):
+	"""One punch per person per second, whatever its direction says.
+
+	hrms checks this too, but with `log_type` in the match and with nothing
+	between its check and its insert — so a machine posting IN and a bridge
+	posting no direction, or two deliveries of one machine post running at
+	once, both got through: 1,383 of November's 4,345 punches on 19 Nov 2026.
+
+	**This refuses nothing that was not already there.** A second copy of one
+	punch is not a punch, and the first copy is the evidence. The lock on the
+	Employee row makes the check and the insert one step for that person, so
+	two senders at the same moment take turns rather than both finding nothing.
+	"""
+	if not doc.is_new() or not doc.employee or not doc.time:
+		return
+	frappe.db.sql("SELECT name FROM `tabEmployee` WHERE name = %s FOR UPDATE", doc.employee)
+	twin = frappe.db.get_value(
+		"Employee Checkin",
+		{"employee": doc.employee, "time": get_datetime(doc.time), "name": ("!=", doc.name or "")},
+		"name",
+	)
+	if twin:
+		frappe.throw(
+			"{0} ({1})".format(_(DUPLICATE_MESSAGE), twin),
+			exc=DuplicatePunchError,
+			title=_("Already recorded"),
+		)
 
 
 # ------------------------------------------------------------------- photo ---
@@ -77,8 +142,27 @@ def _classify_source(doc, settings):
 	Derived from `device_id` rather than trusted from the client, because
 	`custom_source` decides which rules are skipped and a client must not be
 	able to name itself a fingerprint machine.
+
+	**The device id is believed only from a writer who could have made it.**
+	It used to be believed from anybody: an employee's own login posting
+	`device_id` = `BIO-…`, `REG-…` or nothing was a machine, a correction or
+	HR, and skipped the server clock, the window and the fence — a back-dated
+	punch for the asking (audit B1, 19 Nov 2026). Now a login that is neither
+	HR nor the site itself is a phone, whatever it says, and may punch only
+	for its own Employee. The machines arrive as the site (ADMS, a guest
+	request that only `adms_site` can turn into a checkin) or as the bridge's
+	key (System Manager). A correction is marked by `regularization.apply`
+	with a flag no request can set.
 	"""
 	device = (doc.device_id or "").strip()
+
+	if doc.flags.get("manna_regularization"):
+		return SOURCE_REGULARIZATION
+
+	if not _writer_is_trusted():
+		if doc.employee and frappe.db.get_value("Employee", doc.employee, "user_id") != frappe.session.user:
+			frappe.throw(_("You can punch only for yourself."), title=_("Not your punch"))
+		return SOURCE_MOBILE
 
 	if device.startswith(REGULARIZATION_PREFIX):
 		return SOURCE_REGULARIZATION
@@ -89,6 +173,21 @@ def _classify_source(doc, settings):
 
 	# No device id at all is somebody typing into Desk.
 	return SOURCE_MOBILE if device else SOURCE_MANUAL
+
+
+#: Logins whose `device_id` is believed. HR keys punches in by hand and the
+#: bridge's key is a System Manager; everybody else is a phone.
+TRUSTED_ROLES = frozenset(("HR Manager", "HR User", "System Manager"))
+
+
+def _writer_is_trusted():
+	user = frappe.session.user
+	# Administrator: scheduled jobs and bench. Guest: an ADMS post from a
+	# machine — Guest holds no permission on Employee Checkin, so the only way
+	# a guest request makes one is through adms_site's own code.
+	if user in ("Administrator", "Guest"):
+		return True
+	return bool(TRUSTED_ROLES & set(frappe.get_roles(user)))
 
 
 def _is_self_service(doc):
@@ -233,6 +332,15 @@ def _check_geofence(doc, settings):
 
 	if not settings.enforce_geofence:
 		doc.custom_geofence_result = GEO_NOT_CHECKED
+		# Still measured. The fence has been off since 29 September 2026, and
+		# a month of distances is how somebody decides whether to turn it back
+		# on, and at what radius — so the distance is written whenever there
+		# is a coordinate and a place to measure it from.
+		location = _work_location_for(doc.employee) if is_real_coordinate(doc.latitude, doc.longitude) else None
+		if location and is_real_coordinate(location.latitude, location.longitude):
+			doc.custom_distance_metres = round(metres_between(
+				float(doc.latitude), float(doc.longitude), float(location.latitude), float(location.longitude),
+			), 1)
 		return
 
 	has_fix = is_real_coordinate(doc.latitude, doc.longitude)

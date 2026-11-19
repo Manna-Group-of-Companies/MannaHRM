@@ -124,6 +124,9 @@ def _write_checkin(doc, when, log_type, device):
 			"skip_auto_attendance": 0,
 		}
 	)
+	# What makes it a correction's punch to checkin.py: a flag, which no
+	# request can set, rather than the `REG-` prefix, which anybody can type.
+	checkin.flags.manna_regularization = True
 	checkin.flags.ignore_permissions = True
 	checkin.insert()
 	return checkin.name

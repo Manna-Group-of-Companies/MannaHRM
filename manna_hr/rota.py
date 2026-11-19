@@ -48,20 +48,21 @@ from datetime import date, datetime, timedelta
 # here on purpose: its 24- and 22-hour shifts are told apart by the machine,
 # not the hour (client/src/lib/direction.js).
 #
-# Names as the site holds them on 27 October 2026. A key that names no shift on
-# the site matches nobody, so a name changed there and not here fails safe:
-# those punches go through with no night given.
+# Names are HR's shift sheet of 8 October 2026 (tools/apply_shift_sheet.py).
+# **The bridge holds the same map** (bridge/mannabridge/rota.py) and a test
+# pins the two together: this copy kept the names the sheet retired for three
+# weeks after the machines moved to the site, and no night was given to
+# anybody (audit, 19 Nov 2026). A shift not listed here can name its night on
+# the Shift Type itself (`custom_night_shift`), which HR can set without a
+# release; `night_for` reads that first.
 NIGHT_OF = {
 	# Manna Rubber Products: 08:30–20:30 and 20:30–08:30.
 	"Manna Rubber Products Pvt.Ltd-Production12hrshift1": "Manna Rubber Products Pvt.Ltd-Production12hrshift2",
 	# The eight-hour pair worked as twelve with four of overtime, 08:30–16:30
-	# and 20:30–04:30.
-	"Manna Rubber Products Pvt.Ltd-Production8hrshift1": "Manna Rubber Products Pvt.Ltd-Production8hrshift2",
-	# Each company's own Day and Night, 08:30–20:30 and 20:30–08:30.
-	"MRPPL-Day Shift": "MRPPL-Night Shift",
-	"HRI-Day Shift": "HRI-Night Shift",
-	"MT-Day Shift": "MT-Night Shift",
-	"MTR-Day Shift": "MTR-Night Shift",
+	# and 20:30–04:30 — Production8hrshift1 and 2 before the sheet.
+	"Manna Rubber Products Pvt.Ltd-Productionshift (08:30-16:30)": "Manna Rubber Products Pvt.Ltd-Production8hrshift (20:30-04:30)",
+	# Hi-Tech Pretreads' pair, the same windows under the sheet's same note.
+	"Hi-Tech Pretreads-Production shift3 (08:30-16:30)": "Hi-Tech Pretreads-Production shift4 (20:30-04:30)",
 }
 
 #: The machine's status code on a punch, when the machine is set up for in/out
@@ -153,3 +154,81 @@ def plan(assignments, on, kind, night):
 		return out
 
 	return []
+
+
+# ------------------------------------------------------- no key on the punch ---
+
+#: Two presses this close together are one punch pressed twice.
+SAME_PRESS = timedelta(minutes=3)
+#: Within a run of working days, the longest gap between two punches: the
+#: rest after an eight-hour shift is sixteen, and an arrival can be late.
+IN_RUN = timedelta(hours=20)
+#: A rest at least this long starts a new run with an arrival: a weekly off
+#: is a day and a half or more. Between IN_RUN and this, a punch is missing
+#: (one shift plus one rest is a day), and nothing after it can be judged.
+REST = timedelta(hours=30)
+#: Never walk further back than this many punches looking for the rest.
+LONGEST_RUN = 40
+
+
+def _window(at):
+	if EVENING[0] <= at.hour < EVENING[1]:
+		return "night"
+	if MORNING[0] <= at.hour < MORNING[1]:
+		return "day"
+	return None
+
+
+def arrival_unkeyed(at, earlier):
+	"""'night', 'day' or None, for a punch that carries no direction.
+
+	Most machines here send none (CLAUDE.md §5), so the key `arrival` reads is
+	never there: Hi-Tech's night workers were measured against the day shift
+	all November. A day worker leaving at 20:32 and a night worker arriving at
+	20:24 are the same minute, so the hour alone cannot tell them apart. The
+	order can: after a real rest (a weekly off) the first punch is an arrival,
+	and arrivals and leavings alternate from there. So this walks back to the
+	last rest and counts.
+
+	`earlier` are this person's punches before `at` (ten days is plenty),
+	in any order. **Undecided is the answer whenever the count is in doubt**:
+	no rest found, a gap that says a punch is missing, a run too long, or
+	arrivals that do not all fall in one window. Undecided gives no shift,
+	which is what happened before this existed — never a confident wrong one.
+	"""
+	at = _when(at)
+	seq = []
+	for t in sorted(_when(x) for x in earlier):
+		if t >= at:
+			continue
+		if seq and t - seq[-1] <= SAME_PRESS:
+			continue
+		seq.append(t)
+	if seq and at - seq[-1] <= SAME_PRESS:
+		return None  # the same punch, pressed again
+	seq.append(at)
+
+	i = len(seq) - 1
+	while i > 0:
+		gap = seq[i] - seq[i - 1]
+		if gap >= REST:
+			break
+		if gap > IN_RUN:
+			return None  # a punch is missing in the run: the count is lost
+		i -= 1
+	else:
+		return None  # no rest in what we were given: cannot count from it
+
+	run = seq[i:]
+	if len(run) > LONGEST_RUN or (len(run) - 1) % 2:
+		return None  # too long to trust, or this punch is a leaving
+	windows = {_window(t) for t in run[0::2]}
+	if len(windows) != 1:
+		return None
+	return windows.pop()
+
+
+def night_for(default_shift, partner_on_shift_type=None):
+	"""The night shift a day shift alternates with: the Shift Type's own
+	`custom_night_shift` first, then the map."""
+	return partner_on_shift_type or NIGHT_OF.get(default_shift or "")

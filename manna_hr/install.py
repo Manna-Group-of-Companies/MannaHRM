@@ -560,6 +560,18 @@ CUSTOM_FIELDS = {
 			"in_standard_filter": 1,
 			"description": "The company this shift is for. Blank means any company in the group may use it.",
 		},
+		# The night this day shift alternates with, for people who work a week
+		# of each (manna_hr/rota.py). Read before the map in the code, so HR can
+		# pair a shift the code does not name — Hi-Tech's production shifts in
+		# November 2026 — without waiting for a release.
+		{
+			"fieldname": "custom_night_shift",
+			"label": "Alternates With Night Shift",
+			"fieldtype": "Link",
+			"options": "Shift Type",
+			"insert_after": "custom_company",
+			"description": "For a day shift people work a week of, then a week of nights: the night shift. An evening arrival after a rest then gives that person the night shift for the night.",
+		},
 	],
 	# What a position's resumes are scored against, out of ten — On Board ->
 	# Recruitment (client/src/lib/resumescore.js, 12 Oct 2026). hrms has the
