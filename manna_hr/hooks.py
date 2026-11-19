@@ -86,7 +86,14 @@ doc_events = {
 	# `DuplicateAttendanceError`: anything else would stop hrms's shift job for
 	# the whole group.
 	"Attendance": {
-		"validate": "manna_hr.freeze.guard_attendance",
+		"validate": [
+			"manna_hr.freeze.guard_attendance",
+			# The attendance policy reads the day hrms is making from the
+			# punches: late, early, net hours, OT, missed punch and the status
+			# the policy gives. Never raises — attpolicy_site.py.
+			"manna_hr.attpolicy_site.on_attendance_validate",
+		],
+		"on_submit": "manna_hr.attpolicy_site.on_attendance_submit",
 		"before_cancel": "manna_hr.freeze.guard_attendance_cancel",
 	},
 	"Leave Application": {
@@ -243,6 +250,20 @@ fixtures = [
 					# seven are fields on the `Asset Assignment` doctype instead.
 					"Asset-custom_detail",
 					# Which company a shift is for — see CUSTOM_FIELDS in install.py.
+					"Attendance-custom_policy_section",
+					"Attendance-custom_attendance_policy",
+					"Attendance-custom_late_minutes",
+					"Attendance-custom_early_minutes",
+					"Attendance-custom_net_hours",
+					"Attendance-custom_ot_minutes",
+					"Attendance-custom_policy_column",
+					"Attendance-custom_punch_count",
+					"Attendance-custom_missed_punch",
+					"Attendance-custom_late_counted",
+					"Attendance-custom_early_counted",
+					"Attendance-custom_penalty",
+					"Attendance-custom_exceptions",
+					"Attendance-custom_policy_note",
 					"Shift Type-custom_company",
 					"Shift Type-custom_night_shift",
 					# Resume scoring — see CUSTOM_FIELDS in install.py.
@@ -322,6 +343,9 @@ scheduler_events = {
 		# calendar, weekly offs and leave carry on into the new year by
 		# themselves (18 Nov 2026). manna_hr/holidayroll.py.
 		"manna_hr.holidayroll.run",
+		# The attendance policy's month: penalties counted again after any
+		# correction, and taken from Casual Leave first where the policy says.
+		"manna_hr.attpolicy_site.settle",
 	],
 }
 

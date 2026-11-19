@@ -24,6 +24,29 @@ describe("Daily Detail Attendance Report reads the whole range, not today's punc
 		expect(rows[0]).toMatchObject({ status: "Present", in: "08:42", out: "17:10", work: "8:28", late: "0:12", early: "0:20", source: "attendance" });
 	});
 
+	it("a day the attendance policy read shows the site's figures, not its own", () => {
+		// The policy's 10-minute grace made 08:42 count from 08:30 as 12 minutes
+		// late on the site, and its break took 30 minutes off: those are what
+		// payroll reads, so those are what the report shows.
+		const { rows } = dailyRows({ ...base, attendance: [{ employee: "E1", attendance_date: "2026-09-01", docstatus: 1,
+			status: "Half Day", in_time: "2026-09-01 08:42:00", out_time: "2026-09-01 17:10:00", working_hours: 8.47,
+			shift: "Office", custom_attendance_policy: "Factory", custom_punch_count: 2, custom_late_minutes: 12,
+			custom_early_minutes: 0, custom_net_hours: 7.97, custom_ot_minutes: 0, custom_exceptions: "Late, Penalty",
+			custom_policy_note: "Present → Half Day: 4th late this month, 3 forgiven" }] });
+		expect(rows[0]).toMatchObject({ status: "Half Day", late: "0:12", early: "", work: "7:58",
+			exceptions: "Late, Penalty", ot: "" });
+		expect(rows[0].policyNote).toContain("4th late");
+		expect(rows[0].otPendingMin).toBe(0);
+	});
+
+	it("under a policy, the site's overtime is the pending figure, not the dashboard's own rule", () => {
+		const { rows } = dailyRows({ ...base, attendance: [{ employee: "E1", attendance_date: "2026-09-01", docstatus: 1,
+			status: "Present", in_time: "2026-09-01 08:20:00", out_time: "2026-09-01 19:40:00", working_hours: 11.33,
+			shift: "Office", custom_attendance_policy: "Factory", custom_punch_count: 2, custom_net_hours: 10.83,
+			custom_ot_minutes: 90 }] });
+		expect(rows[0].otPendingMin).toBe(90);
+	});
+
 	it("an unprocessed day falls back to its punches, and says so", () => {
 		const { rows } = dailyRows({ ...base, punches: [
 			{ employee: "E1", time: "2026-09-02 08:20:00", log_type: "IN" },

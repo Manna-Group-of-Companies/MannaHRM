@@ -117,6 +117,10 @@ export const MANAGED = [
    --------------------------------------------------------------------------- */
 
 export const OWN_PAGES = [
+	["attendance", "policy", "Attendance Policy", "Manna Attendance Policy",
+		"What a day's punches mean for that day's pay. Its page edits the two tables a policy is mostly "
+		+ "made of — who it applies to and the shifts it sets — which the generic form does not draw. "
+		+ "The rules are manna_hr/attpolicy.py, on the server."],
 	["attendance", "submit", "Submit Attendance", "Attendance Submission",
 		"One company's month, closed. Submitting it is the freeze — from then on the site refuses any "
 		+ "attendance, approved leave or approved correction that would change a day in it — and "

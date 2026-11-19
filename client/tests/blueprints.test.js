@@ -8,7 +8,7 @@ import { needFor } from "@/data/needs";
 /* ---------------------------------------------------------------------------
    **Every one of Factor HR's 160 menu items has an address here.**
 
-   55 open a page that does the work and 105 open a page that says what the item
+   57 open a page that does the work and 103 open a page that says what the item
    is, what it would take and what the site holds towards it. This file is the
    proof of that sentence, because it is the sentence the whole comparison rests
    on: a reader holding the two systems side by side has to be able to click
@@ -30,9 +30,9 @@ describe("an address for all 160", () => {
 		expect(KNOWN[section], `${title} → ${section}/${tab}`).toContain(tab);
 	});
 
-	it("leaves 105 of them as blueprints", () => {
-		expect(BLUEPRINTS).toHaveLength(105);
-		expect(FACTOHR_MENU.filter((r) => r[5])).toHaveLength(55);
+	it("leaves 103 of them as blueprints", () => {
+		expect(BLUEPRINTS).toHaveLength(103);
+		expect(FACTOHR_MENU.filter((r) => r[5])).toHaveLength(57);
 	});
 });
 
