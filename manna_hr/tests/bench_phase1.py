@@ -274,3 +274,18 @@ class TestFactohrPolicy(IntegrationTestCase):
 		self.assertEqual(_day(emp, "2026-11-16").custom_ot_minutes, 50)
 		self.assertEqual(frappe.db.get_value("Employee Overtime", {"employee": emp, "ot_date": "2026-11-16"}, "hours"),
 		                 round(50 / 60, 2))
+
+
+class TestOnlyTheAdmin(IntegrationTestCase):
+	def test_a_company_hr_login_cannot_change_a_policy(self):
+		user = "_t-company-hr@example.com"
+		if not frappe.db.exists("User", user):
+			frappe.get_doc({"doctype": "User", "email": user, "first_name": "Company HR",
+			                "roles": [{"role": "HR Manager"}]}).insert(ignore_permissions=True)
+		frappe.set_user(user)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				frappe.get_doc({"doctype": "Manna Attendance Policy", "policy_name": "_T Not Allowed",
+				                "is_active": 0}).insert()
+		finally:
+			frappe.set_user("Administrator")

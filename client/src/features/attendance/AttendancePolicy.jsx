@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { useApp } from "@/store";
+import { PAGE_ADMINS } from "@/data/menus";
 import {
 	DEDUCT, HOLIDAY, HOURS_FROM, MODES, MSP, OT_BASIS, SCOPES, blank, loadPolicies, loadPolicy, savePolicy, summary,
 } from "@/api/policy";
@@ -225,7 +226,14 @@ function Editor({ start, onDone }) {
 	);
 }
 
+/** Only the admin turns rules on and off (19 Nov 2026). The site refuses
+    anybody else (MannaAttendancePolicy._only_the_admin); this only hides the
+    buttons that would be refused. */
+const isAdmin = (user) => PAGE_ADMINS.includes(String(user || "").trim().toLowerCase());
+
 export default function AttendancePolicy() {
+	const s = useApp();
+	const admin = isAdmin(s.user);
 	const [rows, setRows] = useState(null);
 	const [err, setErr] = useState("");
 	const [open, setOpen] = useState(null);
@@ -244,12 +252,19 @@ export default function AttendancePolicy() {
 		<div className="kit k-enter">
 			<PageHead title="Attendance Policy"
 				sub="What a day's punches mean for that day's pay: hours, late and early, missed punches, penalties and overtime">
-				<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => setOpen(blank())}>
-					<KitIcon name="plus" size={16} stroke={2} />New policy
-				</button>
+				{admin ? (
+					<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => setOpen(blank())}>
+						<KitIcon name="plus" size={16} stroke={2} />New policy
+					</button>
+				) : null}
 			</PageHead>
 			{open ? <Editor start={open} onDone={() => { setOpen(null); reload(); }} /> : null}
-			{err ? <p className="k-err" role="alert">{err}</p> : null}
+			{!admin ? (
+				<p className="k-muted" style={{ fontSize: 13 }}>
+					Only {PAGE_ADMINS.join(", ")} can turn these rules on or off. You can read them here.
+				</p>
+			) : null}
+						{err ? <p className="k-err" role="alert">{err}</p> : null}
 			{rows === null ? <div className="k-sk" style={{ height: 120 }} /> : rows.length ? (
 				<div className="k-grid2" style={{ marginTop: 16 }}>
 					{rows.map((r) => (
@@ -258,10 +273,12 @@ export default function AttendancePolicy() {
 								<h3>{r.policy_name || r.name}</h3>
 								{Number(r.is_active) ? null : <span className="k-pill k-p-grey k-nodot">Not in use</span>}
 								{Number(r.is_default) ? <span className="k-pill k-nodot">Default</span> : null}
-								<button type="button" className="k-btn k-btn-line k-btn-sm" aria-label={`Edit ${r.name}`}
-									onClick={() => void edit(r.name)}>
-									<KitIcon name="edit" size={16} stroke={2} />Edit
-								</button>
+								{admin ? (
+									<button type="button" className="k-btn k-btn-line k-btn-sm" aria-label={`Edit ${r.name}`}
+										onClick={() => void edit(r.name)}>
+										<KitIcon name="edit" size={16} stroke={2} />Edit
+									</button>
+								) : null}
 							</div>
 							<div className="k-muted" style={{ fontSize: 13 }}>{r.company || "Any company"}</div>
 							<p style={{ fontSize: 13, margin: "6px 0 0" }}>{summary(r)}</p>

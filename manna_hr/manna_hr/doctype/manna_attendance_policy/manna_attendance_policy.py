@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from manna_hr import attpolicy
+from manna_hr import attpolicy, rules
 
 
 class MannaAttendancePolicy(Document):
@@ -10,6 +10,7 @@ class MannaAttendancePolicy(Document):
 	and puts them onto the Shift Types the policy names."""
 
 	def validate(self):
+		self._only_the_admin()
 		problems = attpolicy.policy_problems(self.as_dict())
 		if problems:
 			frappe.throw("<br>".join(_(p) for p in problems), title=_("These numbers disagree"))
@@ -19,6 +20,20 @@ class MannaAttendancePolicy(Document):
 		sources = (self.penalty_deduct_from, self.early_deduct_from, self.hours_deduct_from)
 		if any(x and x != attpolicy.DEDUCT_LWP for x in sources) and not self.casual_leave_type:
 			frappe.throw(_("Name the Casual Leave type penalties come from first."), title=_("Which leave?"))
+
+	def on_trash(self):
+		self._only_the_admin()
+
+	def _only_the_admin(self):
+		"""Turning the rules on and off is the admin's alone (asked for 19 Nov
+		2026): every company login is an HR Manager, so a role cannot say it.
+		The same list as Settings -> Security (rules.PAGE_ADMINS)."""
+		if not rules.may_set_page_visibility(frappe.session.user):
+			frappe.throw(
+				_("Only {0} can change attendance policies.").format(", ".join(rules.PAGE_ADMINS)),
+				frappe.PermissionError,
+				title=_("Not yours to change"),
+			)
 
 	def on_update(self):
 		from manna_hr import attpolicy_site
