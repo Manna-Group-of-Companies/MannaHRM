@@ -37,7 +37,13 @@ from datetime import date, datetime
 SCOPE_UNASSIGNED = "unassigned"
 #: Every punch in the range — for a Shift Assignment, which names its dates.
 SCOPE_ALL = "all"
-SCOPES = (SCOPE_UNASSIGNED, SCOPE_ALL)
+#: Every day the shift job made in the range, whether or not a punch moved —
+#: for a day built wrong by the shift's settings rather than by its punches.
+#: Hi-Tech's shifts were "Strictly based on Log Type" while its machine sends
+#: none, and hrms made each such day a Present of 0 hours (19 Nov 2026); once
+#: the setting is right, only a rebuild of every day fixes them.
+SCOPE_DAYS = "days"
+SCOPES = (SCOPE_UNASSIGNED, SCOPE_ALL, SCOPE_DAYS)
 
 #: The widest range one call may rebuild. Two months is the open month and the
 #: one before it; anything older has been paid from.
@@ -100,13 +106,15 @@ def plan(punches, attendance, scope=SCOPE_UNASSIGNED, frozen=(), rebuild=()):
 		raise ValueError("scope must be one of {0}".format(", ".join(SCOPES)))
 	frozen = {_day(d) for d in frozen}
 	rebuild = {_day(d) for d in rebuild}
+	if scope == SCOPE_DAYS:
+		rebuild |= {_day(r["attendance_date"]) for r in attendance}
 	rows = {r["name"]: r for r in attendance}
 	by_day = {}
 	for r in attendance:
 		by_day.setdefault(_day(r["attendance_date"]), []).append(r)
 
 	def in_scope(p):
-		if scope == SCOPE_ALL:
+		if scope in (SCOPE_ALL, SCOPE_DAYS):
 			return True
 		return not p.get("attendance") or bool(p.get("offshift")) or not p.get("shift")
 

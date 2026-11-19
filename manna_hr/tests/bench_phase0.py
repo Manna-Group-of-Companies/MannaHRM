@@ -165,3 +165,49 @@ class TestPhase0(IntegrationTestCase):
 		self.assertEqual(
 			getdate(frappe.db.get_value("Employee Checkin", morning.name, "shift_start")), getdate("2026-11-16")
 		)
+
+	# -------------------------------------------------- settling duplicates --
+
+	def test_duplicates_already_on_the_site_are_set_aside_and_their_day_rebuilt(self):
+		from manna_hr import dedupe_site
+
+		emp = _employee("_T-OLDDUP", shift=DAY)
+		first = _punch(emp.name, "2026-11-06 08:27:00")
+		# How the live site got them: written past the check (before it existed).
+		twin = frappe.get_doc({"doctype": "Employee Checkin", "employee": emp.name,
+		                       "time": "2026-11-06 08:27:00", "device_id": "BIO-T2", "shift": DAY,
+		                       "offshift": 0, "shift_start": "2026-11-06 08:30:00"})
+		twin.db_insert()
+		_punch(emp.name, "2026-11-06 17:03:00")
+		reprocess_site.process_shifts([DAY])
+
+		got = dedupe_site.preview("2026-11-06", "2026-11-06", employee=emp.name)
+		self.assertEqual((got["punches_doubled"], got["copies_to_set_aside"]), (1, 1))
+		dedupe_site.apply("2026-11-06", "2026-11-06", employee=emp.name)
+		skipped = {n: frappe.db.get_value("Employee Checkin", n, "skip_auto_attendance") for n in (first.name, twin.name)}
+		self.assertEqual(sorted(skipped.values()), [0, 1])
+		self.assertTrue(frappe.db.exists("Employee Checkin", twin.name))  # set aside, never deleted
+
+	# ------------------------------------------- a shift's settings changed --
+
+	def test_a_strict_shift_with_unkeyed_punches_is_fixed_by_the_setting_and_a_rebuild_of_every_day(self):
+		strict = "_T Strict 08:30-17:00"
+		_shift(strict, "08:30:00", "17:00:00")
+		frappe.db.set_value("Shift Type", strict, "determine_check_in_and_check_out",
+		                    "Strictly based on Log Type in Employee Checkin")
+		emp = _employee("_T-STRICT", shift=strict)
+		_punch(emp.name, "2026-11-07 08:27:00")
+		_punch(emp.name, "2026-11-07 17:05:00")
+		reprocess_site.process_shifts([strict])
+		before = frappe.db.get_value("Attendance", {"employee": emp.name, "attendance_date": "2026-11-07", "docstatus": 1},
+		                             ["status", "working_hours"], as_dict=True)
+
+		frappe.db.set_value("Shift Type", strict, "determine_check_in_and_check_out",
+		                    "Alternating entries as IN and OUT during the same shift")
+		out = reprocess_site.run([emp.name], "2026-11-07", "2026-11-07", scope="days", write=True)
+		reprocess_site.process_shifts([strict])
+		after = frappe.db.get_value("Attendance", {"employee": emp.name, "attendance_date": "2026-11-07", "docstatus": 1},
+		                            ["status", "working_hours"], as_dict=True)
+		# What the live site shows for Hi-Tech, and what it should.
+		print("strict before:", before, "after:", after, "cancelled:", out["cancelled"])
+		self.assertTrue(after and after.working_hours > 8)

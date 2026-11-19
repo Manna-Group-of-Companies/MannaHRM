@@ -510,6 +510,7 @@ function RebuildBar({ rows, from, to }) {
 								aria-label="Which punches">
 								<option value="unassigned">Only punches no day was built from</option>
 								<option value="all">Every punch in the range (a shift changed for these dates)</option>
+								<option value="days">Every day in the range (a shift's settings were changed)</option>
 							</select>
 							<button type="button" className="btn tpl" disabled={Boolean(busy) || !plan || !(plan.cancelled || plan.refetched)}
 								onClick={go}>

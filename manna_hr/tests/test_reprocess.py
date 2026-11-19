@@ -138,3 +138,16 @@ def test_a_range_that_cannot_be_rebuilt_says_why(a, b, why):
 
 def test_the_open_month_can_be_rebuilt():
 	assert range_problem("2026-11-01", "2026-11-19", "2026-11-19") is None
+
+
+def test_rebuild_every_day_cancels_each_generated_day_whatever_the_punches_say():
+	# Hi-Tech, Nov 2026: a Strict shift and a machine with no key made each
+	# day a Present of 0 hours. The punches are right; the day is not.
+	from manna_hr.reprocess import SCOPE_DAYS
+
+	p = [punch("CHK-1", "2026-11-02 08:27", shift=DAY, start="2026-11-02 08:30",
+	           new_shift=DAY, new_start="2026-11-02 08:30", attendance="ATT-1")]
+	rows = [row("ATT-1", "2026-11-02", "Present"), row("ATT-2", "2026-11-03", "On Leave", leave="HR-LAP-1")]
+	got = plan(p, rows, scope=SCOPE_DAYS)
+	assert got["cancel"] == ["ATT-1"]
+	assert got["refetch"] == ["CHK-1"]
