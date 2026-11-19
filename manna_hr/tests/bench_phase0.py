@@ -132,7 +132,9 @@ class TestPhase0(IntegrationTestCase):
 		if not frappe.db.exists("User", user):
 			frappe.get_doc({"doctype": "User", "email": user, "first_name": "Phone",
 			                "roles": [{"role": "Employee"}]}).insert(ignore_permissions=True)
-		emp = _employee("_T-PHONE", shift=DAY, user=user)
+		# Reused across runs: hrms's shift job commits, so a run's employees stay.
+		mine = frappe.db.get_value("Employee", {"user_id": user}, "name")
+		emp = frappe.get_doc("Employee", mine) if mine else _employee("_T-PHONE", shift=DAY, user=user)
 		other = _employee("_T-OTHER", shift=DAY)
 		frappe.set_user(user)
 		try:

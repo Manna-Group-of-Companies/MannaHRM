@@ -1,0 +1,358 @@
+{
+ "actions": [],
+ "autoname": "field:policy_name",
+ "creation": "2026-11-19 00:00:00.000000",
+ "description": "factoHR's Manage Attendance Policy: what a day's punches mean for that day's pay. Every rule is off until set. manna_hr/attpolicy.py.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "policy_name",
+  "is_active",
+  "is_default",
+  "column_break_head",
+  "company",
+  "priority",
+  "description",
+  "section_applies",
+  "scopes",
+  "shift_types",
+  "section_day",
+  "check_in_out_mode",
+  "hours_based_on",
+  "full_day_hours",
+  "half_day_below_hours",
+  "absent_below_hours",
+  "column_break_day",
+  "break_minutes",
+  "break_after_hours",
+  "msp_status",
+  "section_late",
+  "late_grace_minutes",
+  "late_half_day_after_minutes",
+  "column_break_late",
+  "late_forgiven_per_month",
+  "late_penalty_every",
+  "late_penalty_days",
+  "section_early",
+  "early_grace_minutes",
+  "early_half_day_after_minutes",
+  "column_break_early",
+  "early_forgiven_per_month",
+  "early_penalty_every",
+  "early_penalty_days",
+  "section_penalty",
+  "penalty_deduct_from",
+  "casual_leave_type",
+  "section_ot",
+  "ot_enabled",
+  "ot_min_minutes",
+  "ot_round_minutes",
+  "column_break_ot",
+  "ot_max_minutes",
+  "holiday_work"
+ ],
+ "fields": [
+  {
+   "fieldname": "policy_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Policy Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Active"
+  },
+  {
+   "description": "Applies to anybody no other policy names. At most one active default.",
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Default for Everybody Else"
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Blank: any company in the group.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "default": "0",
+   "description": "Between two policies equally specific for a person, the higher wins.",
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "label": "Priority"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "description": "The most specific match wins: Employee, then Shift Type, Designation, Department, Company.",
+   "fieldname": "section_applies",
+   "fieldtype": "Section Break",
+   "label": "Applies To"
+  },
+  {
+   "fieldname": "scopes",
+   "fieldtype": "Table",
+   "label": "Applies To",
+   "options": "Manna Attendance Policy Scope"
+  },
+  {
+   "description": "Saving the policy writes its thresholds and grace onto these Shift Types, so hrms's first reading of a day agrees with it. A Shift Type can be set by one active policy only.",
+   "fieldname": "shift_types",
+   "fieldtype": "Table",
+   "label": "Shift Types It Sets",
+   "options": "Manna Attendance Policy Shift"
+  },
+  {
+   "fieldname": "section_day",
+   "fieldtype": "Section Break",
+   "label": "The Day"
+  },
+  {
+   "description": "Blank leaves each Shift Type's own. Strict needs machines that send IN and OUT; most here send neither.",
+   "fieldname": "check_in_out_mode",
+   "fieldtype": "Select",
+   "label": "Punch Direction",
+   "options": "\nAlternating entries as IN and OUT during the same shift\nStrictly based on Log Type in Employee Checkin"
+  },
+  {
+   "fieldname": "hours_based_on",
+   "fieldtype": "Select",
+   "label": "Hours Worked From",
+   "options": "\nFirst Check-in and Last Check-out\nEvery Valid Check-in and Check-out"
+  },
+  {
+   "description": "Under this, a day is flagged Short hours. Pay is decided by the two below.",
+   "fieldname": "full_day_hours",
+   "fieldtype": "Float",
+   "label": "Full Day Hours"
+  },
+  {
+   "description": "0 = off",
+   "fieldname": "half_day_below_hours",
+   "fieldtype": "Float",
+   "label": "Half Day Below (Hours)"
+  },
+  {
+   "description": "0 = off",
+   "fieldname": "absent_below_hours",
+   "fieldtype": "Float",
+   "label": "Absent Below (Hours)"
+  },
+  {
+   "fieldname": "column_break_day",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Taken off the hours of a day at least as long as the next field.",
+   "fieldname": "break_minutes",
+   "fieldtype": "Int",
+   "label": "Break (Minutes)"
+  },
+  {
+   "fieldname": "break_after_hours",
+   "fieldtype": "Float",
+   "label": "Break Taken After (Hours)"
+  },
+  {
+   "description": "Blank: as hrms decides from the hours (0).",
+   "fieldname": "msp_status",
+   "fieldtype": "Select",
+   "label": "One Punch Only Counts As",
+   "options": "\nPresent\nHalf Day\nAbsent"
+  },
+  {
+   "fieldname": "section_late",
+   "fieldtype": "Section Break",
+   "label": "Late Arrival"
+  },
+  {
+   "fieldname": "late_grace_minutes",
+   "fieldtype": "Int",
+   "label": "Grace (Minutes)"
+  },
+  {
+   "description": "0 = off",
+   "fieldname": "late_half_day_after_minutes",
+   "fieldtype": "Int",
+   "label": "Half Day When Later Than (Minutes)"
+  },
+  {
+   "fieldname": "column_break_late",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "-1",
+   "description": "-1 = no frequency rule. 3: the 4th late costs a penalty.",
+   "fieldname": "late_forgiven_per_month",
+   "fieldtype": "Int",
+   "label": "Forgiven per Month"
+  },
+  {
+   "default": "1",
+   "description": "1: every late past the forgiven ones. 3: every third.",
+   "fieldname": "late_penalty_every",
+   "fieldtype": "Int",
+   "label": "Then a Penalty Every"
+  },
+  {
+   "default": "0.5",
+   "fieldname": "late_penalty_days",
+   "fieldtype": "Select",
+   "label": "Penalty (Days)",
+   "options": "0.5\n1"
+  },
+  {
+   "fieldname": "section_early",
+   "fieldtype": "Section Break",
+   "label": "Early Going"
+  },
+  {
+   "fieldname": "early_grace_minutes",
+   "fieldtype": "Int",
+   "label": "Grace (Minutes)"
+  },
+  {
+   "description": "0 = off",
+   "fieldname": "early_half_day_after_minutes",
+   "fieldtype": "Int",
+   "label": "Half Day When Earlier Than (Minutes)"
+  },
+  {
+   "fieldname": "column_break_early",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "-1",
+   "fieldname": "early_forgiven_per_month",
+   "fieldtype": "Int",
+   "label": "Forgiven per Month"
+  },
+  {
+   "default": "1",
+   "fieldname": "early_penalty_every",
+   "fieldtype": "Int",
+   "label": "Then a Penalty Every"
+  },
+  {
+   "default": "0.5",
+   "fieldname": "early_penalty_days",
+   "fieldtype": "Select",
+   "label": "Penalty (Days)",
+   "options": "0.5\n1"
+  },
+  {
+   "fieldname": "section_penalty",
+   "fieldtype": "Section Break",
+   "label": "Where Penalties Come From"
+  },
+  {
+   "default": "Leave Without Pay",
+   "fieldname": "penalty_deduct_from",
+   "fieldtype": "Select",
+   "label": "Deduct From",
+   "options": "Leave Without Pay\nCasual Leave, then Leave Without Pay"
+  },
+  {
+   "depends_on": "eval:doc.penalty_deduct_from!='Leave Without Pay'",
+   "fieldname": "casual_leave_type",
+   "fieldtype": "Link",
+   "label": "Casual Leave Type",
+   "options": "Leave Type"
+  },
+  {
+   "fieldname": "section_ot",
+   "fieldtype": "Section Break",
+   "label": "Overtime"
+  },
+  {
+   "fieldname": "ot_enabled",
+   "fieldtype": "Check",
+   "label": "Overtime Counted"
+  },
+  {
+   "depends_on": "ot_enabled",
+   "fieldname": "ot_min_minutes",
+   "fieldtype": "Int",
+   "label": "Minimum (Minutes)"
+  },
+  {
+   "depends_on": "ot_enabled",
+   "fieldname": "ot_round_minutes",
+   "fieldtype": "Int",
+   "label": "Rounded Down To (Minutes)"
+  },
+  {
+   "fieldname": "column_break_ot",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "ot_enabled",
+   "description": "0 = no cap",
+   "fieldname": "ot_max_minutes",
+   "fieldtype": "Int",
+   "label": "Most in a Day (Minutes)"
+  },
+  {
+   "default": "Nothing",
+   "fieldname": "holiday_work",
+   "fieldtype": "Select",
+   "label": "Work on a Weekly Off or Holiday",
+   "options": "Nothing\nOvertime\nComp off"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manna HR",
+ "name": "Manna Attendance Policy",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "policy_name",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "policy_name",
+ "track_changes": 1
+}
