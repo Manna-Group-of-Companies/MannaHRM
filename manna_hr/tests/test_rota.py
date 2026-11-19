@@ -126,3 +126,105 @@ def test_a_status_the_machine_was_not_set_up_for_is_no_direction():
 def test_every_night_shift_named_is_a_different_shift_from_its_day():
 	assert all(day != night for day, night in NIGHT_OF.items())
 
+
+
+# --------------------------------------------------- no key on the punch --
+#
+# Most machines here send no direction. HPT-012 and others on Hi-Tech's
+# machines worked nights all November and were measured against the day
+# shift, because `arrival` needs a key that never came.
+
+from manna_hr.rota import arrival_unkeyed, night_for  # noqa: E402
+
+
+def _nights(first_evening_day, count, out_min=35, in_min=24):
+	"""Consecutive nights from the 2nd of November: in ~20:24, out ~08:35 next day."""
+	out = []
+	for k in range(count):
+		d = first_evening_day + k
+		out.append("2026-11-{0:02d} 20:{1:02d}:00".format(d, in_min))
+		out.append("2026-11-{0:02d} 08:{1:02d}:00".format(d + 1, out_min))
+	return out
+
+
+def _days(first_day, count):
+	out = []
+	for k in range(count):
+		d = first_day + k
+		out.append("2026-11-{0:02d} 08:27:00".format(d))
+		out.append("2026-11-{0:02d} 20:32:00".format(d))
+	return out
+
+
+def test_the_first_evening_after_a_weekly_off_is_a_night_arrival():
+	# Last week of days ended Saturday 20:32; Sunday off; Monday 20:24.
+	earlier = _days(1, 6)  # 1st..6th
+	assert arrival_unkeyed("2026-11-08 20:24:00", earlier) == "night"
+
+
+def test_the_third_night_running_is_still_a_night_with_no_key_anywhere():
+	earlier = _days(1, 6) + _nights(8, 2)  # nights of the 8th and 9th
+	assert arrival_unkeyed("2026-11-10 20:24:00", earlier) == "night"
+
+
+def test_a_night_workers_morning_leaving_decides_nothing():
+	earlier = _days(1, 6) + _nights(8, 1)[:1]
+	assert arrival_unkeyed("2026-11-09 08:35:00", earlier) is None
+
+
+def test_a_day_workers_evening_leaving_is_not_a_night():
+	# The minute that fooled the hour alone: 20:32 after an 08:27 arrival.
+	earlier = ["2026-11-01 20:32:00"] + _days(3, 2) + ["2026-11-05 08:27:00"]
+	assert arrival_unkeyed("2026-11-05 20:32:00", earlier) is None
+
+
+def test_a_day_workers_morning_after_a_rest_is_a_day():
+	earlier = _nights(2, 5)  # last night out the 7th at 08:35
+	assert arrival_unkeyed("2026-11-09 08:27:00", earlier) == "day"
+
+
+def test_a_missing_punch_in_the_run_makes_everything_after_it_undecided():
+	# The out of the 9th's night is missing: 20:24 on the 9th, then 20:24 on
+	# the 10th — a day between them, which is one punch short of a run.
+	earlier = _days(1, 6) + _nights(8, 1) + ["2026-11-09 20:24:00"]
+	assert arrival_unkeyed("2026-11-10 20:24:00", earlier) is None
+
+
+def test_no_rest_in_the_history_given_decides_nothing():
+	assert arrival_unkeyed("2026-11-10 20:24:00", _nights(2, 8)[1:]) is None
+	assert arrival_unkeyed("2026-11-10 20:24:00", []) is None
+
+
+def test_a_second_press_of_the_same_punch_is_one_punch():
+	earlier = _days(1, 6) + ["2026-11-08 20:24:00"]
+	assert arrival_unkeyed("2026-11-08 20:25:30", earlier) is None
+	# …and the press does not shift the count for the morning after.
+	earlier = _days(1, 6) + ["2026-11-08 20:24:00", "2026-11-08 20:25:30", "2026-11-09 08:35:00"]
+	assert arrival_unkeyed("2026-11-09 20:24:00", earlier) == "night"
+
+
+def test_an_eight_hour_night_is_counted_the_same_way():
+	# 20:30–04:30 with sixteen hours' rest between.
+	earlier = ["2026-11-01 16:32:00", "2026-11-03 20:24:00", "2026-11-04 04:35:00"]
+	assert arrival_unkeyed("2026-11-04 20:24:00", earlier) == "night"
+
+
+def test_the_shift_types_own_night_comes_before_the_map():
+	assert night_for(DAY, "Some Other Night") == "Some Other Night"
+	assert night_for(DAY) == NIGHT
+	assert night_for("Hi-Tech Pretreads-Production shift1") is None
+
+
+def test_the_sites_night_map_is_the_bridges():
+	# Kept apart, the site's copy named shifts the 8 October sheet retired
+	# for three weeks after the machines moved to the site.
+	import ast
+	import pathlib
+
+	src = (pathlib.Path(__file__).resolve().parents[2] / "bridge" / "mannabridge" / "rota.py").read_text(encoding="utf-8")
+	tree = ast.parse(src)
+	bridge = next(
+		ast.literal_eval(n.value) for n in tree.body
+		if isinstance(n, ast.Assign) and any(getattr(t, "id", None) == "NIGHT_OF" for t in n.targets)
+	)
+	assert NIGHT_OF == bridge

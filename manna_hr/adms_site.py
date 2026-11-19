@@ -30,7 +30,8 @@ import frappe
 from frappe.utils import add_to_date, get_datetime, now_datetime
 from werkzeug.wrappers import Response
 
-from manna_hr import adms, rota, rota_site
+from manna_hr import adms, rota
+from manna_hr.checkin import DuplicatePunchError
 
 ROOT = "iclock"
 
@@ -97,7 +98,19 @@ def handle(endpoint, request):
 			if stamp:
 				frappe.db.set_global(_stamp_key(serial), stamp)
 			frappe.db.commit()
-			deliver_pending(serial)
+			# Answered first, delivered after. Delivering a backlog inside the
+			# request made a slow post time out at the machine, which sent it
+			# again while the first delivery was still running — two
+			# deliveries of one punch (19 Nov 2026). The store above is what
+			# the reply promises; delivery can wait a few seconds for a worker.
+			frappe.enqueue(
+				"manna_hr.adms_site.deliver_pending",
+				serial=serial,
+				queue="short",
+				job_id="adms-deliver-{0}".format(serial),
+				deduplicate=True,
+				enqueue_after_commit=True,
+			)
 			return "OK: {0}".format(count)
 		if table in ("OPERLOG", "USERINFO"):
 			record_users(serial, device, adms.parse_users(body))
@@ -245,6 +258,13 @@ def retry_waiting():
 def _deliver(row):
 	frappe.db.savepoint("adms_deliver")
 	try:
+		# Whoever holds this row delivers it; anybody else waits, then finds
+		# it Delivered. Two deliveries of one post (a retried post, the hourly
+		# retry, a saved Employee) used to both find no checkin and both
+		# insert one.
+		state = frappe.db.get_value("Attendance Device Punch", row.name, "state", for_update=True)
+		if state == "Delivered":
+			return
 		employee, reason = _employee_for(row)
 		if not employee:
 			return _wait(row, reason)
@@ -258,9 +278,9 @@ def _deliver(row):
 			# pairing alternates IN/OUT from nothing and cannot recover from a
 			# confident wrong one (CLAUDE.md §5).
 			report = frappe.db.get_value("Attendance Device", {"serial_number": row.serial_number}, "report_direction")
+			# Day or night is decided as the checkin is saved
+			# (checkin._day_or_night), for the bridge's punches as well.
 			log_type = rota.log_type_for(row.status_code, report)
-			if log_type:
-				_day_or_night(employee, row.punched_at, log_type)
 			doc = frappe.get_doc(
 				{
 					"doctype": "Employee Checkin",
@@ -275,24 +295,19 @@ def _deliver(row):
 			{"state": "Delivered", "employee": employee, "employee_checkin": checkin, "reason": None},
 			update_modified=False,
 		)
+	except DuplicatePunchError:
+		# The same punch, already on the site by another road (the bridge, a
+		# correction at that second): it is delivered.
+		frappe.db.rollback(save_point="adms_deliver")
+		twin = frappe.db.get_value("Employee Checkin", {"employee": employee, "time": row.punched_at}, "name")
+		row.db_set(
+			{"state": "Delivered", "employee": employee, "employee_checkin": twin, "reason": None},
+			update_modified=False,
+		)
 	except Exception as exc:
 		frappe.db.rollback(save_point="adms_deliver")
 		# Stored either way: the punch waits with what went wrong on it.
 		_wait(row, "Not delivered: {0}".format(exc)[:500])
-
-
-def _day_or_night(employee, punched_at, log_type):
-	"""The shift this punch starts, given before the checkin is inserted.
-
-	**Never holds up the punch.** The punch is the pay; its shift can be put
-	right after. A failure is rolled back on its own and logged.
-	"""
-	frappe.db.savepoint("adms_rota")
-	try:
-		rota_site.before_deliver(employee, punched_at, log_type)
-	except Exception:
-		frappe.db.rollback(save_point="adms_rota")
-		frappe.log_error(title="ADMS: day or night not decided for {0} at {1}".format(employee, punched_at))
 
 
 def _wait(row, reason):

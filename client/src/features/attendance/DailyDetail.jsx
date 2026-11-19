@@ -6,12 +6,13 @@ import { save } from "@/lib/csv";
 import { sheetsPdf, sheetsXlsx } from "@/lib/export";
 import { esc, paper, printPaper } from "@/lib/doc";
 import { CTC_BY } from "@/data/masters";
-import { CAT_GROUP_BY, DDA_CAT_COLS, DDA_COLS, DDA_MONTH_COLS } from "@/data/attendance";
+import { CAT_GROUP_BY, DDA_CAT_COLS, DDA_COLS, DDA_MONTH_COLS, DDA_PERIODS, DDA_PUNCH_TYPES } from "@/data/attendance";
 import { Empty, Modal, Scroll } from "@/components/ui";
 import { loadDda, loadShiftWindows } from "@/api/attendance";
 import { dailyRows, daySummary, monthRollup } from "@/lib/dailydetail";
 import { useEffect, useState } from "react";
 import { decideOvertime } from "@/api/overtime";
+import { applyRebuild, previewRebuild, rebuildSummary } from "@/api/reprocess";
 import { hm } from "@/lib/dailydetail";
 import { parseOtInput } from "@/lib/overtime";
 import { workedIn } from "@/lib/deactivate";
@@ -451,6 +452,77 @@ function OtBulk({ rows, onDone }) {
 	);
 }
 
+/** Rebuild these days from the punches: factoHR's Manual Process Attendance,
+    done by running the shift job again rather than by writing a day by hand.
+    The site's answer is shown first and nothing changes until Rebuild. */
+function RebuildBar({ rows, from, to }) {
+	const [open, setOpen] = useState(false);
+	const [scope, setScope] = useState("unassigned");
+	const [plan, setPlan] = useState(null);
+	const [busy, setBusy] = useState("");
+	const [msg, setMsg] = useState("");
+	const people = [...new Set(rows.map((r) => r.emp?.name).filter(Boolean))];
+	const ask = async (sc) => {
+		setBusy("Asking the site…");
+		setMsg("");
+		try {
+			setPlan(await previewRebuild(people, from, to, sc));
+		} catch (e) {
+			setPlan(null);
+			setMsg(e.message || String(e));
+		}
+		setBusy("");
+	};
+	const go = async () => {
+		setBusy("Rebuilding…");
+		try {
+			const out = await applyRebuild(people, from, to, scope);
+			setMsg(rebuildSummary(out) + " The shift job builds the new days in the next minutes; read the report again then.");
+			setPlan(null);
+		} catch (e) {
+			setMsg(e.message || String(e));
+		}
+		setBusy("");
+	};
+	if (!people.length) return null;
+	return (
+		<>
+			<div className="otbar">
+				<span>
+					A day reads wrong after a shift was changed or a punch came late? <b>Rebuild</b> asks the site to
+					build these days again from their punches.
+				</span>
+				<button type="button" className="embtn" onClick={() => { setOpen(true); void ask(scope); }}>
+					Rebuild days
+				</button>
+			</div>
+			{open ? (
+				<Modal
+					title="Rebuild days from the punches"
+					onClose={busy ? () => {} : () => { setOpen(false); setPlan(null); setMsg(""); }}
+					why={`${fmt(people.length)} ${people.length === 1 ? "person" : "people"}, ${longDate(from)} – ${longDate(to)}. `
+						+ "Days made from leave and days in a submitted month are never touched."}
+					msg={busy || msg || (plan ? rebuildSummary(plan) : undefined)}
+					foot={
+						<>
+							<select value={scope} disabled={Boolean(busy)}
+								onChange={(e) => { setScope(e.target.value); void ask(e.target.value); }}
+								aria-label="Which punches">
+								<option value="unassigned">Only punches no day was built from</option>
+								<option value="all">Every punch in the range (a shift changed for these dates)</option>
+							</select>
+							<button type="button" className="btn tpl" disabled={Boolean(busy) || !plan || !(plan.cancelled || plan.refetched)}
+								onClick={go}>
+								Rebuild
+							</button>
+						</>
+					}
+				/>
+			) : null}
+		</>
+	);
+}
+
 const OT_HEADS = new Set(["Overtime", "OT Pending"]);
 
 const Table = ({ list, cols, ot }) => (
@@ -586,6 +658,8 @@ function DdaReport({ s }) {
 			</div>
 
 			<DdaSummary rows={rows} />
+
+			<RebuildBar rows={rows} from={from} to={to} />
 
 			{pending.length ? (
 				<div className="otbar">

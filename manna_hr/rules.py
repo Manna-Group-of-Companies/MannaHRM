@@ -1101,3 +1101,25 @@ def queued_punch_time(requested, now, max_hours=QUEUED_PUNCH_MAX_HOURS):
 		return None
 	# A few minutes ahead of the clock is clipped to it, never kept in the future.
 	return min(requested, now)
+
+
+# ------------------------------------------------------------ missed punch ---
+
+
+def shift_is_over(on_date, shift_end, now):
+	"""Has the day a punch belongs to finished, so a missing punch is missing?
+
+	The shift's own end when the punch had a shift; otherwise the end of the
+	calendar day. A night that started yesterday is still running at 06:00, and
+	its one punch is not missing yet."""
+	now = _as_datetime(now)
+	if shift_end:
+		return _as_datetime(shift_end) < now
+	day = _as_date(on_date)
+	return day is not None and day < now.date()
+
+
+def _as_datetime(value):
+	if isinstance(value, datetime):
+		return value
+	return datetime.fromisoformat(str(value)[:19])

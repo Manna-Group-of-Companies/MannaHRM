@@ -47,7 +47,21 @@ doc_events = {
 		"validate": "manna_hr.fieldaccess.validate_employee",
 		# Somebody new on a machine: their punches wait until HR makes them,
 		# and are theirs the moment the Employee is saved. See adms_site.py.
-		"on_update": "manna_hr.adms_site.on_employee_update",
+		"on_update": [
+			"manna_hr.adms_site.on_employee_update",
+			# A shift set or changed: the punches saved with no shift get one,
+			# and the Absents hrms marked under them are rebuilt (19 Nov 2026:
+			# ~650 of them, from one afternoon of default shifts). reprocess.py.
+			"manna_hr.reprocess_site.on_employee_update",
+		],
+	},
+	# A Shift Assignment names dates: the days in them are rebuilt on the shift
+	# it now says. hrms gives a punch its shift once, when it is saved, and
+	# never looks again.
+	"Shift Assignment": {
+		"on_submit": "manna_hr.reprocess_site.on_shift_assignment",
+		"on_update_after_submit": "manna_hr.reprocess_site.on_shift_assignment",
+		"on_cancel": "manna_hr.reprocess_site.on_shift_assignment",
 	},
 	"Employee Checkin": {
 		# `before_validate`, not `validate`: the server clock overwrites
@@ -230,6 +244,7 @@ fixtures = [
 					"Asset-custom_detail",
 					# Which company a shift is for — see CUSTOM_FIELDS in install.py.
 					"Shift Type-custom_company",
+					"Shift Type-custom_night_shift",
 					# Resume scoring — see CUSTOM_FIELDS in install.py.
 					"Job Opening-custom_scoring_section",
 					"Job Opening-custom_must_have",

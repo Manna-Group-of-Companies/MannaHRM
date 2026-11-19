@@ -23,40 +23,55 @@ DEVICE_LOOKBACK_DAYS = 30
 
 
 def flag_open_shifts():
-	"""Employees who punched IN on a past day and never punched OUT.
+	"""People whose finished shift has an odd number of punches: one is missing.
 
-	Today's open punches are deliberately excluded: somebody still on the floor
-	has not missed anything yet, and a system that nags them at 3pm is a system
-	people learn to dismiss.
+	**Once per person per day**, however often this runs. It runs every ten
+	minutes, and until 19 Nov 2026 it wrote a new notification on every run for
+	every open day of the last three weeks.
+
+	**By the shift's day, not the calendar's**, so a night that started
+	yesterday is one day and is not judged until its shift has ended. A day
+	with no shift is judged once the calendar day is over.
+
+	**By count, not by key.** Most machines here send no IN or OUT, so asking
+	for an IN with no OUT found the phone's days and none of the gate's. An
+	odd number of punches is a missing one whichever way round they are.
+	Set-aside punches (duplicates, a frozen month's) do not count.
 	"""
+	now = now_datetime()
 	rows = frappe.db.sql(
 		"""
 		SELECT
 			c.employee,
-			c.employee_name,
-			DATE(c.time) AS on_date,
-			MAX(c.time)  AS last_punch
+			COALESCE(DATE(c.shift_start), DATE(c.time)) AS on_date,
+			COUNT(DISTINCT c.time) AS punches,
+			MAX(c.shift_end) AS shift_end
 		FROM `tabEmployee Checkin` c
-		WHERE DATE(c.time) < %(today)s
-		  AND DATE(c.time) >= %(since)s
-		GROUP BY c.employee, c.employee_name, DATE(c.time)
-		HAVING SUM(CASE WHEN c.log_type = 'OUT' THEN 1 ELSE 0 END) = 0
-		   AND SUM(CASE WHEN c.log_type = 'IN'  THEN 1 ELSE 0 END) > 0
+		WHERE c.time >= %(since)s
+		  AND c.skip_auto_attendance = 0
+		GROUP BY c.employee, COALESCE(DATE(c.shift_start), DATE(c.time))
+		HAVING MOD(COUNT(DISTINCT c.time), 2) = 1
 		""",
-		{"today": today(), "since": add_to_date(today(), days=-21, as_string=True)},
+		{"since": add_to_date(today(), days=-21, as_string=True)},
 		as_dict=True,
 	)
 
 	for row in rows:
+		if not rules.shift_is_over(row.on_date, row.shift_end, now):
+			continue
 		if _already_regularized(row.employee, row.on_date):
 			continue
-		_notify_employee(
-			row.employee,
-			subject=_("Missed punch-out on {0}").format(row.on_date),
-			message=_(
-				"You punched in on {0} but never punched out, so that day has no "
+		subject = _("Missed punch on {0}").format(row.on_date)
+		user = frappe.db.get_value("Employee", row.employee, "user_id")
+		if not user or frappe.db.exists("Notification Log", {"for_user": user, "subject": subject}):
+			continue
+		_make_notification(
+			user,
+			subject,
+			_(
+				"Your shift on {0} has {1} punch(es), so one is missing and the day has no "
 				"hours against it. Request a correction and your manager can fix it."
-			).format(row.on_date),
+			).format(row.on_date, row.punches),
 		)
 
 
