@@ -89,11 +89,13 @@ describe("Daily Detail: Overtime is approved, OT Pending is waiting", () => {
 		expect(r).toMatchObject({ ot: "", otMin: 0, otPending: "", otState: "rejected" });
 	});
 
-	it("carries both figures into Month Wise, and has a column for each", () => {
+	it("shows approved overtime only: no OT Pending column, day or month (21 Nov 2026)", () => {
 		const [g] = monthRollup(dailyRows(base).rows);
-		expect(g).toMatchObject({ ot: "", otPending: "1:30" });
-		expect(DDA_COLS.map((c) => c[0])).toEqual(expect.arrayContaining(["Overtime", "OT Pending"]));
-		expect(DDA_MONTH_COLS.map((c) => c[0])).toEqual(expect.arrayContaining(["Overtime", "OT Pending"]));
+		expect(g).toMatchObject({ ot: "" });
+		for (const cols of [DDA_COLS, DDA_MONTH_COLS]) {
+			expect(cols.map((c) => c[0])).toContain("Overtime");
+			expect(cols.map((c) => c[0])).not.toContain("OT Pending");
+		}
 	});
 });
 
