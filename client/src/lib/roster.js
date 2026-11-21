@@ -41,7 +41,7 @@ import {
 	resolveDayStatus, UNDECIDED_LEAVE,
 	ABSENT, HOLIDAY, LEAVE_PENDING, ON_FLOOR, ON_LEAVE, PRESENT, UNMARKED,
 } from "./rules.js";
-import { otCounts } from "./overtime.js";
+import { autoOtMinutes, otCounts, otDay as otOf, shiftMinutes } from "./overtime.js";
 
 /** The seven Factor HR prints under this screen, plus the two states this side
     can be in that theirs cannot show. `key` is what the dot is classed with;
@@ -268,6 +268,9 @@ export function assignmentOn(iso, assignments) {
 
 export function monthRoster({ ym, punches, leave, holidays, corrections, shift, today, window, overtime, assignments, windows }) {
 	const otDay = overtimeByDay(overtime);
+	/* Every row, decided or not: a pending or rejected one is what stops the
+	   punches' own figure from showing as waiting again. */
+	const otAny = new Map((overtime || []).map((r) => [String(r.ot_date || "").slice(0, 10), r]));
 
 	/* A night shift ends the next morning, and the day it belongs to is the
 	   day it started (CLAUDE.md §5) — `workDateOf` moves that morning's
@@ -337,6 +340,16 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 			/* The same, to the second, for the OT clock — totals stay in minutes. */
 			otSec: otDay.has(iso) ? Math.round(Number(otDay.get(iso).hours || 0) * 3600) : 0,
 			otEntry: otDay.get(iso) || null,
+			/* Overtime the punches earned and nobody has decided yet (asked for
+			   21 Nov 2026: shown and approved here, not only on Daily Detail).
+			   Same rule as Daily Detail's (lib/overtime.js); never paid until
+			   approved. */
+			...(() => {
+				const mm = dayMinutes(inAt, outAt, dayWindow);
+				const auto = autoOtMinutes(mm.workMin || 0, shiftMinutes(dayWindow));
+				const od = otOf(otAny.get(iso) || null, auto);
+				return { otPendingMin: od.pendingMin, otAutoMin: auto, otState: od.state };
+			})(),
 			/* Every punch of the day, so a row that looks wrong can be opened
 			   rather than argued about. A double-read shows as four stamps. */
 			punches: mine.length,
