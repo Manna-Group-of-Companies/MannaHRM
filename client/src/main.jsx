@@ -21,6 +21,21 @@ import "@/styles/kit.css";
    here, reaching the opposite conclusion now that there is a choice to make. */
 applyMode(storedMode());
 
+/* A tab opened before a deploy asks for script files the deploy replaced (the
+   Excel writer, a lazily loaded page), and gets the page back instead: "Failed
+   to fetch dynamically imported module" on Download, 21 Nov 2026. Vite says so
+   with `vite:preloadError`; the answer is the new page. Once per tab per minute,
+   so a file that is genuinely missing shows its error rather than looping. */
+window.addEventListener("vite:preloadError", (event) => {
+	const key = "manna-reloaded-for-deploy";
+	let last = 0;
+	try { last = Number(sessionStorage.getItem(key)) || 0; } catch { /* storage off: still reload once */ }
+	if (Date.now() - last < 60000) return;
+	try { sessionStorage.setItem(key, String(Date.now())); } catch { /* ignore */ }
+	event.preventDefault();
+	window.location.reload();
+});
+
 /* The boundary is inside the Provider and outside App, which is the only place
    it can be useful: a throw while reading the store is the failure it exists to
    catch, so it has to be under the store, and it has to be over every screen

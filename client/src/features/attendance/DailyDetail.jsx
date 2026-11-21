@@ -80,6 +80,9 @@ function ddaRows(s) {
 		windows: s.shiftWindows,
 		today: todayIso(),
 		dow: f.dow, punch: f.punch,
+		/* Every day, not the first 1,500: the tiles and the download were the
+		   capped rows, so a whole company's month came out short (21 Nov 2026). */
+		limit: Infinity,
 	});
 	return { ...out, people: people.length, err: d.err };
 }
@@ -564,6 +567,8 @@ function DdaSummary({ rows }) {
 			["Half Day", n.half], ["On Leave", n.leave, "", "Approved leave, and leave applied for and not yet decided"], ["Late", n.late, n.late ? "warn" : ""],
 			["Missed punch", n.missed, n.missed ? "warn" : "good", "Days with only an in or only an out"],
 			["Off / Holiday", n.off],
+			...(n.punchedAbsent ? [["Absent with punches", n.punchedAbsent, "warn",
+				"The site marked these Absent, but punches exist: rebuild them with Rebuild days below"]] : []),
 		]} />
 	);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clockOf, dailyRows, minutesOf, monthRollup } from "@/lib/dailydetail";
+import { clockOf, dailyRows, daySummary, minutesOf, monthRollup } from "@/lib/dailydetail";
 import { hhmm, shiftLabel } from "@/api/attendance";
 import { periodOf } from "@/lib/format";
 import { shiftPeriod } from "@/lib/monthlysummary";
@@ -45,6 +45,27 @@ describe("Daily Detail Attendance Report reads the whole range, not today's punc
 			shift: "Office", custom_attendance_policy: "Factory", custom_punch_count: 2, custom_net_hours: 10.83,
 			custom_ot_minutes: 90 }] });
 		expect(rows[0].otPendingMin).toBe(90);
+	});
+
+	it("an Absent the site marked over real punches shows the punches and is counted apart", () => {
+		const { rows } = dailyRows({ ...base,
+			attendance: [{ employee: "E1", attendance_date: "2026-09-01", docstatus: 1, status: "Absent" }],
+			punches: [{ employee: "E1", time: "2026-09-01 08:27:00" }, { employee: "E1", time: "2026-09-01 17:40:00" }] });
+		expect(rows[0]).toMatchObject({ status: "Absent", in: "08:27", out: "17:40", punchedAbsent: true });
+		expect(daySummary(rows).punchedAbsent).toBe(1);
+	});
+
+	it("a Present with no times on it takes them from the punches", () => {
+		const { rows } = dailyRows({ ...base,
+			attendance: [{ employee: "E1", attendance_date: "2026-09-01", docstatus: 1, status: "Present", working_hours: 0 }],
+			punches: [{ employee: "E1", time: "2026-09-01 08:27:00" }, { employee: "E1", time: "2026-09-01 17:40:00" }] });
+		expect(rows[0]).toMatchObject({ status: "Present", in: "08:27", out: "17:40", punchedAbsent: false });
+	});
+
+	it("draws every day when asked to: nothing capped", () => {
+		const people = Array.from({ length: 80 }, (_, i) => ({ ...E, name: "E" + i }));
+		const out = dailyRows({ ...base, people, from: "2026-09-01", to: "2026-09-30", limit: Infinity });
+		expect([out.rows.length, out.capped]).toEqual([2400, 0]);
 	});
 
 	it("an unprocessed day falls back to its punches, and says so", () => {
