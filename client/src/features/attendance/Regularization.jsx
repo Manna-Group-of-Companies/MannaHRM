@@ -271,7 +271,11 @@ function RosterRow({ r, label, onOpen, emp, onOtDone }) {
 			<td className="mono">
 				{!r.otSec && r.otPendingMin > 0 && emp
 					? <OtPending emp={emp} r={r} onDone={onOtDone} />
-					: time("ot", otText(r.otSec), "OT hours")}
+					: !r.otSec && r.otExtraMin > 0
+						? <span className="muted" title="Worked past the shift, but under the 30 minutes that make overtime.">
+							{minutesText(r.otExtraMin)}
+						</span>
+						: time("ot", otText(r.otSec), "OT hours")}
 			</td>
 			{/* Coloured as the register's corners are — red for late coming, blue
 			    for early going — asked for on 29 September 2026, so the two
