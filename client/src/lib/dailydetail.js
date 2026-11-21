@@ -151,12 +151,25 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 			let status;
 			let source;
 			let lateFlag = false;
+			let punchedAbsent = false;
 			if (a) {
 				inAt = a.in_time || "";
 				outAt = a.out_time || "";
 				status = a.status || "—";
 				source = "attendance";
 				lateFlag = Boolean(Number(a.late_entry));
+				/* The site's row says nothing about a time it has not got — an
+				   Absent marked before the person's punches had a shift (17 Nov
+				   2026), or a 0-hour Present off a Strict shift — so the punches
+				   fill what it left blank (21 Nov 2026). The status stays the
+				   site's, which is what payroll reads; an Absent with punches
+				   under it is counted apart, as a day to rebuild. */
+				if (!inAt || !outAt) {
+					const p = workDayPunches(byDay.get(e.name + "|" + iso) || [], iso);
+					if (!inAt) inAt = p.inAt;
+					if (!outAt) outAt = p.outAt;
+					punchedAbsent = status === "Absent" && Boolean(p.inAt || p.outAt);
+				}
 			} else {
 				const p = workDayPunches(byDay.get(e.name + "|" + iso) || [], iso);
 				inAt = p.inAt;
@@ -234,6 +247,7 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 				status,
 				dayType: h ? (h.weekly_off ? "weekoff" : "holiday") : "",
 				source,
+				punchedAbsent,
 				/* The policy's own words for the day, when it read it. */
 				exceptions: judged ? a.custom_exceptions || "" : "",
 				policyNote: judged ? a.custom_policy_note || "" : "",
@@ -282,7 +296,7 @@ export function monthRollup(rows) {
     is counted as a missed punch — In Only or Out Only — not as an absence; leave
     applied for counts as leave, as Monthly Basic's tile counts it. */
 export function daySummary(rows) {
-	const n = { people: new Set(), days: rows.length, present: 0, absent: 0, half: 0, leave: 0, late: 0, missed: 0, off: 0 };
+	const n = { people: new Set(), days: rows.length, present: 0, absent: 0, half: 0, leave: 0, late: 0, missed: 0, off: 0, punchedAbsent: 0 };
 	for (const r of rows) {
 		n.people.add(r.emp.name);
 		if (r.status === "Present" || r.status === "Work From Home") n.present++;
@@ -290,6 +304,7 @@ export function daySummary(rows) {
 		else if (r.status === "Half Day") n.half++;
 		else if (r.status === "On Leave" || r.status === "Leave Applied") n.leave++;
 		else if (r.status === "In Only" || r.status === "Out Only") n.missed++;
+		if (r.punchedAbsent) n.punchedAbsent++;
 		if (r.dayType) n.off++;
 		if (r.lateMin || r.late === "late") n.late++;
 	}
