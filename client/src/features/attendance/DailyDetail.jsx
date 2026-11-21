@@ -524,7 +524,10 @@ function RebuildBar({ rows, from, to }) {
 	);
 }
 
-const OT_HEADS = new Set(["Overtime", "OT Pending"]);
+/* No OT buttons on the report since 21 Nov 2026 (asked for by HR): it shows
+   approved overtime only, as every report does, and the deciding is on
+   Employee Attendance Regularization. OtCell and the dialogs stay unused. */
+const OT_HEADS = new Set();
 
 const Table = ({ list, cols, ot }) => (
 	<Scroll>
@@ -662,17 +665,6 @@ function DdaReport({ s }) {
 
 			<RebuildBar rows={rows} from={from} to={to} />
 
-			{pending.length ? (
-				<div className="otbar">
-					<span>
-						<b>{fmt(pending.length)}</b> {pending.length === 1 ? "day has" : "days have"} OT from the punches waiting
-						for approval ({hm(pending.reduce((n, r) => n + r.otPendingMin, 0))}). It is not paid until approved.
-					</span>
-					<button type="button" className="embtn" disabled={Boolean(otBusy)} onClick={() => setOtAll(true)}>
-						Approve all pending OT
-					</button>
-				</div>
-			) : null}
 
 			{sections(ddaSplit(list, ddaSections(f)))}
 

@@ -132,7 +132,6 @@ export const DDA_MONTH_COLS = [
 	["Late Coming By",r => r.late||"—",                "mono"],
 	["Early Going By",r => r.early||"—",               "mono"],
 	["Overtime",      r => r.ot||"—",                  "mono"],
-	["OT Pending",    r => r.otPending||"—",           "mono"],
 ];
 
 export const DDA_LAYOUT = [["logo","With Logo"]];
@@ -177,8 +176,8 @@ export const DDA_COLS = [
   ["Early Going By", r => r.early||"—",                "mono"],
   /* Approved OT only — the figure payroll reads (18 Nov 2026). */
   ["Overtime",       r => r.ot||"—",                   "mono"],
-  /* OT the punches earned that nobody has approved yet: shown, not paid. */
-  ["OT Pending",     r => r.otPending||"—",            "mono"],
+  /* Pending OT is not shown here (21 Nov 2026): reports show approved OT only,
+     and approving is on Employee Attendance Regularization. */
   ["Day Status",     r => r.status + (r.source === "punches" ? " *" : ""), ""],
 ];
 
