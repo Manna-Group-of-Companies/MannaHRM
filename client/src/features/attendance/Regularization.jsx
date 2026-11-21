@@ -9,6 +9,7 @@ import { spliceShift, spliceText } from "@/lib/shiftsplice";
 import { MON, clock, dayOf, dmy, fmt, thisMonth, tidyDept, todayIso } from "@/lib/format";
 import { REGISTER_CODE, ROSTER_STATES, daysOf, minutesText, monthRegister, monthRoster, spanHours } from "@/lib/roster";
 import { loadRegGrid, loadRegMonth, loadShiftWindows, shiftLabel } from "@/api/attendance";
+import { decideOvertime } from "@/api/overtime";
 import { editPlan, nextDay } from "@/lib/punchedit";
 import { Desk, Modal, Note, Scroll } from "@/components/ui";
 import { deskUrl } from "@/lib/desk";
@@ -214,7 +215,31 @@ function RosterCounts({ counts }) {
     the reason and Save together, rather than boxes and a button spread across
     a table wider than the screen. Save changes the time at once — see
     api/punchedit.js, and lib/punchedit.js for why it has to be that shape. A day that has not happened yet is not offered. */
-function RosterRow({ r, label, onOpen }) {
+/** Pending overtime on one day: its figure, Approve at it, Reject. The site
+    decides who may (a company login only writes its own people's rows). */
+function OtPending({ emp, r, onDone }) {
+	const [busy, setBusy] = useState(false);
+	const decide = async (minutes) => {
+		setBusy(true);
+		const res = await decideOvertime(emp, r.iso, { minutes, autoMin: r.otAutoMin });
+		setBusy(false);
+		if (!res.ok) { window.alert(res.msg); return; }
+		onDone();
+	};
+	return (
+		<span className="otpend">
+			<span className="rtflag" title="Overtime from the punches, waiting for approval. Not paid until approved.">
+				{minutesText(r.otPendingMin)} pending
+			</span>{" "}
+			<button type="button" className="embtn" disabled={busy} aria-label={`Approve OT on ${dmy(r.iso)}`}
+				onClick={() => void decide(r.otPendingMin)}>Approve</button>{" "}
+			<button type="button" className="embtn" disabled={busy} aria-label={`Reject OT on ${dmy(r.iso)}`}
+				onClick={() => void decide(0)}>Reject</button>
+		</span>
+	);
+}
+
+function RosterRow({ r, label, onOpen, emp, onOtDone }) {
 	const st = ROSTER_STATES.find((x) => x.key === r.display) || ROSTER_STATES[7];
 	const time = (field, text, name) => (onOpen ? (
 		<button type="button" className="rtbtn" aria-label={`${name}, ${dmy(r.iso)}`}
@@ -243,6 +268,11 @@ function RosterRow({ r, label, onOpen }) {
 			<td className="mono">{time("in", clock(r.inAt).replace("—", ""), "Time In")}</td>
 			<td className="mono">{time("out", clock(r.outAt).replace("—", ""), "Time Out")}</td>
 			<td className="mono">{r.hours}</td>
+			<td className="mono">
+				{!r.otSec && r.otPendingMin > 0 && emp
+					? <OtPending emp={emp} r={r} onDone={onOtDone} />
+					: time("ot", otText(r.otSec), "OT hours")}
+			</td>
 			{/* Coloured as the register's corners are — red for late coming, blue
 			    for early going — asked for on 29 September 2026, so the two
 			    columns are found down thirty rows without reading every one. */}
@@ -252,7 +282,6 @@ function RosterRow({ r, label, onOpen }) {
 			<td className="mono">
 				{r.earlyMin ? <span className="rtflag early" title={`Left ${minutesText(r.earlyMin)} early`}>{minutesText(r.earlyMin)}</span> : null}
 			</td>
-			<td className="mono">{time("ot", otText(r.otSec), "OT hours")}</td>
 			{/* Their four AR columns. Empty on a day nobody asked about, which is
 			    most of them — a dash on thirty rows reads as data. */}
 			<td className="mono">{r.ar ? clock(r.ar.requested_in).replace("—", "") : ""}</td>
@@ -770,14 +799,15 @@ function RegMonth({ s, emp, cyc, onPick }) {
 					<thead>
 						<tr>
 							<th>Date</th><th>Status</th><th>Shift</th>
-							<th>Time In</th><th>Time Out</th><th>Total Hrs</th>
-							<th>Late By</th><th>Early Out</th><th>OT</th>
+							<th>Time In</th><th>Time Out</th><th>Total Hrs</th><th>OT</th>
+							<th>Late By</th><th>Early Out</th>
 							<th>AR In</th><th>AR Date</th><th>AR Out</th><th>AR Hrs</th><th>AR Status</th>
 						</tr>
 					</thead>
 					<tbody>
 						{rows.map((r) => (
 							<RosterRow key={r.iso} r={r} label={r.assigned ? shiftLabel(r.shift, s.shiftWindows) : label}
+								emp={emp} onOtDone={() => void loadRegMonth(emp.name, cyc, "quiet")}
 								onOpen={r.iso <= todayIso() ? (focus) => onPick({
 									emp, iso: r.iso, focus, ar: r.ar,
 									in: clock(r.inAt).replace("—", ""),
