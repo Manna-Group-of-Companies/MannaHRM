@@ -217,7 +217,7 @@ function RosterCounts({ counts }) {
     api/punchedit.js, and lib/punchedit.js for why it has to be that shape. A day that has not happened yet is not offered. */
 /** Pending overtime on one day: its figure, Approve at it, Reject. The site
     decides who may (a company login only writes its own people's rows). */
-function OtPending({ emp, r, onDone }) {
+function OtPending({ emp, r, onDone, onEdit }) {
 	const [busy, setBusy] = useState(false);
 	const decide = async (minutes) => {
 		setBusy(true);
@@ -234,7 +234,11 @@ function OtPending({ emp, r, onDone }) {
 			<button type="button" className="embtn" disabled={busy} aria-label={`Approve OT on ${dmy(r.iso)}`}
 				onClick={() => void decide(r.otPendingMin)}>Approve</button>{" "}
 			<button type="button" className="embtn" disabled={busy} aria-label={`Reject OT on ${dmy(r.iso)}`}
-				onClick={() => void decide(0)}>Reject</button>
+				onClick={() => void decide(0)}>Reject</button>{" "}
+			{onEdit ? (
+				<button type="button" className="embtn" disabled={busy} aria-label={`Edit OT on ${dmy(r.iso)}`}
+					title="Change the hours, then save: saved hours are approved" onClick={onEdit}>Edit</button>
+			) : null}
 		</span>
 	);
 }
@@ -270,11 +274,13 @@ function RosterRow({ r, label, onOpen, emp, onOtDone }) {
 			<td className="mono">{r.hours}</td>
 			<td className="mono">
 				{!r.otSec && r.otPendingMin > 0 && emp
-					? <OtPending emp={emp} r={r} onDone={onOtDone} />
+					? <OtPending emp={emp} r={r} onDone={onOtDone} onEdit={onOpen ? () => onOpen("ot") : null} />
 					: !r.otSec && r.otExtraMin > 0
-						? <span className="muted" title="Worked past the shift, but under the 30 minutes that make overtime.">
-							{minutesText(r.otExtraMin)}
-						</span>
+						? (onOpen ? (
+							<button type="button" className="rtbtn muted" aria-label={`OT hours, ${dmy(r.iso)}`}
+								title="Worked past the shift, under the 30 minutes that make overtime. Click to give it as OT."
+								onClick={() => onOpen("ot")}>{minutesText(r.otExtraMin)}</button>
+						) : <span className="muted">{minutesText(r.otExtraMin)}</span>)
 						: time("ot", otText(r.otSec), "OT hours")}
 			</td>
 			{/* Coloured as the register's corners are — red for late coming, blue
@@ -816,7 +822,9 @@ function RegMonth({ s, emp, cyc, onPick }) {
 									emp, iso: r.iso, focus, ar: r.ar,
 									in: clock(r.inAt).replace("—", ""),
 									out: clock(r.outAt).replace("—", ""),
-									ot: otText(r.otSec),
+									/* The figure the cell shows: approved, else pending, else
+									   the minutes past the shift — edited from there. */
+									ot: otText(r.otSec || (r.otPendingMin || r.otExtraMin || 0) * 60),
 								}) : null} />
 						))}
 					</tbody>
