@@ -348,7 +348,12 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 				const mm = dayMinutes(inAt, outAt, dayWindow);
 				const auto = autoOtMinutes(mm.workMin || 0, shiftMinutes(dayWindow));
 				const od = otOf(otAny.get(iso) || null, auto);
-				return { otPendingMin: od.pendingMin, otAutoMin: auto, otState: od.state };
+				/* Every minute past the shift's own length, shown on every day by
+				   itself (asked for 21 Nov 2026) — before the 30-minute minimum
+				   and the half-hour rounding that decide what may be paid. */
+				const len = shiftMinutes(dayWindow);
+				const extra = len && mm.workMin > len ? mm.workMin - len : 0;
+				return { otPendingMin: od.pendingMin, otAutoMin: auto, otState: od.state, otExtraMin: extra };
 			})(),
 			/* Every punch of the day, so a row that looks wrong can be opened
 			   rather than argued about. A double-read shows as four stamps. */

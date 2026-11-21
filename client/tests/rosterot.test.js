@@ -28,4 +28,10 @@ describe("overtime on the register", () => {
 		expect([a.otMin, a.otPendingMin]).toEqual([120, 0]);
 		expect([b.otMin, b.otPendingMin]).toEqual([0, 0]);
 	});
+
+	it("shows every minute past the shift by itself, even under the overtime minimum", () => {
+		const { rows } = monthRoster({ ...base, punches: day("03", "08:27", "20:34"), overtime: [] });
+		const r = rows.find((x) => x.iso === "2026-11-03");
+		expect([r.otExtraMin, r.otPendingMin]).toEqual([7, 0]);
+	});
 });
