@@ -75,6 +75,10 @@ export const leaveAdmin = (user) => LEAVE_ADMINS.includes(String(user || "").tri
 /* Pages only the logins named are shown, whatever their menu says. */
 export const PAGES_ONLY_FOR = {
 	settings: { security: PAGE_ADMINS },
+	/* The attendance policy decides pay, and only the admin turns its rules on
+	   and off (24 Nov 2026): every other login is not shown the page at all.
+	   The site refuses their writes too (MannaAttendancePolicy._only_the_admin). */
+	attendance: { policy: PAGE_ADMINS },
 };
 
 /* What a login that is not an admin is shown, asked for on 17 September 2026:
