@@ -236,10 +236,19 @@ export default function AttendancePolicy() {
 	const admin = isAdmin(s.user);
 	const [rows, setRows] = useState(null);
 	const [err, setErr] = useState("");
+	const [missing, setMissing] = useState(false);
 	const [open, setOpen] = useState(null);
 	const reload = () => {
 		setErr("");
-		loadPolicies().then((r) => setRows(r || [])).catch((e) => { setRows([]); setErr(e.message || String(e)); });
+		loadPolicies().then((r) => { setMissing(false); setRows(r || []); }).catch((e) => {
+			setRows([]);
+			/* A doctype the site has not got is answered as a refusal to read
+			   "DocType" — which reads like a permission problem and is not one.
+			   It means the app on the site is older than this page (24 Nov 2026). */
+			const msg = e.message || String(e);
+			if (/document\W*(<strong>)?\s*DocType|not found/i.test(msg) || Number(e.status) === 404) setMissing(true);
+			else setErr(msg);
+		});
 	};
 	useEffect(reload, []);
 	const edit = async (name) => {
@@ -252,7 +261,7 @@ export default function AttendancePolicy() {
 		<div className="kit k-enter">
 			<PageHead title="Attendance Policy"
 				sub="What a day's punches mean for that day's pay: hours, late and early, missed punches, penalties and overtime">
-				{admin ? (
+				{admin && !missing ? (
 					<button type="button" className="k-btn k-btn-ink k-btn-sm" onClick={() => setOpen(blank())}>
 						<KitIcon name="plus" size={16} stroke={2} />New policy
 					</button>
@@ -264,8 +273,12 @@ export default function AttendancePolicy() {
 					Only {PAGE_ADMINS.join(", ")} can turn these rules on or off. You can read them here.
 				</p>
 			) : null}
-						{err ? <p className="k-err" role="alert">{err}</p> : null}
-			{rows === null ? <div className="k-sk" style={{ height: 120 }} /> : rows.length ? (
+						{missing ? (
+				<EmptyState icon="clock" title="Not on the site yet"
+					sub="The site has not got the attendance policy yet: its copy of manna_hr is older than this page. Deploy the latest main on Frappe Cloud and run Migrate, then reload." />
+			) : null}
+			{err ? <p className="k-err" role="alert">{err}</p> : null}
+			{missing ? null : rows === null ? <div className="k-sk" style={{ height: 120 }} /> : rows.length ? (
 				<div className="k-grid2" style={{ marginTop: 16 }}>
 					{rows.map((r) => (
 						<div className="k-sec" style={{ margin: 0 }} key={r.name}>

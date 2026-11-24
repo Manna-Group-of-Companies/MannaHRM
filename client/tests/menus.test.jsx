@@ -36,7 +36,9 @@ describe("the Manna Rubber Products login's Attendance menu", () => {
 	});
 
 	it("leaves everybody else's menu and the modules it does not name whole", () => {
-		expect(tabsFor("attendance", MODULES.attendance.tabs, "it@mannarubber.com")).toBe(MODULES.attendance.tabs);
+		// Whole but for Attendance Policy, the admin's page alone (24 Nov 2026).
+		expect(tabsFor("attendance", MODULES.attendance.tabs, "it@mannarubber.com"))
+			.toEqual(MODULES.attendance.tabs.filter((t) => t[0] !== "policy"));
 		expect(allowedFor("leave", MRP)).toBeNull();
 	});
 
