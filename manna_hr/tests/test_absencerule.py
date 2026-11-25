@@ -57,13 +57,11 @@ def test_days_given_as_text_are_read_the_same_as_dates():
 	assert ar.plan(["2026-10-05"], [], regularized=["2026-10-05 09:00:00"]) == ([], None)
 
 
-def test_everybody_who_earns_casual_leave_is_covered_and_the_factory_floor_is_not():
-	assert ar.applies_to("ACCOUNTANT")
-	assert ar.applies_to("  purchase   manager ")
-	assert ar.applies_to("SHIFT SUPERVISOR")
-	assert ar.applies_to("Quality/production Supervisor")
-	assert ar.applies_to("DRIVER")
-	assert not ar.applies_to("WELDER")
+def test_everybody_ticked_for_casual_leave_is_covered_whatever_their_job_and_nobody_else():
+	assert ar.applies_to(1)
+	assert ar.applies_to("1")
+	assert not ar.applies_to(0)
+	assert not ar.applies_to(None)
 	assert not ar.applies_to("")
 
 

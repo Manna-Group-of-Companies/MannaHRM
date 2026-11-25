@@ -35,10 +35,28 @@ export const LEAVE_POLICY = {
 	leave_policy_details: [{ leave_type: LEAVE_TYPE_NAME, annual_allocation: ANNUAL_ALLOCATION }],
 };
 
-/** Who gets Casual Leave (HR, 2 October 2026): office staff, supervisors and
-    drivers, by designation. leavepolicy.casual_leave_group, and the list is
-    pinned to the Python one by tests/leave.test.js. A designation not here
-    gets none — see the Python for why that is the cheaper way to be wrong. */
+/** Who gets Casual Leave: whoever is ticked for it on their Employee record
+    (25 November 2026, the move off Factor HR — its 77, office and floor).
+    leavepolicy.CASUAL_LEAVE_FIELD / gets_casual_leave; the site refuses anybody
+    not ticked (manna_hr/casualleave.py). */
+export const CASUAL_LEAVE_FIELD = "custom_casual_leave";
+
+/** Whether an Employee whose tick reads `ticked` gets Casual Leave. A field
+    not on the site yet reads undefined, and that is a no. */
+export const getsCasualLeave = (ticked) => Number(String(ticked ?? 0).trim() || 0) === 1;
+
+/** Why `who` gets no Casual Leave, or null when they do. The site refuses
+    with the same sentence — leavepolicy.casual_leave_refusal. */
+export function casualLeaveRefusal(ticked, who = "This employee") {
+	if (getsCasualLeave(ticked)) return null;
+	return `${who} is not ticked for ${LEAVE_TYPE_NAME}. Tick ${LEAVE_TYPE_NAME} on their employee record first `
+		+ "(Attendance Rules).";
+}
+
+/** The office, supervisors and drivers by designation (HR, 2 October 2026).
+    No longer who gets Casual Leave — kept for "is this an office job": Sunday
+    leave and the company chart. leavepolicy.casual_leave_group, pinned by
+    tests/leave.test.js. */
 export const DESIGNATION_WORDS = [["SUPERVISOR", "Supervisor"], ["DRIVER", "Driver"]];
 
 export const OFFICE_DESIGNATIONS = new Set([
@@ -66,8 +84,8 @@ export const OFFICE_DESIGNATIONS = new Set([
 
 const designationKey = (d) => String(d ?? "").replace(/\s+/g, " ").trim().toUpperCase();
 
-/** "Office", "Supervisor", "Driver", or null for a job that gets no Casual
-    Leave. leavepolicy.casual_leave_group. */
+/** "Office", "Supervisor", "Driver", or null for a floor job.
+    leavepolicy.casual_leave_group. */
 export function casualLeaveGroup(designation) {
 	const key = designationKey(designation);
 	if (!key) return null;
@@ -75,18 +93,6 @@ export function casualLeaveGroup(designation) {
 		if (new RegExp(`\\b${word}\\b`).test(key)) return group;
 	}
 	return OFFICE_DESIGNATIONS.has(key) ? "Office" : null;
-}
-
-/** Why `who` gets no Casual Leave, or null when they do. The site refuses
-    with the same sentence — leavepolicy.casual_leave_refusal. */
-export function casualLeaveRefusal(designation, who = "This employee") {
-	if (casualLeaveGroup(designation)) return null;
-	if (!designationKey(designation)) {
-		return `${who} has no designation, so gets no ${LEAVE_TYPE_NAME} — it is only for office staff, `
-			+ "supervisors and drivers. Set the designation first.";
-	}
-	return `${who} (${String(designation).trim()}) gets no ${LEAVE_TYPE_NAME} — it is only for office staff, `
-		+ "supervisors and drivers.";
 }
 
 /** The most a month the Create Employee wizard takes — a ceiling on a typo,

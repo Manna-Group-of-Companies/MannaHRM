@@ -191,7 +191,7 @@ class TestPhase1(IntegrationTestCase):
 		_policy(penalty_deduct_from="Casual Leave, then Leave Without Pay", casual_leave_type=CL)
 		try:
 			emp = _employee("_T-P1-CL", shift=SHIFT)
-			frappe.db.set_value("Employee", emp.name, "leave_approver", "Administrator")
+			frappe.db.set_value("Employee", emp.name, {"leave_approver": "Administrator", "custom_casual_leave": 1})
 			frappe.get_doc({"doctype": "Leave Allocation", "employee": emp.name, "leave_type": CL,
 			                "from_date": "2026-01-01", "to_date": "2026-12-31", "new_leaves_allocated": 2}).submit()
 			for on in ("2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05"):
@@ -226,7 +226,7 @@ class TestFactohrPolicy(IntegrationTestCase):
 		cls.people = {}
 		for code in ("_T-FH-SHORT", "_T-FH-EARLY", "_T-FH-OT"):
 			emp = _employee(code, shift=SHIFT)
-			frappe.db.set_value("Employee", emp.name, "leave_approver", "Administrator")
+			frappe.db.set_value("Employee", emp.name, {"leave_approver": "Administrator", "custom_casual_leave": 1})
 			frappe.get_doc({"doctype": "Leave Allocation", "employee": emp.name, "leave_type": CL,
 			                "from_date": "2026-01-01", "to_date": "2026-12-31", "new_leaves_allocated": 3}).submit()
 			cls.people[code] = emp.name

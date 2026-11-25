@@ -2,6 +2,7 @@ import { apiCreateSubmitted, getDoc, listAll } from "@/api/client";
 import { cancel } from "@/api/crud";
 import { getState } from "@/store";
 import { todayIso } from "@/lib/format";
+import { getsCasualLeave } from "@/lib/monthlyleave";
 import {
 	LEAVE_TYPE, adjustment, appliesTo, counts, credit, earned, isAuto, isOff, listOn, plan, reason, stillOpenSince, sundays,
 	window,
@@ -23,12 +24,13 @@ import {
    carrying `AUTO_MARK` are ever cancelled.
    --------------------------------------------------------------------------- */
 
-/** Office employees from the loaded list, as {name: employee}. */
+/** Office employees ticked for Casual Leave, as {name: employee} — the site's
+    Sunday leave is the absence rule's people narrowed to the office. */
 function office() {
 	const out = {};
 	for (const e of getState().employees || []) {
 		if (e.status && e.status !== "Active") continue;
-		if (appliesTo(e.designation)) out[e.name] = e;
+		if (appliesTo(e.designation) && getsCasualLeave(e.custom_casual_leave)) out[e.name] = e;
 	}
 	return out;
 }

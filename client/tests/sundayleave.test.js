@@ -178,7 +178,7 @@ vi.mock("@/api/crud", async (importOriginal) => ({
 const { set } = await import("@/store");
 const { runSundayLeave } = await import("@/api/sundayleave");
 
-const SAJI = { name: "E-OFFICE", employee_name: "SAJI KUMAR K M", designation: "Production Manager", status: "Active", company: "Manna Rubber" };
+const SAJI = { name: "E-OFFICE", employee_name: "SAJI KUMAR K M", designation: "Production Manager", custom_casual_leave: 1, status: "Active", company: "Manna Rubber" };
 const ALLOC = { name: "HR-LAL-1", employee: "E-OFFICE", from_date: "2026-10-01", to_date: "2026-12-31", leave_policy_assignment: "LPA-1" };
 
 describe("Sunday leave runs by itself against the site", () => {

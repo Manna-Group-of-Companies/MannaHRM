@@ -574,26 +574,25 @@ describe("giving the monthly leave", () => {
 		set({ applyBal: { rows: [] } });
 		const c = page();
 		expect(c.getByRole("button", { name: `Give ${emp().employee_name} monthly leave` })).toBeTruthy();
-		expect(c.getByRole("button", { name: /Give office staff, supervisors and drivers \(\d+\) monthly leave/ })).toBeTruthy();
+		expect(c.getByRole("button", { name: /Give everybody ticked for it \(\d+\) monthly leave/ })).toBeTruthy();
 	});
 
-	/* HR, 2 October 2026: office staff, supervisors and drivers only. The
-	   fixture's Operator is none of them; its Accountant and Supervisor are. */
+	/* Whoever is ticked for Casual Leave (25 November 2026). The fixture's
+	   Operator is not; its Accountant and Supervisor are. */
 	it("an_operator_is_told_casual_leave_is_not_theirs_and_offered_no_button_of_their_own", () => {
 		patch("apply", { emp: "HR-EMP-00001" });
 		set({ applyBal: { rows: [] } });
 		const c = page();
 		expect(c.queryByRole("button", { name: `Give ${emp("HR-EMP-00001").employee_name} monthly leave` })).toBeNull();
 		expect(c.container.querySelector(".lvbal").textContent)
-			.toContain("(Operator) gets no Casual Leave — it is only for office staff, supervisors and drivers");
+			.toContain("is not ticked for Casual Leave");
 	});
 
 	it("the_everyone_button_counts_only_the_people_it_will_give_leave_to", () => {
 		patch("apply", { emp: PRIYA });
 		set({ applyBal: { rows: [] } });
-		const n = getState().employees.filter((e) => e.status === "Active"
-			&& ["Accountant", "Supervisor"].includes(e.designation)).length;
-		expect(page().getByRole("button", { name: `Give office staff, supervisors and drivers (${n}) monthly leave` }))
+		const n = getState().employees.filter((e) => e.status === "Active" && Number(e.custom_casual_leave) === 1).length;
+		expect(page().getByRole("button", { name: `Give everybody ticked for it (${n}) monthly leave` }))
 			.toBeTruthy();
 	});
 
@@ -602,7 +601,7 @@ describe("giving the monthly leave", () => {
 		set({ applyBal: { rows: [] } });
 		const view = page();
 		await act(async () => { fireEvent.click(view.getByRole("button", { name: "Save" })); });
-		expect(view.container.textContent).toMatch(/only for office staff, supervisors and drivers/);
+		expect(view.container.textContent).toMatch(/is not ticked for Casual Leave/);
 		expect(calls.made).toEqual([]);
 	});
 

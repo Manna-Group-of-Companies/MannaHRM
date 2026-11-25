@@ -20,6 +20,7 @@ import frappe
 from frappe.utils import getdate, nowdate
 
 from manna_hr import absencerule as ar
+from manna_hr import leavepolicy as lp
 
 
 def run(today=None):
@@ -63,8 +64,8 @@ def next_absence(employee, day):
 	day = getdate(day)
 	if day < ar.EFFECTIVE_FROM:
 		return
-	emp = frappe.db.get_value("Employee", employee, ["name", "designation", "company"], as_dict=True)
-	if not emp or not ar.applies_to(emp.designation):
+	emp = frappe.db.get_value("Employee", employee, ["name", "designation", "company", lp.CASUAL_LEAVE_FIELD], as_dict=True)
+	if not emp or not ar.applies_to(emp.get(lp.CASUAL_LEAVE_FIELD)):
 		return
 	start = day.replace(day=1)
 	end = min((start.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1), getdate(nowdate()))
@@ -84,8 +85,9 @@ def next_absence(employee, day):
 def _covered():
 	"""Active employees the absence rule covers — everybody who earns Casual
 	Leave, office or not. Sunday leave narrows this to the office itself."""
-	rows = frappe.get_all("Employee", filters={"status": "Active"}, fields=["name", "designation", "company"])
-	return {r.name: r for r in rows if ar.applies_to(r.designation)}
+	rows = frappe.get_all("Employee", filters={"status": "Active"},
+		fields=["name", "designation", "company", lp.CASUAL_LEAVE_FIELD])
+	return {r.name: r for r in rows if ar.applies_to(r.get(lp.CASUAL_LEAVE_FIELD))}
 
 
 def _month(staff, start, end, today):

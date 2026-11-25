@@ -160,20 +160,39 @@ def test_a_word_inside_another_word_is_not_that_job():
 	assert lp.casual_leave_group("SCREWDRIVER STORES") is None
 
 
-def test_nobody_without_a_designation_gets_casual_leave():
+def test_nobody_without_a_designation_is_an_office_job():
 	assert lp.casual_leave_group("") is None
 	assert lp.casual_leave_group(None) is None
-	assert "Set the designation" in lp.casual_leave_refusal(None, "A")
 
 
-def test_the_refusal_names_the_person_and_their_job():
-	why = lp.casual_leave_refusal("PLANT HELPER", "RAJU")
-	assert why.startswith("RAJU (PLANT HELPER) gets no Casual Leave")
-	assert "office staff, supervisors and drivers" in why
+def test_casual_leave_is_whoever_is_ticked_not_their_designation():
+	# 25 Nov 2026: Factor HR's 77, plant helpers and machine operators among them.
+	assert lp.gets_casual_leave(1) and lp.gets_casual_leave("1") and lp.gets_casual_leave(" 1 ")
+	assert not lp.gets_casual_leave(0) and not lp.gets_casual_leave("0")
 
 
-def test_somebody_entitled_is_not_refused():
-	assert lp.casual_leave_refusal("DRIVER", "A") is None
+def test_a_field_not_on_the_site_yet_gives_nobody_casual_leave():
+	assert not lp.gets_casual_leave(None)
+	assert not lp.gets_casual_leave("")
+	assert not lp.gets_casual_leave("yes")
+
+
+def test_the_refusal_names_the_person_and_says_where_to_tick():
+	why = lp.casual_leave_refusal(0, "RAJU")
+	assert why.startswith("RAJU is not ticked for Casual Leave")
+	assert "employee record" in why
+
+
+def test_somebody_ticked_is_not_refused_whatever_their_job():
+	assert lp.casual_leave_refusal(1, "A") is None
+
+
+def test_the_tick_is_a_field_install_makes_on_employee():
+	here = os.path.dirname(__file__)
+	install = open(os.path.join(here, "..", "install.py"), encoding="utf-8").read()
+	assert '"fieldname": "{0}"'.format(lp.CASUAL_LEAVE_FIELD) in install
+	guard = open(os.path.join(here, "..", "casualleave.py"), encoding="utf-8").read()
+	assert "lp.CASUAL_LEAVE_FIELD" in guard
 
 
 def test_every_office_designation_is_already_in_the_form_it_is_compared_in():

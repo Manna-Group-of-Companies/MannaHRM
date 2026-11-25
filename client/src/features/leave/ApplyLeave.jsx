@@ -10,7 +10,7 @@ import { Empty, Html, Note, Panel, Scroll } from "@/components/ui";
 import { scoped } from "@/lib/scope";
 import { DOCTYPE, approverFor, raiseLeave, sandwichPreview } from "./raise";
 import { giveMonthlyLeave } from "@/api/monthlyleave";
-import { casualLeaveGroup, casualLeaveRefusal, monthCarry } from "@/lib/monthlyleave";
+import { CASUAL_LEAVE_FIELD, casualLeaveRefusal, getsCasualLeave, monthCarry } from "@/lib/monthlyleave";
 import { loadLeaveBalance, loadLeaveMonth } from "@/api/load";
 import { leaveCards } from "@/lib/leavecards";
 import { leaveRulesFor, settleFirstAbsence } from "@/api/leaverules";
@@ -105,7 +105,7 @@ function dayState(s, iso, hol) {
     can still be refused it for want of a balance — the note under the calendar
     then says so. */
 export function firstAbsence(s, emp, ym) {
-	if (!emp || !appliesTo(emp.designation)) return "";
+	if (!emp || !appliesTo(emp[CASUAL_LEAVE_FIELD])) return "";
 	const live = (s.applyHist || []).filter((r) => r.status === "Open" || r.status === "Approved");
 	const auto = live
 		.filter((r) => r.status === "Approved" && isAuto(r.description) && String(r.from_date).slice(0, 7) === ym)
@@ -250,10 +250,10 @@ function EmpFind({ s, q, status, chosen, onQ, onPick, id }) {
 
 /** Whether this person earns the month's leave on `iso`: the 1st of a month
     they were employed in. The month they joined counts — hrms credits it too,
-    from the assignment's first day. Never for a designation that gets no
-    Casual Leave — office staff, supervisors and drivers only. */
+    from the assignment's first day. Never for somebody not ticked for
+    Casual Leave. */
 function earnsOn(emp, iso) {
-	if (!emp || iso.slice(8) !== "01" || !casualLeaveGroup(emp.designation)) return false;
+	if (!emp || iso.slice(8) !== "01" || !getsCasualLeave(emp[CASUAL_LEAVE_FIELD])) return false;
 	const joined = String(emp.date_of_joining || "").slice(0, 7);
 	return !joined || iso.slice(0, 7) >= joined;
 }
@@ -487,11 +487,11 @@ function LvMonthLeave({ s, emp, ym }) {
 		ym, MONTHLY_LEAVE.type);
 
 	/* Not their leave at all: say so, rather than a rule that will never run. */
-	if (!c && !casualLeaveGroup(emp.designation)) {
+	if (!c && !getsCasualLeave(emp[CASUAL_LEAVE_FIELD])) {
 		return (
 			<div className="lvmonth">
 				<b>{MONTHLY_LEAVE.type}</b>
-				<span className="muted">{casualLeaveRefusal(emp.designation, emp.employee_name)}</span>
+				<span className="muted">{casualLeaveRefusal(emp[CASUAL_LEAVE_FIELD], emp.employee_name)}</span>
 			</div>
 		);
 	}
@@ -586,19 +586,19 @@ function GiveLeave({ s, emp }) {
 		}
 		if (getState().apply.emp === emp.name) void loadLeaveBalance(emp.name);
 	};
-	/* Office staff, supervisors and drivers only: the count on the button is
-	   the people it will write for, not everybody active. */
-	const everyone = scoped(s).filter((e) => e.status === "Active" && casualLeaveGroup(e.designation));
+	/* People ticked for Casual Leave only: the count on the button is the
+	   people it will write for, not everybody active. */
+	const everyone = scoped(s).filter((e) => e.status === "Active" && getsCasualLeave(e[CASUAL_LEAVE_FIELD]));
 	return (
 		<>
 			<span className="repacts">
-				{casualLeaveGroup(emp.designation) ? (
+				{getsCasualLeave(emp[CASUAL_LEAVE_FIELD]) ? (
 					<button className="btn tpl" onClick={() => void run([emp])} aria-busy={f.giving || undefined}>
 						{f.giving ? "Giving…" : `Give ${emp.employee_name} monthly leave`}
 					</button>
 				) : null}
 				<button className="btn ghost" onClick={() => void run(everyone)} aria-busy={f.giving || undefined}>
-					Give office staff, supervisors and drivers ({fmt(everyone.length)}) monthly leave
+					Give everybody ticked for it ({fmt(everyone.length)}) monthly leave
 				</button>
 			</span>
 			{f.giveMsg ? <Note><Html html={f.giveMsg} /></Note> : null}
@@ -613,7 +613,7 @@ function outsideWhy(s, type, from, till, who) {
 	const row = (s.applyBal?.rows || []).find((r) => r.type === type);
 	const emp = s.byName[s.apply.emp];
 	const no = type === MONTHLY_LEAVE.type && !row?.periods?.length && emp
-		? casualLeaveRefusal(emp.designation, emp.employee_name) : null;
+		? casualLeaveRefusal(emp[CASUAL_LEAVE_FIELD], emp.employee_name) : null;
 	if (no) return esc(no);
 	if (!row?.periods?.length) {
 		return `${who} has not been given any ${esc(type)} on the site. `
@@ -686,14 +686,14 @@ function LvBalance({ s, emp }) {
 						{b.err
 							? <>The site did not give the balance ({b.err}). </>
 							: null}
-						{casualLeaveGroup(emp.designation) ? (
+						{getsCasualLeave(emp[CASUAL_LEAVE_FIELD]) ? (
 							<>
 								<b>{emp.employee_name} has not been given {MONTHLY_LEAVE.type} on the site</b>, so the
-								site refuses every {MONTHLY_LEAVE.type} application. Office staff, supervisors and
-								drivers earn one a month, added on the 1st — give it here.
+								site refuses every {MONTHLY_LEAVE.type} application. Everybody ticked for it earns
+								one a month, added on the 1st — give it here.
 							</>
 						) : (
-							<>{casualLeaveRefusal(emp.designation, emp.employee_name)} </>
+							<>{casualLeaveRefusal(emp[CASUAL_LEAVE_FIELD], emp.employee_name)} </>
 						)}
 					</span>
 					<GiveLeave s={s} emp={emp} />
@@ -781,7 +781,7 @@ export default function ApplyLeave() {
 		/* Somebody given Casual Leave before HR's rule still holds it and may
 		   take it; only a person with none of it is answered here. */
 		const noCL = f.type === MONTHLY_LEAVE.type && s.applyBal && !typeBal && emp
-			? casualLeaveRefusal(emp.designation, emp.employee_name) : null;
+			? casualLeaveRefusal(emp[CASUAL_LEAVE_FIELD], emp.employee_name) : null;
 		if (noCL) {
 			return patch("apply", { msg: `<b>Not saved.</b> ${esc(noCL)} Nothing has been sent.` });
 		}
