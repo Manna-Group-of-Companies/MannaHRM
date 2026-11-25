@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:manna_hr_app/core/auth_store.dart';
 import 'package:manna_hr_app/core/constants.dart';
@@ -35,12 +36,20 @@ class Api {
 
   // ------------------------------------------------------------- signing in --
 
+  /// The site every sign-in goes to. Never set from a screen: only a test
+  /// points it at an address that cannot be reached, so no test ever signs in
+  /// to the real site.
+  @visibleForTesting
+  static String site = kDefaultSiteUrl;
+
   /// Puts the app back on an authenticated connection without anybody typing,
   /// if it can. Returns the employee record, or null when there is no session
   /// to restore — which is the sign-in screen, not a failure.
   static Future<Map<String, dynamic>?> restore() async {
     final creds = await AuthStore.load();
-    Session.I.init(url: creds.siteUrl.isEmpty ? kDefaultSiteUrl : creds.siteUrl);
+    // Always the Manna site, whatever an older version of the app saved: the
+    // site address is never chosen on the phone (core/constants.dart).
+    Session.I.init(url: site);
     Session.I.email = creds.email;
     Session.I.sid = creds.sid;
     _wireReauth();
@@ -76,17 +85,22 @@ class Api {
   /// Sign in. Everything the app reads and writes afterwards runs under this
   /// user's own roles, which is the whole of the security model.
   static Future<Map<String, dynamic>?> login({
-    required String siteUrl,
     required String email,
     required String password,
   }) async {
-    Session.I.init(url: siteUrl);
+    Session.I.init(url: site);
     _wireReauth();
-    final ok = await _passwordLogin(email, password);
-    if (!ok) throw const Refused('Wrong email or password.');
-    await AuthStore.saveLogin(
-        siteUrl: siteUrl, email: email, password: password);
-    return _resolveQuietly();
+    // The Emp Code and a date of birth however they were typed — `mrp293`,
+    // `2432005` — then in the form the site holds them (core/first_password.dart).
+    // What worked is what is kept, so the silent re-login and the first-password
+    // check both see the real password.
+    for (final (usr, pwd) in signInTries(email, password, today: ServerClock.I.now())) {
+      if (await _passwordLogin(usr, pwd)) {
+        await AuthStore.saveLogin(siteUrl: site, email: usr, password: pwd);
+        return _resolveQuietly();
+      }
+    }
+    throw const Refused('Wrong Emp Code or password.');
   }
 
   /// Opens on the remembered employee, with no session. Null when this phone
@@ -270,9 +284,9 @@ class Api {
 
   /// Frappe's own "forgot password": the site emails a reset link to the
   /// login's address. A guest call, so it works from the sign-in screen.
-  static Future<void> resetPassword({required String siteUrl, required String user}) async {
+  static Future<void> resetPassword({required String user}) async {
     if (user.trim().isEmpty) throw const Refused('Type your email first.');
-    Session.I.init(url: siteUrl);
+    Session.I.init(url: site);
     final r = await Session.I.dio.post(
       '/api/method/frappe.core.doctype.user.user.reset_password',
       data: {'user': user.trim()},

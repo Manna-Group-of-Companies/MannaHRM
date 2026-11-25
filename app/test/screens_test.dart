@@ -48,16 +48,16 @@ void main() {
     expect(find.widgetWithText(TextButton, 'Sign out'), findsOneWidget);
   });
 
-  testWidgets('the site box is folded away until somebody asks for it',
+  testWidgets('the sign-in screen never asks for or shows a site address',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
     await tester.pumpAndSettle();
 
+    expect(find.text('Site address'), findsNothing);
     expect(find.widgetWithText(TextField, 'Site URL'), findsNothing);
-    await tester.ensureVisible(find.text('Site address'));
-    await tester.tap(find.text('Site address'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextField, 'Site URL'), findsOneWidget);
+    expect(find.textContaining('frappe.cloud'), findsNothing);
+    // Emp Code and password: the only two boxes.
+    expect(find.byType(TextField), findsNWidgets(2));
   });
 
   testWidgets('a correction with no time and no reason cannot be sent',

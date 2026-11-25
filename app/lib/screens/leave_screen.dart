@@ -75,79 +75,110 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = DefaultTabController(
-      length: 2,
-      child: Column(children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-              color: kField, borderRadius: BorderRadius.circular(14), border: Border.all(color: kCardLine)),
-          child: TabBar(
-            indicatorSize: TabBarIndicatorSize.tab,
-            dividerHeight: 0,
-            labelColor: kInk,
-            unselectedLabelColor: kInk2,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontFamily: 'PlusJakartaSans'),
-            indicator: BoxDecoration(color: kRaised, borderRadius: BorderRadius.circular(10)),
-            tabs: [
-              Tab(height: 38, text: _own ? 'My Leave' : 'Leave'),
-              const Tab(height: 38, text: 'Leave Balance'),
-            ],
+    final body = _loading && _rows.isEmpty && _kinds.isEmpty
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
+            onRefresh: _load,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),
+              children: [
+                if (_said.isNotEmpty) Note(_said, kind: NoteKind.ok),
+                if (_error.isNotEmpty) Note(_error),
+                if (_kinds.isNotEmpty) ...[
+                  TileGrid(columns: 3, gap: 8, [for (final k in _kinds) _left(k)]),
+                ],
+                SectionTitle(_own ? 'Recent requests' : 'Leave history'),
+                if (_rows.isEmpty && _error.isEmpty)
+                  Panel(
+                    child: Text(_own ? 'You have not asked for any leave.' : 'No leave asked for.',
+                        style: const TextStyle(color: kInk2)),
+                  )
+                else if (_rows.isNotEmpty)
+                  Panel(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                    child: Column(children: [
+                      for (var i = 0; i < _rows.length; i++) ...[
+                        if (i > 0) const Divider(height: 1),
+                        _row(_rows[i]),
+                      ],
+                    ]),
+                  ),
+                if (_kinds.isNotEmpty) ...[
+                  const SectionTitle('Leave balance'),
+                  _summary(),
+                  for (final k in _kinds) _detail(k),
+                ] else if (!_loading) ...[
+                  const SectionTitle('Leave balance'),
+                  Panel(
+                    child: Text(_own ? 'You have no leave to ask for yet. Ask HR.' : 'No leave allocated yet.',
+                        style: const TextStyle(color: kInk2)),
+                  ),
+                ],
+              ],
+            ),
+          );
+    if (widget.bare) return body;
+    return Scaffold(
+      appBar: brandBar(_own ? 'My leave' : 'Leave', actions: [
+        if (_own)
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: FilledButton.icon(
+              onPressed: _apply,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Apply'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 42),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+            ),
           ),
-        ),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : TabBarView(children: [_history(), _balance()]),
-        ),
       ]),
+      body: body,
     );
-    if (widget.bare) return tabs;
-    return Scaffold(appBar: brandBar('Leave Management'), body: tabs);
+  }
+
+  /// One kind's days left, large — "5 / Casual left".
+  Widget _left(LeaveKind k) => Panel(
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(k.left == null ? '—' : fmtDays(k.left!), style: serif(24)),
+          const SizedBox(height: 4),
+          Text(k.left == null ? '${_short(k.name)} · no limit' : '${_short(k.name)} left',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kInk2)),
+        ]),
+      );
+
+  /// "Casual Leave" → "Casual": the tile already says it is leave.
+  static String _short(String name) {
+    final s = name.replaceAll(RegExp(r'\s*leave\s*$', caseSensitive: false), '').trim();
+    return s.isEmpty ? name : s;
+  }
+
+  static IconData _iconFor(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('sick') || t.contains('medical')) return Icons.favorite_border_rounded;
+    if (t.contains('casual')) return Icons.wb_sunny_outlined;
+    if (t.contains('earned') || t.contains('privilege') || t.contains('annual')) return Icons.ac_unit_rounded;
+    if (t.contains('without pay') || t.contains('lwp')) return Icons.money_off_rounded;
+    return Icons.beach_access_outlined;
   }
 
   Widget _summary() {
     final t = balanceTotals(_kinds);
-    Widget cell(String label, double n) => Expanded(
-          child: Column(children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: kInk2)),
-            const SizedBox(height: 4),
-            Text(fmtDays(n), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: kInk)),
-          ]),
-        );
     return Panel(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: IntrinsicHeight(
-        child: Row(children: [
-          cell('Total', t.total),
-          const VerticalDivider(color: kLine),
-          cell('Used', t.taken),
-          const VerticalDivider(color: kLine),
-          cell('Remaining', t.left),
-        ]),
-      ),
+      padding: const EdgeInsets.all(10),
+      child: Row(children: [
+        Expanded(child: StatBox(value: fmtDays(t.total), label: 'Total')),
+        const SizedBox(width: 8),
+        Expanded(child: StatBox(value: fmtDays(t.taken), label: 'Used')),
+        const SizedBox(width: 8),
+        Expanded(child: StatBox(value: fmtDays(t.left), label: 'Remaining', color: kAccent)),
+      ]),
     );
   }
-
-  Widget _history() => RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-          children: [
-            if (_said.isNotEmpty) Note(_said, kind: NoteKind.ok),
-            if (_error.isNotEmpty) Note(_error),
-            if (_own) FilledButton(onPressed: _apply, child: const Text('Apply Leave')),
-            SectionTitle(_own ? 'Recent Requests' : 'Leave History'),
-            if (_rows.isEmpty && _error.isEmpty)
-              Panel(
-                child: Text(_own ? 'You have not asked for any leave.' : 'No leave asked for.',
-                    style: const TextStyle(color: kInk2)),
-              ),
-            ..._rows.map(_row),
-          ],
-        ),
-      );
 
   Widget _row(Map<String, dynamic> r) {
     final word = leaveStatusWord('${r['status'] ?? ''}', int.tryParse('${r['docstatus'] ?? 0}') ?? 0);
@@ -155,86 +186,67 @@ class _LeaveScreenState extends State<LeaveScreen> {
     final to = '${r['to_date'] ?? ''}';
     final days = r['total_leave_days'];
     final half = '${r['half_day'] ?? 0}' == '1';
+    final type = '${r['leave_type'] ?? ''}';
+    final when = [
+      from == to ? dmy(from) : '${dmy(from)} – ${dmy(to)}',
+      if (days != null) '$days ${'$days' == '1' || '$days' == '1.0' ? 'day' : 'days'}',
+      if (half) 'half day',
+    ].join(' · ');
+    final note = '${r['description'] ?? ''}';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Panel(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(
-              child: Text('${r['leave_type'] ?? ''}',
-                  style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: kInk)),
-            ),
-            // The design marks a request with a bar of colour alone; the word
-            // stays, because Rejected and Approved must not differ only in hue.
-            Pill(word, color: wordColour(word)),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        IconBadge(_iconFor(type), color: wordColour(word), size: 40),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(type, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: kInk)),
+            const SizedBox(height: 2),
+            Text(when, style: const TextStyle(fontSize: 12, color: kInk2)),
+            if (note.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(note,
+                    maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: kInk)),
+              ),
           ]),
-          const SizedBox(height: 14),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.calendar_today_rounded, size: 16, color: kInk2),
-            const SizedBox(width: 8),
-            Text(from == to ? dmy(from) : '${dmy(from)} – ${dmy(to)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk2)),
-          ]),
-          const SizedBox(height: 14),
-          Text(
-            [
-              if (days != null) '$days ${'$days' == '1' || '$days' == '1.0' ? 'Day' : 'Days'}',
-              if (half) 'Half day',
-            ].join(' · '),
-            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kInk2),
-          ),
-          if ('${r['description'] ?? ''}'.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text('${r['description']}', style: const TextStyle(fontSize: 13, color: kInk)),
-            ),
-        ]),
-      ),
+        ),
+        const SizedBox(width: 8),
+        // The word as well as the colour: Rejected and Approved must not
+        // differ only in hue.
+        Pill(word, color: wordColour(word)),
+      ]),
     );
   }
 
-  Widget _balance() => RefreshIndicator(
-        onRefresh: _load,
-        child: _kinds.isEmpty
-            ? EmptyNote('No leave allocated', _own ? 'You have no leave to ask for yet. Ask HR.' : 'No leave allocated yet.',
-                icon: Icons.beach_access_outlined)
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-                children: [
-                  _summary(),
-                  const SizedBox(height: 6),
-                  for (final k in _kinds)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Panel(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Row(children: [
-                            Expanded(
-                              child: Text(k.name, style: const TextStyle(fontWeight: FontWeight.w700, color: kInk)),
-                            ),
-                            Text(k.left == null ? 'Without pay' : '${fmtDays(k.left!)} left',
-                                style: const TextStyle(fontWeight: FontWeight.w700, color: kInk)),
-                          ]),
-                          if (k.left != null && (k.total ?? 0) > 0) ...[
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: ((k.taken ?? 0) / k.total!).clamp(0, 1).toDouble(),
-                                minHeight: 7,
-                                color: kGreen,
-                                backgroundColor: kBrandTint,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text('${fmtDays(k.taken ?? 0)} used of ${fmtDays(k.total!)}',
-                                style: const TextStyle(fontSize: 12.5, color: kInk2)),
-                          ],
-                        ]),
-                      ),
-                    ),
-                ],
+  Widget _detail(LeaveKind k) => Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Panel(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              IconBadge(_iconFor(k.name), size: 34),
+              const SizedBox(width: 10),
+              Expanded(child: Text(k.name, style: const TextStyle(fontWeight: FontWeight.w700, color: kInk))),
+              Text(k.left == null ? 'Without pay' : '${fmtDays(k.left!)} left',
+                  style: const TextStyle(fontWeight: FontWeight.w800, color: kAccent)),
+            ]),
+            if (k.left != null && (k.total ?? 0) > 0) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: ((k.taken ?? 0) / k.total!).clamp(0, 1).toDouble(),
+                  minHeight: 7,
+                  color: kGreen,
+                  backgroundColor: kBrandTint,
+                ),
               ),
+              const SizedBox(height: 6),
+              Text('${fmtDays(k.taken ?? 0)} used of ${fmtDays(k.total!)}',
+                  style: const TextStyle(fontSize: 12.5, color: kInk2)),
+            ],
+          ]),
+        ),
       );
 }

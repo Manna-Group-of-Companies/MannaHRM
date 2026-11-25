@@ -49,3 +49,85 @@ String? newPasswordProblem(
   }
   return null;
 }
+
+/// The most sign-ins one tap of Sign in may try. The site locks a login for a
+/// minute after ten wrong ones in a row, so three taps of this still cannot.
+const kMaxSignInTries = 4;
+
+/// The Emp Code the way the site holds it, `MRP-293`, from however it was
+/// typed: `mrp293`, `MRP 293`, `mrp-293`. An email, or anything else, as typed.
+String empCodeForm(String typed) {
+  final t = typed.trim();
+  final m = RegExp(r'^([A-Za-z]+)[\s_.-]*(\d+)$').firstMatch(t);
+  return m == null ? t : '${m.group(1)!.toUpperCase()}-${m.group(2)}';
+}
+
+/// The DDMMYYYY first passwords a typed date could be (25 November 2026: a
+/// phone signed in with `2432005` for 24 March 2005 and was told the password
+/// was wrong). `2432005`, `24-3-2005`, `24/03/05` and `240305` are all
+/// `24032005`. A date that reads two ways — `1112005` is 1 November or 11
+/// January — gives both. Nothing for a password that is not a date.
+List<String> dobForms(String typed, {DateTime? today}) {
+  final t = typed.trim();
+  if (!RegExp(r'^[\d\s./-]+$').hasMatch(t)) return const [];
+  final now = today ?? DateTime.now();
+  final out = <String>[];
+  void add(String d, String m, String y) {
+    if (d.isEmpty || d.length > 2 || m.isEmpty || m.length > 2 || (y.length != 2 && y.length != 4)) return;
+    final day = int.parse(d), month = int.parse(m);
+    var year = int.parse(y);
+    if (y.length == 2) year += 2000 + year <= now.year ? 2000 : 1900;
+    if (year < now.year - 100 || year > now.year || month < 1 || month > 12 || day < 1) return;
+    if (day > DateTime(year, month + 1, 0).day) return;
+    final s = '${day.toString().padLeft(2, '0')}${month.toString().padLeft(2, '0')}$year';
+    if (!out.contains(s)) out.add(s);
+  }
+
+  final parts = t.split(RegExp(r'[\s./-]+')).where((p) => p.isNotEmpty).toList();
+  if (parts.length == 3) {
+    add(parts[0], parts[1], parts[2]);
+  } else if (parts.length == 1) {
+    // The year is the last four digits, or the last two; before it, the day
+    // and then the month, each one digit or two.
+    final s = parts.first;
+    for (final yLen in const [4, 2]) {
+      if (s.length <= yLen) continue;
+      final dm = s.substring(0, s.length - yLen);
+      final y = s.substring(s.length - yLen);
+      for (var dLen = 1; dLen <= 2 && dLen < dm.length; dLen++) {
+        add(dm.substring(0, dLen), dm.substring(dLen), y);
+      }
+    }
+  }
+  return out;
+}
+
+/// The (user, password) pairs to try for one tap of Sign in, as typed first —
+/// somebody who chose their own password typed exactly that — then the Emp
+/// Code and the date of birth in the form the site holds them. At most
+/// [kMaxSignInTries].
+List<(String, String)> signInTries(String user, String password, {DateTime? today}) {
+  final users = [user.trim()];
+  final code = empCodeForm(user);
+  if (code != users.first) users.add(code);
+  final passwords = [password];
+  for (final f in dobForms(password, today: today)) {
+    if (!passwords.contains(f)) passwords.add(f);
+  }
+  // As typed; then the Emp Code with each date form, which is how a first
+  // sign-in is meant to go; then the rest.
+  final tries = <(String, String)>[(users.first, password)];
+  void add((String, String) t) {
+    if (!tries.contains(t)) tries.add(t);
+  }
+
+  for (final p in passwords.skip(1)) {
+    add((users.last, p));
+  }
+  for (final u in users) {
+    for (final p in passwords) {
+      add((u, p));
+    }
+  }
+  return tries.take(kMaxSignInTries).toList();
+}

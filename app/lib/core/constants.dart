@@ -7,10 +7,14 @@ library;
 
 /// The ERPNext site. There is no server of ours in between: this app holds the
 /// person's own Frappe session and every read and write is logged on the site
-/// as them (CLAUDE.md §1). It is overridable on the sign-in screen because a
-/// test bench is a different host and nobody should have to rebuild an APK to
-/// reach one.
-const String kDefaultSiteUrl = 'https://mannarubber.m.frappe.cloud';
+/// as them (CLAUDE.md §1).
+///
+/// The app never asks for it and never shows it (25 November 2026): nobody in
+/// the factory has a reason to type a server address, and one typed wrong is a
+/// phone that punches nowhere. A test bench is reached by building with
+/// `--dart-define=SITE_URL=http://…`, never from a screen.
+const String kDefaultSiteUrl =
+    String.fromEnvironment('SITE_URL', defaultValue: 'https://mannarubber.m.frappe.cloud');
 
 /// The punch. Generated `Attendance` is derived from these rows by the shift
 /// job, and this app never writes that — CLAUDE.md §5.
@@ -87,4 +91,4 @@ const int kNextDayHours = 14;
 
 /// What the sign-in screen and Settings → About say. pubspec.yaml's `version`
 /// is the store's; keep the two together.
-const String kAppVersion = '2.0.0';
+const String kAppVersion = '2.1.0';

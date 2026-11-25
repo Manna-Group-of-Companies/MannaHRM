@@ -24,24 +24,19 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _site = TextEditingController(text: kDefaultSiteUrl);
   bool _busy = false;
   bool _showPassword = false;
-  bool _showSite = false;
   String _error = '';
   String _said = '';
 
   @override
   void initState() {
     super.initState();
-    // The email and the site come back filled in. A bench address typed once
-    // should not have to be typed again, and neither is a secret.
+    // The Emp Code or email comes back filled in; it is not a secret. The site
+    // is never asked for or shown (core/constants.dart kDefaultSiteUrl).
     AuthStore.load().then((c) {
       if (!mounted) return;
-      setState(() {
-        if (c.email.isNotEmpty) _email.text = c.email;
-        if (c.siteUrl.isNotEmpty) _site.text = c.siteUrl;
-      });
+      if (c.email.isNotEmpty) setState(() => _email.text = c.email);
     });
   }
 
@@ -49,11 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _email.dispose();
     _password.dispose();
-    _site.dispose();
     super.dispose();
   }
-
-  String get _siteUrl => _site.text.trim().replaceAll(RegExp(r'/+$'), '');
 
   Future<void> _signIn() async {
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
@@ -66,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _said = '';
     });
     try {
-      await Api.login(siteUrl: _siteUrl, email: _email.text.trim(), password: _password.text);
+      await Api.login(email: _email.text.trim(), password: _password.text);
       final admin = await Api.isAdmin();
       final first = await Api.onFirstPassword();
       if (!mounted) return;
@@ -87,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _said = '';
     });
     try {
-      await Api.resetPassword(siteUrl: _siteUrl, user: _email.text);
+      await Api.resetPassword(user: _email.text);
       if (mounted) setState(() => _said = 'The site has emailed a link to reset your password.');
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
@@ -116,25 +108,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 76,
                         height: 76,
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                        decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: kCardLine)),
                         child: Image.asset('assets/manna_logo.png', fit: BoxFit.contain),
                       ),
                     ),
                     const SizedBox(height: 18),
-                    const Text('Manna HR',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: kInk)),
+                    Text('Manna HR', textAlign: TextAlign.center, style: serif(30)),
                     const SizedBox(height: 4),
                     const Text('People • Attendance • Payroll',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kInk2)),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kAccent)),
                     const SizedBox(height: 24),
                     Panel(
                       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        const Text('Sign in to your account',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: kInk)),
+                        Text('Sign in to your account', textAlign: TextAlign.center, style: serif(20)),
                         const SizedBox(height: 20),
                         const FieldLabel('Emp Code or email'),
                         TextField(
@@ -164,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text('First time? Your password is your date of birth, DDMMYYYY.',
+                        const Text('First time? Your password is your date of birth, DDMMYYYY — 24 March 2005 is 24032005.',
                             style: TextStyle(fontSize: 12.5, color: kInk2)),
                         const SizedBox(height: 18),
                         if (_error.isNotEmpty) Note(_error),
@@ -180,33 +171,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextButton(onPressed: _busy ? null : _forgot, child: const Text('Forgot password?')),
                       ]),
                     ),
-                    const SizedBox(height: 10),
-                    // Folded away rather than absent: nobody in the factory
-                    // needs it, and whoever is testing against a bench cannot
-                    // do without it.
-                    InkWell(
-                      onTap: () => setState(() => _showSite = !_showSite),
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-                        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: kCardLine))),
-                        child: Row(children: [
-                          const Expanded(
-                            child: Text('Site address',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kInk)),
-                          ),
-                          Icon(_showSite ? Icons.remove_rounded : Icons.add_rounded, color: kInk),
-                        ]),
-                      ),
-                    ),
-                    if (_showSite) ...[
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: _site,
-                        keyboardType: TextInputType.url,
-                        autocorrect: false,
-                        decoration: const InputDecoration(labelText: 'Site URL', prefixIcon: Icon(Icons.dns_outlined)),
-                      ),
-                    ],
                     const SizedBox(height: 40),
                     const Text('v$kAppVersion',
                         textAlign: TextAlign.center,

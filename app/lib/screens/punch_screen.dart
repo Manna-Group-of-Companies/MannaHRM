@@ -303,18 +303,18 @@ class _PunchScreenState extends State<PunchScreen> {
                     height: 136,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      // Out is amber with navy on it: white on a pale amber
+                      // Out is amber with dark ink on it: white on a pale amber
                       // is the one pairing here that fails contrast.
                       gradient: isIn
                           ? kPunchGradient
-                          : const LinearGradient(colors: [kWarn, Color(0xFFE0A93A)]),
+                          : const LinearGradient(colors: [Color(0xFFF2C25A), Color(0xFFE0A93A)]),
                       boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18, offset: Offset(0, 8))],
                     ),
                     child: _busy || _loading
                         ? Center(
                             child: SizedBox(
-                                width: 40, height: 40, child: CircularProgressIndicator(color: isIn ? Colors.white : kPage)))
-                        : Icon(Icons.fingerprint, color: isIn ? Colors.white : kPage, size: 78),
+                                width: 40, height: 40, child: CircularProgressIndicator(color: isIn ? Colors.white : kInk)))
+                        : Icon(Icons.fingerprint, color: isIn ? Colors.white : kInk, size: 78),
                   ),
                 ),
               ),

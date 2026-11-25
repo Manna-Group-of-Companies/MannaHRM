@@ -79,6 +79,7 @@ void main() {
       id: id, employee: 'HR-EMP-1', logType: type, time: time, latitude: 9.5, longitude: 76.6, device: 'vivo');
 
   setUp(() async {
+    Api.site = 'https://site.invalid';
     SharedPreferences.setMockInitialValues({});
     Session.I.init(url: 'https://site.invalid');
     Session.I.dio.httpClientAdapter = site;

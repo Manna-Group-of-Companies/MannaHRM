@@ -88,52 +88,57 @@ class _TodayCardState extends State<TodayCard> {
         : punched && pair.outAt.isNotEmpty
             ? 'In ${clockOf(pair.inAt)}${hours.isEmpty ? '' : '  ·  $hours h'}'
             : '';
-    final status = _loading
-        ? 'Reading…'
-        : _error.isNotEmpty
-            ? _error
-            : headline;
 
     Widget button(String direction) {
       final isIn = direction == kLogIn;
-      final label = Text(isIn ? 'Punch In' : 'Punch Out');
+      // One line always, shrunk on a narrow phone rather than broken in two.
+      final label = FittedBox(fit: BoxFit.scaleDown, child: Text(isIn ? 'Punch In' : 'Punch Out', maxLines: 1));
       final onPressed = canPunch ? () => _punch(direction) : null;
-      // The way today's punches point is the white pill; the other is a dark
-      // one, there for the day that needs it, the way a gate machine has both
-      // keys.
-      return linked && next != direction
-          ? FilledButton(
-              onPressed: onPressed,
-              style: FilledButton.styleFrom(
-                backgroundColor: kField,
-                foregroundColor: kInk,
-                side: const BorderSide(color: kCardLine),
-                minimumSize: const Size.fromHeight(46),
-              ),
-              child: label,
-            )
-          : FilledButton(
-              onPressed: onPressed,
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
-              child: label,
-            );
+      final main = !linked || next == direction;
+      // The way today's punches point is the bright button; the other is
+      // there for the day that needs it, the way a gate machine has both keys.
+      if (widget.compact) {
+        return main
+            ? FilledButton(
+                onPressed: onPressed, style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)), child: label)
+            : FilledButton(
+                onPressed: onPressed,
+                style: FilledButton.styleFrom(
+                  backgroundColor: kGreenSoft,
+                  foregroundColor: kAccent,
+                  minimumSize: const Size.fromHeight(46),
+                ),
+                child: label,
+              );
+      }
+      return FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: main ? kLime : Colors.white.withValues(alpha: .10),
+          foregroundColor: main ? kOnLime : Colors.white,
+          disabledBackgroundColor: Colors.white.withValues(alpha: .08),
+          disabledForegroundColor: Colors.white38,
+          minimumSize: const Size.fromHeight(48),
+          side: main ? null : BorderSide(color: Colors.white.withValues(alpha: .18)),
+        ),
+        child: label,
+      );
     }
 
+    // The punch most people are about to press goes first and widest.
+    final first = next == kLogOut ? kLogOut : kLogIn;
+    final second = first == kLogIn ? kLogOut : kLogIn;
     final buttons = Row(children: [
-      Expanded(child: button(kLogIn)),
-      const SizedBox(width: 12),
-      Expanded(child: button(kLogOut)),
+      Expanded(child: button(first)),
+      const SizedBox(width: 10),
+      Expanded(child: button(second)),
     ]);
     final tone = _error.isNotEmpty ? kBad : (punched ? kGood : kInk2);
 
     if (widget.compact) {
       return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: kRaised.withValues(alpha: .55),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: kCardLine),
-        ),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: kPage, borderRadius: BorderRadius.circular(18)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
@@ -158,37 +163,85 @@ class _TodayCardState extends State<TodayCard> {
             const SizedBox(height: 8),
             Text(_error, style: const TextStyle(color: kBad, fontSize: 12.5)),
           ],
-          const SizedBox(height: 16),
-          buttons,
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(child: button(kLogIn)),
+            const SizedBox(width: 10),
+            Expanded(child: button(kLogOut)),
+          ]),
         ]),
       );
     }
 
-    return Panel(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          const Expanded(
-            child: Text("Today's Attendance",
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: kInk2)),
+    // The dark green card: what happened last, large, and the button for
+    // what comes next in lime.
+    final title = !linked
+        ? 'Not linked yet'
+        : _loading
+            ? 'Reading today…'
+            : !punched
+                ? "You haven't punched in"
+                : pair.outAt.isEmpty
+                    ? "You're punched in"
+                    : "You're punched out";
+    final time = !punched ? '--:--' : clockOf(pair.outAt.isEmpty ? pair.inAt : pair.outAt);
+    const soft = Color(0xB3FFFFFF);
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: kBrandGradient,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Stack(children: [
+        // Two faint rings in the corner, as the picture has them.
+        Positioned(
+          right: -60,
+          top: -70,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+                shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: .07), width: 26)),
           ),
-          if (punched) const StatusTag('Present', color: kGood, icon: Icons.check_circle_rounded),
-        ]),
-        const SizedBox(height: 14),
-        Text(status,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: _error.isNotEmpty ? 14 : 28,
-                fontWeight: FontWeight.w800,
-                color: _error.isNotEmpty ? kBad : kInk)),
-        if (detail.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(detail,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kInk2)),
-        ],
-        const SizedBox(height: 18),
-        buttons,
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text("Today's attendance",
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: soft)),
+            const SizedBox(height: 6),
+            Text(title, style: serif(22, color: Colors.white)),
+            const SizedBox(height: 12),
+            // The time shrinks before anything spills: a 320-wide phone with
+            // large text still gets the whole of it and the tag beside it.
+            Row(children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(time, style: serif(34, color: Colors.white, weight: FontWeight.w800)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (punched)
+                StatusTag('Present',
+                    color: kLime, icon: Icons.circle, background: Colors.white.withValues(alpha: .12)),
+            ]),
+            if (detail.isNotEmpty || !linked) ...[
+              const SizedBox(height: 4),
+              Text(detail.isNotEmpty ? detail : 'No employee record carries this login',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: soft)),
+            ],
+            if (_error.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(_error, style: const TextStyle(color: Color(0xFFFFB4A8), fontSize: 13)),
+            ],
+            const SizedBox(height: 16),
+            buttons,
+          ]),
+        ),
       ]),
     );
   }

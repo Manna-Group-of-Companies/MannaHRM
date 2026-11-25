@@ -37,13 +37,13 @@ const Map<DayStatus, Color> kStatusColour = {
   DayStatus.absent: kBad,
 };
 
-/// The HRDashboard kit's dark look (26 October 2026): a navy page, cards a
-/// step lighter, white buttons with navy text, outlined fields, green for what
-/// is selected. Values are `ui/brand.dart`'s, which says where each comes from.
+/// The light green look (25 November 2026): an off-white page, white cards,
+/// a deep green button, white fields held by a hairline, the serif for
+/// headings. Values are ui/brand.dart's.
 ThemeData mannaTheme() {
   final scheme = ColorScheme.fromSeed(
     seedColor: kGreen,
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     primary: kPrimary,
     onPrimary: kOnPrimary,
     secondary: kAccent,
@@ -59,81 +59,129 @@ ThemeData mannaTheme() {
     useMaterial3: true,
     fontFamily: 'PlusJakartaSans',
     colorScheme: scheme,
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     scaffoldBackgroundColor: kPage,
     dividerColor: kLine,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: kCard,
+    dividerTheme: const DividerThemeData(color: kLine, space: 1),
+    appBarTheme: AppBarTheme(
+      backgroundColor: kPage,
       foregroundColor: kInk,
       elevation: 0,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
-      centerTitle: true,
-      shape: Border(bottom: BorderSide(color: kLine)),
-      systemOverlayStyle: SystemUiOverlayStyle.light,
-      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: kInk),
+      centerTitle: false,
+      shape: const Border(),
+      systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+      titleTextStyle: serif(22),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: kInk,
-        side: const BorderSide(color: kFieldLine),
-        shape: const StadiumBorder(),
+        foregroundColor: kAccent,
+        backgroundColor: kGreenSoft,
+        side: BorderSide.none,
+        minimumSize: const Size(0, 48),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, fontFamily: 'PlusJakartaSans'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(backgroundColor: kCard, surfaceTintColor: Colors.transparent),
-    dialogTheme: const DialogThemeData(backgroundColor: kCard, surfaceTintColor: Colors.transparent),
-    drawerTheme: const DrawerThemeData(backgroundColor: kCard),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: kCard,
+      surfaceTintColor: Colors.transparent,
+      dragHandleColor: kFieldLine,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: kCard,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      titleTextStyle: serif(20),
+    ),
+    drawerTheme: const DrawerThemeData(backgroundColor: kBrandDeep),
     listTileTheme: const ListTileThemeData(iconColor: kInk2, textColor: kInk),
-    snackBarTheme: const SnackBarThemeData(
-      backgroundColor: kRaised,
-      contentTextStyle: TextStyle(color: kInk),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: kBrandDeep,
+      contentTextStyle: const TextStyle(color: Colors.white, fontFamily: 'PlusJakartaSans'),
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     checkboxTheme: CheckboxThemeData(
-      fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? kGreen : null),
+      fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? kPrimary : null),
     ),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: kAccent)),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: kAccent,
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontFamily: 'PlusJakartaSans'),
+      ),
+    ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(color: kGreen, linearTrackColor: kBrandTint),
     cardTheme: CardThemeData(
       elevation: 0,
       color: kCard,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: kLine)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: kCardLine)),
       margin: const EdgeInsets.symmetric(vertical: 6),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: kPrimary,
         foregroundColor: kOnPrimary,
+        disabledBackgroundColor: kFieldLine,
         minimumSize: const Size.fromHeight(50),
-        textStyle: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700),
-        shape: const StadiumBorder(),
+        textStyle: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, fontFamily: 'PlusJakartaSans'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: kField,
+      fillColor: kCard,
       labelStyle: const TextStyle(color: kInk2),
       hintStyle: const TextStyle(color: kFaint),
       prefixIconColor: kInk2,
       suffixIconColor: kInk2,
       border: field,
       enabledBorder: field,
-      focusedBorder: field.copyWith(borderSide: const BorderSide(color: kGreen, width: 1.6)),
+      focusedBorder: field.copyWith(borderSide: const BorderSide(color: kPrimary, width: 1.6)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     ),
     tabBarTheme: const TabBarThemeData(
       labelColor: kAccent,
       unselectedLabelColor: kInk2,
-      indicatorColor: kGreen,
-      labelStyle: TextStyle(fontWeight: FontWeight.w700),
+      indicatorColor: kPrimary,
+      labelStyle: TextStyle(fontWeight: FontWeight.w700, fontFamily: 'PlusJakartaSans'),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: kCard,
       selectedItemColor: kAccent,
-      unselectedItemColor: kInk2,
+      unselectedItemColor: kFaint,
       type: BottomNavigationBarType.fixed,
-      selectedLabelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
-      unselectedLabelStyle: TextStyle(fontSize: 11.5),
+      elevation: 0,
+      selectedLabelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 11.5),
+      unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 11.5),
+    ),
+  );
+}
+
+/// Every screen, on every phone and tablet: the text never grows past what the
+/// layouts were drawn for, and on a screen wider than [kMaxContentWidth] the
+/// app is drawn at that width in the middle, the page colour either side.
+/// Dialogs and sheets are told the narrower width too, so they open over the
+/// app, not the glass.
+Widget fitScreen(BuildContext context, Widget? child) {
+  final mq = MediaQuery.of(context);
+  final text = mq.textScaler.clamp(minScaleFactor: .85, maxScaleFactor: 1.3);
+  final app = child ?? const SizedBox();
+  if (mq.size.width <= kMaxContentWidth) {
+    return MediaQuery(data: mq.copyWith(textScaler: text), child: app);
+  }
+  return ColoredBox(
+    color: kPage,
+    child: Center(
+      child: SizedBox(
+        width: kMaxContentWidth,
+        child: MediaQuery(
+          data: mq.copyWith(textScaler: text, size: Size(kMaxContentWidth, mq.size.height)),
+          child: app,
+        ),
+      ),
     ),
   );
 }
@@ -149,6 +197,7 @@ class MannaHrApp extends StatelessWidget {
         title: 'Manna HR',
         debugShowCheckedModeBanner: false,
         theme: mannaTheme(),
+        builder: fitScreen,
         home: home ?? const _Gate(),
       );
 }
@@ -243,12 +292,12 @@ class SplashScreen extends StatelessWidget {
         body: Container(
           width: double.infinity,
           height: double.infinity,
-          color: kPage,
+          decoration: const BoxDecoration(gradient: kBrandGradient),
           child: SafeArea(
             child: Column(children: [
               const Spacer(flex: 3),
               // The lockup is dark-on-white artwork — half of it is grey — so
-              // it sits on a white plate, never straight on the navy.
+              // it sits on a white plate, never straight on the green.
               Container(
                 width: 96,
                 height: 96,
@@ -257,11 +306,10 @@ class SplashScreen extends StatelessWidget {
                 child: Image.asset('assets/manna_logo.png', fit: BoxFit.contain),
               ),
               const SizedBox(height: 26),
-              const Text('Manna HR',
-                  style: TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w800)),
+              Text('Manna HR', style: serif(34, color: Colors.white)),
               const SizedBox(height: 8),
               const Text('People • Attendance • Payroll',
-                  style: TextStyle(color: kAccent, fontSize: 14, fontWeight: FontWeight.w700)),
+                  style: TextStyle(color: kLime, fontSize: 14, fontWeight: FontWeight.w700)),
               const Spacer(flex: 3),
               const SizedBox(
                   height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),

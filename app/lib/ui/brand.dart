@@ -2,85 +2,96 @@ import 'package:flutter/material.dart';
 
 import 'package:manna_hr_app/core/session.dart';
 
-/// **The HRDashboard kit's dark look** (26 October 2026, asked for: the phone
-/// app drawn like the Figma "HRDashboard" UI kit, its *Visual Design - Dark*
-/// page). The kit names no colour variables, so each value here was sampled
-/// off its 375-wide phone frames rather than invented. The logo keeps its
-/// orange on a white plate; the interface does not wear it.
-///
-/// A dark interface is what the link asked for. Every colour on every screen
-/// is one of these names, so a light kit palette later is this block again
-/// with other numbers, not a pass over thirty files.
-const kPage = Color(0xFF121828);
-const kCard = Color(0xFF212A39);
-const kRaised = Color(0xFF303948);
-const kLine = Color(0xFF2D3645);
-const kFieldLine = Color(0xFF465061);
+/// **The light green look** (25 November 2026, asked for from a picture: an
+/// off-white page, white cards, a deep green for what matters, a lime button
+/// on the dark green Today card, serif headings). Every colour on every screen
+/// is one of these names, so a change of palette is this block again with
+/// other numbers, not a pass over thirty files. The logo keeps its own orange
+/// on a white plate; the interface does not wear it.
+const kPage = Color(0xFFF3F5F1);
+const kCard = Colors.white;
+const kRaised = Color(0xFFEEF3EF);
+const kLine = Color(0xFFE6EAE5);
+const kFieldLine = Color(0xFFD8DED7);
 
-/// The FlutterFlow design (29 October 2026): fields sit a shade *below* the
-/// card they are on, and every card carries a hairline a shade above it.
-const kField = Color(0xFF1A2131);
-const kCardLine = Color(0xFF2F3849);
+/// Fields are near-white on the white card, held by a hairline; every card
+/// carries a hairline a shade darker than the page.
+const kField = Color(0xFFFAFBF9);
+const kCardLine = Color(0xFFE8ECE7);
 
-/// The kit's primary button is white with the page's navy on it — the
-/// reverse of its light page, where the same button is navy.
-const kPrimary = Colors.white;
-const kOnPrimary = kPage;
+/// The primary button: the deep green, white on it.
+const kPrimary = Color(0xFF17795A);
+const kOnPrimary = Colors.white;
 
-/// [kBrand] and [kBrandDeep] are the chrome — a home screen's header, a
-/// summary card — drawn a step up from the cards beneath them.
-const kBrand = kRaised;
-const kBrandDeep = kCard;
-const kBrandTint = kRaised;
+/// [kBrand] and [kBrandDeep] are the dark green of the Today card and the
+/// splash; [kBrandTint] is the pale green track behind a bar.
+const kBrand = Color(0xFF1D5543);
+const kBrandDeep = Color(0xFF123B2F);
+const kBrandTint = Color(0xFFE2EFE6);
 
-/// The kit's green. [kGreen] is a fill, a ring or a mark; [kAccent] is green
-/// *text*, lifted so it still reads at AA on a dark card; [kGreenSoft] its wash.
-const kGreen = Color(0xFF19A974);
-const kAccent = Color(0xFF4ADE9B);
-const kGreenSoft = Color(0x2E19A974);
+/// The lime on the dark green card — the one button most people press.
+const kLime = Color(0xFFD4EE72);
+const kOnLime = Color(0xFF15382B);
 
-const kInk = Color(0xFFF4F5F7);
-const kInk2 = Color(0xFFA3AAB6);
-const kFaint = Color(0xFF6E7787);
+/// [kGreen] is a fill, a ring or a mark; [kAccent] is green *text*, dark
+/// enough to read at AA on white; [kGreenSoft] its wash.
+const kGreen = Color(0xFF1F8A63);
+const kAccent = Color(0xFF17795A);
+const kGreenSoft = Color(0xFFE3F1E8);
 
-/// Status inks, light enough to be text on [kCard]. Each has a wash for the
-/// box it sits in. On the light palette these were the website's dark shades;
-/// on a dark card the same hue is used a few steps paler.
+const kInk = Color(0xFF15231C);
+const kInk2 = Color(0xFF5F6D65);
+const kFaint = Color(0xFF98A39C);
+
+/// The headings' face: the phone's own serif (Noto Serif on Android), so
+/// nothing is fetched and a gate with no signal still draws it.
+const kSerif = 'serif';
+
+/// Status inks, dark enough to be text on white. Each has a wash for the box
+/// it sits in.
 const kGood = kAccent;
-const kBad = Color(0xFFFF7A80);
-const kBadSoft = Color(0x2EFF5A61);
-const kWarn = Color(0xFFF2CC60);
-const kWarnSoft = Color(0x2EF2CC60);
-const kInfo = Color(0xFF7DA7FF);
-const kTeal = Color(0xFF45CFC0);
+const kBad = Color(0xFFC8443A);
+const kBadSoft = Color(0xFFFCE9E5);
+const kWarn = Color(0xFFB7791F);
+const kWarnSoft = Color(0xFFFBF0DC);
+const kInfo = Color(0xFF2F6BD3);
+const kTeal = Color(0xFF0E8378);
 
 /// Accents for the tiles on the two home screens. Status colours are
 /// `kStatusColour` in app.dart and are not these — a tile is a door, not a day.
 const kTileGreen = kAccent;
 const kTileBlue = kInfo;
-const kTilePurple = Color(0xFFB79CFF);
-const kTileOrange = Color(0xFFFFA866);
+const kTilePurple = Color(0xFF6E56CF);
+const kTileOrange = Color(0xFFD9692B);
 
-/// The chrome's gradient: a home screen's header, a summary card.
+/// The dark green card: Today on the home screen, the splash.
 const kBrandGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: [kBrand, kBrandDeep],
 );
 
-/// The punch button's — the one green surface on the app, because it is the
-/// one thing on it most people ever press.
+/// The punch button's — green, because it is the one thing on the app most
+/// people ever press.
 const kPunchGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF22C487), kGreen],
+  colors: [Color(0xFF26A673), kAccent],
 );
 
-/// Every inner screen's bar, the kit's way: no band, the page's own colour,
-/// and the title large and to the left behind a bare chevron — "‹ Detail
-/// Employee" — rather than a centred word on a white strip.
+/// The widest the content is drawn. A tablet gets the phone layout centred at
+/// this width, with the tile grids doubled (see [TileGrid]), rather than cards
+/// stretched across a metre of glass.
+const kMaxContentWidth = 760.0;
+
+/// A heading in the serif face.
+TextStyle serif(double size, {Color color = kInk, FontWeight weight = FontWeight.w700}) =>
+    TextStyle(fontFamily: kSerif, fontSize: size, fontWeight: weight, color: color, height: 1.2);
+
+/// Every inner screen's bar: no band, the page's own colour, and the title
+/// large, in the serif, to the left — "Attendance", "My leave".
 AppBar brandBar(String title, {List<Widget>? actions, PreferredSizeWidget? bottom, Widget? leading}) => AppBar(
-      title: Text(title),
+      title: Text(title, overflow: TextOverflow.ellipsis),
       actions: actions,
       bottom: bottom,
       leading: leading,
@@ -88,20 +99,45 @@ AppBar brandBar(String title, {List<Widget>? actions, PreferredSizeWidget? botto
       centerTitle: false,
       toolbarHeight: 64,
       shape: const Border(),
-      titleTextStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: kInk),
+      titleTextStyle: serif(24),
     );
 
-/// The top of a home screen, the FlutterFlow way (29 October 2026): the
-/// greeting small, the name large, the role under it, the photo on the right.
+/// The Manna mark and name, small, at the top of a home screen.
+class BrandMark extends StatelessWidget {
+  const BrandMark({super.key});
+
+  @override
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 30,
+          height: 30,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: kCardLine)),
+          child: Image.asset('assets/manna_logo.png', fit: BoxFit.contain),
+        ),
+        const SizedBox(width: 8),
+        Text.rich(TextSpan(children: [
+          TextSpan(text: 'manna', style: serif(17)),
+          TextSpan(text: 'hr', style: serif(17, color: kAccent, weight: FontWeight.w800)),
+        ])),
+      ]);
+}
+
+/// The top of a home screen: the brand and the photo on one line, then
+/// "Good morning, Anand" large in the serif, and the date and role under it.
 ///
-/// [banded] draws it on a card-coloured band with rounded lower corners, as
-/// HR's home does, and puts [child] — HR's own attendance — inside the band.
+/// [banded] draws it on a white band with rounded lower corners, as HR's home
+/// does, and puts [child] — HR's own attendance — inside the band. The banded
+/// header keeps the whole name: HR phones are shared, and two Priyas is one
+/// login looking like another's.
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
     super.key,
     required this.name,
     required this.role,
     this.greeting = '',
+    this.subtitle = '',
     this.image = '',
     this.roleColor = kInk2,
     this.onAvatar,
@@ -112,6 +148,9 @@ class HomeHeader extends StatelessWidget {
   final String name;
   final String role;
   final String greeting;
+
+  /// Today's date, as the site has it — "Wednesday, 25 November".
+  final String subtitle;
   final String image;
   final Color roleColor;
   final VoidCallback? onAvatar;
@@ -121,52 +160,47 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
+    final first = name.trim().split(RegExp(r'\s+')).first;
+    // On HR's band "Hi," is its own word, so the whole name stays findable as
+    // itself.
+    final Widget headline = banded
+        ? Row(children: [
+            Text('Hi, ', style: serif(26)),
+            Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: serif(26))),
+          ])
+        : Text(greeting.isEmpty ? name : '$greeting, $first',
+            maxLines: 2, overflow: TextOverflow.ellipsis, style: serif(26));
+    final under = [subtitle, role].where((s) => s.isNotEmpty).join('  ·  ');
     final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (greeting.isNotEmpty)
-              Text(greeting, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kInk2)),
-            // The whole name: HR phones are shared, and two Priyas is one
-            // login looking like another's. "Hi," is its own word so the name
-            // stays findable as itself.
-            Row(children: [
-              if (banded)
-                const Text('Hi, ', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: kInk)),
-              Flexible(
-                child: Text(name,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: kInk, height: 1.25)),
-              ),
-            ]),
-            if (role.isNotEmpty)
-              Text(role,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: roleColor)),
-          ]),
-        ),
-        const SizedBox(width: 12),
+      Row(children: [
+        const BrandMark(),
+        const Spacer(),
         InkWell(
           customBorder: const CircleBorder(),
           onTap: onAvatar,
-          child: Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: kCardLine, width: 2)),
-            child: Avatar(name: name, image: image, radius: 24),
-          ),
+          child: Avatar(name: name, image: image, radius: 20, color: kAccent),
         ),
       ]),
-      if (child != null) ...[const SizedBox(height: 20), child!],
+      const SizedBox(height: 20),
+      headline,
+      if (under.isNotEmpty) ...[
+        const SizedBox(height: 4),
+        Text(under,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: roleColor)),
+      ],
+      if (child != null) ...[const SizedBox(height: 18), child!],
     ]);
     if (!banded) {
-      return Padding(padding: EdgeInsets.fromLTRB(20, top + 16, 20, 4), child: body);
+      return Padding(padding: EdgeInsets.fromLTRB(20, top + 14, 20, 4), child: body);
     }
     return Container(
       padding: EdgeInsets.fromLTRB(18, top + 14, 18, 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: kCard,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-        boxShadow: [BoxShadow(color: Colors.black38, blurRadius: 18, offset: Offset(0, 8))],
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+        boxShadow: [BoxShadow(color: kBrandDeep.withValues(alpha: .06), blurRadius: 18, offset: const Offset(0, 8))],
       ),
       child: body,
     );
@@ -179,6 +213,15 @@ String greeting(int hour) => hour < 12
     : hour < 17
         ? 'Good afternoon'
         : 'Good evening';
+
+const _weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const _months = [
+  'January', 'February', 'March', 'April', 'May', 'June', //
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/// "Wednesday, 25 November".
+String longDate(DateTime d) => '${_weekdays[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]}';
 
 /// Up to two initials, or `?` — an Employee saved with a blank name must not
 /// take a screen down with it.
@@ -204,7 +247,7 @@ class Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? kInk;
+    final c = color ?? kAccent;
     final url = image.isEmpty
         ? ''
         : image.startsWith('http')
@@ -212,38 +255,38 @@ class Avatar extends StatelessWidget {
             : '${Session.I.siteUrl}$image';
     return CircleAvatar(
       radius: radius,
-      backgroundColor: c.withValues(alpha: .14),
+      backgroundColor: c.withValues(alpha: .13),
       foregroundImage: url.isEmpty ? null : NetworkImage(url, headers: Session.I.authHeaders),
       onForegroundImageError: url.isEmpty ? null : (_, _) {},
-      child: Text(initialsOf(name),
-          style: TextStyle(color: c, fontWeight: FontWeight.w700, fontSize: radius * .7)),
+      child: Text(initialsOf(name), style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: radius * .7)),
     );
   }
 }
 
-/// The card everything sits on.
+/// The card everything sits on: white, a hairline, soft corners.
 class Panel extends StatelessWidget {
-  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(20), this.onTap});
+  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(18), this.onTap, this.color = kCard});
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Material(
-        color: kCard,
+        color: color,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: kCardLine),
+          side: BorderSide(color: color == kCard ? kCardLine : Colors.transparent),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
       );
 }
 
-/// An icon on a raised circle — the kit's, at the head of every stat and row.
+/// An icon on a soft square of its own colour — at the head of every row.
 class IconBadge extends StatelessWidget {
-  const IconBadge(this.icon, {super.key, this.color = kInk, this.size = 40});
+  const IconBadge(this.icon, {super.key, this.color = kAccent, this.size = 40});
 
   final IconData icon;
   final Color color;
@@ -253,15 +296,14 @@ class IconBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: size,
         height: size,
-        decoration: const BoxDecoration(color: kRaised, shape: BoxShape.circle),
+        decoration: BoxDecoration(color: color.withValues(alpha: .11), borderRadius: BorderRadius.circular(size * .3)),
         child: Icon(icon, color: color, size: size * .5),
       );
 }
 
-/// A door on a home screen. Without a [count] it is the FlutterFlow action
-/// tile: an icon on a raised circle over a word, centred. With one it is a
-/// figure: the icon on a filled circle of its [color], a small label, and the
-/// number large under it.
+/// A door on a home screen. Without a [count] it is a quick action: the icon
+/// and the word side by side on a pale green pill. With one it is a figure:
+/// the icon, the number large in the serif, and a small label.
 class Tile extends StatelessWidget {
   const Tile({super.key, required this.icon, required this.label, required this.onTap, this.color = kGreen, this.count});
 
@@ -274,40 +316,70 @@ class Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (count == null) {
-      return Panel(
-        onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          IconBadge(icon, color: color, size: 46),
-          const SizedBox(height: 12),
-          Text(label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: kInk)),
-        ]),
+      return Material(
+        color: kGreenSoft,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(icon, color: kAccent, size: 19),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(label,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kAccent)),
+              ),
+            ]),
+          ),
+        ),
       );
     }
     return Panel(
       onTap: onTap,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          child: Icon(icon, color: kPage, size: 22),
-        ),
-        const SizedBox(height: 18),
-        Center(
-          child: Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: kInk2)),
-        ),
-        const SizedBox(height: 4),
-        Center(
-          child: Text(count!,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: kInk, height: 1.15)),
-        ),
+        IconBadge(icon, color: color, size: 38),
+        const SizedBox(height: 14),
+        Text(count!, style: serif(28)),
+        const SizedBox(height: 2),
+        Text(label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kInk2)),
       ]),
     );
   }
+}
+
+/// A small figure in a grey box — "18 / Days present" — three to a card.
+class StatBox extends StatelessWidget {
+  const StatBox({super.key, required this.value, required this.label, this.color = kInk});
+
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+        decoration: BoxDecoration(color: kPage, borderRadius: BorderRadius.circular(14)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(value, style: serif(24, color: color)),
+          const SizedBox(height: 4),
+          // One line, shrunk if it must: four boxes to a row on a 320-wide
+          // phone is 50 pixels for "Holidays".
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(label,
+                maxLines: 1, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kInk2)),
+          ),
+        ]),
+      );
 }
 
 /// A small door, three to a row — HR's Quick Actions.
@@ -323,7 +395,7 @@ class MiniTile extends StatelessWidget {
         onTap: onTap,
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: kGreen, size: 26),
+          IconBadge(icon, size: 40),
           const SizedBox(height: 8),
           Text(label,
               textAlign: TextAlign.center,
@@ -333,30 +405,37 @@ class MiniTile extends StatelessWidget {
       );
 }
 
-/// Tiles in rows of [columns], at any count.
+/// Tiles in rows of [columns], at any count. On a screen wide enough — a
+/// tablet — the rows hold twice as many, so a tile is never stretched to the
+/// width of a page.
 class TileGrid extends StatelessWidget {
-  const TileGrid(this.tiles, {super.key, this.columns = 2, this.gap = 14});
+  const TileGrid(this.tiles, {super.key, this.columns = 2, this.gap = 12});
 
   final List<Widget> tiles;
   final int columns;
   final double gap;
 
   @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          for (var i = 0; i < tiles.length; i += columns) ...[
-            if (i > 0) SizedBox(height: gap),
-            IntrinsicHeight(
-              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                for (var j = 0; j < columns; j++) ...[
-                  if (j > 0) SizedBox(width: gap),
-                  Expanded(child: i + j < tiles.length ? tiles[i + j] : const SizedBox()),
-                ],
-              ]),
-            ),
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        var n = columns;
+        if (box.maxWidth >= 560 && tiles.length > columns) n = columns * 2;
+        if (n > tiles.length && tiles.length > columns) n = tiles.length;
+        return Column(
+          children: [
+            for (var i = 0; i < tiles.length; i += n) ...[
+              if (i > 0) SizedBox(height: gap),
+              IntrinsicHeight(
+                child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  for (var j = 0; j < n; j++) ...[
+                    if (j > 0) SizedBox(width: gap),
+                    Expanded(child: i + j < tiles.length ? tiles[i + j] : const SizedBox()),
+                  ],
+                ]),
+              ),
+            ],
           ],
-        ],
-      );
+        );
+      });
 }
 
 /// A centred heading over a group — "Organization Overview".
@@ -367,15 +446,12 @@ class CenterTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(0, 26, 0, 16),
-        child: Text(text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kInk)),
+        padding: const EdgeInsets.fromLTRB(0, 26, 0, 14),
+        child: Text(text, textAlign: TextAlign.center, style: serif(19)),
       );
 }
 
-/// One thing somebody asked for, on a card of its own: a square icon, the
-/// title and a line under it, and where it stands.
+/// One thing somebody asked for, on a card of its own.
 class ActivityCard extends StatelessWidget {
   const ActivityCard({super.key, required this.icon, required this.title, required this.subtitle, required this.status});
 
@@ -386,34 +462,45 @@ class ActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.only(bottom: 10),
         child: Panel(
           padding: const EdgeInsets.all(14),
-          child: Row(children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: kRaised, borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, color: kGreen, size: 21),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(children: [
-                Text(title,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: kInk)),
-                const SizedBox(height: 3),
-                Text(subtitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: kInk2)),
-              ]),
-            ),
-            const SizedBox(width: 8),
-            Pill(status, color: wordColour(status)),
-          ]),
+          child: ActivityRow(icon: icon, title: title, subtitle: subtitle, status: status),
         ),
       );
+}
+
+/// [ActivityCard]'s line on its own, for a list inside one card: a soft
+/// square icon, the title and a line under it, and where it stands.
+class ActivityRow extends StatelessWidget {
+  const ActivityRow({super.key, required this.icon, required this.title, required this.subtitle, required this.status});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = wordColour(status);
+    return Row(children: [
+      IconBadge(icon, color: c, size: 40),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: kInk)),
+          const SizedBox(height: 2),
+          Text(subtitle,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: kInk2)),
+        ]),
+      ),
+      const SizedBox(width: 8),
+      Pill(status, color: c),
+    ]);
+  }
 }
 
 /// A label over a value, with an icon — a profile's line.
@@ -426,14 +513,14 @@ class InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 20, color: kInk2),
+          IconBadge(icon, size: 36),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontSize: 13, color: kInk2)),
-              const SizedBox(height: 6),
+              Text(label, style: const TextStyle(fontSize: 12.5, color: kInk2)),
+              const SizedBox(height: 3),
               Text(value.isEmpty ? '—' : value,
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kInk)),
             ]),
@@ -452,7 +539,7 @@ class Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(color: color.withValues(alpha: .16), borderRadius: BorderRadius.circular(6)),
+        decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
         child: Text(text, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: .2)),
       );
 }
@@ -465,6 +552,7 @@ Color wordColour(String word) {
     case 'Completed':
     case 'Submitted':
     case 'Active':
+    case 'Present':
       return kAccent;
     case 'Refused':
     case 'Rejected':
@@ -479,7 +567,7 @@ Color wordColour(String word) {
   }
 }
 
-/// A heading over a group on a page.
+/// A heading over a group on a page, with a link on the right.
 class SectionTitle extends StatelessWidget {
   const SectionTitle(this.text, {super.key, this.trailing});
 
@@ -488,9 +576,9 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(2, 24, 2, 12),
+        padding: const EdgeInsets.fromLTRB(2, 22, 2, 10),
         child: Row(children: [
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kInk))),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kInk))),
           ?trailing,
         ]),
       );
@@ -506,9 +594,9 @@ class Note extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, line, ink) = switch (kind) {
-      NoteKind.error => (kBadSoft, kBad.withValues(alpha: .35), kBad),
-      NoteKind.warn => (kWarnSoft, kWarn.withValues(alpha: .35), kWarn),
-      NoteKind.ok => (kGreenSoft, kAccent.withValues(alpha: .35), kAccent),
+      NoteKind.error => (kBadSoft, kBad.withValues(alpha: .25), kBad),
+      NoteKind.warn => (kWarnSoft, kWarn.withValues(alpha: .25), const Color(0xFF8A5A12)),
+      NoteKind.ok => (kGreenSoft, kAccent.withValues(alpha: .25), kAccent),
     };
     return Container(
       width: double.infinity,
@@ -536,11 +624,9 @@ class EmptyNote extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(32, 64, 32, 32),
         children: [
-          Icon(icon, size: 44, color: kFaint),
-          const SizedBox(height: 12),
-          Text(title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: kInk)),
+          Center(child: IconBadge(icon, color: kFaint, size: 64)),
+          const SizedBox(height: 14),
+          Text(title, textAlign: TextAlign.center, style: serif(18)),
           const SizedBox(height: 6),
           Text(body, textAlign: TextAlign.center, style: const TextStyle(color: kInk2)),
         ],
@@ -559,16 +645,16 @@ class MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-        leading: Icon(icon, color: color),
+        leading: IconBadge(icon, color: color == kInk ? kAccent : color, size: 36),
         title: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: color)),
-        subtitle: subtitle == null ? null : Text(subtitle!),
-        trailing: const Icon(Icons.chevron_right, color: kInk2),
+        subtitle: subtitle == null ? null : Text(subtitle!, style: const TextStyle(color: kInk2)),
+        trailing: const Icon(Icons.chevron_right, color: kFaint),
         onTap: onTap,
       );
 }
 
-/// Behind the first card under a [KitHeader]: the band carried on for the
-/// card's top third, so the card sits across the band's edge as in the kit.
+/// Behind the first card under a banded header: the band carried on for the
+/// card's top third, so the card sits across the band's edge.
 const kBandEdge = LinearGradient(
   begin: Alignment.topCenter,
   end: Alignment.bottomCenter,
@@ -576,8 +662,8 @@ const kBandEdge = LinearGradient(
   stops: [0, .32, .32, 1],
 );
 
-/// A field's name over the field, the FlutterFlow way, rather than a label
-/// that floats inside the box.
+/// A field's name over the field, rather than a label that floats inside the
+/// box.
 class FieldLabel extends StatelessWidget {
   const FieldLabel(this.text, {super.key});
 
@@ -590,21 +676,25 @@ class FieldLabel extends StatelessWidget {
       );
 }
 
-/// A status on a dark wash with an icon — "✓ Present" on the Today card.
+/// A status on a wash with an icon — "✓ Present" on the Today card.
 class StatusTag extends StatelessWidget {
-  const StatusTag(this.text, {super.key, required this.color, this.icon});
+  const StatusTag(this.text, {super.key, required this.color, this.icon, this.background});
 
   final String text;
   final Color color;
   final IconData? icon;
 
+  /// Its own fill, for a tag on the dark green card.
+  final Color? background;
+
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(color: color.withValues(alpha: .16), borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        decoration:
+            BoxDecoration(color: background ?? color.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, size: 15, color: color), const SizedBox(width: 5)],
-          Text(text, style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w700)),
+          if (icon != null) ...[Icon(icon, size: 14, color: color), const SizedBox(width: 5)],
+          Text(text, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
         ]),
       );
 }

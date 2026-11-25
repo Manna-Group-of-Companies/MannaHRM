@@ -35,7 +35,7 @@ class SettingsScreen extends StatelessWidget {
                   applicationName: 'Manna HR',
                   applicationVersion: kAppVersion,
                   applicationIcon: Image.asset('assets/manna_logo.png', height: 32),
-                  children: [Text('Signed in to ${Session.I.siteUrl} as ${Session.I.user}.')],
+                  children: [Text('Signed in as ${Session.I.user}.')],
                 ),
               ),
             ]),

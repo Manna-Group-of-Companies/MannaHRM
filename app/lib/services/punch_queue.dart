@@ -76,12 +76,23 @@ class PunchQueue with WidgetsBindingObserver {
     await _save();
   }
 
+  Timer? _timer;
+
+  /// For the tests: stop sending by itself, so a test ends with no timer left.
+  @visibleForTesting
+  void stop() {
+    _timer?.cancel();
+    _timer = null;
+    if (_started) WidgetsBinding.instance.removeObserver(this);
+    _started = false;
+  }
+
   /// Start sending by itself. Idempotent: called every time the shell opens.
   void start() {
     if (_started) return;
     _started = true;
     WidgetsBinding.instance.addObserver(this);
-    Timer.periodic(const Duration(seconds: 30), (_) => unawaited(flush()));
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => unawaited(flush()));
     unawaited(load().then((_) => flush()));
   }
 

@@ -173,8 +173,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             icon: const Icon(Icons.chevron_left),
             onPressed: _loading ? null : () => _shiftMonth(-1),
           ),
-          Text('${kMonthNames[_month - 1]} $_year',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kInk)),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('${kMonthNames[_month - 1]} $_year', style: serif(17)),
+            ),
+          ),
           IconButton(
             tooltip: 'Next month',
             icon: const Icon(Icons.chevron_right),
@@ -192,7 +196,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   padding: const EdgeInsets.only(bottom: 10, top: 2),
                   child: Text(d,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kInk2)),
+                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: kFaint)),
                 ),
               ))
           .toList(),
@@ -218,34 +222,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _cell(RosterDay r) {
     final colour = kStatusColour[r.status] ?? kFaint;
-    // `unmarked` is drawn as an outline rather than a fill: a day that has not
-    // happened yet and a day that was worked must not read as two shades of the
-    // same thing.
-    final filled = r.status != DayStatus.unmarked;
+    // A day is a pale square of its state's colour with the number in that
+    // colour; a day that has not happened yet is bare. Today is the one solid
+    // green square.
+    final bare = r.status == DayStatus.unmarked;
     final day = int.parse(r.iso.substring(8, 10));
     final isToday = r.iso == _today;
+    final ink = isToday ? Colors.white : (bare ? kInk2 : colour);
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: () => _openDay(r),
       child: Container(
-        margin: const EdgeInsets.all(4),
+        margin: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          color: filled ? colour : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(
-            color: isToday ? kInk : (filled ? Colors.transparent : kLine),
-            width: isToday ? 2 : 1,
-          ),
+          color: isToday ? kPrimary : (bare ? Colors.transparent : colour.withValues(alpha: .13)),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Stack(children: [
           Center(
-            child: Text('$day',
-                style: TextStyle(color: filled ? kPage : kInk, fontWeight: FontWeight.w800, fontSize: 13.5)),
+            child: Text('$day', style: TextStyle(color: ink, fontWeight: FontWeight.w700, fontSize: 13.5)),
           ),
           // A day carrying a correction is flagged, whatever its colour: it is
           // the day somebody already knows about and is waiting on.
-          if (r.correction != null)
-            const Positioned(right: 3, top: 3, child: Icon(Icons.flag, size: 11, color: kPage)),
+          if (r.correction != null) Positioned(right: 3, top: 3, child: Icon(Icons.flag, size: 10, color: ink)),
         ]),
       ),
     );
@@ -254,45 +253,54 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _counts() {
     final c = countStates(_rows);
     // Two digits, as the design draws them: 02 lines up under 22.
-    Widget stat(String label, int n, IconData icon, Color colour) => Panel(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kInk2)),
-            const SizedBox(height: 4),
-            Text(n.toString().padLeft(2, '0'),
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: colour)),
-          ]),
-        );
-    return TileGrid([
-      stat('Present', c[DayStatus.present] ?? 0, Icons.how_to_reg_rounded, kStatusColour[DayStatus.present]!),
-      stat('Absent', c[DayStatus.absent] ?? 0, Icons.person_off_rounded, kStatusColour[DayStatus.absent]!),
-      stat('Leave', c[DayStatus.onLeave] ?? 0, Icons.beach_access_rounded, kStatusColour[DayStatus.onLeave]!),
-      stat('Holidays', (c[DayStatus.holiday] ?? 0) + (c[DayStatus.weeklyOff] ?? 0), Icons.weekend_rounded,
-          kStatusColour[DayStatus.holiday]!),
-    ]);
+    Widget stat(String label, int n, Color colour) =>
+        Expanded(child: StatBox(value: n.toString().padLeft(2, '0'), label: label, color: colour));
+    return Panel(
+      padding: const EdgeInsets.all(10),
+      child: Row(children: [
+        stat('Present', c[DayStatus.present] ?? 0, kStatusColour[DayStatus.present]!),
+        const SizedBox(width: 8),
+        stat('Absent', c[DayStatus.absent] ?? 0, kStatusColour[DayStatus.absent]!),
+        const SizedBox(width: 8),
+        stat('Leave', c[DayStatus.onLeave] ?? 0, kStatusColour[DayStatus.onLeave]!),
+        const SizedBox(width: 8),
+        stat('Holidays', (c[DayStatus.holiday] ?? 0) + (c[DayStatus.weeklyOff] ?? 0), kStatusColour[DayStatus.holiday]!),
+      ]),
+    );
   }
 
   List<Widget> _todayBlock() {
     final r = _rows.where((d) => d.iso == _today).firstOrNull;
     if (r == null) return const [];
-    Widget half(String label, String value, IconData icon, Color colour) => Panel(
-          padding: const EdgeInsets.all(12),
+    Widget line(IconData icon, Color colour, String label, String sub, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(children: [
-            IconBadge(icon, color: colour, size: 36),
-            const SizedBox(width: 10),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: kInk2)),
-              Text(value.isEmpty ? '—' : value,
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: kInk)),
-            ]),
+            IconBadge(icon, color: colour, size: 38),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(label, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: kInk)),
+                Text(sub, style: const TextStyle(fontSize: 12, color: kInk2)),
+              ]),
+            ),
+            Text(value.isEmpty ? '—' : value,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: kInk)),
           ]),
         );
     return [
-      SectionTitle(_own ? "Today's Attendance" : 'Today'),
-      TileGrid([
-        half('Punch in', clockOf(r.inAt), Icons.login_rounded, kTileGreen),
-        half('Punch out', clockOf(r.outAt), Icons.logout_rounded, kTileBlue),
-      ]),
+      SectionTitle(_own ? longDate(ServerClock.I.now()) : 'Today'),
+      Panel(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        child: Column(children: [
+          line(Icons.login_rounded, kTileGreen, 'Punch in', r.inAt.isEmpty ? 'Not punched in yet' : 'First punch',
+              clockOf(r.inAt)),
+          const Divider(height: 1),
+          line(Icons.logout_rounded, kTileOrange, 'Punch out', r.outAt.isEmpty ? 'Not punched out yet' : 'Last punch',
+              clockOf(r.outAt)),
+          const Divider(height: 1),
+          line(Icons.schedule_rounded, kTileBlue, 'Total hours', 'Today so far', r.hours),
+        ]),
+      ),
     ];
   }
 
@@ -307,15 +315,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
           opacity: n == 0 ? .45 : 1,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: kStatusColour[s], borderRadius: BorderRadius.circular(3)),
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: kStatusColour[s], shape: BoxShape.circle),
             ),
             const SizedBox(width: 5),
             // The word as well as the colour, always. Eight states over
             // thirty-one cells is exactly the chart that fails on colour alone,
             // and this one is read to check a wage.
-            Text('${kDayLabels[s]} $n', style: const TextStyle(fontSize: 12)),
+            Text('${kDayLabels[s]} $n', style: const TextStyle(fontSize: 12, color: kInk2)),
           ]),
         );
       }).toList(),

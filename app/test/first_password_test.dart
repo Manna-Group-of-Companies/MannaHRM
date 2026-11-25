@@ -56,4 +56,42 @@ void main() {
           isNull);
     });
   });
+
+  group('signing in with a date typed loosely (25 November 2026)', () {
+    final today = DateTime(2026, 11, 25);
+
+    test('the date of birth without its zeros is still the first password', () {
+      expect(dobForms('2432005', today: today), ['24032005']);
+      expect(dobForms('24-3-2005', today: today), ['24032005']);
+      expect(dobForms('24/03/05', today: today), ['24032005']);
+      expect(dobForms('240305', today: today), ['24032005']);
+      expect(dobForms('24032005', today: today), ['24032005']);
+    });
+
+    test('a date that reads two ways gives both, and nothing that is not a date gives anything', () {
+      expect(dobForms('1112005', today: today), ['01112005', '11012005']);
+      expect(dobForms('river-stone-42', today: today), isEmpty);
+      expect(dobForms('31022005', today: today), isEmpty, reason: 'no 31 February');
+      expect(dobForms('24032031', today: today), isEmpty, reason: 'not born yet');
+    });
+
+    test('the Emp Code is found however it is typed', () {
+      expect(empCodeForm('mrp293'), 'MRP-293');
+      expect(empCodeForm(' MRP 293 '), 'MRP-293');
+      expect(empCodeForm('MRP-293'), 'MRP-293');
+      expect(empCodeForm('anand@manna.in'), 'anand@manna.in');
+    });
+
+    test('the phone in the picture: MRP-293 and 2432005 signs in as MRP-293 and 24032005', () {
+      expect(signInTries('MRP-293', '2432005', today: today), [('MRP-293', '2432005'), ('MRP-293', '24032005')]);
+    });
+
+    test('as typed first, then the form the site holds, never more than four tries', () {
+      final tries = signInTries('mrp293', '1112005', today: today);
+      expect(tries.first, ('mrp293', '1112005'));
+      expect(tries[1], ('MRP-293', '01112005'));
+      expect(tries.length, kMaxSignInTries);
+      expect(signInTries('anand@manna.in', 'my own password', today: today), [('anand@manna.in', 'my own password')]);
+    });
+  });
 }
