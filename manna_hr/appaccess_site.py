@@ -47,7 +47,9 @@ def _phone(employee):
 	emp = frappe.db.get_value("Employee", employee, list(_PHONE_FIELDS), as_dict=True) or {}
 	login = emp.get("user_id") or ""
 	if not login:
-		email = aa.email_of(emp)
+		# A login already named by their email, or by the stand-in a first press
+		# of the button made, is the one to link rather than a second.
+		email = aa.email_of(emp) or aa.stand_in_email(emp.get("employee_number"))
 		if email and frappe.db.exists("User", email):
 			login = email
 	login_user = None

@@ -71,7 +71,12 @@ export default function AppAccess({ emp }) {
 				<ul style={{ margin: "0 0 12px", paddingLeft: 18, lineHeight: 1.6 }}>
 					<li>Punch Method: <b>{phone.method || "not set"}</b> → <b>{phone.method === "Mobile App" ? "Mobile App" : "Both"}</b>. The machine keeps working.</li>
 					{phone.make_login ? (
-						<li>A new login <b>{phone.login}</b> is made with the Employee role. They sign in to the Manna HR app with <b>{phone.sign_in_as}</b> and their date of birth (DDMMYYYY), and choose a new password the first time.</li>
+						<li>
+							{phone.stand_in
+								? <>A new login is made with the Employee role. The record has no email, so the site names it <b>{phone.login}</b>, an address that never receives mail.</>
+								: <>A new login <b>{phone.login}</b> is made with the Employee role.</>}
+							{" "}They sign in to the Manna HR app with <b>{phone.sign_in_as}</b> and their date of birth (DDMMYYYY), and choose a new password the first time.
+						</li>
 					) : (
 						<li>Their login <b>{phone.login}</b> is linked. Its user name and password are not changed: they sign in as <b>{phone.sign_in_as}</b> with their own password.</li>
 					)}
