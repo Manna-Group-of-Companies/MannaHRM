@@ -164,3 +164,104 @@ def plan(key, value, roles):
 def granted(changes):
 	"""The roles a change would add. Checked against UNTOUCHABLE before writing."""
 	return list(changes.get("add_roles") or ())
+
+
+# ------------------------------------------------------------ phone punch ---
+#
+# Asked for 25 November 2026: an employee who punches on the machine should be
+# able to punch on the phone as well, switched on from their profile. Create
+# Employee already makes a phone login for a new person (client/src/lib/
+# newemp.js appUserDoc); this does the same for somebody already on the site.
+
+#: The punch methods the phone app is for.
+PHONE_METHODS = ("Mobile App", "Both")
+
+
+def first_password(dob):
+	"""The date of birth as DDMMYYYY — 2005-03-24 is "24032005" — or "".
+
+	The same rule as `dobPassword` in client/src/lib/newemp.js and
+	`dobPassword` in app/lib/core/first_password.dart; the phone app makes the
+	person choose their own the first time they sign in with it.
+	"""
+	s = str(dob or "")[:10]
+	if len(s) != 10 or s[4] != "-" or s[7] != "-":
+		return ""
+	return s[8:10] + s[5:7] + s[0:4]
+
+
+def email_of(emp):
+	"""The address a new login is named by: the work email, else the personal."""
+	for key in ("company_email", "personal_email", "prefered_email"):
+		v = str(emp.get(key) or "").strip().lower()
+		if "@" in v:
+			return v
+	return ""
+
+
+def phone_punch(emp, login_user=None, username_holder="", by_user_name=None):
+	"""What "Allow phone punch too" would do for one employee, or why it cannot.
+
+	`emp` is the Employee's fields. `login_user` is the User it would use —
+	the one `user_id` names, or else the one its email names — as
+	`{name, enabled, username}`, or None when there is none. `username_holder`
+	is any other login already carrying the Emp Code as its user name.
+	`by_user_name` is System Settings → Allow Login using User Name (None:
+	could not tell).
+
+	**An existing login keeps its user name and password.** A driver's
+	`pareeth_k_b` is how the Fleet driver app signs them in, and a password is
+	somebody's own; changing either here would lock them out of something they
+	were using. Only a login made here gets the Emp Code and the date of birth.
+	"""
+	method = str(emp.get("custom_punch_method") or "")
+	code = str(emp.get("employee_number") or "").strip()
+	out = {
+		"method": method,
+		"on": method in PHONE_METHODS and bool(emp.get("user_id")),
+		"login": "",
+		"make_login": False,
+		"sign_in_as": "",
+		"password": "",
+		"problems": [],
+		"warnings": [],
+	}
+	if str(emp.get("status") or "Active") != "Active":
+		out["problems"].append("This employee is not Active.")
+
+	if login_user:
+		out["login"] = login_user["name"]
+		out["sign_in_as"] = login_user.get("username") or login_user["name"]
+		out["password"] = "their own password"
+		if not login_user.get("enabled"):
+			out["problems"].append(
+				"Their login {0} is turned off. Turn on the login above first.".format(login_user["name"]))
+	else:
+		email = email_of(emp)
+		dob = first_password(emp.get("date_of_birth"))
+		if not email:
+			out["problems"].append("No email on the record. Every login is named by an email: fill in Company Email or Personal Email.")
+		if not code:
+			out["problems"].append("No Emp Code on the record. It is the user name they sign in with.")
+		elif username_holder:
+			out["problems"].append("{0} is already the user name of {1}.".format(code, username_holder))
+		if not dob:
+			out["problems"].append("No date of birth on the record. It is their first password.")
+		out["login"] = email
+		out["make_login"] = True
+		out["sign_in_as"] = code
+		out["password"] = "date of birth, DDMMYYYY"
+
+	if not emp.get("default_shift"):
+		out["warnings"].append("No default shift: the punches will land, but will not become attendance until a shift is set.")
+	if by_user_name is False and out["sign_in_as"] and "@" not in out["sign_in_as"]:
+		out["warnings"].append(
+			"The site does not allow signing in with a user name (System Settings → Allow Login using "
+			"User Name), so until that is ticked they sign in with {0}.".format(out["login"] or "their email"))
+	return out
+
+
+def phone_method_after(method):
+	"""The punch method once phone punch is allowed: a machine person keeps the
+	machine, so it is Both; Mobile App stays as it is."""
+	return method if method in PHONE_METHODS else "Both"

@@ -81,3 +81,68 @@ def test_no_switch_can_grant_an_untouchable_role():
 		if a["kind"] == "role":
 			assert a["role"] not in aa.UNTOUCHABLE
 	assert not set(aa.CMMS_ROLES) & set(aa.UNTOUCHABLE)
+
+
+# ------------------------------------------------------------ phone punch ---
+
+MACHINE = {
+	"name": "HR-EMP-00293", "employee_name": "Anand K", "employee_number": "MRP-293", "status": "Active",
+	"date_of_birth": "2005-03-24", "company_email": "Anand@Manna.in", "user_id": "",
+	"custom_punch_method": "Fingerprint Machine", "default_shift": "General",
+}
+
+
+def test_the_first_password_is_the_date_of_birth_ddmmyyyy():
+	assert aa.first_password("2005-03-24") == "24032005"
+	assert aa.first_password("") == ""
+	assert aa.first_password(None) == ""
+
+
+def test_a_machine_employee_with_no_login_gets_one_named_by_email_signed_in_with_the_emp_code():
+	p = aa.phone_punch(MACHINE)
+	assert p["problems"] == []
+	assert (p["make_login"], p["login"], p["sign_in_as"]) == (True, "anand@manna.in", "MRP-293")
+	assert p["on"] is False
+
+
+def test_an_existing_login_keeps_its_own_user_name_and_password():
+	# A driver's Fleet app signs in as pareeth_k_b; changing it would lock them out there.
+	p = aa.phone_punch({**MACHINE, "user_id": "pareeth@manna.in"},
+		{"name": "pareeth@manna.in", "enabled": 1, "username": "pareeth_k_b"})
+	assert (p["make_login"], p["sign_in_as"], p["password"]) == (False, "pareeth_k_b", "their own password")
+	assert p["problems"] == []
+
+
+def test_what_is_missing_is_said_in_words_hr_can_act_on():
+	p = aa.phone_punch({**MACHINE, "company_email": "", "date_of_birth": None})
+	assert any("email" in s for s in p["problems"])
+	assert any("date of birth" in s for s in p["problems"])
+
+
+def test_an_emp_code_already_somebodys_user_name_is_refused():
+	p = aa.phone_punch(MACHINE, None, "other@manna.in")
+	assert p["problems"] == ["MRP-293 is already the user name of other@manna.in."]
+
+
+def test_a_turned_off_login_or_a_left_employee_is_refused():
+	assert aa.phone_punch({**MACHINE, "user_id": "a@b.in"}, {"name": "a@b.in", "enabled": 0})["problems"]
+	assert aa.phone_punch({**MACHINE, "status": "Left"})["problems"]
+
+
+def test_no_shift_and_no_user_name_sign_in_are_warnings_not_refusals():
+	p = aa.phone_punch({**MACHINE, "default_shift": ""}, by_user_name=False)
+	assert p["problems"] == []
+	assert len(p["warnings"]) == 2
+
+
+def test_the_machine_is_kept():
+	assert aa.phone_method_after("Fingerprint Machine") == "Both"
+	assert aa.phone_method_after("") == "Both"
+	assert aa.phone_method_after("Mobile App") == "Mobile App"
+	assert aa.phone_method_after("Both") == "Both"
+
+
+def test_on_means_a_phone_method_and_a_linked_login():
+	assert aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "a@b.in"},
+		{"name": "a@b.in", "enabled": 1, "username": "MRP-293"})["on"] is True
+	assert aa.phone_punch({**MACHINE, "custom_punch_method": "Both"})["on"] is False

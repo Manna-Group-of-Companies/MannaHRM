@@ -14,6 +14,7 @@ const why = (e) => String(e?.message || e || "The site would not do that.").slic
 
 export const loadAccess = (employee) => apiCall("manna_hr.appaccess_site.get_access", { employee });
 const setAccess = (employee, key, value) => apiCall("manna_hr.appaccess_site.set_access", { employee, key, value });
+const allowPhone = (employee) => apiCall("manna_hr.appaccess_site.allow_phone_punch", { employee });
 
 const optLabel = (o) => (typeof o === "string" ? o : o.label);
 const optValue = (o) => (typeof o === "string" ? o : o.value);
@@ -32,6 +33,19 @@ export default function AppAccess({ emp }) {
 		return () => { dead = true; };
 	}, [emp]);
 
+	async function phoneOn() {
+		setAsk(null);
+		setBusy("phone");
+		try {
+			const data = await allowPhone(emp);
+			setSt({ state: "ok", data, err: "" });
+			toast("Phone punch allowed.");
+		} catch (e) {
+			toast(why(e));
+		}
+		setBusy("");
+	}
+
 	async function change(key, value) {
 		setAsk(null);
 		setBusy(key);
@@ -47,11 +61,38 @@ export default function AppAccess({ emp }) {
 
 	if (st.state === "loading") return <EmptyState title="Reading access…" />;
 	if (st.state === "error") return <EmptyState title="Access could not be read">{st.err}</EmptyState>;
-	const { login, why: locked, apps } = st.data || {};
-	if (!login) return <EmptyState title="No login">This employee has no login on the site.</EmptyState>;
+	const { login, why: locked, apps, phone } = st.data || {};
+	const phoneCard = phone ? (
+		<PhonePunch phone={phone} locked={login ? locked : ""} busy={busy === "phone"} onAsk={() => setAsk({ key: "phone" })} />
+	) : null;
+	const phoneAsk = ask?.key === "phone" ? (
+		<KitModal title="Allow phone punch?" onClose={() => setAsk(null)}>
+			<form noValidate onSubmit={(e) => { e.preventDefault(); void phoneOn(); }}>
+				<ul style={{ margin: "0 0 12px", paddingLeft: 18, lineHeight: 1.6 }}>
+					<li>Punch Method: <b>{phone.method || "not set"}</b> → <b>{phone.method === "Mobile App" ? "Mobile App" : "Both"}</b>. The machine keeps working.</li>
+					{phone.make_login ? (
+						<li>A new login <b>{phone.login}</b> is made with the Employee role. They sign in to the Manna HR app with <b>{phone.sign_in_as}</b> and their date of birth (DDMMYYYY), and choose a new password the first time.</li>
+					) : (
+						<li>Their login <b>{phone.login}</b> is linked. Its user name and password are not changed: they sign in as <b>{phone.sign_in_as}</b> with their own password.</li>
+					)}
+				</ul>
+				<ModalFoot ok="Allow phone punch" onCancel={() => setAsk(null)} busy={busy === "phone"} />
+			</form>
+		</KitModal>
+	) : null;
+	if (!login) {
+		return (
+			<div>
+				{phoneCard}
+				<EmptyState title="No login">This employee has no login on the site.</EmptyState>
+				{phoneAsk}
+			</div>
+		);
+	}
 
 	return (
 		<div>
+			{phoneCard}
 			<p style={{ margin: "0 0 12px" }}><b>{login}</b>{locked ? <small style={{ display: "block", color: "rgb(var(--ink-3))" }}>{locked}</small> : null}</p>
 			<table className="k-rt" aria-label="Apps & access">
 				<thead><tr>{["App", "Access", ""].map((c, i) => <th key={i}><span>{c}</span></th>)}</tr></thead>
@@ -85,7 +126,8 @@ export default function AppAccess({ emp }) {
 					})}
 				</tbody>
 			</table>
-			{ask ? (
+			{phoneAsk}
+			{ask && ask.key !== "phone" ? (
 				<KitModal title="Turn off the login?" onClose={() => setAsk(null)}>
 					<form noValidate onSubmit={(e) => { e.preventDefault(); void change("login", false); }}>
 						<p style={{ margin: "0 0 12px" }}>{login} will be signed out of every app and website.</p>
@@ -94,6 +136,44 @@ export default function AppAccess({ emp }) {
 				</KitModal>
 			) : null}
 		</div>
+	);
+}
+
+/** Phone punch (25 November 2026, asked for by HR): somebody who punches on
+    the machine can punch on the phone as well. What it needs and what it does
+    are the site's answer (manna_hr/appaccess.py phone_punch); this draws it
+    and offers the one button. */
+function PhonePunch({ phone, locked, busy, onAsk }) {
+	const { on, method, sign_in_as: as, problems = [], warnings = [] } = phone;
+	return (
+		<section aria-label="Phone punch" style={{ border: "1px solid rgb(var(--line))", borderRadius: 14, padding: "14px 16px", margin: "0 0 16px" }}>
+			<div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+				<div style={{ flex: "1 1 220px" }}>
+					<b>Phone punch</b>{" "}
+					{on ? <Pill status="Active">On · {method}</Pill> : <Pill status="Suspended">Off</Pill>}
+					<small style={{ display: "block", color: "rgb(var(--ink-3))", marginTop: 4 }}>
+						{on
+							? <>Signs in to the Manna HR app as <b>{as}</b>.</>
+							: <>Punches on <b>{method || "nothing set"}</b>.</>}
+					</small>
+				</div>
+				{on || locked ? null : (
+					<button type="button" className="k-btn k-btn-sm k-btn-ink" disabled={busy || problems.length > 0} onClick={onAsk}>
+						{busy ? "Allowing…" : "Allow phone punch too"}
+					</button>
+				)}
+			</div>
+			{!on && problems.length ? (
+				<ul style={{ margin: "10px 0 0", paddingLeft: 18, color: "rgb(var(--bad))" }}>
+					{problems.map((p) => <li key={p}>{p}</li>)}
+				</ul>
+			) : null}
+			{warnings.length ? (
+				<ul style={{ margin: "10px 0 0", paddingLeft: 18, color: "rgb(var(--ink-3))" }}>
+					{warnings.map((w) => <li key={w}>{w}</li>)}
+				</ul>
+			) : null}
+		</section>
 	);
 }
 
