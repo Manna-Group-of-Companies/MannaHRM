@@ -1104,7 +1104,19 @@
   .ecard.ecard-off { @apply bg-wash shadow-none; }
   .ecard.ecard-off .ava { @apply opacity-60 grayscale; }
   .ecard .eoff { @apply text-fine text-ink-3 py-[.1rem]; }
-  .ecard .emgr { @apply ml-[.4rem] px-[.45rem] py-[.05rem] rounded-full text-tiny font-semibold bg-live-wash text-live-dark; }
+  /* A tagged Manager (26 November 2026, asked for by HR): the card in gold,
+     and a solid gold badge — not the pale gold of Needs details. */
+  .ecard.ecard-mgr {
+    border-color: rgb(var(--part));
+    box-shadow: 0 0 0 1px rgb(var(--part) / .35), 0 8px 22px -12px rgb(var(--part) / .55);
+    background-image: linear-gradient(135deg, rgb(var(--part) / .12), transparent 60%);
+  }
+  .ecard.ecard-mgr:hover { border-color: rgb(var(--part)); }
+  .ecard .emgr, .k-mgr {
+    margin-left: .4rem; padding: .05rem .5rem; border-radius: 9999px;
+    font-size: 11px; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
+    background: rgb(var(--part)); color: rgb(var(--card));
+  }
   .ecard .eneeds { @apply ml-[.4rem] px-[.45rem] py-[.05rem] rounded-full text-tiny font-semibold bg-part-wash text-part; }
   .empneeds {
     @apply flex flex-wrap items-center justify-between gap-[.6rem] px-[.9rem] py-[.6rem] rounded-md

@@ -343,6 +343,34 @@ export default function EmployeeMaster() {
 	   may, and a refusal names who it was. Never a delete (D11). */
 	/* Deactivate asks which day it took effect (18 Nov 2026) — one date for
 	   everybody ticked, stored as their Leaving Date; see lib/deactivate.js. */
+	/* Manager tag for every ticked person (26 November 2026, asked for by HR:
+	   nobody was tagged, so Reporting Manager offered nobody). One field,
+	   `custom_is_manager`, written as the signed-in login like the status. */
+	async function setManagerAll(on) {
+		setBusy(true);
+		setErr("");
+		const refused = [];
+		let done = 0;
+		for (const name of sel) {
+			const who = s.byName[name]?.employee_name || name;
+			if ((Number(s.byName[name]?.custom_is_manager) === 1) === on) continue;
+			const patch = { custom_is_manager: on ? 1 : 0 };
+			const r = await saveEmployee(name, patch);
+			if (!r.ok) { refused.push(`${who}: ${r.error}`); continue; }
+			done++;
+			const { employees, byName } = getState();
+			const row = { ...byName[name], ...patch };
+			set({ employees: employees.map((e) => (e.name === name ? row : e)), byName: { ...byName, [name]: row } });
+			forgetEmployeeDoc(name);
+		}
+		setBusy(false);
+		setAsk("");
+		setSel(new Set());
+		if (done) toast(`${done} ${done === 1 ? "person" : "people"} ${on ? "tagged as Manager" : "no longer tagged as Manager"}`);
+		else if (!refused.length) toast(on ? "Already tagged as Manager." : "None of them was tagged as Manager.");
+		if (refused.length) setErr(`The site refused ${refused.length}: ${refused.join("; ")}`);
+	}
+
 	async function setStatusAll(status) {
 		setBusy(true);
 		setErr("");
@@ -478,6 +506,8 @@ export default function EmployeeMaster() {
 					{sel.size && !readOnly ? (
 						<div className="k-row-act">
 							<span style={{ alignSelf: "center", fontWeight: 600, color: "rgb(var(--ink))" }}>{sel.size} selected</span>
+							<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => setAsk("mgr-on")}>★ Mark as Manager</button>
+							<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => setAsk("mgr-off")}>Remove Manager</button>
 							<button type="button" className="k-btn k-btn-line k-btn-sm" onClick={() => setAsk("Active")}>Activate</button>
 							<button type="button" className="k-btn k-btn-line k-btn-sm" style={{ color: "rgb(var(--bad))" }}
 								onClick={() => setAsk("Inactive")}>Deactivate</button>
@@ -549,7 +579,8 @@ export default function EmployeeMaster() {
 														})} />
 												</td>
 											) : null}
-											<td className="k-title-cell"><Who name={e.employee_name || e.name} sub={on ? mailOf(e) : ""} /></td>
+											<td className="k-title-cell"><Who name={e.employee_name || e.name} sub={on ? mailOf(e) : ""}
+												tag={on && Number(e.custom_is_manager) === 1 ? <span className="k-mgr" title="Tagged as a Manager">★ Manager</span> : null} /></td>
 											<td data-label="Employee ID" className="k-num">{on ? e.employee_number || "—" : hid}</td>
 											<td data-label="Job Title">{on ? e.designation || "—" : hid}</td>
 											<td data-label="Line Manager">{on ? atName(s, e) : hid}</td>
@@ -564,6 +595,9 @@ export default function EmployeeMaster() {
 												<DotsMenu label={`More for ${e.employee_name}`} items={[
 													{ label: "View profile", icon: "user", onClick: () => openEmployee(e.name) },
 													...(readOnly ? [] : [
+														Number(e.custom_is_manager) === 1
+															? { label: "Remove Manager", icon: "user", onClick: () => { setSel(new Set([e.name])); setAsk("mgr-off"); } }
+															: { label: "Mark as Manager", icon: "user", onClick: () => { setSel(new Set([e.name])); setAsk("mgr-on"); } },
 														"-",
 														on
 															? { label: "Deactivate", icon: "door", danger: true, onClick: () => { setSel(new Set([e.name])); setAsk("Inactive"); } }
@@ -582,7 +616,16 @@ export default function EmployeeMaster() {
 			</div>
 
 			{drawer ? <FilterDrawer s={s} all={all} onClose={() => { setDrawer(false); setPage(1); }} /> : null}
-			{ask ? (
+			{ask === "mgr-on" || ask === "mgr-off" ? (
+				<Confirm
+					title={`${ask === "mgr-on" ? "Tag" : "Untag"} ${sel.size} ${sel.size === 1 ? "person" : "people"} as Manager?`}
+					sub={ask === "mgr-on"
+						? "A Manager's card is drawn in gold, and they are offered as Reporting Manager when somebody new is added to their company."
+						: "They are no longer offered as Reporting Manager to new people. Whoever already reports to them still does."}
+					ok={busy ? "Working…" : ask === "mgr-on" ? "Mark as Manager" : "Remove Manager"}
+					onClose={() => { if (!busy) { setAsk(""); } }}
+					onOk={() => setManagerAll(ask === "mgr-on")} />
+			) : ask ? (
 				<Confirm
 					title={`${ask === "Inactive" ? "Deactivate" : "Activate"} ${sel.size} ${sel.size === 1 ? "person" : "people"}?`}
 					sub={ask === "Inactive"

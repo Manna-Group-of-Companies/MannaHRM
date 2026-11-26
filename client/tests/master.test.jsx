@@ -180,6 +180,21 @@ describe("the reference's Employees controls", () => {
 		expect(getState().byName[first.dataset.emp].status).toBe("Inactive");
 	});
 
+	it("tags the people ticked as Manager, and the badge shows on their row (26 November 2026)", async () => {
+		set(loadedState());
+		const wrote = [];
+		vi.spyOn(http, "put").mockImplementation((url, body) => { wrote.push([decodeURIComponent(url), body]); return Promise.resolve({ data: {} }); });
+		const r = await draw();
+		const first = rowsOf(r)[0];
+		await act(async () => { first.querySelector('input[type="checkbox"]').click(); });
+		await act(async () => { [...r.container.querySelectorAll("button")].find((b) => b.textContent === "★ Mark as Manager").click(); });
+		expect(document.body.textContent).toContain("as Manager?");
+		await act(async () => { fireEvent.submit(document.querySelector(".k-modal form")); });
+		expect(wrote).toEqual([[`/api/resource/Employee/${first.dataset.emp}`, { custom_is_manager: 1 }]]);
+		expect(getState().byName[first.dataset.emp].custom_is_manager).toBe(1);
+		expect(rowsOf(r).find((row) => row.dataset.emp === first.dataset.emp).querySelector(".k-mgr").textContent).toBe("★ Manager");
+	});
+
 	it("offers no ticking and no Deactivate to a login that only reads employees", async () => {
 		set({ ...loadedState(), user: "mannarubber@gmail.com" });
 		const r = await draw();

@@ -120,7 +120,17 @@ export function missing(step, f) {
 	const out = rows
 		.filter((r) => r[3] && r[0] && !String(f[r[0]] ?? "").trim())
 		.map((r) => r[1]);
-	return out.concat(punchGaps(f).filter((g) => rows.some((r) => r[0] === g.on)).map((g) => g.label));
+	return out.concat([...punchGaps(f), ...managerGap(f)].filter((g) => rows.some((r) => r[0] === g.on)).map((g) => g.label));
+}
+
+/** Reporting Manager is required (26 November 2026, asked for by HR: "manager
+    tag and reporting manager are a must"), except for somebody ticked as a
+    Manager themselves — the MD and the top of each company report to nobody
+    here. Only on this form: the bridge's people from a punch and the imports
+    have no manager to give, and the site does not refuse them. */
+export function managerGap(f) {
+	if (typed(f.reports_to) || Number(f.custom_is_manager) === 1) return [];
+	return [{ on: "reports_to", label: "Reporting Manager (or tick Manager for somebody who reports to nobody)" }];
 }
 
 const typed = (v) => String(v ?? "").trim() !== "";

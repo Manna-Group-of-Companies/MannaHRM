@@ -968,6 +968,9 @@ function Header({ doc, onRefresh, deskHref, editing, edit, onEdit, pic, onPhoto,
 					<b>{doc.employee_name || doc.name}</b>
 					<small className="prosub">{[doc.employee_number, doc.designation].filter(Boolean).join(" · ") || "—"}</small>
 					<span className={`k-pill ${on ? "k-p-green" : "k-p-grey"}`}>{doc.status || "—"}</span>
+					{on && Number(doc.custom_is_manager) === 1 ? (
+						<span className="k-mgr" title="Tagged as a Manager: offered as Reporting Manager to new people in the same company.">★ Manager</span>
+					) : null}
 					<span className="proacts">
 						{/* The same edit mode the pencils open, reachable from the top —
 						    somebody who came here to change a phone number should not

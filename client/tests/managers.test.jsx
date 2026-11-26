@@ -133,3 +133,27 @@ describe("Create Employee's Approving Manager", () => {
 		])).toEqual([["a@x.test", "A · Head"]]);
 	});
 });
+
+describe("Reporting Manager is required on Create Employee (26 November 2026)", () => {
+	it("is a gap until a Reporting Manager is chosen", async () => {
+		const { managerGap } = await import("@/lib/newemp");
+		expect(managerGap({})).toHaveLength(1);
+		expect(managerGap({ reports_to: "HR-EMP-00001" })).toEqual([]);
+	});
+
+	it("is not asked of somebody ticked as a Manager, who may report to nobody", async () => {
+		const { managerGap } = await import("@/lib/newemp");
+		expect(managerGap({ custom_is_manager: 1 })).toEqual([]);
+	});
+
+	it("is reported on the step that holds Reporting Manager, and nowhere else", async () => {
+		const { missing } = await import("@/lib/newemp");
+		const { NEW_EMP_STEPS } = await import("@/data/employees");
+		const step = NEW_EMP_STEPS.findIndex((st) => st[2].some(([, rows]) => rows.some((r) => r[0] === "reports_to")));
+		expect(step).toBeGreaterThanOrEqual(0);
+		const label = (i, f) => missing(i, f).filter((g) => g.startsWith("Reporting Manager"));
+		expect(label(step, {})).toHaveLength(1);
+		expect(label(step, { custom_is_manager: 1 })).toEqual([]);
+		NEW_EMP_STEPS.forEach((_, i) => { if (i !== step) expect(label(i, {})).toEqual([]); });
+	});
+});

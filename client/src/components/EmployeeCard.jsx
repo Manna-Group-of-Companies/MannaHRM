@@ -33,7 +33,7 @@ export default function EmployeeCard({ e, onOpen, boss = null }) {
 	const on = isOn(e);
 	return (
 		<article
-			className={"ecard" + (on ? "" : " ecard-off")}
+			className={"ecard" + (on ? "" : " ecard-off") + (on && isManager ? " ecard-mgr" : "")}
 			tabIndex={0}
 			title="Open this record"
 			onClick={onOpen}
@@ -57,7 +57,7 @@ export default function EmployeeCard({ e, onOpen, boss = null }) {
 					{e.status || "—"}
 					{on && isManager && (
 							<span className="emgr" title="Tagged as a Manager: offered as Reporting Manager to new people in the same company.">
-								Manager
+								★ Manager
 							</span>
 						)}
 						{/* Made by the bridge from a fingerprint punch, and not yet

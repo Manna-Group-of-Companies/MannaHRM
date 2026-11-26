@@ -12,15 +12,18 @@ const person = (over) => ({
 });
 
 describe("a card on Employee Master", () => {
-	it("carries a Manager tag for somebody tagged as one", () => {
+	it("carries a Manager tag for somebody tagged as one, on a gold card", () => {
+		// Gold card, 26 November 2026.
 		const v = render(<EmployeeCard e={person({ custom_is_manager: 1 })} onOpen={() => {}} />);
-		expect(v.container.querySelector(".emgr").textContent).toBe("Manager");
+		expect(v.container.querySelector(".emgr").textContent).toBe("★ Manager");
+		expect(v.container.querySelector(".ecard").classList.contains("ecard-mgr")).toBe(true);
 	});
 
 	it("has no tag for everybody else, whether the field is 0, empty or absent on the site", () => {
 		for (const over of [{ custom_is_manager: 0 }, { custom_is_manager: "" }, {}]) {
 			const v = render(<EmployeeCard e={person(over)} onOpen={() => {}} />);
 			expect(v.container.querySelector(".emgr")).toBeNull();
+			expect(v.container.querySelector(".ecard-mgr")).toBeNull();
 			v.unmount();
 		}
 	});
@@ -41,6 +44,7 @@ describe("a card on Employee Master", () => {
 		const v = render(<EmployeeCard e={person({ status: "Left", custom_is_manager: 1, reports_to: "E9" })}
 			boss={{ name: "E9", employee_name: "Biju" }} onOpen={() => {}} />);
 		expect(v.container.querySelector(".emgr")).toBeNull();
+		expect(v.container.querySelector(".ecard-mgr")).toBeNull();
 		expect(v.container.textContent).not.toContain("Reports to");
 	});
 });

@@ -47,12 +47,12 @@ export function Pill({ status, children, dot = true }) {
 }
 
 /** A person: their initials disc, their name, and one small line under it. */
-export function Who({ name, sub }) {
+export function Who({ name, sub, tag = null }) {
 	return (
 		<div className="k-who">
 			<KitAvatar name={name} />
 			<div>
-				<b>{name}</b>
+				<b>{name}{tag}</b>
 				<small>{sub || ""}</small>
 			</div>
 		</div>
