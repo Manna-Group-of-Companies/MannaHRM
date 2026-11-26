@@ -142,10 +142,9 @@ void main() {
           DayStatus.holiday);
     });
 
-    test('a month read with no holiday list calls every Sunday absent', () {
-      // Not a bug — the finding. It is why the calendar says out loud that no
-      // holiday list is on the record, rather than drawing four red Sundays and
-      // letting somebody conclude they were marked absent.
+    test('every Sunday is a week off, even with no holiday list to say so', () {
+      // 26 Nov 2026: Sunday is the group's week off. With no list readable the
+      // app had drawn four red Sundays as absences (MRP-293's November).
       final rows = monthRoster(
         ym: '2026-09',
         punches: const [],
@@ -155,7 +154,40 @@ void main() {
         today: '2026-09-30',
       );
       expect(rows.firstWhere((r) => r.iso == '2026-09-06').status,
-          DayStatus.absent);
+          DayStatus.weeklyOff);
+      expect(rows.where((r) => isSunday(r.iso)).every((r) => r.status == DayStatus.weeklyOff), isTrue);
+      expect(rows.firstWhere((r) => r.iso == '2026-09-07').status, DayStatus.absent,
+          reason: 'a Monday with nobody there is still absent');
+    });
+
+    test('a festival typed in on a Sunday is still shown as the week off, never a holiday', () {
+      final rows = monthRoster(
+        ym: '2026-09',
+        punches: const [],
+        leave: const [],
+        holidays: const [
+          {'holiday_date': '2026-09-13', 'description': 'Some festival', 'weekly_off': 0},
+          {'holiday_date': '2026-09-15', 'description': 'Onam', 'weekly_off': 0},
+        ],
+        corrections: const [],
+        today: '2026-09-30',
+      );
+      expect(rows.firstWhere((r) => r.iso == '2026-09-13').status, DayStatus.weeklyOff);
+      expect(rows.firstWhere((r) => r.iso == '2026-09-15').status, DayStatus.holiday);
+    });
+
+    test('a Sunday with punches still reads Week off, and keeps its times', () {
+      final rows = monthRoster(
+        ym: '2026-09',
+        punches: [punch('2026-09-06 09:00:00', 'IN'), punch('2026-09-06 17:00:00', 'OUT')],
+        leave: const [],
+        holidays: const [],
+        corrections: const [],
+        today: '2026-09-30',
+      );
+      final sun = rows.firstWhere((r) => r.iso == '2026-09-06');
+      expect(sun.status, DayStatus.weeklyOff);
+      expect((sun.inAt.substring(11, 16), sun.outAt.substring(11, 16), sun.hours), ('09:00', '17:00', '08:00'));
     });
 
     test('the day carries its punches, its hours and its correction', () {

@@ -395,14 +395,26 @@ class _AbsentList extends StatelessWidget {
                 overflow: TextOverflow.ellipsis),
             trailing: StateChip(d.state, today: isToday),
           ),
-        if (off.isNotEmpty) ...[
-          _Header('Holiday or weekly off (${off.length})'),
-          for (final d in off)
+        // Week off and holiday apart (26 Nov 2026): a Sunday is never a holiday.
+        for (final (title, group) in [
+          ('Week off', off.where((d) => d.state == DayState.weekOff).toList()),
+          ('Holiday', off.where((d) => d.state == DayState.holiday).toList()),
+        ])
+          if (group.isNotEmpty) ...[
+          _Header('$title (${group.length})'),
+          for (final d in group)
             ListTile(
               dense: true,
               leading: Avatar(name: d.person.name, color: stateColor(context, d.state), radius: 20),
               title: Text(d.person.name, overflow: TextOverflow.ellipsis),
-              subtitle: Text([subline(d.person), d.holiday?.description ?? ''].where((s) => s.isNotEmpty).join(' · '),
+              subtitle: Text(
+                  [
+                    subline(d.person),
+                    d.holiday?.description ?? '',
+                    // Somebody who worked their Sunday: their times, on the week-off row.
+                    if (d.firstIn.isNotEmpty) 'In ${d.firstIn.length >= 16 ? d.firstIn.substring(11, 16) : d.firstIn}',
+                    if (d.lastOut.isNotEmpty) 'Out ${d.lastOut.length >= 16 ? d.lastOut.substring(11, 16) : d.lastOut}',
+                  ].where((s) => s.isNotEmpty).join(' · '),
                   overflow: TextOverflow.ellipsis),
               trailing: StateChip(d.state),
             ),

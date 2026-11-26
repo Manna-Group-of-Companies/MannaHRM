@@ -87,7 +87,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Sunil Rathore'), findsOneWidget);
     expect(find.textContaining('Sick Leave applied, not approved'), findsOneWidget);
-    expect(find.text('Holiday or weekly off (1)'), findsOneWidget);
+    expect(find.text('Week off (1)'), findsOneWidget);
     expect(find.text('Anita Das'), findsOneWidget);
   });
 

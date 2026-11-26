@@ -124,11 +124,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           if (!_loading && _data.noHolidayList)
             Note(
               _own
-                  ? 'No holiday list on your record or your company, so nothing here knows which days are '
-                      'Sundays. Every one of them reads as a day nobody punched on. That is HR\'s to fix, and it '
-                      'is worth telling them.'
-                  : 'No holiday list on this record or its company, so every Sunday reads as a day nobody '
-                      'punched on.',
+                  ? 'Your holiday list could not be read, so Sundays are shown as week off but holidays such '
+                      'as Onam or Christmas are not. Tell HR.'
+                  : 'No holiday list on this record or its company, so Sundays are shown as week off but '
+                      'holidays are not.',
               kind: NoteKind.warn,
             ),
           Panel(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), child: _monthBar()),
@@ -264,7 +263,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         const SizedBox(width: 8),
         stat('Leave', c[DayStatus.onLeave] ?? 0, kStatusColour[DayStatus.onLeave]!),
         const SizedBox(width: 8),
-        stat('Holidays', (c[DayStatus.holiday] ?? 0) + (c[DayStatus.weeklyOff] ?? 0), kStatusColour[DayStatus.holiday]!),
+        // Week off and holidays apart (26 Nov 2026): a Sunday is never a holiday.
+        stat('Week off', c[DayStatus.weeklyOff] ?? 0, kStatusColour[DayStatus.weeklyOff]!),
+        const SizedBox(width: 8),
+        stat('Holidays', c[DayStatus.holiday] ?? 0, kStatusColour[DayStatus.holiday]!),
       ]),
     );
   }

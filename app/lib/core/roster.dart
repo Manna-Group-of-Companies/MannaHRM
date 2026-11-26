@@ -33,7 +33,7 @@ const Map<DayStatus, String> kDayLabels = {
   DayStatus.onLeave: 'On leave',
   DayStatus.leavePending: 'Leave not granted',
   DayStatus.holiday: 'Holiday',
-  DayStatus.weeklyOff: 'Weekly off',
+  DayStatus.weeklyOff: 'Week off',
   DayStatus.unmarked: 'Not marked',
   DayStatus.absent: 'Absent',
 };
@@ -196,12 +196,15 @@ List<RosterDay> monthRoster({
     final pair = dayPunches(mine);
     final h = hol[iso];
     final lv = leaveOn(iso, leave);
+    // Sunday is a week off, whatever the list says or whether there is one
+    // (asked for by HR, 26 November 2026): never a holiday, never an absence.
+    final sunday = isSunday(iso);
 
     var status = resolveDayStatus(
       hasPunchIn: pair.inAt.isNotEmpty,
       hasPunchOut: pair.outAt.isNotEmpty,
       leaveStatus: '${lv?['status'] ?? ''}',
-      isHoliday: h != null,
+      isHoliday: h != null || sunday,
       isPastDay: iso.compareTo(today) < 0,
     );
 
@@ -209,9 +212,13 @@ List<RosterDay> monthRoster({
     // so the split happens here rather than in `resolveDayStatus` — that
     // function decides whether somebody is absent, and a Sunday and Diwali are
     // the same answer to that question.
-    if (status == DayStatus.holiday && '${h?['weekly_off'] ?? 0}' == '1') {
+    if (status == DayStatus.holiday && (sunday || '${h?['weekly_off'] ?? 0}' == '1')) {
       status = DayStatus.weeklyOff;
     }
+    // A Sunday is the week off even for somebody who punched on it — two or
+    // three companies work Sundays (HR, 26 Nov 2026). The day reads Week off,
+    // and its punches, times and hours stay on it to be seen.
+    if (sunday) status = DayStatus.weeklyOff;
 
     return RosterDay(
       iso: iso,
@@ -220,7 +227,7 @@ List<RosterDay> monthRoster({
       outAt: pair.outAt,
       hours: spanHours(pair.inAt, pair.outAt),
       punches: mine,
-      holiday: '${h?['description'] ?? ''}',
+      holiday: sunday ? 'Sunday' : '${h?['description'] ?? ''}',
       leave: lv,
       correction: ar[iso],
     );
@@ -236,4 +243,10 @@ Map<DayStatus, int> countStates(List<RosterDay> rows) {
     out[r.status] = (out[r.status] ?? 0) + 1;
   }
   return out;
+}
+
+/// Whether `YYYY-MM-DD` is a Sunday — the group's week off.
+bool isSunday(String iso) {
+  final d = DateTime.tryParse(iso.length >= 10 ? iso.substring(0, 10) : iso);
+  return d != null && d.weekday == DateTime.sunday;
 }

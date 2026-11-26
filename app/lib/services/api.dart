@@ -538,7 +538,7 @@ class Api {
       punches: results[0] ?? const [],
       leave: results[1] ?? const [],
       corrections: results[2] ?? const [],
-      holidays: await _holidays(person),
+      holidays: who == null ? await _myHolidays(from, '$ym-${_lastDay(ym)}', person) : await _holidays(person),
       error: refused.isEmpty
           ? ''
           : 'The site would not answer for ${refused.join(', ')}.',
@@ -546,6 +546,35 @@ class Api {
   }
 
   static final Map<String, List<Map<String, dynamic>>> _holidayCache = {};
+
+  /// The signed-in person's own holidays, from the site (26 November 2026).
+  ///
+  /// An Employee login may not read Company, so reading the company's
+  /// `default_holiday_list` here found nothing and every Sunday came out
+  /// absent. `manna_hr.api.my_holidays` reads it for the session's own record
+  /// and marks every Sunday a week off. A site without that call yet answers
+  /// with an error, and the old reads are tried instead; the calendar treats
+  /// Sundays as week offs either way (core/roster.dart).
+  static Future<List<Map<String, dynamic>>> _myHolidays(
+      String from, String to, Map<String, dynamic>? person) async {
+    try {
+      final r = await Session.I.dio.get('/api/method/manna_hr.api.my_holidays',
+          queryParameters: {'from_date': from, 'to_date': to});
+      final m = (r.data is Map) ? r.data['message'] : null;
+      if (r.statusCode == 200 && m is Map && m['holidays'] is List) {
+        return (m['holidays'] as List).cast<Map<String, dynamic>>();
+      }
+    } catch (_) {
+      // Fall through to the old reads.
+    }
+    return _holidays(person);
+  }
+
+  static String _lastDay(String ym) {
+    final y = int.parse(ym.substring(0, 4));
+    final m = int.parse(ym.substring(5, 7));
+    return DateTime(y, m + 1, 0).day.toString().padLeft(2, '0');
+  }
 
   /// The holiday list this person is measured against: their own where the
   /// record names one, otherwise their company's default.

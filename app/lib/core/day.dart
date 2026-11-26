@@ -56,7 +56,7 @@ String stateLabel(DayState s, {bool today = false}) => switch (s) {
       DayState.inOnly => today ? 'Still in' : 'No punch-out',
       DayState.onLeave => 'On leave',
       DayState.holiday => 'Holiday',
-      DayState.weekOff => 'Weekly off',
+      DayState.weekOff => 'Week off',
       DayState.leavePending => 'Leave not approved',
       DayState.absent => 'Absent',
       DayState.notYetIn => 'Not in yet',
@@ -339,12 +339,15 @@ class DayView {
       final pending = myLeave.where((l) => l.status == 'Open').firstOrNull;
       final list = person.holidayList.isNotEmpty ? person.holidayList : (companyCalendar[person.company] ?? '');
       final holiday = (calendars[list] ?? const <Holiday>[]).where((h) => h.date == date).firstOrNull;
+      final sundayOff = DateTime.tryParse(date)?.weekday == DateTime.sunday;
 
       if (mine.isNotEmpty) {
         final (inAt, outAt) = pair(mine);
         out.add(PersonDay(
           person: person,
-          state: outAt.isEmpty ? DayState.inOnly : DayState.inOut,
+          // A Sunday stays the week off for somebody who worked it; the
+          // punches are on the row to be seen (HR, 26 Nov 2026).
+          state: sundayOff ? DayState.weekOff : (outAt.isEmpty ? DayState.inOnly : DayState.inOut),
           punches: mine,
           firstIn: inAt,
           lastOut: outAt,
@@ -357,8 +360,9 @@ class DayView {
       final DayState state;
       if (approved != null) {
         state = DayState.onLeave;
-      } else if (holiday != null) {
-        state = holiday.weeklyOff ? DayState.weekOff : DayState.holiday;
+      } else if (sundayOff || holiday != null) {
+        // Sunday is the week off, list or no list, and never a holiday (26 Nov 2026).
+        state = sundayOff || holiday!.weeklyOff ? DayState.weekOff : DayState.holiday;
       } else if (pending != null) {
         state = DayState.leavePending;
       } else {
