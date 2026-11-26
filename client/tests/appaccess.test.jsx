@@ -3,7 +3,7 @@ import { act, render } from "@testing-library/react";
 import { Provider } from "react-redux";
 
 import AppAccess from "@/features/employees/AppAccess";
-import { PROFILE_TABS } from "@/data/profile";
+import { PROFILE_PANES, PROFILE_TABS } from "@/data/profile";
 import { store, set, resetStore } from "@/store";
 import { loadedState } from "./fixture";
 
@@ -42,6 +42,12 @@ describe("Apps & access", () => {
 		expect(PROFILE_TABS.map((t) => t[0])).toContain("access");
 	});
 
+	it("every tab of the profile opens a pane, so none falls back to About when pressed", () => {
+		// Apps & access was a tab without a pane from 27 October to 25 November 2026.
+		const leaves = PROFILE_TABS.flatMap((t) => (t[3] ? t[3] : [t])).map((t) => t[0]);
+		expect(leaves.filter((k) => !PROFILE_PANES[k])).toEqual([]);
+	});
+
 	it("draws each app on or off, and offers no switch for the desk", async () => {
 		const view = await draw();
 		expect(view.getByRole("button", { name: /turn on fleet driver app/i })).toBeInTheDocument();
@@ -71,6 +77,52 @@ describe("Apps & access", () => {
 		const view = await draw();
 		expect(view.container.textContent).toContain("signed in with");
 		expect(view.queryAllByRole("button")).toHaveLength(0);
+	});
+});
+
+const PHONE = {
+	on: false, method: "Fingerprint Machine", login: "anand@manna.in", make_login: true,
+	sign_in_as: "MRP-293", password: "date of birth, DDMMYYYY", problems: [], warnings: [],
+};
+
+describe("phone punch (25 November 2026)", () => {
+	it("offers it to a machine employee with no login, and says how they will sign in once asked", async () => {
+		answer = () => Promise.resolve({ login: "", why: "This employee has no login.", apps: [], phone: PHONE });
+		const view = await draw();
+		expect(view.container.textContent).toContain("Punches on Fingerprint Machine");
+		await act(async () => { view.getByRole("button", { name: /allow phone punch too/i }).click(); });
+		expect(calls.some(([m]) => m.endsWith("allow_phone_punch"))).toBe(false);
+		expect(document.body.textContent).toContain("The machine keeps working");
+		expect(document.body.textContent).toContain("MRP-293");
+	});
+
+	it("asks the site, and draws what it answers", async () => {
+		answer = (m) => Promise.resolve(m.endsWith("allow_phone_punch")
+			? { login: "anand@manna.in", why: "", apps: APPS, phone: { ...PHONE, on: true, method: "Both", make_login: false } }
+			: { login: "", why: "", apps: [], phone: PHONE });
+		const view = await draw();
+		await act(async () => { view.getByRole("button", { name: /allow phone punch too/i }).click(); });
+		await act(async () => { view.getByRole("button", { name: /^allow phone punch$/i }).click(); });
+		expect(calls.at(-1)).toEqual(["manna_hr.appaccess_site.allow_phone_punch", { employee: "HR-EMP-1" }]);
+		expect(view.container.textContent).toContain("On · Both");
+		expect(view.container.textContent).toContain("Signs in to the Manna HR app as MRP-293");
+	});
+
+	it("says what is missing, and offers nothing until it is filled in", async () => {
+		answer = () => Promise.resolve({ login: "", why: "", apps: [],
+			phone: { ...PHONE, problems: ["No date of birth on the record. It is their first password."] } });
+		const view = await draw();
+		expect(view.container.textContent).toContain("No date of birth");
+		expect(view.getByRole("button", { name: /allow phone punch too/i })).toBeDisabled();
+	});
+
+	it("an existing login is linked with its own user name and password", async () => {
+		answer = () => Promise.resolve({ login: "pareeth@manna.in", why: "", apps: APPS,
+			phone: { ...PHONE, login: "pareeth@manna.in", make_login: false, sign_in_as: "pareeth_k_b" } });
+		const view = await draw();
+		await act(async () => { view.getByRole("button", { name: /allow phone punch too/i }).click(); });
+		expect(document.body.textContent).toContain("user name and password are not changed");
+		expect(document.body.textContent).toContain("pareeth_k_b");
 	});
 });
 

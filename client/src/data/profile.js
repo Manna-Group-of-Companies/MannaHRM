@@ -358,6 +358,11 @@ export const PROFILE_PANES = {
 
 	assets: { groups: [] },
 
+	/* Drawn by features/employees/AppAccess.jsx, off manna_hr/appaccess_site.py.
+	   Missing from 27 October to 25 November 2026, so the tab was drawn but
+	   pressing it fell back to About: a tab is only opened when it is a pane. */
+	access: { groups: [] },
+
 	/* Drawn by LeavePane in features/employees/EmployeeProfile.jsx, off
 	   Leave Policy Assignment and hrms's own balance — neither is on Employee. */
 	leave: {

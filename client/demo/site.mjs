@@ -255,6 +255,42 @@ export function createSite(seed, { now = () => new Date() } = {}) {
 		return rows;
 	}
 
+	/** manna_hr/appaccess.py phone_punch, as far as the practice site needs. */
+	function practicePhone(emp) {
+		const method = norm(emp.custom_punch_method);
+		const code = norm(emp.employee_number).trim();
+		const login = norm(emp.user_id);
+		const held = login ? table("User").get(login) : null;
+		const email = [emp.company_email, emp.personal_email, emp.prefered_email].map((v) => norm(v).trim().toLowerCase()).find((v) => v.includes("@")) || "";
+		const dob = /^\d{4}-\d{2}-\d{2}/.test(norm(emp.date_of_birth));
+		const out = { method, on: ["Mobile App", "Both"].includes(method) && !!login, login: "", make_login: false, sign_in_as: "", password: "", problems: [], warnings: [] };
+		if ((emp.status || "Active") !== "Active") out.problems.push("This employee is not Active.");
+		if (login) {
+			Object.assign(out, { login, sign_in_as: held?.username || login, password: "their own password" });
+		} else {
+			if (!email) out.problems.push("No email on the record. Every login is named by an email: fill in Company Email or Personal Email.");
+			if (!code) out.problems.push("No Emp Code on the record. It is the user name they sign in with.");
+			if (!dob) out.problems.push("No date of birth on the record. It is their first password.");
+			Object.assign(out, { login: email, make_login: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });
+		}
+		if (!emp.default_shift) out.warnings.push("No default shift: the punches will land, but will not become attendance until a shift is set.");
+		return out;
+	}
+
+	function practiceAccess(employee) {
+		const emp = table("Employee").get(norm(employee));
+		const phone = emp ? practicePhone(emp) : null;
+		const login = norm(emp?.user_id);
+		if (!login) return { login: "", why: "This employee has no login.", apps: [], phone };
+		return {
+			login, why: "", phone,
+			apps: [
+				{ key: "login", label: "Login (every app)", kind: "enabled", on: true, value: "", options: [] },
+				{ key: "hr_app", label: "Manna HR app", kind: "follows_login", on: true, value: "", options: [] },
+			],
+		};
+	}
+
 	function method(name, req, user) {
 		const q = { ...(req.query || {}), ...(req.body || {}) };
 		switch (name) {
@@ -304,6 +340,26 @@ export function createSite(seed, { now = () => new Date() } = {}) {
 			return json(200, { message: { name: "PRACTICE-COMMENT" } });
 		case "upload_file":
 			return fail(417, "ValidationError", "Files are not kept on the practice site.");
+		/* Apps & access, and its Phone punch (manna_hr/appaccess_site.py), as
+		   far as practising the button needs: the practice login is a manager,
+		   and a login made here is a row in a pretend User table. */
+		case "manna_hr.appaccess_site.can_manage":
+			return json(200, { message: true });
+		case "manna_hr.appaccess_site.get_access":
+			return json(200, { message: practiceAccess(q.employee) });
+		case "manna_hr.appaccess_site.allow_phone_punch": {
+			const emp = table("Employee").get(norm(q.employee));
+			if (!emp) return fail(404, "DoesNotExistError", `Employee ${q.employee} not found`);
+			const phone = practicePhone(emp);
+			if (phone.problems.length) return fail(417, "ValidationError", phone.problems.join("<br>"));
+			if (phone.make_login) {
+				table("User").set(phone.login, { name: phone.login, email: phone.login, username: phone.sign_in_as, enabled: 1, roles: ["Employee"] });
+			}
+			emp.user_id = phone.login;
+			if (emp.custom_punch_method !== "Mobile App") emp.custom_punch_method = "Both";
+			emp.modified = stamp();
+			return json(200, { message: practiceAccess(emp.name) });
+		}
 		case "manna_hr.adms_site.new_on_machine": {
 			/* Two people punching whom no Employee carries — one on a machine
 			   with a company, one on a machine without — for Onboarding's New on

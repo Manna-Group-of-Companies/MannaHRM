@@ -232,7 +232,11 @@ export function makeData({ today = new Date(), month = process.env.DEMO_MONTH, s
 			custom_pf_number: p.pf ? `KR/DEMO/${String(i + 1).padStart(5, "0")}` : "",
 			custom_esic_number: p.esi ? `99000000${String(i + 1).padStart(2, "0")}` : "",
 			bank_name: "Demo Bank", bank_ac_no: `00009${String(i + 1).padStart(6, "0")}`, ifsc_code: "DEMO0000001",
-			cell_number: `90000000${String(i + 1).padStart(2, "0")}`, personal_email: "", company_email: "", prefered_email: "",
+			cell_number: `90000000${String(i + 1).padStart(2, "0")}`, personal_email: "",
+			/* Every other one with a work email, so Apps & access → Phone punch
+			   can be tried both ready and refused for want of one. */
+			company_email: i % 2 === 0 ? `${p.code.toLowerCase()}@practice.invalid` : "", prefered_email: "",
+			custom_punch_method: "Fingerprint Machine",
 			salutation: p.gender === "Female" ? "Ms" : "Mr", reports_to: "", user_id: "", image: "", grade: "",
 			ctc: p.base * 12, modified: stampOf(dayOf(prev, 1)), creation: stampOf(dayOf(prev, 1)),
 			/* Tagged managers, for Create Employee's Reporting Manager list: the

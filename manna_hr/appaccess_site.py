@@ -21,14 +21,109 @@ def get_access(employee):
 	"""The switches for one employee's login, and whether this login may flip them."""
 	frappe.only_for(aa.MANAGERS)
 	login = _login_of(employee)
+	phone = _phone(employee)
 	if not login:
-		return {"login": "", "why": _("This employee has no login."), "apps": []}
+		return {"login": "", "why": _("This employee has no login."), "apps": [], "phone": phone}
 	info = _info(login)
 	return {
 		"login": login,
 		"why": aa.why_not(frappe.session.user, frappe.get_roles(), login, info["roles"]),
 		"apps": aa.states(info),
+		"phone": phone,
 	}
+
+
+#: The Employee fields phone punch reads. `custom_punch_method` is manna_hr's
+#: own (install.py).
+_PHONE_FIELDS = (
+	"name", "employee_name", "first_name", "last_name", "employee_number", "status",
+	"date_of_birth", "company_email", "personal_email", "prefered_email",
+	"user_id", "custom_punch_method", "default_shift",
+)
+
+
+def _phone(employee):
+	"""`aa.phone_punch` for one employee, with what it needs read off the site."""
+	emp = frappe.db.get_value("Employee", employee, list(_PHONE_FIELDS), as_dict=True) or {}
+	login = emp.get("user_id") or ""
+	if not login:
+		email = aa.email_of(emp)
+		if email and frappe.db.exists("User", email):
+			login = email
+	login_user = None
+	if login:
+		login_user = frappe.db.get_value("User", login, ["name", "enabled", "username"], as_dict=True)
+	code = str(emp.get("employee_number") or "").strip()
+	holder = ""
+	if code and not login_user:
+		holder = frappe.db.get_value("User", {"username": code}, "name") or ""
+	by_name = frappe.db.get_single_value("System Settings", "allow_login_using_user_name")
+	return aa.phone_punch(emp, login_user, holder, None if by_name is None else bool(by_name))
+
+
+@frappe.whitelist(methods=["POST"])
+def allow_phone_punch(employee):
+	"""Let one employee punch on the phone as well as on the machine.
+
+	Punch Method becomes Both (Mobile App stays), and `user_id` names a login
+	the Manna HR app signs in with: the one already linked, or the one already
+	named by their email, or — when there is none — a new one with the Emp
+	Code as its user name, the date of birth as its first password and the
+	Employee role. An existing login's user name and password are left alone
+	(`aa.phone_punch` says why). Returns `get_access` as it now is.
+	"""
+	frappe.only_for(aa.MANAGERS)
+	plan = _phone(employee)
+	if plan["problems"]:
+		frappe.throw("<br>".join(plan["problems"]))
+
+	emp = frappe.get_doc("Employee", employee)
+	login = plan["login"]
+	said = []
+	if plan["make_login"]:
+		first, _sp, rest = str(emp.employee_name or emp.first_name or login).strip().partition(" ")
+		user = frappe.get_doc({
+			"doctype": "User",
+			"email": login,
+			"username": plan["sign_in_as"],
+			"first_name": first,
+			"last_name": rest.strip() or None,
+			"enabled": 1,
+			"user_type": "System User",
+			"send_welcome_email": 0,
+			"new_password": aa.first_password(emp.date_of_birth),
+			"roles": [{"role": "Employee"}],
+		})
+		# An HR Manager holds no write on User (see set_access). Who may do this
+		# was `only_for`'s question; the login made carries the Employee role
+		# alone. The date of birth is a first password the app makes them
+		# replace, so the site's strength rule is not asked of it.
+		user.flags.ignore_permissions = True
+		user.flags.ignore_password_policy = True
+		user.flags.no_welcome_mail = True
+		user.insert(ignore_permissions=True)
+		said.append(_("made login {0} (user name {1}, first password the date of birth)").format(login, plan["sign_in_as"]))
+	else:
+		roles = frappe.get_roles(login)
+		why = aa.why_not(frappe.session.user, frappe.get_roles(), login, roles)
+		if why:
+			frappe.throw(why, frappe.PermissionError)
+		if "Employee" not in roles:
+			user = frappe.get_doc("User", login)
+			user.flags.ignore_permissions = True
+			user.add_roles("Employee")
+			said.append(_("added the Employee role to {0}").format(login))
+
+	method = aa.phone_method_after(emp.get("custom_punch_method"))
+	if emp.user_id != login:
+		emp.user_id = login
+		said.append(_("linked login {0}").format(login))
+	if emp.get("custom_punch_method") != method:
+		said.append(_("Punch Method {0} → {1}").format(emp.get("custom_punch_method") or _("blank"), method))
+		emp.custom_punch_method = method
+	emp.save()
+	emp.add_comment("Info", _("Phone punch allowed: {0}").format("; ".join(said) or _("no change")))
+	return get_access(employee)
 
 
 @frappe.whitelist(methods=["POST"])
