@@ -190,6 +190,28 @@ def first_password(dob):
 	return s[8:10] + s[5:7] + s[0:4]
 
 
+#: The domain of the stand-in address a phone login gets when the record has no
+#: email. `.invalid` is reserved (RFC 2606): mail to it is never delivered, so
+#: no outside address is used and nothing is ever sent anywhere.
+STAND_IN_DOMAIN = "phone.manna.invalid"
+
+
+def stand_in_email(code):
+	"""The login name for somebody with no email: their Emp Code at
+	STAND_IN_DOMAIN — MRP-293 is "mrp-293@phone.manna.invalid". "" with no code.
+
+	Asked for 26 November 2026: punching on the phone needs the Emp Code and
+	the date of birth, not an email. Frappe names every User by an email, so
+	one is made up; nobody types it — they sign in with the Emp Code.
+	"""
+	local = "".join(ch if ch.isalnum() or ch in ".-_" else "-" for ch in str(code or "").strip().lower()).strip(".-_")
+	return f"{local}@{STAND_IN_DOMAIN}" if local else ""
+
+
+def is_stand_in(email):
+	return str(email or "").lower().endswith("@" + STAND_IN_DOMAIN)
+
+
 def email_of(emp):
 	"""The address a new login is named by: the work email, else the personal."""
 	for key in ("company_email", "personal_email", "prefered_email"):
@@ -225,22 +247,27 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None):
 		"password": "",
 		"problems": [],
 		"warnings": [],
+		"stand_in": False,
 	}
 	if str(emp.get("status") or "Active") != "Active":
 		out["problems"].append("This employee is not Active.")
 
 	if login_user:
 		out["login"] = login_user["name"]
+		out["stand_in"] = is_stand_in(login_user["name"])
 		out["sign_in_as"] = login_user.get("username") or login_user["name"]
 		out["password"] = "their own password"
 		if not login_user.get("enabled"):
 			out["problems"].append(
 				"Their login {0} is turned off. Turn on the login above first.".format(login_user["name"]))
 	else:
-		email = email_of(emp)
+		email = email_of(emp) or stand_in_email(code)
 		dob = first_password(emp.get("date_of_birth"))
-		if not email:
-			out["problems"].append("No email on the record. Every login is named by an email: fill in Company Email or Personal Email.")
+		out["stand_in"] = is_stand_in(email)
+		if out["stand_in"]:
+			out["warnings"].append(
+				"No email on the record, so the login is named {0}. They sign in with their Emp Code; "
+				"Forgot password cannot email them, so HR resets it.".format(email))
 		if not code:
 			out["problems"].append("No Emp Code on the record. It is the user name they sign in with.")
 		elif username_holder:

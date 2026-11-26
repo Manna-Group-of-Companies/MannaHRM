@@ -261,14 +261,16 @@ export function createSite(seed, { now = () => new Date() } = {}) {
 		const code = norm(emp.employee_number).trim();
 		const login = norm(emp.user_id);
 		const held = login ? table("User").get(login) : null;
-		const email = [emp.company_email, emp.personal_email, emp.prefered_email].map((v) => norm(v).trim().toLowerCase()).find((v) => v.includes("@")) || "";
+		const own = [emp.company_email, emp.personal_email, emp.prefered_email].map((v) => norm(v).trim().toLowerCase()).find((v) => v.includes("@")) || "";
+		const standIn = code ? `${code.toLowerCase().replace(/[^a-z0-9._-]+/g, "-")}@phone.manna.invalid` : "";
+		const email = own || standIn;
 		const dob = /^\d{4}-\d{2}-\d{2}/.test(norm(emp.date_of_birth));
-		const out = { method, on: ["Mobile App", "Both"].includes(method) && !!login, login: "", make_login: false, sign_in_as: "", password: "", problems: [], warnings: [] };
+		const out = { method, on: ["Mobile App", "Both"].includes(method) && !!login, login: "", make_login: false, sign_in_as: "", password: "", problems: [], warnings: [], stand_in: !own && !login };
 		if ((emp.status || "Active") !== "Active") out.problems.push("This employee is not Active.");
 		if (login) {
 			Object.assign(out, { login, sign_in_as: held?.username || login, password: "their own password" });
 		} else {
-			if (!email) out.problems.push("No email on the record. Every login is named by an email: fill in Company Email or Personal Email.");
+			if (!own && standIn) out.warnings.push(`No email on the record, so the login is named ${standIn}. They sign in with their Emp Code; Forgot password cannot email them, so HR resets it.`);
 			if (!code) out.problems.push("No Emp Code on the record. It is the user name they sign in with.");
 			if (!dob) out.problems.push("No date of birth on the record. It is their first password.");
 			Object.assign(out, { login: email, make_login: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });

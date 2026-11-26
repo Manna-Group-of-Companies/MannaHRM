@@ -114,9 +114,29 @@ def test_an_existing_login_keeps_its_own_user_name_and_password():
 
 
 def test_what_is_missing_is_said_in_words_hr_can_act_on():
-	p = aa.phone_punch({**MACHINE, "company_email": "", "date_of_birth": None})
-	assert any("email" in s for s in p["problems"])
+	p = aa.phone_punch({**MACHINE, "date_of_birth": None, "employee_number": ""})
 	assert any("date of birth" in s for s in p["problems"])
+	assert any("Emp Code" in s for s in p["problems"])
+
+
+def test_no_email_is_not_a_refusal_the_login_is_named_after_the_emp_code():
+	# 26 Nov 2026: punching on the phone needs the Emp Code and the date of birth, not an email.
+	p = aa.phone_punch({**MACHINE, "company_email": ""})
+	assert p["problems"] == []
+	assert (p["login"], p["sign_in_as"], p["stand_in"]) == ("mrp-293@phone.manna.invalid", "MRP-293", True)
+	assert any("Forgot password" in w for w in p["warnings"])
+
+
+def test_the_stand_in_address_is_made_from_the_emp_code_and_never_delivers():
+	assert aa.stand_in_email("MRP-293") == "mrp-293@phone.manna.invalid"
+	assert aa.stand_in_email(" MT 12/7 ") == "mt-12-7@phone.manna.invalid"
+	assert aa.stand_in_email("") == ""
+	assert aa.stand_in_email("MRP-293").endswith(".invalid")
+
+
+def test_a_real_email_still_wins_over_the_stand_in():
+	p = aa.phone_punch(MACHINE)
+	assert (p["login"], p["stand_in"]) == ("anand@manna.in", False)
 
 
 def test_an_emp_code_already_somebodys_user_name_is_refused():

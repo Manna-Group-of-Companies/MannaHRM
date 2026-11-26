@@ -116,6 +116,17 @@ describe("phone punch (25 November 2026)", () => {
 		expect(view.getByRole("button", { name: /allow phone punch too/i })).toBeDisabled();
 	});
 
+	it("no email on the record: the login is named after the Emp Code, and the box says so", async () => {
+		answer = () => Promise.resolve({ login: "", why: "", apps: [],
+			phone: { ...PHONE, login: "mrp-293@phone.manna.invalid", stand_in: true,
+				warnings: ["No email on the record, so the login is named mrp-293@phone.manna.invalid."] } });
+		const view = await draw();
+		expect(view.getByRole("button", { name: /allow phone punch too/i })).not.toBeDisabled();
+		await act(async () => { view.getByRole("button", { name: /allow phone punch too/i }).click(); });
+		expect(document.body.textContent).toContain("never receives mail");
+		expect(document.body.textContent).toContain("sign in to the Manna HR app with MRP-293");
+	});
+
 	it("an existing login is linked with its own user name and password", async () => {
 		answer = () => Promise.resolve({ login: "pareeth@manna.in", why: "", apps: APPS,
 			phone: { ...PHONE, login: "pareeth@manna.in", make_login: false, sign_in_as: "pareeth_k_b" } });
