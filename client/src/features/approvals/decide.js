@@ -128,6 +128,26 @@ export function forgetAttendanceReads() {
 }
 
 /**
+ * After a decision the site has taken: the request leaves its queue on screen
+ * now, and the dashboard reads the site again in the background.
+ *
+ * **Not awaited** (26 November 2026). The dialog used to wait on `load()` —
+ * every employee, every queue, and until then every Attendance row, 182 reads
+ * on the live site — and sat on "Saving…" for minutes after the decision had
+ * already landed. What the reload brings back is the queue as the site now has
+ * it, which this has already drawn.
+ *
+ * @param {"attendance"|"leave"} queue
+ * @param {string} name the request just decided
+ */
+export function afterDecision(queue, name) {
+	const cur = getState().approvals || {};
+	set({ approvals: { ...cur, [queue]: (cur[queue] || []).filter((x) => x.name !== name) } });
+	forgetAttendanceReads();
+	void load().catch(() => {});
+}
+
+/**
  * Approve or reject one correction, and read the queue back.
  *
  * @param {object} r the request as the queue holds it
@@ -173,15 +193,15 @@ export async function decideCorrection(r, action, note) {
 	if (!res.ok) return fail(`The site refused to ${verb} ${r.name}: ${res.error || "no reason given"}.`);
 
 	if (!approve) {
-		forgetAttendanceReads();
-		await load();
+		afterDecision("attendance", r.name);
 		return { ok: true, persisted: true, msg: `${r.name} rejected. Nothing was written to attendance.` };
 	}
 
 	const day = String(r.attendance_date || "").slice(0, 10);
 	const undo = async (why) => {
 		const back = await apiWrite(dt, r.name, { status: OPEN, decided_by: null, decided_on: null });
-		await load();
+		// Still in the queue on screen; the site is read again behind the message.
+		void load().catch(() => {});
 		return fail(back.ok
 			? `${r.name} is back to Pending Approval: ${why}`
 			: `${r.name} is marked Approved but its punches are not all written, and putting it back to `
@@ -192,8 +212,7 @@ export async function decideCorrection(r, action, note) {
 	const w = await writeCorrection(r, user);
 	if (!w.ok) return undo(w.error);
 
-	forgetAttendanceReads();
-	await load();
+	afterDecision("attendance", r.name);
 	return { ok: true, persisted: true, msg: `${r.name} approved. ${correctionSummary(w, day)}` };
 }
 
@@ -291,17 +310,20 @@ export async function writeCorrection(r, user) {
 
 	/* The office absence rule: the leave this day gave back (above) goes to
 	   the month's next absence, if it has one. */
-	const after = await afterCorrection(r.employee, day);
+	// Two reads that need nothing from each other, asked for together.
+	const [after, marked] = await Promise.all([
+		afterCorrection(r.employee, day),
+		listAll("Attendance", ["name", "status"],
+			[["employee", "=", r.employee], ["attendance_date", "=", day], ["docstatus", "=", 1]])
+			.catch(() => []),
+	]);
 	const leave = back.returned.length || after
 		? { given: [], refused: [], waiting: [], ...(after || {}), returned: [...back.returned, ...((after && after.returned) || [])] }
 		: null;
 
-	/* `hrms` will not rebuild a day it has already marked — it returns quietly
-	   when a row exists. Cancelling it is `regularization.py`'s job, on the
-	   server; this page never writes Attendance, so it says so instead. */
-	const marked = await listAll("Attendance", ["name", "status"],
-		[["employee", "=", r.employee], ["attendance_date", "=", day], ["docstatus", "=", 1]])
-		.catch(() => []);
+	/* `marked`: `hrms` will not rebuild a day it has already marked — it returns
+	   quietly when a row exists. Cancelling it is `regularization.py`'s job, on
+	   the server; this page never writes Attendance, so it says so instead. */
 
 	return { ok: true, made, restored, kept: wanted.filter((p) => !made.includes(p) && !restored.includes(p)), setAside, stuck, marked, leave };
 }
