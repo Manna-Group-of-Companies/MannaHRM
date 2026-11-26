@@ -162,7 +162,9 @@ export async function saveApprovals() {
 
 	// The site is the authority on what a write actually did — an approval that
 	// fires the hook can change more than the field that was sent.
-	if (wrote) await load();
+	// Behind the message rather than before it (26 Nov 2026): the dashboard's
+	// whole read used to hold the page for minutes after the writes had landed.
+	if (wrote) void load().catch(() => {});
 }
 
 /** Every decision made from this page, as a file. Session-scoped and said so —

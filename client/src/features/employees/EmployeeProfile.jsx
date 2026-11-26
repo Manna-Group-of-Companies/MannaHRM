@@ -13,7 +13,7 @@ import { Desk, Empty, Scroll } from "@/components/ui";
 import { saveEmployee, saveEmployeePhoto } from "@/api/employee";
 import { activatePatch, deactivateDateProblem, deactivatePatch } from "@/lib/deactivate";
 import {
-	CHOICES, LINK_LISTS, boxValue, changedCount, controlFor, patchFrom, whyNotEditable, withEdit,
+	CHOICES, LINK_LISTS, approverOptions, boxValue, changedCount, controlFor, patchFrom, reportsToOptions, whyNotEditable, withEdit,
 } from "@/lib/profedit";
 import { deskUrl } from "@/lib/desk";
 import People from "@/components/People";
@@ -171,14 +171,19 @@ function EditField({ doc, label, field, kind, edit }) {
 				{CHOICES[field].map((o) => <option key={o} value={o}>{o || "—"}</option>)}
 			</select>
 		);
-	} else if (kind === "employee") {
+	} else if (kind === "employee" || kind === "approver") {
 		/* A real select, because the value is a record id and the screen shows a
-		   name. A box that took the name would post the name. */
+		   name. A box that took the name would post the name. Only tagged
+		   managers in this person's company (lib/profedit.js), as on Create
+		   Employee; the company is the one being typed, if it is. */
+		const company = "company" in draft ? draft.company : doc.company;
+		const options = (kind === "approver" ? approverOptions : reportsToOptions)(
+			lists.allEmployees || lists.employees, company, doc.name, doc[field] || "");
 		control = (
 			<select {...box}>
 				<option value="">— nobody —</option>
-				{lists.employees.map((e) => (
-					<option key={e.name} value={e.name}>{e.employee_name || e.name}</option>
+				{options.map(([v, l]) => (
+					<option key={v} value={v}>{l}</option>
 				))}
 			</select>
 		);
@@ -1379,6 +1384,9 @@ export default function EmployeeProfile() {
 			onSet,
 			lists: {
 				employees: people,
+				/* Every company's people, not the top bar's: a manager is looked
+				   for in the company of the person being edited. */
+				allEmployees: s.employees,
 				companies: s.companies,
 				departments: s.departments,
 				designations: s.designations,

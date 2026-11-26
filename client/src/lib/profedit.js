@@ -1,5 +1,6 @@
 import { DATE_FIELD } from "../data/employees.js";
 import { PROFILE_CHECKS, PROFILE_LONG, PROFILE_PLUMBING } from "../data/profile.js";
+import { approverChoices, managerChoices } from "./newemp.js";
 
 /* ---------------------------------------------------------------------------
    What may be edited on Employee Profile, and what the site would be sent.
@@ -97,6 +98,7 @@ export function controlFor(key, how) {
 	if (!key || how === "absent") return "";
 	if (NEVER_EDITABLE.has(key) || PROFILE_PLUMBING.has(key)) return "";
 	if (ID_NOT_LABEL.has(key)) return "employee";
+	if (key === "leave_approver") return "approver";
 	if (CHOICES[key]) return "choice";
 	if (PROFILE_CHECKS.has(key)) return "check";
 	if (DATE_FIELD.test(key)) return "date";
@@ -178,4 +180,39 @@ export function withEdit(doc, draft, key, value) {
 	if (same(doc[key], value)) delete next[key];
 	else next[key] = value;
 	return next;
+}
+
+/* ---------------------------------------------------------------------------
+   Reporting Manager and Approving Manager on the profile (26 November 2026,
+   asked for by HR): only people tagged as a Manager, in this person's company,
+   and nobody else — the same people Create Employee offers (lib/newemp.js
+   managerChoices / approverChoices). The profile had offered every employee for
+   Reporting Manager and a free text box for Approving Manager.
+
+   Whoever the record already names stays in the list, marked, when they are
+   not a tagged manager: dropping them would blank the field on the next Save
+   of anything else on the page, and nobody would have chosen that.
+   --------------------------------------------------------------------------- */
+
+/** Reporting Manager's options, as `[value, label]` — Employee ids. */
+export function reportsToOptions(employees, company, self, current) {
+	const pool = (employees || []).filter((e) => !company || e.company === company);
+	const out = managerChoices(pool).list
+		.filter((e) => e.name !== self)
+		.map((e) => [e.name, e.employee_name + (e.designation ? ` · ${e.designation}` : "")]);
+	if (current && !out.some(([v]) => v === current)) {
+		const who = (employees || []).find((e) => e.name === current);
+		out.push([current, `${who?.employee_name || current} (not tagged as Manager)`]);
+	}
+	return out;
+}
+
+/** Approving Manager's options, as `[value, label]` — logins, because
+    `leave_approver` holds a User. */
+export function approverOptions(employees, company, self, current) {
+	const pool = (employees || []).filter((e) => !company || e.company === company);
+	const mine = (employees || []).find((e) => e.name === self)?.user_id;
+	const out = approverChoices(pool).filter(([user]) => user !== mine);
+	if (current && !out.some(([v]) => v === current)) out.push([current, `${current} (not a tagged manager)`]);
+	return out;
 }
