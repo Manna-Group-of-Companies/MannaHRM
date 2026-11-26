@@ -38,7 +38,7 @@ flutter run           # a device or an emulator
 flutter build apk --release
 ```
 
-The APK is `com.mannagroup.manna_hr_app`, version 2.1.0, so it installs over
+The APK is `com.mannagroup.manna_hr_app`, version 2.1.1, so it installs over
 the employee app already on people's phones. **Uninstall Manna HR Admin**
 (`com.mannagroup.manna_hr_admin`) from HR's phones; nothing replaces it but
 this.

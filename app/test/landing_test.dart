@@ -22,10 +22,11 @@ void main() {
       expect(landingFor(signedIn: true, isAdmin: true), Landing.admin);
     });
 
-    test('anybody still on their birth-date password chooses a new one first, HR included', () {
-      expect(landingFor(signedIn: true, isAdmin: false, firstPassword: true), Landing.newPassword);
-      expect(landingFor(signedIn: true, isAdmin: true, firstPassword: true), Landing.newPassword);
-      expect(landingFor(signedIn: false, isAdmin: false, firstPassword: true), Landing.signIn);
+    test('nobody is sent to choose a new password: signed in is home, every time', () {
+      // 26 Nov 2026: they sign in with their Emp Code and date of birth and keep them.
+      expect(Landing.values.map((l) => l.name), ['signIn', 'employee', 'admin']);
+      expect(landingFor(signedIn: true, isAdmin: false), Landing.employee);
+      expect(landingFor(signedIn: true, isAdmin: true), Landing.admin);
     });
   });
 

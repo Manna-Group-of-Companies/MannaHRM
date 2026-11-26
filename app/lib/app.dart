@@ -7,7 +7,6 @@ import 'package:manna_hr_app/core/session.dart';
 import 'package:manna_hr_app/screens/admin/admin_shell.dart';
 import 'package:manna_hr_app/screens/employee_shell.dart';
 import 'package:manna_hr_app/screens/login_screen.dart';
-import 'package:manna_hr_app/screens/new_password_screen.dart';
 import 'package:manna_hr_app/services/admin_api.dart';
 import 'package:manna_hr_app/services/api.dart';
 import 'package:manna_hr_app/ui/brand.dart';
@@ -205,7 +204,6 @@ class MannaHrApp extends StatelessWidget {
 /// The screen for a [Landing].
 Widget screenFor(Landing l) => switch (l) {
       Landing.signIn => const LoginScreen(),
-      Landing.newPassword => const NewPasswordScreen(),
       Landing.employee => const EmployeeShell(),
       Landing.admin => const AdminShell(),
     };
@@ -260,15 +258,18 @@ class _GateState extends State<_Gate> {
       // Signed in is a live session, not a resolved employee: somebody whose
       // Employee record carries no `user_id` is legitimately signed in and has
       // nothing to punch against, and their home says so and names the fix.
-      final who = await Api.whoami();
+      //
+      // Signed in once stays signed in until Sign out (26 November 2026):
+      // `restore` has just answered this, signing in again by itself with the
+      // kept login when the site's session had run out, so a second question
+      // that a weak signal fails must not send somebody to the sign-in form.
+      final restored = Session.I.user;
+      final who = restored.isNotEmpty && restored != 'Guest' ? restored : await Api.whoami();
       final signedIn = who.isNotEmpty && who != 'Guest';
       // Asked again on every start, not only at sign-in: a login whose HR role
       // was taken away should stop seeing everybody's day.
       final admin = signedIn && await Api.isAdmin();
-      // Asked on every start too: somebody who closed the app on the new
-      // password screen is still on their date of birth.
-      final first = signedIn && await Api.onFirstPassword();
-      landing = landingFor(signedIn: signedIn, isAdmin: admin, firstPassword: first);
+      landing = landingFor(signedIn: signedIn, isAdmin: admin);
     } catch (_) {
       landing = Landing.signIn;
     }

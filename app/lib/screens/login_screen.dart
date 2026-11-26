@@ -60,12 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await Api.login(email: _email.text.trim(), password: _password.text);
       final admin = await Api.isAdmin();
-      final first = await Api.onFirstPassword();
       if (!mounted) return;
-      goTo(
-        context,
-        landingFor(signedIn: true, isAdmin: admin, firstPassword: first),
-      );
+      goTo(context, landingFor(signedIn: true, isAdmin: admin));
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
     } finally {

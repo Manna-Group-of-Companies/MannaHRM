@@ -61,6 +61,21 @@ class Session {
   String get employeeId => '${employee?['name'] ?? ''}';
   String get employeeName => '${employee?['employee_name'] ?? email}';
 
+  /// The login as the person knows it — their Emp Code, `MRP-293` — never the
+  /// stand-in address the site names a login by when the record has no email
+  /// (`mrp-293@phone.manna.invalid`, manna_hr/appaccess.py stand_in_email).
+  /// Asked for 26 November 2026: the ID they signed in with is their ID.
+  String get loginName {
+    final code = '${employee?['employee_number'] ?? ''}'.trim();
+    if (code.isNotEmpty) return code;
+    for (final v in [email, user]) {
+      if (v.trim().isNotEmpty && !isStandIn(v)) return v.trim();
+    }
+    // Only the stand-in is known: the Emp Code is what it was made from.
+    final s = [email, user].firstWhere((v) => v.trim().isNotEmpty, orElse: () => '');
+    return isStandIn(s) ? s.trim().split('@').first.toUpperCase() : s.trim();
+  }
+
   late Dio dio;
 
   /// Re-establishes the session silently. Wired up by `Api` at start-up; left
@@ -172,3 +187,7 @@ class Session {
   Future<bool> _refresh() =>
       _reauthInFlight ??= reauthenticate!().whenComplete(() => _reauthInFlight = null);
 }
+
+/// Whether [address] is the made-up login name the site gives somebody with no
+/// email (manna_hr/appaccess.py STAND_IN_DOMAIN). Never shown as their ID.
+bool isStandIn(String address) => address.trim().toLowerCase().endsWith('@phone.manna.invalid');

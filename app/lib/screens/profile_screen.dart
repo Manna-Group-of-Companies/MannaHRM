@@ -159,8 +159,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
   String _email() {
+    // The login's stand-in address is not an email anybody has: a record with
+    // no email shows none rather than mrp-293@phone.manna.invalid.
     for (final k in ['prefered_email', 'company_email', 'personal_email', 'user_id']) {
-      if (_v(k).isNotEmpty) return _v(k);
+      if (_v(k).isNotEmpty && !isStandIn(_v(k))) return _v(k);
     }
     return '';
   }
