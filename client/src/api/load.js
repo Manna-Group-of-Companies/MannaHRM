@@ -190,7 +190,13 @@ export async function load() {
 			   the reads around it: this read is the dashboard. */
 			listAll("Leave Type", ["name", "is_earned_leave", "earned_leave_frequency"])
 				.catch(() => listAll("Leave Type", ["name"])),
-			listAll("Attendance", ["name"]),
+			/* A count, asked for as one: the screens that show it (Attendance,
+			   Salary Process) use the number alone. Reading every row to count them
+			   was 182 sequential reads on the live site (18,128 rows, 26 Nov 2026),
+			   minutes on every open of the dashboard and after every approval. */
+			api("/api/method/frappe.client.get_count", { doctype: "Attendance" })
+				.then((r) => Number(r && r.message) || 0)
+				.catch(() => 0),
 			/* `disabled` is the Status column on the screen behind View Category.
 			   Department is the only one of these three masters that carries such a
 			   field at all, and asking for one a site does not have is a 417 on the
@@ -256,7 +262,7 @@ export async function load() {
 			workLocations: (worklocs || []).filter((l) => l.is_active !== 0),
 			counts: {
 				companies: companies.length, shift: shifts.length, holiday: holidays.length,
-				leavetype: leavetypes.length, attendance: attendance.length,
+				leavetype: leavetypes.length, attendance,
 				departments: depts.length, designations: desigs.length, left: 344,
 			},
 			connState: "live",

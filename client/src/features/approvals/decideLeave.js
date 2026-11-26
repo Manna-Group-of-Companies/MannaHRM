@@ -1,8 +1,7 @@
 import { apiCall, apiDecide } from "@/api/client";
-import { load } from "@/api/load";
 import { getState } from "@/store";
 import { dmy } from "@/lib/format";
-import { forgetAttendanceReads } from "@/features/approvals/decide";
+import { afterDecision } from "@/features/approvals/decide";
 
 /* ---------------------------------------------------------------------------
    Deciding one leave application — the tick and the cross on a Leave card.
@@ -73,8 +72,7 @@ export async function decideLeave(r, action, note) {
 		}).then(() => " Your note is on its comments.", (e) => ` The note could not be added (${e.message}).`);
 	}
 
-	forgetAttendanceReads();
-	await load();
+	afterDecision("leave", r.name);
 	const who = r.employee_name || r.employee;
 	return {
 		ok: true,
