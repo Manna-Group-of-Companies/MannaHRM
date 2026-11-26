@@ -5,6 +5,7 @@ to it, as the signed-in HR login — whose roles `why_not` judges first.
 """
 
 import frappe
+import frappe.permissions
 from frappe import _
 
 from manna_hr import appaccess as aa
@@ -115,6 +116,20 @@ def allow_phone_punch(employee):
 			user.flags.ignore_permissions = True
 			user.add_roles("Employee")
 			said.append(_("added the Employee role to {0}").format(login))
+
+	# The two User Permissions that keep the new login to this one Employee and
+	# its Company. ERPNext adds them in Employee.on_update, but on the live site
+	# it does so as the signed-in login, and an HR Manager holds no right on
+	# User Permission: MRP-293 was refused on 26 November 2026 ("does not have
+	# doctype access via role permission for document User Permission"), and
+	# the login made a line earlier went with the rolled-back request. Made
+	# here, after `only_for`, they are found by on_update, which then adds
+	# nothing. The Employee's own Create User Permission tick decides, as it
+	# does for ERPNext.
+	if emp.get("create_user_permission"):
+		frappe.permissions.add_user_permission("Employee", emp.name, login, ignore_permissions=True)
+		if emp.company:
+			frappe.permissions.add_user_permission("Company", emp.company, login, ignore_permissions=True)
 
 	method = aa.phone_method_after(emp.get("custom_punch_method"))
 	if emp.user_id != login:
