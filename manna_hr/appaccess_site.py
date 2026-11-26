@@ -75,11 +75,41 @@ def allow_phone_punch(employee):
 	Employee role. An existing login's user name and password are left alone
 	(`aa.phone_punch` says why). Returns `get_access` as it now is.
 	"""
+	# Everything this login is judged on is judged here, as this login: the
+	# role, the record, and — for a login already there — `why_not`.
 	frappe.only_for(aa.MANAGERS)
+	caller = frappe.session.user
 	plan = _phone(employee)
 	if plan["problems"]:
 		frappe.throw("<br>".join(plan["problems"]))
+	login = plan["login"]
+	if not plan["make_login"]:
+		why = aa.why_not(caller, frappe.get_roles(), login, frappe.get_roles(login))
+		if why:
+			frappe.throw(why, frappe.PermissionError)
 
+	# The writes are made as Administrator (26 November 2026). The live site's
+	# ERPNext (16.32.3) adds the new login's Employee and Company User
+	# Permissions in Employee.on_update with the signed-in login's rights, and
+	# an HR Manager holds none on User Permission: MRP-293 was refused twice
+	# ("does not have doctype access via role permission for document User
+	# Permission"), the second time after those two were made here first. What
+	# is written is fixed by the plan above, not by the caller: a login with
+	# the Employee role alone, the two User Permissions that keep it to this
+	# one record, the link and the punch method. The note says who asked.
+	try:
+		frappe.set_user("Administrator")
+		said = _allow_phone_punch_writes(employee, plan)
+		frappe.get_doc("Employee", employee).add_comment(
+			"Info", _("Phone punch allowed by {0}: {1}").format(caller, "; ".join(said) or _("no change"))
+		)
+	finally:
+		frappe.set_user(caller)
+	return get_access(employee)
+
+
+def _allow_phone_punch_writes(employee, plan):
+	"""The writes behind Allow phone punch too. Returns what was done, in words."""
 	emp = frappe.get_doc("Employee", employee)
 	login = plan["login"]
 	said = []
@@ -97,35 +127,22 @@ def allow_phone_punch(employee):
 			"new_password": aa.first_password(emp.date_of_birth),
 			"roles": [{"role": "Employee"}],
 		})
-		# An HR Manager holds no write on User (see set_access). Who may do this
-		# was `only_for`'s question; the login made carries the Employee role
-		# alone. The date of birth is a first password the app makes them
-		# replace, so the site's strength rule is not asked of it.
+		# The date of birth is a first password the app makes them replace, so
+		# the site's strength rule is not asked of it.
 		user.flags.ignore_permissions = True
 		user.flags.ignore_password_policy = True
 		user.flags.no_welcome_mail = True
 		user.insert(ignore_permissions=True)
 		said.append(_("made login {0} (user name {1}, first password the date of birth)").format(login, plan["sign_in_as"]))
-	else:
-		roles = frappe.get_roles(login)
-		why = aa.why_not(frappe.session.user, frappe.get_roles(), login, roles)
-		if why:
-			frappe.throw(why, frappe.PermissionError)
-		if "Employee" not in roles:
-			user = frappe.get_doc("User", login)
-			user.flags.ignore_permissions = True
-			user.add_roles("Employee")
-			said.append(_("added the Employee role to {0}").format(login))
+	elif "Employee" not in frappe.get_roles(login):
+		user = frappe.get_doc("User", login)
+		user.flags.ignore_permissions = True
+		user.add_roles("Employee")
+		said.append(_("added the Employee role to {0}").format(login))
 
-	# The two User Permissions that keep the new login to this one Employee and
-	# its Company. ERPNext adds them in Employee.on_update, but on the live site
-	# it does so as the signed-in login, and an HR Manager holds no right on
-	# User Permission: MRP-293 was refused on 26 November 2026 ("does not have
-	# doctype access via role permission for document User Permission"), and
-	# the login made a line earlier went with the rolled-back request. Made
-	# here, after `only_for`, they are found by on_update, which then adds
-	# nothing. The Employee's own Create User Permission tick decides, as it
-	# does for ERPNext.
+	# The two User Permissions that keep the login to this one Employee and its
+	# Company, made before the save so on_update finds them and adds nothing.
+	# The Employee's own Create User Permission tick decides, as for ERPNext.
 	if emp.get("create_user_permission"):
 		frappe.permissions.add_user_permission("Employee", emp.name, login, ignore_permissions=True)
 		if emp.company:
@@ -139,8 +156,7 @@ def allow_phone_punch(employee):
 		said.append(_("Punch Method {0} → {1}").format(emp.get("custom_punch_method") or _("blank"), method))
 		emp.custom_punch_method = method
 	emp.save()
-	emp.add_comment("Info", _("Phone punch allowed: {0}").format("; ".join(said) or _("no change")))
-	return get_access(employee)
+	return said
 
 
 @frappe.whitelist(methods=["POST"])
