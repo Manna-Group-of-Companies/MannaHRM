@@ -9,6 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime, today
 
+from manna_hr import rules
 from manna_hr.regularization import approver_type_for
 
 
@@ -112,6 +113,36 @@ def request_regularization(attendance_date, reason, requested_in=None, requested
 	)
 	doc.insert()
 	return {"name": doc.name, "approver_type": doc.approver_type}
+
+
+@frappe.whitelist()
+def my_holidays(from_date, to_date):
+	"""The calling user's own holidays between two dates (26 November 2026).
+
+	The phone app used to read the company's `default_holiday_list` itself, and
+	an Employee login may not read Company — so it found no list, said so, and
+	drew every Sunday as an absence. This reads the list for the session's own
+	Employee only (their own list, else their company's) and nobody else's, and
+	shows every Sunday as a week off (`rules.sundays_are_week_off`).
+	"""
+	employee = _my_employee()
+	emp = frappe.db.get_value("Employee", employee, ["holiday_list", "company"], as_dict=True) or {}
+	listname = emp.get("holiday_list") or (
+		frappe.db.get_value("Company", emp.get("company"), "default_holiday_list") if emp.get("company") else None
+	)
+	rows = []
+	if listname:
+		rows = frappe.get_all(
+			"Holiday",
+			filters={
+				"parent": listname,
+				"parenttype": "Holiday List",
+				"holiday_date": ["between", [from_date, to_date]],
+			},
+			fields=["holiday_date", "description", "weekly_off"],
+			order_by="holiday_date asc",
+		)
+	return {"holiday_list": listname or "", "holidays": rules.sundays_are_week_off(rows)}
 
 
 def _my_employee():

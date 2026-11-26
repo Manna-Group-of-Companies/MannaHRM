@@ -1123,3 +1123,28 @@ def _as_datetime(value):
 	if isinstance(value, datetime):
 		return value
 	return datetime.fromisoformat(str(value)[:19])
+
+
+# ------------------------------------------------------------- week offs ---
+
+
+def sundays_are_week_off(rows):
+	"""Holiday rows as the app and the website should show them: a Sunday is
+	always a week off, never a holiday (asked for by HR, 26 November 2026).
+
+	Every Sunday on the group's list already carries `weekly_off`, but a
+	festival that falls on a Sunday, typed in as a holiday, would otherwise be
+	shown as one. Each row comes back as {holiday_date, description,
+	weekly_off}; the date as `YYYY-MM-DD`.
+	"""
+	out = []
+	for r in rows or ():
+		d = r.get("holiday_date")
+		day = d if isinstance(d, date) else date.fromisoformat(str(d)[:10])
+		sunday = day.weekday() == 6
+		out.append({
+			"holiday_date": day.isoformat(),
+			"description": r.get("description") or ("Sunday" if sunday else "Holiday"),
+			"weekly_off": 1 if sunday or int(r.get("weekly_off") or 0) else 0,
+		})
+	return out

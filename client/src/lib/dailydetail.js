@@ -20,7 +20,7 @@
    --------------------------------------------------------------------------- */
 
 import { resolveDayStatus, ABSENT, HOLIDAY, LEAVE_PENDING, ON_FLOOR, ON_LEAVE, PRESENT, UNMARKED } from "./rules.js";
-import { workDateOf, workDayPunches } from "./roster.js";
+import { isSunday, workDateOf, workDayPunches } from "./roster.js";
 import { periodOf } from "./format.js";
 import { autoOtMinutes, otDay, shiftMinutes } from "./overtime.js";
 
@@ -179,7 +179,10 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 					hasPunchIn: Boolean(inAt), hasPunchOut: Boolean(outAt),
 					leaveStatus: l ? l.status : "", isHoliday: Boolean(h), isPastDay: iso < today,
 				});
-				status = st === HOLIDAY ? (h.weekly_off ? "Weekly Off" : h.description || "Holiday") : STATUS_WORD[st];
+				/* Sunday is the week off — list or no list, punched or not (HR, 26
+				   November 2026); the punches stay on the row as In and Out. */
+				const weekOff = (h && h.weekly_off) || isSunday(iso);
+				status = weekOff ? "Weekly Off" : st === HOLIDAY ? h.description || "Holiday" : STATUS_WORD[st];
 				/* An OUT with no IN is still somebody who was there. */
 				if (!inAt && outAt && status === "Absent") status = "Out Only";
 				source = inAt || outAt ? "punches" : "";
@@ -245,7 +248,7 @@ export function dailyRows({ people, from, to, attendance, punches, leave, holida
 				otState: od.state,
 				crossed,
 				status,
-				dayType: h ? (h.weekly_off ? "weekoff" : "holiday") : "",
+				dayType: (h && h.weekly_off) || isSunday(iso) ? "weekoff" : h ? "holiday" : "",
 				source,
 				punchedAbsent,
 				/* The policy's own words for the day, when it read it. */

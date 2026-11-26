@@ -338,3 +338,30 @@ def test_the_forms_timestamp_keeps_its_time_of_day():
 
 	assert sheet_serial_to_datetime(46278.5) == "2026-09-13 12:00:00"
 	assert sheet_serial_to_datetime("9/13/2026 12:00:00") == "9/13/2026 12:00:00"
+
+
+# ------------------------------------------------- Sunday is a week off ---
+
+
+def test_a_sunday_is_always_a_week_off_never_a_holiday():
+	from manna_hr.rules import sundays_are_week_off
+
+	rows = sundays_are_week_off([
+		{"holiday_date": "2026-11-01", "description": "Sunday", "weekly_off": 1},
+		# A festival typed in on a Sunday is still the Sunday's week off.
+		{"holiday_date": "2026-11-08", "description": "Some festival", "weekly_off": 0},
+		{"holiday_date": "2026-12-25", "description": "Christmas", "weekly_off": 0},
+	])
+	assert [(r["holiday_date"], r["weekly_off"]) for r in rows] == [
+		("2026-11-01", 1), ("2026-11-08", 1), ("2026-12-25", 0)]
+	assert rows[2]["description"] == "Christmas"
+
+
+def test_week_off_rows_take_dates_as_dates_or_strings():
+	from datetime import date as _d
+
+	from manna_hr.rules import sundays_are_week_off
+
+	assert sundays_are_week_off([{"holiday_date": _d(2026, 11, 15)}]) == [
+		{"holiday_date": "2026-11-15", "description": "Sunday", "weekly_off": 1}]
+	assert sundays_are_week_off([]) == []

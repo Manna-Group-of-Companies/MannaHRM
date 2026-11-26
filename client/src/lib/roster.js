@@ -317,7 +317,12 @@ export function monthRoster({ ym, punches, leave, holidays, corrections, shift, 
 		   key, so the split happens here rather than in `rules.js` — that
 		   function decides whether somebody is absent, and a Sunday and Diwali
 		   are the same answer to that question. */
-		const display = status === HOLIDAY && h && h.weekly_off ? "weekoff" : DISPLAY[status];
+		/* Sunday is the week off, list or no list, and stays one for somebody
+		   who punched on it — two or three companies work Sundays (HR, 26
+		   November 2026). Only what is shown changes: `status` is still the
+		   rule's answer, and the punches and times stay on the day. */
+		const weekOff = (h && h.weekly_off) || isSunday(iso);
+		const display = weekOff ? "weekoff" : DISPLAY[status];
 
 		/* A dated Shift Assignment beats the default shift for its days. */
 		const asg = assignmentOn(iso, assignments);
@@ -432,4 +437,10 @@ export function monthRegister({ ym, people, punches, leave, corrections, holiday
 			overtime: o.get(emp.name) || [],
 		}),
 	}));
+}
+
+/** Whether `YYYY-MM-DD` is a Sunday — the group's week off. */
+export function isSunday(iso) {
+	const d = new Date(String(iso || "").slice(0, 10) + "T00:00:00");
+	return !Number.isNaN(d.getTime()) && d.getDay() === 0;
 }

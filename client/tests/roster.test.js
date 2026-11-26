@@ -240,7 +240,9 @@ describe("the month", () => {
 		/* Treating a missing record as an absence would mark the whole group
 		   absent at nine in the morning. */
 		const out = monthRoster({ ...base, today: "2026-08-10" });
-		expect(dayOn(out, "2026-08-09").display).toBe("absent");
+		expect(dayOn(out, "2026-08-08").display).toBe("absent");
+		// 9 Aug 2026 is a Sunday: the week off, never an absence (26 Nov 2026).
+		expect(dayOn(out, "2026-08-09").display).toBe("weekoff");
 		expect(dayOn(out, "2026-08-10").display).toBe("unmarked");
 		expect(dayOn(out, "2026-08-20").display).toBe("unmarked");
 	});
@@ -274,7 +276,19 @@ describe("the month", () => {
 	it("survives a month the site answered nothing for", () => {
 		const out = monthRoster({ ...base, punches: null, leave: null, holidays: null, corrections: null });
 		expect(out.rows).toHaveLength(31);
-		expect(out.counts.absent).toBe(31);
+		// August 2026 has five Sundays, each the week off even with no list.
+		expect(out.counts.absent).toBe(26);
+		expect(out.rows.filter((r) => r.display === "weekoff")).toHaveLength(5);
+	});
+
+	it("shows a Sunday somebody worked as the week off, with their punches on it", () => {
+		const out = monthRoster({ ...base, punches: [
+			{ employee: "HR-EMP-1", time: "2026-08-16 09:00:00", log_type: "IN" },
+			{ employee: "HR-EMP-1", time: "2026-08-16 17:00:00", log_type: "OUT" },
+		] });
+		const sun = dayOn(out, "2026-08-16");
+		expect(sun.display).toBe("weekoff");
+		expect([String(sun.inAt).slice(11, 16), String(sun.outAt).slice(11, 16)]).toEqual(["09:00", "17:00"]);
 	});
 });
 

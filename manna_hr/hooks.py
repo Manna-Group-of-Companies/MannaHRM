@@ -40,6 +40,13 @@ page_renderer = ["manna_hr.adms_site.AdmsRenderer"]
 # ---------------------------------------------------------------- documents ---
 
 doc_events = {
+	# Sunday is the group's week off and never a holiday (asked for by HR,
+	# 26 November 2026): a Sunday row saved on any Holiday List is marked
+	# weekly off, so the website, the app, hrms's shift job and payroll all
+	# read it as one. See manna_hr/weekoff.py.
+	"Holiday List": {
+		"validate": "manna_hr.weekoff.sundays_off",
+	},
 	# Settings → Security → Employee fields: a field HR has locked for a login
 	# is refused from Desk and the API too, not only left off the dashboard's
 	# two forms. See manna_hr/fieldaccess.py.

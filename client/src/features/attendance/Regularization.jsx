@@ -352,7 +352,10 @@ const GRID_TOTALS = [
 	["½", "Partial — a punch-in with no punch-out", (c) => fmt(c.partial)],
 	["A", "Absent", (c) => fmt(c.absent)],
 	["L", "Approved leave", (c) => fmt(c.leave)],
-	["Off", "Holiday and weekly off", (c) => fmt(c.holiday + c.weekoff)],
+	/* Week off and holiday apart (26 November 2026, asked for by HR): a Sunday
+	   is never a holiday, so the two are never added together. */
+	["WO", "Week off", (c) => fmt(c.weekoff)],
+	["H", "Holiday", (c) => fmt(c.holiday)],
 	/* Time, asked for on 16 September 2026: hours worked, overtime past the
 	   shift's end, and the days that started late. Blank for somebody with no
 	   shift window — there is nothing to measure them against. */
