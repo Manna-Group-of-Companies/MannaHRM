@@ -206,6 +206,15 @@ already marked Absent silently swallows a correction: the checkins land, the job
 runs, the day stays Absent. `_clear_generated_attendance` cancels the old row
 first. Do not remove it.
 
+**hrms sets aside a punch that arrives after its day was made.** It tries to
+make the day a second time, is refused, ticks `skip_auto_attendance` and writes
+"Reason for skipping auto attendance … already marked" on the punch — and the
+dashboard never draws a set-aside punch. On 26 November 2026 that was 64
+punches over 16 people (punch-outs a gate sent the next morning, a month of
+punches delivered onto days already Absent). `latepunch_site` rebuilds the day
+when such a punch arrives and releases, once, any hrms set aside anyway. Do not
+remove the after_insert hook or the sweep; see `manna_hr/latepunch.py`.
+
 **The bridge must never clear a device's log.** `pyzk` offers
 `clear_attendance()` and every tutorial calls it. The device's memory is the
 last copy of a punch that failed to deliver. The ADMS server has its own version

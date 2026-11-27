@@ -495,3 +495,33 @@ def advance_shifts():
 			frappe.db.set_value("Shift Type", shift.name, "last_sync_of_checkin", up_to,
 			                    update_modified=False)
 	frappe.db.commit()
+
+
+def guard_last_sync(doc, method=None):
+	"""Shift Type · validate. A save may not move `last_sync_of_checkin` past the
+	shift's own newest punch — the rule and the reason are `adms.sync_limit`.
+
+	`advance_shifts` writes with `db.set_value` and is not judged here; it holds
+	itself at the quietest machine, which is stricter still.
+	"""
+	if doc.is_new() or not doc.get("last_sync_of_checkin"):
+		return
+	before = doc.get_doc_before_save()
+	current = before.get("last_sync_of_checkin") if before else None
+	if str(current or "")[:19] == str(doc.last_sync_of_checkin)[:19]:
+		return
+	newest = frappe.db.sql(
+		"select max(time) from `tabEmployee Checkin` where shift = %s and time <= %s",
+		(doc.name, now_datetime()),
+	)[0][0]
+	allowed = adms.sync_limit(current, doc.last_sync_of_checkin, newest)
+	if str(allowed or "")[:19] == str(doc.last_sync_of_checkin)[:19]:
+		return
+	asked = str(doc.last_sync_of_checkin)[:19]
+	doc.last_sync_of_checkin = allowed
+	frappe.msgprint(
+		"Last Sync of Checkin on {0} kept at {1}, not {2}: no punch on this shift is that late yet, "
+		"and moving it further would close days whose punches may still be on a machine.".format(
+			doc.name, str(allowed or "")[:19] or "(not set)", asked),
+		alert=True,
+	)

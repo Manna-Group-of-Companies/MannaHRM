@@ -18,8 +18,15 @@ def test_the_copy_a_day_was_built_from_is_the_one_kept():
 	assert keeper([c("A"), c("B", att="ATT-1", creation="2026-11-03 09:00")])["name"] == "B"
 
 
-def test_a_copy_with_a_direction_beats_one_without():
-	assert keeper([c("A"), c("B", log="IN", creation="2026-11-03 09:00")])["name"] == "B"
+def test_a_copy_without_a_direction_beats_the_key_the_person_pressed():
+	# FARISAMOL VS, 16 Nov 2026: the gate's own post (no direction) and the
+	# bridge's copy of it, which said OUT for his arrival. Keeping the OUT
+	# leaves the day with no punch-in on the dashboard.
+	assert keeper([c("A", log="OUT"), c("B", creation="2026-11-03 09:00")])["name"] == "B"
+
+
+def test_when_both_copies_made_the_day_the_one_without_a_direction_is_still_kept():
+	assert keeper([c("A", att="ATT-1", log="OUT"), c("B", att="ATT-1", creation="2026-11-03 09:00")])["name"] == "B"
 
 
 def test_otherwise_the_first_made_is_kept():
@@ -37,7 +44,7 @@ def test_a_day_a_set_aside_copy_was_counted_into_is_rebuilt():
 	# Both copies made it into the day (alternating IN/OUT): the day's pairing
 	# was wrong from that punch on.
 	got = plan([c("A", att="ATT-1", log="IN"), c("B", att="ATT-1")])
-	assert got["set_aside"] == [("B", "A")] and got["rebuild"] == {"ATT-1"}
+	assert got["set_aside"] == [("A", "B")] and got["rebuild"] == {"ATT-1"}
 
 
 def test_a_copy_already_set_aside_is_left_alone():
