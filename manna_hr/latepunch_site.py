@@ -234,6 +234,9 @@ def _plan(punches):
 	# second copy stays set aside, as `dedupe` would leave it.
 	unflag, twins = latepunch.one_per_second(unflag)
 	kept.extend(dict(r, why=latepunch.KEPT_DUPLICATE) for r in twins)
+	# A copy beside a punch whose flag comes off is that punch a second time.
+	release, twins = latepunch.beside_counted(release, unflag)
+	kept.extend(dict(r, why=latepunch.KEPT_DUPLICATE) for r in twins)
 	return {"release": release, "unflag": unflag, "kept": kept}
 
 

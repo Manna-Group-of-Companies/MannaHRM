@@ -59,7 +59,9 @@ def _wire(doctype, event, method, on):
 	hooks = frappe.get_doc_hooks().setdefault(doctype, {}).setdefault(event, [])
 	if on and method not in hooks:
 		hooks.append(method)
-	if not on and method in hooks:
+	# Every copy: a runner that wires the hook itself on a bench whose
+	# hooks.py already has it leaves it in the list twice.
+	while not on and method in hooks:
 		hooks.remove(method)
 
 
@@ -169,17 +171,25 @@ class TestLatePunch(IntegrationTestCase):
 		made = _day(emp, "2026-11-17")
 		self.assertEqual((str(made.in_time), str(made.out_time)), ("2026-11-17 08:16:21", "2026-11-17 17:01:15"))
 
+		# The bridge's OUT copy of the punch-out, set aside long before: a copy
+		# at the same second (saved a second off, as the duplicate guard
+		# refuses an exact copy, then moved onto it).
+		bridge = _punch(emp, "2026-11-17 17:01:16", log_type="OUT")
+		frappe.db.set_value("Employee Checkin", bridge.name, {"time": "2026-11-17 17:01:15", "skip_auto_attendance": 1})
+		said = "Attendance for employee {0} is already marked for the date 17-11-2026: {1}".format(emp, made.name)
+		add_comment_in_checkins([bridge.name], said)
+
 		# The losing job, word for word what hrms does with its refusal.
 		skip_attendance_in_checkins([a.name, b.name])
-		add_comment_in_checkins(
-			[a.name, b.name],
-			"Attendance for employee {0} is already marked for the date 17-11-2026: {1}".format(emp, made.name),
-		)
+		add_comment_in_checkins([a.name, b.name], said)
 
 		latepunch_site.sweep()
 		for p in (a, b):
 			self.assertEqual(frappe.db.get_value("Employee Checkin", p.name, ["skip_auto_attendance", "attendance"]),
 			                 (0, made.name))
+		# The bridge's copy is the same punch: it stays set aside, out of the day.
+		self.assertEqual(frappe.db.get_value("Employee Checkin", bridge.name, ["skip_auto_attendance", "attendance"]),
+		                 (1, None))
 		# The day was right: it is not rebuilt.
 		self.assertEqual(frappe.db.get_value("Attendance", made.name, "docstatus"), 1)
 

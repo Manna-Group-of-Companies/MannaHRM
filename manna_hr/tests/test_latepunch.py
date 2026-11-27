@@ -143,6 +143,18 @@ def test_a_counted_second_copy_and_a_submitted_month_stay_as_they_are():
 	assert not lp.counted_but_set_aside(COUNTED, RACE, day=MADE, frozen=True)
 
 
+def test_a_copy_beside_a_punch_that_counts_again_is_never_released_with_it():
+	# ERENIUS BECK, 17 Nov 2026, 17:01:15: the gate's own post (003932) is
+	# counted again; the bridge's OUT copy (003936), set aside on 18 Nov, would
+	# otherwise pass `releasable` and count the same punch twice.
+	gate = {"name": "EMP-CKIN-11-2026-003932", "employee": "HR-EMP-00054", "time": "2026-11-17 17:01:15"}
+	bridge = {"name": "EMP-CKIN-11-2026-003936", "employee": "HR-EMP-00054", "time": "2026-11-17 17:01:15"}
+	other = {"name": "X", "employee": "HR-EMP-00054", "time": "2026-11-17 17:01:16"}
+	keep, duplicates = lp.beside_counted([bridge, other], [gate])
+	assert [r["name"] for r in keep] == ["X"]
+	assert [r["name"] for r in duplicates] == ["EMP-CKIN-11-2026-003936"]
+
+
 def copy(name, log_type=None, creation="2026-11-02 07:57:32", at="2026-11-01 06:10:32", emp="HR-EMP-00478"):
 	return {"name": name, "employee": emp, "time": at, "creation": creation, "attendance": None, "log_type": log_type}
 

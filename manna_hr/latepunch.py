@@ -200,6 +200,24 @@ def one_per_second(rows):
 	return release, duplicates
 
 
+def beside_counted(release, counted):
+	"""`(release, duplicates)`: what is left to release once `counted` count again.
+
+	A punch whose flag comes off (`counted_but_set_aside`) is the punch, and
+	a copy of it at the same second must not be released beside it. That copy
+	passes `releasable`, because until this run no copy of it counted — and
+	releasing it would put one punch into the day twice. ERENIUS BECK, 17
+	November 2026, 17:01:15: the gate's own post, counted and then set aside by
+	a second shift job, and the bridge's OUT copy, set aside on 18 November.
+	Rows are `{"employee", "time", ...}`.
+	"""
+	keys = {(r["employee"], str(r["time"])[:19]) for r in counted}
+	keep, duplicates = [], []
+	for r in release:
+		(duplicates if (r["employee"], str(r["time"])[:19]) in keys else keep).append(r)
+	return keep, duplicates
+
+
 def rebuild_on_arrival(punch, attendance):
 	"""The day to rebuild because this punch arrived after it was made, or None.
 
