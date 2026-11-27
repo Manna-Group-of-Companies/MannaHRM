@@ -96,16 +96,15 @@ describe("create employee: company and punch method", () => {
 		expect(punchGaps({ custom_punch_method: "Fingerprint Machine", attendance_device_id: "12" })).toEqual([]);
 	});
 
-	it("a mobile-app punch needs an email to sign in with, and does not need a machine code", () => {
+	it("a mobile-app punch needs no email and no machine code (27 Nov 2026: Emp Code + date of birth)", () => {
 		const f = { custom_punch_method: "Mobile App" };
-		expect(punchGaps(f).map((g) => g.on)).toEqual(["company_email"]);
-		expect(punchGaps({ ...f, personal_email: "a@b.c" })).toEqual([]);
+		expect(punchGaps(f)).toEqual([]);
 		expect(missing(0, f).join(" ")).not.toMatch(/Machine Code/);
-		expect(missing(1, f).join(" ")).toMatch(/Email/);
+		expect(missing(1, f).join(" ")).not.toMatch(/Email/);
 	});
 
-	it("both needs both", () => {
-		expect(punchGaps({ custom_punch_method: "Both" })).toHaveLength(2);
+	it("both needs only the machine code", () => {
+		expect(punchGaps({ custom_punch_method: "Both" }).map((g) => g.on)).toEqual(["attendance_device_id"]);
 	});
 });
 

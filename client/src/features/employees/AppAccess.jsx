@@ -15,6 +15,7 @@ const why = (e) => String(e?.message || e || "The site would not do that.").slic
 export const loadAccess = (employee) => apiCall("manna_hr.appaccess_site.get_access", { employee });
 const setAccess = (employee, key, value) => apiCall("manna_hr.appaccess_site.set_access", { employee, key, value });
 const allowPhone = (employee) => apiCall("manna_hr.appaccess_site.allow_phone_punch", { employee });
+const resetLogin = (employee) => apiCall("manna_hr.appaccess_site.reset_app_login", { employee });
 
 const optLabel = (o) => (typeof o === "string" ? o : o.label);
 const optValue = (o) => (typeof o === "string" ? o : o.value);
@@ -46,6 +47,19 @@ export default function AppAccess({ emp }) {
 		setBusy("");
 	}
 
+	async function phoneReset() {
+		setAsk(null);
+		setBusy("reset");
+		try {
+			const data = await resetLogin(emp);
+			setSt({ state: "ok", data, err: "" });
+			toast("Login reset to the Emp Code and date of birth.");
+		} catch (e) {
+			toast(why(e));
+		}
+		setBusy("");
+	}
+
 	async function change(key, value) {
 		setAsk(null);
 		setBusy(key);
@@ -63,7 +77,8 @@ export default function AppAccess({ emp }) {
 	if (st.state === "error") return <EmptyState title="Access could not be read">{st.err}</EmptyState>;
 	const { login, why: locked, apps, phone } = st.data || {};
 	const phoneCard = phone ? (
-		<PhonePunch phone={phone} locked={login ? locked : ""} busy={busy === "phone"} onAsk={() => setAsk({ key: "phone" })} />
+		<PhonePunch phone={phone} locked={login ? locked : ""} busy={busy === "phone" || busy === "reset"}
+			onAsk={() => setAsk({ key: "phone" })} onReset={() => setAsk({ key: "reset" })} />
 	) : null;
 	const phoneAsk = ask?.key === "phone" ? (
 		<KitModal title="Allow phone punch?" onClose={() => setAsk(null)}>
@@ -75,13 +90,26 @@ export default function AppAccess({ emp }) {
 							{phone.stand_in
 								? <>A new login is made with the Employee role. The record has no email, so the site names it <b>{phone.login}</b>, an address that never receives mail.</>
 								: <>A new login <b>{phone.login}</b> is made with the Employee role.</>}
-							{" "}They sign in to the Manna HR app with <b>{phone.sign_in_as}</b> and their date of birth (DDMMYYYY), and choose a new password the first time.
+							{" "}They sign in to the Manna HR app with <b>{phone.sign_in_as}</b> and their date of birth (DDMMYYYY).
 						</li>
+					) : phone.reset_login ? (
+						<li>Their login <b>{phone.login}</b> is linked, with its user name set to <b>{phone.sign_in_as}</b> and its password to their date of birth (DDMMYYYY). Any password it had stops working.</li>
 					) : (
-						<li>Their login <b>{phone.login}</b> is linked. Its user name and password are not changed: they sign in as <b>{phone.sign_in_as}</b> with their own password.</li>
+						<li>Their login <b>{phone.login}</b> is linked. It is also used for other work, so its user name and password are not changed: they sign in as <b>{phone.sign_in_as}</b> with their own password.</li>
 					)}
 				</ul>
 				<ModalFoot ok="Allow phone punch" onCancel={() => setAsk(null)} busy={busy === "phone"} />
+			</form>
+		</KitModal>
+	) : null;
+	const resetAsk = ask?.key === "reset" ? (
+		<KitModal title="Reset the app login?" onClose={() => setAsk(null)}>
+			<form noValidate onSubmit={(e) => { e.preventDefault(); void phoneReset(); }}>
+				<p style={{ margin: "0 0 12px" }}>
+					Login <b>{phone.login}</b>: user name <b>{phone.sign_in_as}</b>, password their date of birth (DDMMYYYY).
+					The password they use now stops working.
+				</p>
+				<ModalFoot ok="Reset login" onCancel={() => setAsk(null)} busy={busy === "reset"} />
 			</form>
 		</KitModal>
 	) : null;
@@ -90,7 +118,7 @@ export default function AppAccess({ emp }) {
 			<div>
 				{phoneCard}
 				<EmptyState title="No login">This employee has no login on the site.</EmptyState>
-				{phoneAsk}
+				{phoneAsk}{resetAsk}
 			</div>
 		);
 	}
@@ -131,8 +159,8 @@ export default function AppAccess({ emp }) {
 					})}
 				</tbody>
 			</table>
-			{phoneAsk}
-			{ask && ask.key !== "phone" ? (
+			{phoneAsk}{resetAsk}
+			{ask && ask.key !== "phone" && ask.key !== "reset" ? (
 				<KitModal title="Turn off the login?" onClose={() => setAsk(null)}>
 					<form noValidate onSubmit={(e) => { e.preventDefault(); void change("login", false); }}>
 						<p style={{ margin: "0 0 12px" }}>{login} will be signed out of every app and website.</p>
@@ -148,8 +176,8 @@ export default function AppAccess({ emp }) {
     the machine can punch on the phone as well. What it needs and what it does
     are the site's answer (manna_hr/appaccess.py phone_punch); this draws it
     and offers the one button. */
-function PhonePunch({ phone, locked, busy, onAsk }) {
-	const { on, method, sign_in_as: as, problems = [], warnings = [] } = phone;
+function PhonePunch({ phone, locked, busy, onAsk, onReset }) {
+	const { on, method, sign_in_as: as, problems = [], warnings = [], reset_login: resettable } = phone;
 	return (
 		<section aria-label="Phone punch" style={{ border: "1px solid rgb(var(--line))", borderRadius: 14, padding: "14px 16px", margin: "0 0 16px" }}>
 			<div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -167,6 +195,13 @@ function PhonePunch({ phone, locked, busy, onAsk }) {
 						{busy ? "Allowing…" : "Allow phone punch too"}
 					</button>
 				)}
+				{/* Every app user signs in with Emp Code + date of birth (HR, 27 Nov
+				    2026): for a forgotten password, and for logins made before. */}
+				{on && resettable && !locked ? (
+					<button type="button" className="k-btn k-btn-sm k-btn-line" disabled={busy || problems.length > 0} onClick={onReset}>
+						{busy ? "Resetting…" : "Reset to Emp Code + date of birth"}
+					</button>
+				) : null}
 			</div>
 			{!on && problems.length ? (
 				<ul style={{ margin: "10px 0 0", paddingLeft: 18, color: "rgb(var(--bad))" }}>

@@ -176,6 +176,20 @@ def granted(changes):
 #: The punch methods the phone app is for.
 PHONE_METHODS = ("Mobile App", "Both")
 
+#: The roles a login holds just by being an employee's. A login with nothing
+#: else is the phone app's alone, so its user name and password may be set to
+#: the group's rule; one with any other role (HR, CMMS, Fleet, Sales) is
+#: somebody's way into another system and is left as it is.
+BASIC_ROLES = frozenset({"Employee", "Desk User", "All", "Guest", "Employee Self Service"})
+
+
+def app_only(roles):
+	"""Whether a login holds nothing but the employee's own roles. Unknown
+	(None) is not app-only: a login nobody looked at is not reset."""
+	if roles is None:
+		return False
+	return not (set(roles) - BASIC_ROLES)
+
 
 def first_password(dob):
 	"""The date of birth as DDMMYYYY — 2005-03-24 is "24032005" — or "".
@@ -231,10 +245,13 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None):
 	`by_user_name` is System Settings → Allow Login using User Name (None:
 	could not tell).
 
-	**An existing login keeps its user name and password.** A driver's
-	`pareeth_k_b` is how the Fleet driver app signs them in, and a password is
-	somebody's own; changing either here would lock them out of something they
-	were using. Only a login made here gets the Emp Code and the date of birth.
+	**Every phone-app user signs in with their Emp Code and date of birth**
+	(HR, 27 November 2026). A new login is made that way, and so is an existing
+	one that holds nothing but the employee's own roles (`app_only`): its user
+	name becomes the Emp Code and its password the date of birth. A login with
+	any other role — a driver's Fleet login, an HR Manager's, a CMMS one — is
+	somebody's way into another system and keeps its user name and password.
+	`login_user` carries `roles` for this; without them nothing is reset.
 	"""
 	method = str(emp.get("custom_punch_method") or "")
 	code = str(emp.get("employee_number") or "").strip()
@@ -248,6 +265,7 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None):
 		"problems": [],
 		"warnings": [],
 		"stand_in": False,
+		"reset_login": False,
 	}
 	if str(emp.get("status") or "Active") != "Active":
 		out["problems"].append("This employee is not Active.")
@@ -260,6 +278,22 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None):
 		if not login_user.get("enabled"):
 			out["problems"].append(
 				"Their login {0} is turned off. Turn on the login above first.".format(login_user["name"]))
+		roles = login_user.get("roles")
+		if app_only(roles):
+			dob = first_password(emp.get("date_of_birth"))
+			out["reset_login"] = True
+			out["sign_in_as"] = code
+			out["password"] = "date of birth, DDMMYYYY"
+			if not code:
+				out["problems"].append("No Emp Code on the record. It is the user name they sign in with.")
+			elif username_holder:
+				out["problems"].append("{0} is already the user name of {1}.".format(code, username_holder))
+			if not dob:
+				out["problems"].append("No date of birth on the record. It is their password.")
+		elif roles:
+			other = sorted(set(roles) - BASIC_ROLES)
+			out["warnings"].append(
+				"This login is also used as {0}, so its user name and password are left as they are.".format(", ".join(other)))
 	else:
 		email = email_of(emp) or stand_in_email(code)
 		dob = first_password(emp.get("date_of_birth"))
