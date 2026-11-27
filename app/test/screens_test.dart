@@ -27,7 +27,7 @@ void main() {
 
     expect(find.text('Manna HR'), findsOneWidget);
     // Each box is named over it, not inside it (the FlutterFlow design).
-    expect(find.text('Emp Code or email'), findsOneWidget);
+    expect(find.text('Emp Code'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);

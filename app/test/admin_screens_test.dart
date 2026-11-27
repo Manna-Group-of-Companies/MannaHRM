@@ -125,13 +125,29 @@ void main() {
     expect(find.text('On leave (1)'), findsOneWidget);
   });
 
-  testWidgets('the sign-in screen asks for an Emp Code (or email) and a password, and says when either is missing', (t) async {
+  testWidgets('the sign-in screen asks for an Emp Code and a password, and says when either is missing', (t) async {
     await t.pumpWidget(const MannaHrApp(home: LoginScreen()));
     await t.pumpAndSettle();
     await t.ensureVisible(find.text('Sign in'));
     await t.tap(find.text('Sign in'));
     await t.pump();
-    expect(find.text('Type your Emp Code (or email) and password.'), findsOneWidget);
+    expect(find.text('Type your Emp Code and password.'), findsOneWidget);
+  });
+
+  testWidgets('the sign-in screen takes an Emp Code only, never an email (27 Nov 2026)', (t) async {
+    await t.pumpWidget(const MannaHrApp(home: LoginScreen()));
+    await t.pumpAndSettle();
+    final boxes = find.byType(TextField);
+    await t.enterText(boxes.at(0), 'ebin@mannarubber.com');
+    await t.enterText(boxes.at(1), '08091990');
+    await t.ensureVisible(find.text('Sign in'));
+    await t.tap(find.text('Sign in'));
+    await t.pump();
+    expect(find.text('Sign in with your Emp Code (for example MRP-103), not an email.'), findsOneWidget);
+    await t.ensureVisible(find.text('Forgot password?'));
+    await t.tap(find.text('Forgot password?'));
+    await t.pump();
+    expect(find.textContaining('Ask HR to reset it'), findsOneWidget);
   });
 
   testWidgets("HR's home counts the group, the leave waiting, and who is in today", (t) async {

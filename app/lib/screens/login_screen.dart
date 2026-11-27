@@ -32,11 +32,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // The Emp Code or email comes back filled in; it is not a secret. The site
-    // is never asked for or shown (core/constants.dart kDefaultSiteUrl).
+    // The Emp Code comes back filled in; it is not a secret. An email kept by an
+    // older version is not: only the Emp Code signs in now. The site is never
+    // asked for or shown (core/constants.dart kDefaultSiteUrl).
     AuthStore.load().then((c) {
       if (!mounted) return;
-      if (c.email.isNotEmpty) setState(() => _email.text = c.email);
+      if (c.email.isNotEmpty && !c.email.contains('@')) setState(() => _email.text = c.email);
     });
   }
 
@@ -49,7 +50,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signIn() async {
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
-      setState(() => _error = 'Type your Emp Code (or email) and password.');
+      setState(() => _error = 'Type your Emp Code and password.');
+      return;
+    }
+    // Emp Code only, never an email (HR, 27 November 2026): every app user
+    // signs in with their Emp Code and date of birth. Refused here, before the
+    // site is asked, because the site itself takes an email for any login.
+    if (_email.text.contains('@')) {
+      setState(() => _error = 'Sign in with your Emp Code (for example MRP-103), not an email.');
       return;
     }
     setState(() {
@@ -69,17 +77,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _forgot() async {
+  /// No emailed reset link: most app logins have no mailbox behind them, and
+  /// HR sets a forgotten one back to the Emp Code and date of birth from the
+  /// employee's profile (Apps & access → Reset).
+  void _forgot() {
     setState(() {
       _error = '';
-      _said = '';
+      _said = 'Ask HR to reset it. Your password goes back to your date of birth, DDMMYYYY.';
     });
-    try {
-      await Api.resetPassword(user: _email.text);
-      if (mounted) setState(() => _said = 'The site has emailed a link to reset your password.');
-    } catch (e) {
-      if (mounted) setState(() => _error = humanError(e));
-    }
   }
 
   @override
@@ -123,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                         Text('Sign in to your account', textAlign: TextAlign.center, style: serif(20)),
                         const SizedBox(height: 20),
-                        const FieldLabel('Emp Code or email'),
+                        const FieldLabel('Emp Code'),
                         TextField(
                           controller: _email,
                           // Not an email keyboard: most people sign in with their
@@ -132,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           autocorrect: false,
                           autofillHints: const [AutofillHints.username],
                           textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(prefixIcon: Icon(Icons.person_rounded)),
+                          decoration: const InputDecoration(prefixIcon: Icon(Icons.person_rounded), hintText: 'MRP-103'),
                         ),
                         const SizedBox(height: 16),
                         const FieldLabel('Password'),
@@ -151,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text('First time? Your password is your date of birth, DDMMYYYY — 24 March 2005 is 24032005.',
+                        const Text('Your password is your date of birth, DDMMYYYY — 24 March 2005 is 24032005.',
                             style: TextStyle(fontSize: 12.5, color: kInk2)),
                         const SizedBox(height: 18),
                         if (_error.isNotEmpty) Note(_error),

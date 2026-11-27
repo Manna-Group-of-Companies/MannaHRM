@@ -91,4 +91,4 @@ const int kNextDayHours = 14;
 
 /// What the sign-in screen and Settings → About say. pubspec.yaml's `version`
 /// is the store's; keep the two together.
-const String kAppVersion = '2.1.2';
+const String kAppVersion = '2.1.3';
