@@ -228,3 +228,10 @@ def test_the_sites_night_map_is_the_bridges():
 		if isinstance(n, ast.Assign) and any(getattr(t, "id", None) == "NIGHT_OF" for t in n.targets)
 	)
 	assert NIGHT_OF == bridge
+
+
+def test_no_shift_is_given_from_a_punch_since_hr_assigns_every_shift():
+	# 27 Nov 2026: "HR assigns the shifts in HRMS, so no automatic shift is needed."
+	from manna_hr import rota
+
+	assert rota.NIGHT_FROM_PUNCH is False

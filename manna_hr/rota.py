@@ -42,6 +42,13 @@ unchanged, the site half in `rota_site.py`. Pure — no `frappe`.
 
 from datetime import date, datetime, timedelta
 
+#: Whether a punch-in gives the night shift at all. **Off since 27 November
+#: 2026.** From 1 December, HR assigns every shift on the site, nights
+#: included, and factoHR's automatic shift goes with factoHR. The user's words
+#: were that no shift is to be given automatically. The rule below stays, with
+#: its tests, for the day it is wanted again. `checkin._day_or_night` reads this.
+NIGHT_FROM_PUNCH = False
+
 # Working time → the night shift it alternates with (HR, 1 October 2026). Each
 # day starts in MORNING and its night in EVENING; a pair with nobody on it yet
 # costs nothing and is ready the day somebody is. Manna Tyre Retreads is not

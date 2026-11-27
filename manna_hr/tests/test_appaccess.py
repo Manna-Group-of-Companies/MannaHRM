@@ -199,3 +199,25 @@ def test_unknown_roles_are_never_reset():
 	assert aa.app_only([]) is True
 	assert aa.app_only(["Employee", "Desk User", "All"]) is True
 	assert aa.app_only(["Employee", "HR User"]) is False
+
+
+# ------------------------------------------------ nobody without a way to punch --
+
+
+def test_somebody_active_with_no_machine_number_and_no_login_cannot_punch():
+	people = [
+		{"name": "E1", "status": "Active", "attendance_device_id": "", "user_id": None, "employee_name": "RAJU K M", "employee_number": "MTR-001"},
+		{"name": "E2", "status": "Active", "attendance_device_id": "92", "user_id": None},
+		{"name": "E3", "status": "Active", "attendance_device_id": None, "user_id": "mrp-103@phone.manna.invalid"},
+		{"name": "E4", "status": "Inactive", "attendance_device_id": None, "user_id": None},
+		{"name": "E5", "status": "Active", "attendance_device_id": "  ", "user_id": ""},
+	]
+	assert [p["name"] for p in aa.cannot_punch(people)] == ["E1", "E5"]
+
+
+def test_hr_reads_who_cannot_punch_and_what_to_do_in_one_line():
+	one = aa.cannot_punch_subject([{"name": "E1", "employee_name": "RAJU K M", "employee_number": "MTR-001"}])
+	assert one.startswith("1 person cannot punch: RAJU K M (MTR-001).")
+	assert "Allow phone punch" in one
+	many = aa.cannot_punch_subject([{"name": "E%d" % i, "employee_name": "N%d" % i, "employee_number": "C%d" % i} for i in range(10)], shown=3)
+	assert many.startswith("10 people cannot punch: N0 (C0), N1 (C1), N2 (C2) and 7 more.")

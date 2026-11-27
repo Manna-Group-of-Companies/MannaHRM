@@ -89,7 +89,11 @@ doc_events = {
 	# No save may close a shift past its own newest punch: an old bridge moved
 	# every shift in the group at once and closed other plants' days before
 	# their machines had sent the evening (26 Nov 2026). adms.sync_limit.
+	# And no shift is ever saved with auto attendance off: eight were, and the
+	# punches of the 31 people on them made no day for all of November 2026.
+	# adms.keep_auto_attendance.
 	"Shift Type": {
+		"before_validate": "manna_hr.adms_site.keep_auto_attendance",
 		"validate": "manna_hr.adms_site.guard_last_sync",
 	},
 	"Employee Attendance Regularization": {
@@ -366,6 +370,10 @@ scheduler_events = {
 		# The attendance policy's month: penalties counted again after any
 		# correction, and taken from Casual Leave first where the policy says.
 		"manna_hr.attpolicy_site.settle",
+		# Somebody Active with no machine number and no phone login cannot
+		# punch at all, and every day of theirs reads Absent: five people on
+		# 27 November 2026. HR is told each day until it is fixed.
+		"manna_hr.adms_site.warn_cannot_punch",
 	],
 }
 

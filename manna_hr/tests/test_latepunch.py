@@ -90,6 +90,32 @@ def test_a_punch_released_once_and_set_aside_again_is_not_released_a_second_time
 	assert lp.releasable(SET_ASIDE, comments, blocker=PRESENT) == (False, lp.KEPT_TWICE)
 
 
+def test_a_punch_set_aside_again_against_the_day_its_release_cancelled_is_released_once_more():
+	# BUDHWA ASUR, 25 Nov 2026: released at 13:10, then set aside again by a second
+	# shift job naming HR-ATT-2026-18336, the Absent the release had just cancelled.
+	# The day read Absent with both of his punches set aside.
+	comments = [
+		cm(HRMS_DATE, "2026-11-27 12:39:00"),
+		cm(lp.RELEASED, "2026-11-27 13:10:01"),
+		cm(HRMS_DATE, "2026-11-27 13:10:04"),
+	]
+	cancelled = dict(PRESENT, status="Absent", docstatus=2)
+	assert lp.releasable(SET_ASIDE, comments, blocker=cancelled) == (True, None)
+	assert lp.releasable(SET_ASIDE, comments, blocker=None) == (True, None)
+
+
+def test_a_punch_released_twice_is_never_released_a_third_time():
+	comments = [
+		cm(HRMS_DATE, "2026-11-27 12:39:00"),
+		cm(lp.RELEASED, "2026-11-27 13:10:01"),
+		cm(HRMS_DATE, "2026-11-27 13:10:04"),
+		cm(lp.RELEASED, "2026-11-27 13:20:01"),
+		cm(HRMS_DATE, "2026-11-27 13:20:04"),
+	]
+	cancelled = dict(PRESENT, status="Absent", docstatus=2)
+	assert lp.releasable(SET_ASIDE, comments, blocker=cancelled) == (False, lp.KEPT_TWICE)
+
+
 def test_a_punch_somebody_set_aside_after_hrms_did_stays_set_aside():
 	comments = [cm(HRMS_DATE, "2026-11-26 09:02:07"), cm("Set aside by HR: wrong person", "2026-11-26 11:00:00")]
 	assert lp.releasable(SET_ASIDE, comments, blocker=PRESENT) == (False, lp.KEPT_NOT_LATE)

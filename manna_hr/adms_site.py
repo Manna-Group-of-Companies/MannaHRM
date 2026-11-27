@@ -27,10 +27,10 @@ is why every machine punch names its machine, and why the register is kept.
 """
 
 import frappe
-from frappe.utils import add_to_date, get_datetime, now_datetime
+from frappe.utils import add_to_date, get_datetime, getdate, now_datetime, today
 from werkzeug.wrappers import Response
 
-from manna_hr import adms, rota
+from manna_hr import adms, appaccess, rota
 from manna_hr.checkin import DuplicatePunchError
 
 ROOT = "iclock"
@@ -331,14 +331,58 @@ def _employee_for(row):
 		fields=["name", "status", "company"],
 	)
 	employee, reason = adms.choose_employee(rows, device.company)
-	if employee or reason:
-		return employee, reason
+	if employee:
+		return employee, None
+	if reason:
+		gone = adms.gone_carrier(rows)
+		if gone:
+			_tell_hr_gone(row, device, gone["name"])
+		return None, reason
 	_ask_hr(row, device)
 	return None, adms.NEW_ON_MACHINE
 
 
 #: Who is told that somebody new punched. Both may make an Employee.
 HR_ROLES = ("HR Manager", "HR User")
+
+
+def hr_users():
+	"""Every login holding an HR role, which is who these notifications are for."""
+	users = frappe.get_all(
+		"Has Role", filters={"role": ["in", HR_ROLES], "parenttype": "User"}, pluck="parent"
+	)
+	return sorted(set(users) - {"Administrator", "Guest"})
+
+
+def _tell_hr_gone(row, device, employee):
+	"""Tell HR, once a day per person, that somebody marked gone is punching.
+
+	Before 27 November 2026 only a pin with no Employee at all asked HR anything.
+	A pin whose Employee was Inactive waited in silence: SURENDRA ORAON's 47
+	November punches did. Every hourly retry passes through here, so a person
+	nobody has looked at is named again each day until HR acts.
+	"""
+	if frappe.db.exists("Notification Log", {
+		"document_type": "Employee", "document_name": employee,
+		"subject": ["like", "%{0}%".format(adms.GONE_PUNCHING)],
+		"creation": [">=", getdate(today())],
+	}):
+		return
+	emp = frappe.db.get_value("Employee", employee, ["employee_name", "employee_number"], as_dict=True) or {}
+	subject = adms.gone_subject(
+		emp.get("employee_name"), emp.get("employee_number") or employee,
+		frappe.db.get_value("Attendance Device", device.name, "device_name") or device.device_id,
+		row.device_user_id, row.punched_at,
+	)
+	for user in hr_users():
+		frappe.get_doc({
+			"doctype": "Notification Log",
+			"for_user": user,
+			"type": "Alert",
+			"subject": subject,
+			"document_type": "Employee",
+			"document_name": employee,
+		}).insert(ignore_permissions=True)
 
 
 def _ask_hr(row, device):
@@ -371,10 +415,7 @@ def _ask_hr(row, device):
 		name or "no name on the machine",
 		row.device_user_id,
 	)
-	users = frappe.get_all(
-		"Has Role", filters={"role": ["in", HR_ROLES], "parenttype": "User"}, pluck="parent"
-	)
-	for user in sorted(set(users) - {"Administrator", "Guest"}):
+	for user in hr_users():
 		frappe.get_doc({
 			"doctype": "Notification Log",
 			"for_user": user,
@@ -525,3 +566,46 @@ def guard_last_sync(doc, method=None):
 			doc.name, str(allowed or "")[:19] or "(not set)", asked),
 		alert=True,
 	)
+
+
+def keep_auto_attendance(doc, method=None):
+	"""Shift Type · before_validate. Auto attendance is never off — `adms.keep_auto_attendance`.
+
+	before_validate, so hrms's own validation already sees the box ticked and
+	the date it then requires.
+	"""
+	fix = adms.keep_auto_attendance(
+		doc.get("enable_auto_attendance"), doc.get("process_attendance_after"), getdate(today()),
+	)
+	if not fix:
+		return
+	doc.update(fix)
+	if "enable_auto_attendance" in fix and not doc.is_new():
+		frappe.msgprint(
+			"Auto attendance stays on for {0}: without it this shift's punches never become attendance.".format(doc.name),
+			alert=True,
+		)
+
+
+def warn_cannot_punch():
+	"""Daily. HR is told who has no way to punch at all — `appaccess.cannot_punch`."""
+	rows = frappe.get_all(
+		"Employee",
+		filters={"status": "Active"},
+		fields=["name", "employee_name", "employee_number", "status", "attendance_device_id", "user_id"],
+		limit_page_length=0,
+	)
+	who = sorted(appaccess.cannot_punch(rows), key=lambda p: str(p.get("employee_number") or p["name"]))
+	if not who:
+		return
+	subject = appaccess.cannot_punch_subject(who)
+	for user in hr_users():
+		frappe.get_doc({
+			"doctype": "Notification Log",
+			"for_user": user,
+			"type": "Alert",
+			"subject": subject,
+			"document_type": "Employee",
+			"document_name": who[0]["name"],
+		}).insert(ignore_permissions=True)
+	frappe.db.commit()

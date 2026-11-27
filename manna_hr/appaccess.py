@@ -176,6 +176,34 @@ def granted(changes):
 #: The punch methods the phone app is for.
 PHONE_METHODS = ("Mobile App", "Both")
 
+
+def cannot_punch(employees):
+	"""Active people with no way to punch at all: no machine number and no login.
+
+	A punch reaches the site from a fingerprint machine, by the Employee's
+	`attendance_device_id`, or from the phone app, by the login on `user_id`.
+	With neither, every day of theirs reads Absent and nothing says why. On
+	27 November 2026 that was five people, whose November punches had come from
+	factoHR's own phone app, which stops on 1 December.
+	"""
+	return [
+		e for e in employees or ()
+		if e.get("status") == "Active"
+		and not str(e.get("attendance_device_id") or "").strip()
+		and not str(e.get("user_id") or "").strip()
+	]
+
+
+def cannot_punch_subject(people, shown=8):
+	"""HR's daily notification for `cannot_punch`: who, and what to do about it."""
+	names = ["{0} ({1})".format(p.get("employee_name") or p.get("name"), p.get("employee_number") or p.get("name"))
+	         for p in people]
+	listed = ", ".join(names[:shown])
+	if len(names) > shown:
+		listed += " and {0} more".format(len(names) - shown)
+	who = "1 person" if len(names) == 1 else "{0} people".format(len(names))
+	return "{0} cannot punch: {1}. Give each a machine number, or Allow phone punch on their record.".format(who, listed)
+
 #: The roles a login holds just by being an employee's. A login with nothing
 #: else is the phone app's alone, so its user name and password may be set to
 #: the group's rule; one with any other role (HR, CMMS, Fleet, Sales) is

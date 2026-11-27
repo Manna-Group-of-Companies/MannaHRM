@@ -138,3 +138,35 @@ def test_a_firmware_asking_for_aspx_paths_is_answered_as_the_plain_ones():
 def test_no_machine_is_told_a_time_zone_so_the_server_never_sets_a_clock():
 	for serial in ("NYU7262002047", "CGKK211162173", "CGKK211561350", "6426150300688"):
 		assert "TimeZone" not in adms.option_block(serial, "0")
+
+
+# ---------------------------------------------- nobody lost to a setting (27 Nov 2026) --
+
+
+def test_a_shift_saved_with_auto_attendance_off_is_saved_with_it_on():
+	# Eight shifts were saved off, and the 31 people on them had no day for all of November.
+	fix = adms.keep_auto_attendance(0, None, "2026-11-27")
+	assert fix == {"enable_auto_attendance": 1, "process_attendance_after": "2026-11-27"}
+
+
+def test_a_shift_already_on_keeps_its_own_start_date():
+	assert adms.keep_auto_attendance(1, "2026-07-31", "2026-11-27") == {}
+	assert adms.keep_auto_attendance(0, "2026-10-01", "2026-11-27") == {"enable_auto_attendance": 1}
+
+
+def test_a_pin_whose_only_employee_is_inactive_names_that_employee_for_hr():
+	rows = [{"name": "HR-EMP-00440", "status": "Inactive", "company": "MRP"}]
+	assert adms.choose_employee(rows, "MRP")[0] is None
+	assert adms.gone_carrier(rows) == rows[0]
+
+
+def test_a_pin_with_an_active_employee_or_none_at_all_names_nobody_gone():
+	assert adms.gone_carrier([]) is None
+	assert adms.gone_carrier([{"name": "A", "status": "Inactive"}, {"name": "B", "status": "Active"}]) is None
+
+
+def test_hr_is_told_who_punched_where_and_what_to_do():
+	s = adms.gone_subject("SURENDRA ORAON", "MRP-208", "MRP Gate 1", "983", "2026-11-27 08:31:02")
+	assert adms.GONE_PUNCHING in s
+	assert "SURENDRA ORAON (MRP-208)" in s and "MRP Gate 1" in s and "2026-11-27 08:31" in s and "983" in s
+	assert "make the Employee Active" in s

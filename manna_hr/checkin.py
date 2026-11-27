@@ -62,7 +62,11 @@ def _day_or_night(doc):
 	"""
 	if not doc.is_new() or doc.custom_source != SOURCE_BIOMETRIC or not doc.employee:
 		return
-	from manna_hr import rota_site
+	from manna_hr import rota, rota_site
+
+	# HR assigns every shift from 1 December 2026 (rota.NIGHT_FROM_PUNCH).
+	if not rota.NIGHT_FROM_PUNCH:
+		return
 
 	frappe.db.savepoint("manna_rota")
 	try:

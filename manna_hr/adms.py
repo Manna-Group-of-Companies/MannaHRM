@@ -286,6 +286,57 @@ def choose_employee(rows, company):
 	)
 
 
+def gone_carrier(rows):
+	"""The Employee who carries a pin but is no longer Active, or None.
+
+	Only when no Active Employee carries the pin. Then the punch waits on
+	somebody HR marked gone (`choose_employee`), and HR is told so.
+	"""
+	if rows and not any(r["status"] == "Active" for r in rows):
+		return rows[0]
+	return None
+
+
+#: The words in every notification about a person marked gone who still punches,
+#: so that one a day per person can be found again. Keep it a constant: do not
+#: reword it.
+GONE_PUNCHING = "is not Active here but punched"
+
+
+def gone_subject(employee_name, code, machine, pin, at):
+	"""What HR is told when somebody marked gone punches on a machine.
+
+	SURENDRA ORAON (MRP-208) worked every day of November 2026 while his
+	Employee read Inactive. 47 of his punches waited and HR was never told,
+	because only a pin with no Employee at all raised a notification.
+	"""
+	return (
+		"{0} ({1}) {2} on {3} at {4} (machine no. {5}). If they still work here, make the "
+		"Employee Active and their waiting punches arrive at once. If the number now belongs "
+		"to somebody new, create that person with it."
+	).format(employee_name or code, code, GONE_PUNCHING, machine, str(at)[:16], pin)
+
+
+def keep_auto_attendance(enabled, process_after, today):
+	"""The fields to set so that a shift's punches always become Attendance.
+
+	A new Shift Type starts with auto attendance off, and nothing warned anybody.
+	Eight shifts were saved that way: Manna Treads' two office shifts and every
+	Manna Tyre Retreads shift. From 1 to 24 November 2026 the punches of the 31
+	people on them made no day at all, 435 days in total. hrms marks nothing
+	without this box, so on this site it is never off (27 November 2026).
+
+	`process_attendance_after` is set only when it is empty. hrms needs a date
+	there, and the day the shift is saved is the first day it can have punches.
+	"""
+	fix = {}
+	if not int(enabled or 0):
+		fix["enable_auto_attendance"] = 1
+	if not process_after:
+		fix["process_attendance_after"] = str(today)
+	return fix
+
+
 # ------------------------------------------------------------ closing shifts ---
 
 #: How far back a machine counts as serving a shift: it delivered a punch on it

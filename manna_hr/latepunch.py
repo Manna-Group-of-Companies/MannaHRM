@@ -62,8 +62,8 @@ ALREADY_MARKED = (
 )
 
 #: The comment this module writes when it releases a punch. Found again by
-#: this text, which is how a punch is released once and never twice — so it
-#: is a constant, not a sentence to reword.
+#: this text, which is how a punch is released at most twice (`releasable`) —
+#: so it is a constant, not a sentence to reword.
 RELEASED = "Released: this punch arrived after its day was made, so the day is made again with it."
 
 #: The comment written when hrms set aside a punch its own day had counted.
@@ -113,6 +113,11 @@ def _when(c):
 	return str(c.get("creation") or "")
 
 
+def _gone(blocker):
+	"""The Attendance hrms named is cancelled, or could not be read."""
+	return blocker is None or int(blocker.get("docstatus") or 0) == 2
+
+
 def latest_late_comment(comments):
 	"""hrms's most recent "already made" comment on the punch, or None."""
 	late = [c for c in comments or () if is_late_set_aside(c.get("content"))]
@@ -143,8 +148,17 @@ def releasable(punch, comments, has_live_twin=False, frozen=False, blocker=None)
 	later = [c for c in comments if _when(c) > _when(late) and not is_late_set_aside(c.get("content"))]
 	if any(not is_release(c.get("content")) for c in later):
 		return False, KEPT_NOT_LATE
-	if any(is_release(c.get("content")) for c in comments):
-		return False, KEPT_TWICE
+	released = sum(1 for c in comments if is_release(c.get("content")))
+	if released:
+		# Released once and set aside again. hrms can race the rebuild itself:
+		# two shift jobs on one day at once (fixed 27 November 2026 in
+		# `reprocess_site.enqueue_shifts`) set the punch aside against the very
+		# day the release had just cancelled. BUDHWA ASUR's 25 November read Absent
+		# with both of his punches set aside that way. So it is released once more,
+		# and only once, when the day hrms named is gone. A day that is still
+		# there, or a third set-aside, is for a person to look at.
+		if released > 1 or not _gone(blocker):
+			return False, KEPT_TWICE
 	if blocker and int(blocker.get("docstatus") or 0) == 1 and not made_from_punches(blocker):
 		return False, KEPT_NOT_PUNCHES
 	return True, None
