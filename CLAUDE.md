@@ -215,6 +215,13 @@ punches delivered onto days already Absent). `latepunch_site` rebuilds the day
 when such a punch arrives and releases, once, any hrms set aside anyway. Do not
 remove the after_insert hook or the sweep; see `manna_hr/latepunch.py`.
 
+**Two shift jobs on one shift at once set aside punches that count.** The
+loser is refused because the winner just made the day, and hrms sets aside the
+punches the winner counted (ERENIUS BECK, 17 Nov, during the backfill of 27
+November 2026). Start the shift job through `reprocess_site.enqueue_shifts`
+(one job per shift), and after the last day of a batch, never per day. The
+sweep takes the flag off a punch its own day counts.
+
 **The bridge must never clear a device's log.** `pyzk` offers
 `clear_attendance()` and every tutorial calls it. The device's memory is the
 last copy of a punch that failed to deliver. The ADMS server has its own version

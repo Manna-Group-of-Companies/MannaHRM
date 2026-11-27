@@ -104,6 +104,45 @@ def test_a_punch_that_counts_has_nothing_to_release():
 	assert lp.releasable({"skip_auto_attendance": 1, "attendance": "HR-ATT-1"}, [cm(HRMS_DATE)]) == (False, None)
 
 
+# ---------------------------------------------------- counted, yet set aside --
+
+# ERENIUS BECK, 17 Nov 2026, as the live site held it after the backfill of 27
+# Nov: released, counted into HR-ATT-2026-18300 by one shift job, and set
+# aside in the same second by a second job on the same shift.
+COUNTED = {"skip_auto_attendance": 1, "attendance": "HR-ATT-2026-18300"}
+MADE = {"docstatus": 1}
+RACE = [
+	cm(HRMS_OVERLAP, "2026-11-18 09:02:06.000000"),
+	cm(lp.RELEASED, "2026-11-27 12:39:03.120000"),
+	cm(HRMS_DATE, "2026-11-27 12:39:03.410000"),
+]
+
+
+def test_a_punch_hrms_set_aside_although_its_day_counts_it_has_the_flag_taken_off():
+	assert lp.counted_but_set_aside(COUNTED, RACE, day=MADE)
+
+
+def test_a_punch_its_day_does_not_count_is_for_releasing_not_for_this():
+	assert not lp.counted_but_set_aside(SET_ASIDE, RACE, day=MADE)
+	assert not lp.counted_but_set_aside(COUNTED, RACE, day={"docstatus": 2})
+	assert not lp.counted_but_set_aside(COUNTED, RACE, day=None)
+
+
+def test_a_punch_that_is_not_set_aside_has_no_flag_to_take_off():
+	assert not lp.counted_but_set_aside(dict(COUNTED, skip_auto_attendance=0), RACE, day=MADE)
+
+
+def test_a_counted_punch_set_aside_by_a_person_or_dedupe_stays_set_aside():
+	assert not lp.counted_but_set_aside(COUNTED, [], day=MADE)
+	later = RACE + [cm("Set aside: a second copy of EMP-CKIN-1, the same person at the same second.", "2026-11-27 13:00:00")]
+	assert not lp.counted_but_set_aside(COUNTED, later, day=MADE)
+
+
+def test_a_counted_second_copy_and_a_submitted_month_stay_as_they_are():
+	assert not lp.counted_but_set_aside(COUNTED, RACE, day=MADE, has_live_twin=True)
+	assert not lp.counted_but_set_aside(COUNTED, RACE, day=MADE, frozen=True)
+
+
 def copy(name, log_type=None, creation="2026-11-02 07:57:32", at="2026-11-01 06:10:32", emp="HR-EMP-00478"):
 	return {"name": name, "employee": emp, "time": at, "creation": creation, "attendance": None, "log_type": log_type}
 
