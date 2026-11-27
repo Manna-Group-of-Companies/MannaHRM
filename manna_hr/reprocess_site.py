@@ -83,10 +83,16 @@ def run(employees, from_date, to_date, scope=rp.SCOPE_UNASSIGNED, write=False, r
 	out["shifts"] = sorted(shifts)
 	if write and shifts:
 		# After the commit, so the job reads the cancelled rows as cancelled.
+		# One job per set of shifts: a machine sending last night's punch-outs
+		# in one burst rebuilds a day per person (latepunch_site), and each
+		# would otherwise run the whole shift job again. A day cancelled while
+		# that job is already running is made by hrms's hourly run instead.
 		frappe.enqueue(
 			"manna_hr.reprocess_site.process_shifts",
 			shifts=sorted(shifts),
 			queue="long",
+			job_id="manna-process-shifts-{0}".format("|".join(sorted(shifts))),
+			deduplicate=True,
 			enqueue_after_commit=True,
 		)
 	return out

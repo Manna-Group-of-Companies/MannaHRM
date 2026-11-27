@@ -29,14 +29,22 @@ def keeper(group):
 	"""The copy that stays.
 
 	The one a day was built from first — its Attendance already names it — then
-	one that carries a direction, since a direction is information and its
-	absence is not, then the first one made.
+	one with **no** direction, then the first one made.
+
+	**No direction beats a direction** (26 November 2026; it was the other way
+	round). The copies that carry one are a bridge's reading of the key the
+	person pressed, on gates the register says do not report a direction
+	(`Attendance Device.report_direction`, CLAUDE.md §5): FARISAMOL VS's
+	arrival at MRP Gate 1 on 16 November is an OUT. The dashboard reads a day
+	with any typed punch by its types (`dayPunches` in client/src/lib/roster.js),
+	so keeping the typed copy would have turned 19 November days that showed a
+	punch-in into days with none. The copy without one is the machine's own post.
 	"""
 	return sorted(
 		group,
 		key=lambda r: (
 			0 if r.get("attendance") else 1,
-			0 if r.get("log_type") else 1,
+			1 if r.get("log_type") else 0,
 			str(r.get("creation") or ""),
 			r["name"],
 		),

@@ -81,6 +81,16 @@ doc_events = {
 		# A punch in a submitted month is kept, and the day it would have made
 		# is what `freeze.guard_attendance` refuses. See manna_hr/freeze.py.
 		"before_validate": "manna_hr.checkin.validate",
+		# A punch for a day the shift job has already made rebuilds that day.
+		# Without it hrms sets the punch aside, and the day — and the
+		# dashboard — never show it (26 Nov 2026: 64 punches). latepunch.py.
+		"after_insert": "manna_hr.latepunch_site.on_checkin_insert",
+	},
+	# No save may close a shift past its own newest punch: an old bridge moved
+	# every shift in the group at once and closed other plants' days before
+	# their machines had sent the evening (26 Nov 2026). adms.sync_limit.
+	"Shift Type": {
+		"validate": "manna_hr.adms_site.guard_last_sync",
 	},
 	"Employee Attendance Regularization": {
 		# Raising one for a submitted month is allowed; approving it is not.
@@ -312,6 +322,9 @@ scheduler_events = {
 			# passes it. The bridge moved it; machines now push here, so the site
 			# does — held at the quietest machine on the shift. adms.sync_point.
 			"manna_hr.adms_site.advance_shifts",
+			# A punch hrms set aside because its day was already made is
+			# released and the day made again with it. latepunch.py.
+			"manna_hr.latepunch_site.sweep",
 		],
 	},
 	"hourly": [

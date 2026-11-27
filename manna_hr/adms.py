@@ -319,3 +319,36 @@ def sync_point(current, newest, serving_seen):
 	if current and str(current)[:19] >= limit:
 		return None
 	return limit
+
+
+def sync_limit(current, proposed, newest_on_shift):
+	"""What a write to one shift's `last_sync_of_checkin` may set it to.
+
+	**Never past that shift's own newest punch.** The bridges move this field
+	after each pass, and a bridge older than 30 September 2026 moves *every*
+	shift in the group to the newest punch it delivered on any of them. One was
+	still running at the Hi-Tech gate on 26 November 2026: at 17:09 it set all
+	37 shifts to 17:07:01, a Hi-Tech punch, and hrms closed other plants' days
+	before their own machines had sent the evening's punch-outs — Manna Rubber
+	Products' Office Shift on the 25th at 20:02, with MRP Gate 1's 17:37 outs
+	still on the machine until the next morning. The current bridge moves each
+	shift only to its own newest punch (bridge/mannabridge/sink.py), so for it
+	this changes nothing; for an old one it is the difference between closing
+	its own shifts and closing everybody's.
+
+	Backwards, or not at all, is left as asked: never moved forward is the safe
+	direction (CLAUDE.md §4), and moving it back is somebody re-opening days on
+	purpose. A shift with no punch on it is not moved forward — there is no day
+	on it to close. Strings compare; `None` means "leave it where it is".
+	"""
+	if not proposed:
+		return proposed
+	asked = str(proposed)[:19]
+	now = str(current)[:19] if current else ""
+	if now and asked <= now:
+		return proposed
+	newest = str(newest_on_shift)[:19] if newest_on_shift else ""
+	if newest and asked <= newest:
+		return proposed
+	allowed = max(now, newest)
+	return allowed or None
