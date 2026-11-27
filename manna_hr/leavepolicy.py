@@ -13,9 +13,14 @@ carry within the year is free — an earned-leave allocation only ever grows, an
 a day not taken is simply still in it. The carry *across* years is
 `is_carry_forward` plus a new assignment each January with `carry_forward` set.
 
-**Who gets it** (HR, 2 October 2026): office staff, supervisors and drivers,
-and nobody else. The factory floor's absence is Leave Without Pay. See
-`casual_leave_group`.
+**Who gets it: whoever is ticked for it** — `Employee.custom_casual_leave`
+(CASUAL_LEAVE_FIELD). Decided 25 November 2026 for the move off Factor HR on
+1 December: everybody Factor HR gives Casual Leave keeps it, 77 people across
+the office and the floor. It replaces HR's rule of 2 October (office staff,
+supervisors and drivers, read off the designation), which would have taken it
+from 45 of them. A tick rather than a designation list because the people are
+the decision, not their job titles; HR ticks a new joiner on Create Employee.
+See `gets_casual_leave`.
 
 Pure values and date arithmetic, no `frappe` — the same file is read by
 `install.py` on a bench and by `tools/setup_monthly_leave.py` against the live
@@ -27,7 +32,39 @@ from datetime import date, timedelta
 
 LEAVE_TYPE_NAME = "Casual Leave"
 
-#: The three groups HR named as getting Casual Leave, in the words they used.
+#: The Employee tick that says somebody gets Casual Leave. `install.py` makes it.
+CASUAL_LEAVE_FIELD = "custom_casual_leave"
+
+
+def gets_casual_leave(ticked):
+	"""Whether an Employee whose CASUAL_LEAVE_FIELD reads `ticked` gets Casual Leave.
+
+	Frappe hands a Check back as 0/1, a string from some reads, or None when the
+	field is not on the site yet — and None is a no: until HR has ticked
+	somebody, nothing says they get paid days.
+	"""
+	try:
+		return int(str(ticked or 0).strip() or 0) == 1
+	except ValueError:
+		return False
+
+
+def casual_leave_refusal(ticked, who="This employee"):
+	"""Why `who` cannot be given Casual Leave, or None when they can.
+
+	One sentence, used by the server's refusal and the tool's report alike, so
+	HR reads the same reason wherever they meet it.
+	"""
+	if gets_casual_leave(ticked):
+		return None
+	return ("{0} is not ticked for {1}. Tick {1} on their employee record first "
+		"(Attendance Rules).").format(who, LEAVE_TYPE_NAME)
+
+
+#: The office, the supervisors and the drivers, as HR named them on 2 October
+#: 2026. **No longer who gets Casual Leave** (that is the tick, above). Kept for
+#: what still asks "is this an office job": Sunday leave is office-only, and the
+#: company chart draws the office apart from the floor.
 CASUAL_LEAVE_GROUPS = ("Office", "Supervisor", "Driver")
 
 #: A designation with one of these words in it is that group, however it is
@@ -44,12 +81,8 @@ DESIGNATION_WORDS = (("SUPERVISOR", "Supervisor"), ("DRIVER", "Driver"))
 #: production managers sit in the Production department beside 117 people on
 #: the floor. Designation is the one field that names the job.
 #:
-#: **A designation missing from here gets no Casual Leave**, and the tool and
-#: the Give monthly leave button both say who was passed over and why. That is
-#: the cheaper mistake to have made: leave not given is a line on a report HR
-#: reads and one more name here, while leave given is paid days that have to be
-#: clawed back from somebody. `PRODUCTION FOREMAN`, `COOK`, `TECHNICIAN`,
-#: `WELDER`, `FITTER` and `MAINTENANCE ASSISTANT` are left out deliberately.
+#: Until 25 November 2026 a designation missing from here got no Casual Leave.
+#: Now it only means the job is not an office one (Sunday leave, the chart).
 OFFICE_DESIGNATIONS = frozenset({
 	"ACCOUNTANT",
 	"ACCOUNTS MANAGER",
@@ -93,20 +126,6 @@ def casual_leave_group(designation):
 			return group
 	return "Office" if key in OFFICE_DESIGNATIONS else None
 
-
-def casual_leave_refusal(designation, who="This employee"):
-	"""Why `who` cannot be given Casual Leave, or None when they can.
-
-	One sentence, used by the server's refusal and the tool's report alike, so
-	HR reads the same reason wherever they meet it.
-	"""
-	if casual_leave_group(designation):
-		return None
-	if not _designation_key(designation):
-		return ("{0} has no designation, so gets no {1} — it is only for office staff, "
-			"supervisors and drivers. Set the designation first.").format(who, LEAVE_TYPE_NAME)
-	return ("{0} ({1}) gets no {2} — it is only for office staff, supervisors and drivers.").format(
-		who, str(designation).strip(), LEAVE_TYPE_NAME)
 
 #: Twelve a year is what hrms is given; it divides by the frequency itself, so
 #: "one a month" is this number and `earned_leave_frequency`, never a 1 typed

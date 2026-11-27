@@ -1,6 +1,6 @@
 import { NEW_EMP_ELSEWHERE, NEW_EMP_STEPS, punchesOnApp, punchesOnMachine } from "../data/employees.js";
 import { ageOn, todayIso } from "./format.js";
-import { LEAVE_TYPE_NAME, casualLeaveGroup, notMonthly, perMonthProblem } from "./monthlyleave.js";
+import { CASUAL_LEAVE_FIELD, LEAVE_TYPE_NAME, notMonthly, perMonthProblem } from "./monthlyleave.js";
 
 /* ---------------------------------------------------------------------------
    What the Create Employee wizard will send, and what it refuses to send,
@@ -106,6 +106,12 @@ export function employeeDoc(f) {
 	for (const k of NEW_EMP_FIELDS) {
 		const v = typeof f[k] === "string" ? f[k].trim() : f[k];
 		if (v !== "" && v != null) doc[k] = v;
+	}
+	/* Casual Leave a month typed on the wizard is HR saying this person gets
+	   it, so the record is ticked for it as it is made — the site refuses the
+	   leave to anybody not ticked (manna_hr/casualleave.py). */
+	if ((f.leave_type || LEAVE_TYPE_NAME) === LEAVE_TYPE_NAME && Number(f.leaves_a_month) > 0) {
+		doc[CASUAL_LEAVE_FIELD] = 1;
 	}
 	return doc;
 }
@@ -299,21 +305,13 @@ export function clashes(f, employees) {
     gap, not a mistake — `missing` reports that one. A type that is not
     monthly matters only when some leave is asked for: 0 of it writes nothing.
 
-    Casual Leave for a designation that does not get it is refused here, before
-    the Employee exists, rather than on the done screen after: HR typed a 1 and
-    should hear at once that it should be a 0. Judged only once a designation
-    is typed — an empty one is a gap `missing` already reports. */
+    Casual Leave is not judged by designation any more (25 November 2026):
+    typing some is HR ticking the person for it — see `employeeDoc`. */
 export function leaveProblems(f, leaveTypes) {
 	if (!typed(f.leaves_a_month)) return [];
 	const p = perMonthProblem(f.leaves_a_month);
 	if (p) return [p];
 	if (!(Number(f.leaves_a_month) > 0)) return [];
-	if ((f.leave_type || LEAVE_TYPE_NAME) === LEAVE_TYPE_NAME && typed(f.designation)) {
-		if (!casualLeaveGroup(f.designation)) {
-			return [`${String(f.designation).trim()} gets no ${LEAVE_TYPE_NAME} — it is only for office staff, `
-				+ "supervisors and drivers. Set Leaves A Month to 0."];
-		}
-	}
 	const t = notMonthly(f.leave_type, leaveTypes);
 	return t ? [t] : [];
 }

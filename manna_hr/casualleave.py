@@ -1,10 +1,11 @@
-"""Casual Leave for office staff, supervisors and drivers only — on the server.
+"""Casual Leave only for people ticked for it — on the server.
 
-HR's rule of 2 October 2026; who counts as which is
-`leavepolicy.casual_leave_group`, pure and tested without a site. This is the
+Who: `Employee.custom_casual_leave` (`leavepolicy.CASUAL_LEAVE_FIELD`), since
+25 November 2026; before that HR's designation rule of 2 October. The rule is
+`leavepolicy.gets_casual_leave`, pure and tested without a site. This is the
 half that refuses, because the dashboard and `tools/setup_monthly_leave.py`
 skipping somebody is only what those two do (CLAUDE.md §1) — Desk and the API
-would still hand a plant helper twelve paid days a year.
+would still hand anybody twelve paid days a year.
 
 Two doors, both at submit, because a draft gives nobody anything:
 
@@ -31,22 +32,21 @@ from manna_hr import leavepolicy as lp
 
 
 def _refuse(employee):
-	designation, name = frappe.db.get_value("Employee", employee, ["designation", "employee_name"]) or (None, None)
-	why = lp.casual_leave_refusal(designation, name or employee)
+	ticked, name = frappe.db.get_value("Employee", employee, [lp.CASUAL_LEAVE_FIELD, "employee_name"]) or (None, None)
+	why = lp.casual_leave_refusal(ticked, name or employee)
 	if why:
 		frappe.throw(_(why), title=_("No {0}").format(lp.LEAVE_TYPE_NAME))
 
 
 def guard_assignment(doc, method=None):
 	"""Refuse a Leave Policy Assignment that would give Casual Leave to
-	somebody whose designation does not get it."""
+	somebody not ticked for it."""
 	types = frappe.get_all("Leave Policy Detail", filters={"parent": doc.leave_policy}, pluck="leave_type")
 	if lp.LEAVE_TYPE_NAME in types:
 		_refuse(doc.employee)
 
 
 def guard_allocation(doc, method=None):
-	"""Refuse a Casual Leave allocation to somebody whose designation does not
-	get it."""
+	"""Refuse a Casual Leave allocation to somebody not ticked for it."""
 	if doc.leave_type == lp.LEAVE_TYPE_NAME:
 		_refuse(doc.employee)

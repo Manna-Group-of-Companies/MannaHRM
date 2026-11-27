@@ -4,6 +4,7 @@
     python tools/setup_monthly_leave.py --employee HR-EMP-00012 # one person, to try it
     python tools/setup_monthly_leave.py --apply                 # everybody active
     python tools/setup_monthly_leave.py --apply --year 2027     # next January, carrying forward
+    python tools/setup_monthly_leave.py --from 2026-12-01       # earn from a named month, not this one
 
     ERP_URL / ERP_KEY / ERP_SECRET in the environment, as the other tools here.
 
@@ -18,9 +19,10 @@ does not run (CLAUDE.md §7).
     2. Leave Policy  → twelve a year of it, submitted.
     3. Leave Policy Assignment, one per active employee without one for the
        year → submitted, which is what makes hrms create the allocation.
-       **Office staff, supervisors and drivers only** (HR, 2 October 2026):
-       everybody else is listed by designation and skipped. Who is which is
-       `leavepolicy.casual_leave_group`.
+       **Only people ticked for Casual Leave** (`Employee.custom_casual_leave`,
+       since 25 November 2026; before, HR's designation rule of 2 October).
+       Everybody else is counted and skipped — the site would refuse them
+       anyway (manna_hr/casualleave.py). See `leavepolicy.gets_casual_leave`.
 
 From then on hrms's daily scheduler adds one day on the 1st of every month.
 A month not taken is still in the balance the month after; that part needs
@@ -102,6 +104,9 @@ def main():
 	p.add_argument("--year", type=int, default=date.today().year, help="the leave year (default: this one)")
 	p.add_argument("--start-month", type=int, default=1, help="1 = January (default), 4 = April")
 	p.add_argument("--employee", action="append", help="only this Employee ID; repeatable")
+	p.add_argument("--from", dest="start", help="first day to earn from, the 1st of a month in the year "
+		"(default: this month). For the move off Factor HR: --from 2026-12-01, so November, already "
+		"in Factor HR's balance, is not credited twice")
 	args = p.parse_args()
 
 	if not os.environ.get("ERP_KEY"):
@@ -119,6 +124,12 @@ def main():
 	today = date.today()
 	year_from, year_to = lp.leave_year(args.year, args.start_month)
 	start = lp.effective_from(year_from, today)
+	if args.start:
+		asked = date.fromisoformat(args.start)
+		if asked.day != 1 or not (year_from <= asked <= year_to) or asked < start:
+			print("--from must be the 1st of a month in the leave year, and not before {0}.".format(start))
+			return 2
+		start = asked
 	carry = 1 if start == year_from else 0
 	print("site: {0}".format(BASE))
 	print("leave year {0} → {1}; assignments earn from {2}{3}\n".format(
@@ -146,26 +157,32 @@ def main():
 	filters = [["status", "=", "Active"]]
 	if args.employee:
 		filters.append(["name", "in", args.employee])
-	emps = listing("Employee", ["name", "employee_name", "company", "date_of_joining", "designation"], filters)
+	try:
+		emps = listing("Employee", ["name", "employee_name", "company", "date_of_joining", "designation",
+			lp.CASUAL_LEAVE_FIELD], filters)
+	except urllib.error.HTTPError:
+		print("Employee has no {0} field yet. Run tools/create_custom_fields.py Employee --apply "
+			"and tick the people who get {1} first.".format(lp.CASUAL_LEAVE_FIELD, lp.LEAVE_TYPE_NAME))
+		return 2
 	held = {a["employee"] for a in listing("Leave Policy Assignment", ["employee"], [
 		["docstatus", "=", 1],
 		["effective_to", ">=", str(start)],
 		["effective_from", "<=", str(year_to)],
 	])}
-	entitled = [e for e in emps if lp.casual_leave_group(e.get("designation"))]
-	passed = [e for e in emps if not lp.casual_leave_group(e.get("designation"))]
+	entitled = [e for e in emps if lp.gets_casual_leave(e.get(lp.CASUAL_LEAVE_FIELD))]
+	passed = [e for e in emps if not lp.gets_casual_leave(e.get(lp.CASUAL_LEAVE_FIELD))]
 	todo = [e for e in entitled if e["name"] not in held]
-	print("Employees: {0} active in scope, {1} get {2} (office, supervisor, driver), "
+	print("Employees: {0} active in scope, {1} ticked for {2}, "
 		"{3} already assigned for this year, {4} to assign\n".format(
 		len(emps), len(entitled), lp.LEAVE_TYPE_NAME, len(entitled) - len(todo), len(todo)))
 
-	# Who does not get it, by designation — the list somebody checks for an
-	# office job spelled in a way OFFICE_DESIGNATIONS does not know yet.
+	# Who does not get it, by designation — the list somebody reads for a
+	# person who should have been ticked and was not.
 	by = {}
 	for e in passed:
 		by.setdefault((e.get("designation") or "").strip() or "(no designation)", []).append(e)
 	if by:
-		print("Not given {0} — not office, supervisor or driver:".format(lp.LEAVE_TYPE_NAME))
+		print("Not given {0} — not ticked for it, by designation:".format(lp.LEAVE_TYPE_NAME))
 		for d, rows in sorted(by.items(), key=lambda kv: -len(kv[1])):
 			print("    {0:>4}  {1}".format(len(rows), d))
 		print()
@@ -173,7 +190,7 @@ def main():
 	# has built up, and taking it away is HR's decision, not a re-run's.
 	stale = [e for e in passed if e["name"] in held]
 	if stale:
-		print("Already hold a leave policy this year but are not office, supervisor or driver — HR to decide:")
+		print("Already hold a leave policy this year but are not ticked for it — HR to decide:")
 		for e in stale:
 			print("    {0} · {1} · {2}".format(e["name"], e.get("employee_name"), e.get("designation") or "no designation"))
 		print()

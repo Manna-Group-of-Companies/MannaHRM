@@ -72,10 +72,22 @@ CUSTOM_FIELDS = {
 			"description": "Somebody others report to. Offered as Reporting Manager to new people in the same company.",
 		},
 		{
+			# Who gets Casual Leave (25 Nov 2026, for the move off Factor HR):
+			# ticked for the 77 Factor HR gives it to, and by HR for anybody
+			# after. The site refuses Casual Leave to anybody not ticked
+			# (manna_hr/casualleave.py); leavepolicy.CASUAL_LEAVE_FIELD.
+			"fieldname": "custom_casual_leave",
+			"label": "Casual Leave",
+			"fieldtype": "Check",
+			"insert_after": "custom_is_manager",
+			"in_standard_filter": 1,
+			"description": "Earns one Casual Leave a month, carried forward. Untick and the site refuses them any more Casual Leave.",
+		},
+		{
 			"fieldname": "custom_factor_hr_id",
 			"label": "Factor HR ID",
 			"fieldtype": "Data",
-			"insert_after": "custom_is_manager",
+			"insert_after": "custom_casual_leave",
 			"unique": 1,
 			"read_only": 1,
 			"description": "The id this person had in Factor HR. Kept for reconciliation during changeover.",

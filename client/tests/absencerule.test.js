@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-	AUTO_LEAVE_RULES, AUTO_MARK, DESCRIPTION, EFFECTIVE_FROM, GROUPS, REG_PREFIX, appliesTo, application, approverFor, isAuto, monthsToCheck,
+	AUTO_LEAVE_RULES, AUTO_MARK, DESCRIPTION, EFFECTIVE_FROM, REG_PREFIX, appliesTo, application, approverFor, isAuto, monthsToCheck,
 	plan,
 } from "@/lib/absencerule";
 
@@ -29,13 +29,11 @@ describe("the dashboard applies the same rule the site does", () => {
 		expect(py).toContain(`AUTO_LEAVE_RULES = ${AUTO_LEAVE_RULES ? "True" : "False"}`);
 	});
 
-	it("starts_on_the_same_day_and_covers_the_same_groups", () => {
+	it("starts_on_the_same_day_and_covers_whoever_is_ticked_on_both_sides", () => {
 		const [y, m, d] = EFFECTIVE_FROM.split("-").map(Number);
 		expect(py).toContain(`EFFECTIVE_FROM = date(${y}, ${m}, ${d})`);
-		/* The Python takes leavepolicy's groups whole; this copy spells them. */
-		expect(py).toContain("GROUPS = lp.CASUAL_LEAVE_GROUPS");
-		const policy = fs.readFileSync(path.resolve(__dirname, "../../manna_hr/leavepolicy.py"), "utf8");
-		expect(policy).toContain(`CASUAL_LEAVE_GROUPS = (${GROUPS.map((g) => `"${g}"`).join(", ")})`);
+		/* Both copies ask leavepolicy's tick, not a designation list. */
+		expect(py).toContain("return lp.gets_casual_leave(ticked)");
 		expect(py).toContain(`REG_PREFIX = "${REG_PREFIX}"`);
 	});
 
@@ -77,12 +75,12 @@ describe("one person's month", () => {
 		expect(plan([], [A("LA-2", "2026-10-12"), A("LA-1", "2026-10-05")])).toEqual({ cancel: ["LA-2"], give: null });
 	});
 
-	it("everybody_who_earns_casual_leave_is_covered_and_the_factory_floor_is_not", () => {
-		expect(appliesTo("ACCOUNTANT")).toBe(true);
-		expect(appliesTo("SHIFT SUPERVISOR")).toBe(true);
-		expect(appliesTo("Quality/production Supervisor")).toBe(true);
-		expect(appliesTo("DRIVER")).toBe(true);
-		expect(appliesTo("WELDER")).toBe(false);
+	it("everybody_ticked_for_casual_leave_is_covered_whatever_their_job_and_nobody_else", () => {
+		expect(appliesTo(1)).toBe(true);
+		expect(appliesTo("1")).toBe(true);
+		expect(appliesTo(0)).toBe(false);
+		expect(appliesTo(undefined)).toBe(false);
+		expect(appliesTo("")).toBe(false);
 	});
 
 	it("the_approver_is_the_persons_own_then_their_managers_then_whoever_runs_the_rule", () => {
@@ -170,7 +168,7 @@ const { set } = await import("@/store");
 const { afterCorrection, giveBack, runAbsenceRule } = await import("@/api/absencerule");
 const { leaveSummary, writeCorrection } = await import("@/features/approvals/decide");
 
-const ANU = { name: "E-OFFICE", employee_name: "ANU", designation: "ACCOUNTANT", status: "Active", company: "Manna Rubber", reports_to: "E-BOSS" };
+const ANU = { name: "E-OFFICE", employee_name: "ANU", designation: "ACCOUNTANT", custom_casual_leave: 1, status: "Active", company: "Manna Rubber", reports_to: "E-BOSS" };
 const RAJU = { name: "E-FLOOR", employee_name: "RAJU", designation: "WELDER", status: "Active", company: "Manna Rubber" };
 
 describe("the rule runs by itself against the site", () => {

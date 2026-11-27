@@ -35,12 +35,12 @@ from manna_hr import leavepolicy as lp
 
 LEAVE_TYPE = lp.LEAVE_TYPE_NAME
 
-#: The groups the rule applies to: everybody who earns Casual Leave. HR first
-#: said *office* employees (3 October 2026) and widened it to supervisors and
+#: Who the rule applies to: everybody who earns Casual Leave. HR first said
+#: *office* employees (3 October 2026) and widened it to supervisors and
 #: drivers on 6 October, when a supervisor's first absence was left a salary
-#: cut. The factory floor earns no Casual Leave, so there is nothing to pay
-#: their first absence from and every absence of theirs is a salary cut.
-GROUPS = lp.CASUAL_LEAVE_GROUPS
+#: cut; since 25 November 2026 that is whoever is ticked for Casual Leave
+#: (`leavepolicy.gets_casual_leave`). Somebody not ticked has nothing to pay
+#: their first absence from, so every absence of theirs is a salary cut.
 
 #: Put at the start of the application's `description`. It is how the rule
 #: finds its own applications again, and the only thing that lets it cancel
@@ -79,9 +79,9 @@ AUTO_LEAVE_RULES = False
 REG_PREFIX = "REG-"
 
 
-def applies_to(designation):
-	"""Whether the rule covers somebody with this designation."""
-	return lp.casual_leave_group(designation) in GROUPS
+def applies_to(ticked):
+	"""Whether the rule covers somebody whose Casual Leave tick reads `ticked`."""
+	return lp.gets_casual_leave(ticked)
 
 
 def is_auto(description):

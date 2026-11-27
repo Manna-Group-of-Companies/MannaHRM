@@ -46,6 +46,8 @@ export const EMPLOYEES = [
 	{
 		name: "HR-EMP-00002", employee_name: "Priya Menon", employee_number: "MR002",
 		company: "Manna Rubber", department: "Accounts - MR", designation: "Accountant",
+		/* Ticked for Casual Leave (25 Nov 2026: the tick, not the job, decides). */
+		custom_casual_leave: 1,
 		attendance_device_id: "1002", reports_to: "HR-EMP-00001", date_of_joining: "2021-07-15",
 		status: "Active", default_shift: "General", grade: "G5", branch: "Kochi",
 		employment_type: "Full-time", holiday_list: "Manna 2026", ctc: 720000,
@@ -71,6 +73,7 @@ export const EMPLOYEES = [
 		   and Final Settlement has somebody to list. */
 		name: "HR-EMP-00004", employee_name: "Sunitha Joseph", employee_number: "MR003",
 		company: "Manna Rubber", department: "Production - MR", designation: "Supervisor",
+		custom_casual_leave: 1,
 		attendance_device_id: "1004", reports_to: "HR-EMP-00001", date_of_joining: "2018-02-01",
 		status: "Left", default_shift: "General", grade: "G4", branch: "Kochi",
 		employment_type: "Full-time", holiday_list: "Manna 2026", ctc: 600000,

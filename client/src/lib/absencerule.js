@@ -14,14 +14,10 @@
    in date order as strings.
    --------------------------------------------------------------------------- */
 
-import { LEAVE_TYPE_NAME, casualLeaveGroup } from "./monthlyleave.js";
+import { LEAVE_TYPE_NAME, getsCasualLeave } from "./monthlyleave.js";
 import { lastOfMonth } from "./format.js";
 
 export const LEAVE_TYPE = LEAVE_TYPE_NAME;
-
-/** Everybody who earns Casual Leave — office staff, supervisors and drivers
-    (HR, widened from office only on 6 October 2026). See the Python. */
-export const GROUPS = ["Office", "Supervisor", "Driver"];
 
 /** The start of the application's description: how the rule knows its own,
     and the only thing that lets it cancel one. */
@@ -43,7 +39,9 @@ export const AUTO_LEAVE_RULES = false;
 /** A correction's punches carry this `device_id` prefix (decide.js `regDevice`). */
 export const REG_PREFIX = "REG-";
 
-export const appliesTo = (designation) => GROUPS.includes(casualLeaveGroup(designation));
+/** Everybody ticked for Casual Leave, whatever their job (25 November 2026).
+    absencerule.applies_to. */
+export const appliesTo = (ticked) => getsCasualLeave(ticked);
 
 export const isAuto = (description) => String(description ?? "").trimStart().startsWith(AUTO_MARK);
 

@@ -47,6 +47,13 @@ export const EMP_FIELDS_WIDE = EMP_FIELDS.concat(["date_of_birth", "custom_needs
    to EMP_FIELDS_WIDE and nobody is tagged, so the list offers nobody. */
 export const EMP_FIELDS_TAGGED = EMP_FIELDS_WIDE.concat(["custom_is_manager"]);
 
+/* Tried before that: the Casual Leave tick (25 November 2026), which decides
+   who the leave pages give Casual Leave to. Not on a site until
+   `tools/create_custom_fields.py Employee --apply`; until then the read falls
+   to EMP_FIELDS_TAGGED and nobody reads as ticked, which is what the site's
+   own refusal would say too. */
+export const EMP_FIELDS_LEAVE = EMP_FIELDS_TAGGED.concat(["custom_casual_leave"]);
+
 /* The Create Letters register — see features/onboard/CreateLetters.jsx, which
    draws Factor HR's own list of issued letters column for column.
 
@@ -164,7 +171,8 @@ export async function load() {
 			   needed. Asking for a field a site does not have is a 417 on the whole
 			   call, and the whole call is the dashboard — so the richer list is tried
 			   and the original one is what it falls back to. */
-			listAll("Employee", EMP_FIELDS_TAGGED)
+			listAll("Employee", EMP_FIELDS_LEAVE)
+				.catch(() => listAll("Employee", EMP_FIELDS_TAGGED))
 				.catch(() => listAll("Employee", EMP_FIELDS_WIDE))
 				.catch(() => listAll("Employee", EMP_FIELDS))
 				.catch(() => listAll("Employee", EMP_FIELDS_MIN)),

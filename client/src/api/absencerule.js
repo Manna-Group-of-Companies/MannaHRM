@@ -42,13 +42,14 @@ const TRIES = 5;
     Matched on hrms's own words, never to decide anything else. */
 const BALANCE = /insufficient leave balance|leave allocation/i;
 
-/** Office employees from the loaded list, as {name: employee}. */
+/** Everybody ticked for Casual Leave in the loaded list, as {name: employee}
+    (the absence rule's people since 25 November 2026, office or not). */
 function office(only) {
 	const out = {};
 	for (const e of getState().employees || []) {
 		if (only && e.name !== only) continue;
 		if (e.status && e.status !== "Active") continue;
-		if (appliesTo(e.designation)) out[e.name] = e;
+		if (appliesTo(e.custom_casual_leave)) out[e.name] = e;
 	}
 	return out;
 }

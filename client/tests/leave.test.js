@@ -125,7 +125,9 @@ describe("leaves a month, asked when an employee is added", () => {
 	});
 
 	it("the_answer_is_never_sent_to_employee_which_has_no_field_for_it", () => {
-		expect(employeeDoc({ first_name: "A", leaves_a_month: "2" })).toEqual({ first_name: "A" });
+		/* The number itself is not; what it says about the person — ticked for
+		   Casual Leave — is, as of 25 November 2026. */
+		expect(employeeDoc({ first_name: "A", leaves_a_month: "2" })).toEqual({ first_name: "A", custom_casual_leave: 1 });
 	});
 
 	it("an_empty_answer_is_neither_a_gap_nor_a_mistake_because_both_leave_fields_are_optional", () => {
@@ -185,13 +187,14 @@ describe("the leave type asked beside leaves a month", () => {
 });
 
 import {
-	DESIGNATION_WORDS, OFFICE_DESIGNATIONS, casualLeaveGroup, casualLeaveRefusal,
+	CASUAL_LEAVE_FIELD, DESIGNATION_WORDS, OFFICE_DESIGNATIONS, casualLeaveGroup, casualLeaveRefusal, getsCasualLeave,
 } from "@/lib/monthlyleave";
 import { leaveProblems as wizardLeaveProblems } from "@/lib/newemp";
 
-/* HR, 2 October 2026: office staff, supervisors and drivers get Casual Leave,
-   nobody else. The site refuses the rest (manna_hr/casualleave.py); this copy
-   is what keeps the calendar and the buttons from promising otherwise. */
+/* 25 November 2026: whoever is ticked for Casual Leave gets it — Factor HR's
+   77, office and floor. The site refuses the rest (manna_hr/casualleave.py);
+   this copy is what keeps the calendar and the buttons from promising
+   otherwise. The designation groups stay for "is this an office job". */
 describe("who gets Casual Leave", () => {
 	it("the_office_list_is_the_one_leavepolicy_py_holds", () => {
 		const body = py.slice(py.indexOf("OFFICE_DESIGNATIONS = frozenset({"), py.indexOf("})", py.indexOf("OFFICE_DESIGNATIONS")));
@@ -204,9 +207,19 @@ describe("who gets Casual Leave", () => {
 		for (const [word, group] of DESIGNATION_WORDS) expect(py).toContain(`("${word}", "${group}")`);
 	});
 
-	it("a_plant_helper_gets_none", () => {
+	it("the_tick_is_the_field_leavepolicy_py_names", () => {
+		expect(py).toContain(`CASUAL_LEAVE_FIELD = "${CASUAL_LEAVE_FIELD}"`);
+	});
+
+	it("a_ticked_plant_helper_gets_it_and_an_unticked_manager_does_not", () => {
+		expect(casualLeaveRefusal(1, "RAJU")).toBeNull();
+		expect(casualLeaveRefusal(0, "ANIL")).toMatch(/^ANIL is not ticked for Casual Leave/);
+		expect(getsCasualLeave("1")).toBe(true);
+		expect(getsCasualLeave(undefined)).toBe(false);
+	});
+
+	it("a_plant_helper_is_not_an_office_job", () => {
 		expect(casualLeaveGroup("PLANT HELPER")).toBeNull();
-		expect(casualLeaveRefusal("PLANT HELPER", "RAJU")).toMatch(/^RAJU \(PLANT HELPER\) gets no Casual Leave/);
 	});
 
 	it("supervisors_drivers_and_office_staff_do", () => {
@@ -219,14 +232,19 @@ describe("who gets Casual Leave", () => {
 		expect(casualLeaveGroup("PRODUCTION FOREMAN")).toBeNull();
 	});
 
-	it("nobody_without_a_designation_gets_it", () => {
+	it("nobody_without_a_designation_is_an_office_job", () => {
 		expect(casualLeaveGroup("")).toBeNull();
-		expect(casualLeaveRefusal(undefined, "A")).toMatch(/no designation/);
 	});
 
-	it("the_wizard_stops_casual_leave_for_a_plant_helper_before_anything_is_created", () => {
-		const bad = wizardLeaveProblems({ designation: "PLANT HELPER", leave_type: "Casual Leave", leaves_a_month: "1" }, []);
-		expect(bad.join(" ")).toMatch(/Set Leaves A Month to 0/);
+	it("the_wizard_lets_hr_give_a_plant_helper_casual_leave_and_ticks_them", () => {
+		const f = { first_name: "R", designation: "PLANT HELPER", leave_type: "Casual Leave", leaves_a_month: "1" };
+		expect(wizardLeaveProblems(f, [])).toEqual([]);
+		expect(employeeDoc(f)[CASUAL_LEAVE_FIELD]).toBe(1);
+	});
+
+	it("no_casual_leave_typed_leaves_the_record_unticked", () => {
+		expect(employeeDoc({ first_name: "R", leaves_a_month: "0" })).not.toHaveProperty(CASUAL_LEAVE_FIELD);
+		expect(employeeDoc({ first_name: "R", leave_type: "Sick Leave", leaves_a_month: "1" })).not.toHaveProperty(CASUAL_LEAVE_FIELD);
 	});
 
 	it("the_wizard_lets_a_plant_helper_through_with_no_leave", () => {
