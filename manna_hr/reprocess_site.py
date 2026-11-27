@@ -64,8 +64,11 @@ def _names(employees):
 # ------------------------------------------------------------------ the work ---
 
 
-def run(employees, from_date, to_date, scope=rp.SCOPE_UNASSIGNED, write=False, rebuild=()):
-	"""Plan, and when `write`, do. Returns what it found, per person."""
+def run(employees, from_date, to_date, scope=rp.SCOPE_UNASSIGNED, write=False, rebuild=(), enqueue=True):
+	"""Plan, and when `write`, do. Returns what it found, per person.
+
+	`enqueue=False` leaves the shift job to the caller, which rebuilds many
+	days and starts it once, after the last (`latepunch_site._do`)."""
 	start, end = getdate(from_date), getdate(to_date)
 	problem = rp.range_problem(start, end, getdate(today()))
 	if problem:
@@ -81,21 +84,36 @@ def run(employees, from_date, to_date, scope=rp.SCOPE_UNASSIGNED, write=False, r
 		shifts.update(got["shifts"])
 
 	out["shifts"] = sorted(shifts)
-	if write and shifts:
-		# After the commit, so the job reads the cancelled rows as cancelled.
-		# One job per set of shifts: a machine sending last night's punch-outs
-		# in one burst rebuilds a day per person (latepunch_site), and each
-		# would otherwise run the whole shift job again. A day cancelled while
-		# that job is already running is made by hrms's hourly run instead.
+	if write and enqueue:
+		enqueue_shifts(shifts)
+	return out
+
+
+def enqueue_shifts(shifts):
+	"""The shift job for these shifts: one job per shift, after the commit.
+
+	After the commit, so the job reads the cancelled rows as cancelled.
+
+	**One job per shift, never one per set of shifts.** Two jobs on the same
+	shift at once both try to make the same day. The one that loses is refused
+	(the day is made) and hrms sets aside the punches of its batch — the very
+	punches the winner has just counted. That happened to ERENIUS BECK's 17
+	November during the backfill of 27 November 2026, when a job per set of
+	shifts let two of them work on Production12hrshift1 together.
+
+	A job already queued for a shift picks up whatever is cancelled before it
+	runs, so it is not queued twice. A day cancelled while it is already
+	running is made by hrms's hourly run.
+	"""
+	for shift in sorted({s for s in shifts or () if s}):
 		frappe.enqueue(
 			"manna_hr.reprocess_site.process_shifts",
-			shifts=sorted(shifts),
+			shifts=[shift],
 			queue="long",
-			job_id="manna-process-shifts-{0}".format("|".join(sorted(shifts))),
+			job_id="manna-process-shift-{0}".format(shift),
 			deduplicate=True,
 			enqueue_after_commit=True,
 		)
-	return out
 
 
 def _one(employee, start, end, scope, write, rebuild):

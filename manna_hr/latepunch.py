@@ -23,6 +23,8 @@ lost (HR, 26 November 2026), so two things here:
 - **After the fact** (`releasable`): a punch hrms set aside for exactly that
   reason is released and its day rebuilt — for the race where the shift job
   reached it first, and for the ones already on the site.
+- **Counted, yet set aside** (`counted_but_set_aside`): two shift jobs on one
+  day, and hrms sets aside the punches the winner counted. The flag comes off.
 
 Rebuilding a day is `reprocess_site`'s: cancel the Attendance the shift job
 made, never a leave's or an Attendance Request's, never in a submitted month,
@@ -63,6 +65,10 @@ ALREADY_MARKED = (
 #: this text, which is how a punch is released once and never twice — so it
 #: is a constant, not a sentence to reword.
 RELEASED = "Released: this punch arrived after its day was made, so the day is made again with it."
+
+#: The comment written when hrms set aside a punch its own day had counted.
+#: A constant for the same reason as RELEASED.
+UNFLAGGED = "Counted: this punch is part of its day, so it is no longer set aside."
 
 #: Why a set-aside punch is left alone. Shown to HR on the preview.
 KEPT_DUPLICATE = "a second copy of a punch that already counts"
@@ -142,6 +148,33 @@ def releasable(punch, comments, has_live_twin=False, frozen=False, blocker=None)
 	if blocker and int(blocker.get("docstatus") or 0) == 1 and not made_from_punches(blocker):
 		return False, KEPT_NOT_PUNCHES
 	return True, None
+
+
+def counted_but_set_aside(punch, comments, day=None, has_live_twin=False, frozen=False):
+	"""True when hrms set aside a punch that its day already counts.
+
+	Two shift jobs making the same day at the same moment: one makes it and
+	links the punches; the other is refused, because the day is made, and hrms
+	sets aside the punches of its batch — the very ones the first just counted.
+	ERENIUS BECK's 17 November, while the backfill of 27 November 2026 rebuilt
+	35 days. The day is right and the flag is wrong, and the next rebuild of
+	that day would leave the punches out (`reprocess_site._punches` passes over
+	set-aside punches). So the flag comes off, and nothing is rebuilt.
+
+	`punch` is `{"skip_auto_attendance", "attendance"}`. `day` is that
+	Attendance as `{"docstatus"}`, or None when it could not be read.
+	`has_live_twin` and `frozen` as for `releasable`: a second copy of a punch
+	that counts stays set aside, and a submitted month is left to the freeze.
+	"""
+	if not int(punch.get("skip_auto_attendance") or 0) or not punch.get("attendance"):
+		return False
+	if not day or int(day.get("docstatus") or 0) != 1 or has_live_twin or frozen:
+		return False
+	late = latest_late_comment(comments)
+	if not late:
+		return False
+	# Anybody after hrms — `dedupe` setting a copy aside, a person — decided on purpose.
+	return not any(_when(c) > _when(late) and not is_late_set_aside(c.get("content")) for c in comments)
 
 
 def one_per_second(rows):

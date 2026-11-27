@@ -8,6 +8,8 @@ The rule is `latepunch.py`. Three ways in, all ending in `_rebuild`:
 - **Every ten minutes** (`sweep`): punches hrms set aside in the last two days
   because their day was already made — the race where the shift job reached
   the punch before the rebuild did — are released and their days rebuilt.
+  Punches hrms set aside although their day had counted them (two shift jobs
+  on one day) just have the flag taken off.
 - **HR, for what is already on the site** (`preview`, then `apply`): the same,
   over a range of dates. Preview first, always: on the live site `apply` is a
   write, and needs a yes for that exact change.
@@ -97,7 +99,7 @@ def sweep():
 	"""Every ten minutes: punches hrms set aside as late in the last two days."""
 	since = add_to_date(now_datetime(), hours=-SWEEP_HOURS)
 	plan = _plan(_set_aside(commented_since=since))
-	if not plan["release"]:
+	if not plan["release"] and not plan["unflag"]:
 		return None
 	days = sorted({(r["employee"], r["day"]) for r in plan["release"]})[:SWEEP_DAYS]
 	keep = set(days)
@@ -138,6 +140,7 @@ def _range(from_date, to_date, employee):
 def _report(plan):
 	return {
 		"release": [_said(r) for r in plan["release"]],
+		"unflag": [_said(r) for r in plan["unflag"]],
 		"kept": [dict(_said(r), why=r["why"]) for r in plan["kept"]],
 		"days": len({(r["employee"], r["day"]) for r in plan["release"]}),
 		"people": len({r["employee"] for r in plan["release"]}),
@@ -178,8 +181,11 @@ def _set_aside(commented_since=None, time_from=None, time_to=None, employee=None
 
 
 def _plan(punches):
-	"""{"release": [...], "kept": [...]} — each `{name, employee, time, day, why}`."""
-	release, kept = [], []
+	"""{"release": [...], "unflag": [...], "kept": [...]} — each `{name, employee, time, day, why}`.
+
+	`unflag`: punches hrms set aside although their day counts them
+	(`latepunch.counted_but_set_aside`). Their flag comes off; no day is rebuilt."""
+	release, unflag, kept = [], [], []
 	for p in punches:
 		comments = frappe.get_all(
 			"Comment",
@@ -187,6 +193,20 @@ def _plan(punches):
 			fields=["content", "creation"],
 			limit_page_length=0,
 		)
+		twin = frappe.db.exists(
+			"Employee Checkin",
+			{"employee": p.employee, "time": p.time, "skip_auto_attendance": 0, "name": ["!=", p.name]},
+		)
+		company = frappe.db.get_value("Employee", p.employee, "company")
+		if p.attendance:
+			counted = frappe.db.get_value("Attendance", p.attendance, ["attendance_date", "docstatus"], as_dict=True)
+			day = getdate((counted or {}).get("attendance_date") or p.shift_start or p.time)
+			if latepunch.counted_but_set_aside(
+				p, comments, day=counted, has_live_twin=bool(twin), frozen=bool(freeze.submitted_for(company, day)),
+			):
+				unflag.append({"name": p.name, "employee": p.employee, "time": p.time, "day": day, "why": None,
+				               "creation": p.creation, "log_type": p.log_type, "attendance": p.attendance})
+			continue
 		late = latepunch.latest_late_comment(comments)
 		blocker = None
 		name = latepunch.blocking_attendance(late["content"]) if late else None
@@ -199,11 +219,6 @@ def _plan(punches):
 		# The day hrms tried to make: the one it says it found made, else the
 		# day the punch's shift began.
 		day = getdate((blocker or {}).get("attendance_date") or p.shift_start or p.time)
-		twin = frappe.db.exists(
-			"Employee Checkin",
-			{"employee": p.employee, "time": p.time, "skip_auto_attendance": 0, "name": ["!=", p.name]},
-		)
-		company = frappe.db.get_value("Employee", p.employee, "company")
 		ok, why = latepunch.releasable(
 			p, comments, has_live_twin=bool(twin), frozen=bool(freeze.submitted_for(company, day)), blocker=blocker,
 		)
@@ -215,15 +230,37 @@ def _plan(punches):
 			kept.append(row)
 	release, twins = latepunch.one_per_second(release)
 	kept.extend(dict(r, why=latepunch.KEPT_DUPLICATE) for r in twins)
-	return {"release": release, "kept": kept}
+	# Both copies of one punch can be counted and set aside together: the
+	# second copy stays set aside, as `dedupe` would leave it.
+	unflag, twins = latepunch.one_per_second(unflag)
+	kept.extend(dict(r, why=latepunch.KEPT_DUPLICATE) for r in twins)
+	return {"release": release, "unflag": unflag, "kept": kept}
 
 
 def _do(plan, days):
-	"""Release, then rebuild each (employee, day). One day failing never stops the rest."""
+	"""Release, then rebuild each (employee, day); then start the shift job, once.
+
+	One day failing never stops the rest. The shift job starts only after the
+	last day: started after each, as it was until 27 November 2026, a job was
+	already making days while the next were still being cancelled, and two
+	jobs on one shift set aside the punches each other had counted
+	(`reprocess_site.enqueue_shifts`)."""
+	out = {"released": 0, "unflagged": 0, "cancelled": 0, "errors": []}
+	for r in plan.get("unflag", ()):
+		try:
+			frappe.db.set_value("Employee Checkin", r["name"], "skip_auto_attendance", 0, update_modified=False)
+			frappe.get_doc("Employee Checkin", r["name"]).add_comment("Comment", latepunch.UNFLAGGED)
+			frappe.db.commit()
+			out["unflagged"] += 1
+		except Exception as exc:
+			frappe.db.rollback()
+			out["errors"].append({"employee": r["employee"], "day": str(r["day"]), "why": str(exc)[:300]})
+			frappe.log_error(title="Late punch: {0} not counted again".format(r["name"]))
+
 	by_day = {}
 	for r in plan["release"]:
 		by_day.setdefault((r["employee"], r["day"]), []).append(r["name"])
-	out = {"released": 0, "cancelled": 0, "errors": []}
+	shifts = set()
 	for employee, day in sorted(days):
 		if getdate(day) > getdate(today()):
 			continue
@@ -233,11 +270,17 @@ def _do(plan, days):
 				frappe.db.set_value("Employee Checkin", name, "skip_auto_attendance", 0, update_modified=False)
 				frappe.get_doc("Employee Checkin", name).add_comment("Comment", latepunch.RELEASED)
 				out["released"] += 1
-			got = reprocess_site.run([employee], day, day, scope=rp.SCOPE_ALL, write=True, rebuild={getdate(day)})
+			got = reprocess_site.run(
+				[employee], day, day, scope=rp.SCOPE_ALL, write=True, rebuild={getdate(day)}, enqueue=False,
+			)
 			out["cancelled"] += got["cancelled"]
 			frappe.db.commit()
+			shifts.update(got["shifts"])
 		except Exception as exc:
 			frappe.db.rollback(save_point="manna_late_punch")
 			out["errors"].append({"employee": employee, "day": str(day), "why": str(exc)[:300]})
 			frappe.log_error(title="Late punch: {0} on {1} not rebuilt".format(employee, day))
+	if shifts:
+		reprocess_site.enqueue_shifts(shifts)
+		frappe.db.commit()
 	return out

@@ -151,6 +151,69 @@ class TestLatePunch(IntegrationTestCase):
 		self.assertEqual(day.status, "Present")
 		self.assertEqual((str(day.in_time), str(day.out_time)), ("2026-11-12 08:15:00", "2026-11-12 17:20:00"))
 
+	def test_punches_set_aside_by_a_second_shift_job_after_the_first_counted_them_count_again(self):
+		# ERENIUS BECK, 17 Nov, during the backfill of 27 Nov 2026: one job made
+		# the day from both punches, a second job on the same shift was refused,
+		# and hrms set the same two punches aside.
+		from hrms.hr.doctype.employee_checkin.employee_checkin import (
+			add_comment_in_checkins,
+			skip_attendance_in_checkins,
+		)
+
+		_wire("Employee Checkin", "after_insert", HOOK_INSERT, False)
+		emp = _employee("_T-LATE-RACE", shift=SHIFT).name
+		a = _punch(emp, "2026-11-17 08:16:21")
+		b = _punch(emp, "2026-11-17 17:01:15")
+		_close("2026-11-17 23:30:00")
+		_job()
+		made = _day(emp, "2026-11-17")
+		self.assertEqual((str(made.in_time), str(made.out_time)), ("2026-11-17 08:16:21", "2026-11-17 17:01:15"))
+
+		# The losing job, word for word what hrms does with its refusal.
+		skip_attendance_in_checkins([a.name, b.name])
+		add_comment_in_checkins(
+			[a.name, b.name],
+			"Attendance for employee {0} is already marked for the date 17-11-2026: {1}".format(emp, made.name),
+		)
+
+		latepunch_site.sweep()
+		for p in (a, b):
+			self.assertEqual(frappe.db.get_value("Employee Checkin", p.name, ["skip_auto_attendance", "attendance"]),
+			                 (0, made.name))
+		# The day was right: it is not rebuilt.
+		self.assertEqual(frappe.db.get_value("Attendance", made.name, "docstatus"), 1)
+
+	def test_a_rebuild_runs_the_shift_job_once_per_shift_after_every_day_is_released(self):
+		# Started after each day, a job was making days while the next were
+		# still being cancelled, and two jobs met on one shift.
+		_wire("Employee Checkin", "after_insert", HOOK_INSERT, False)
+		late = []
+		for who in ("_T-LATE-ONCE-A", "_T-LATE-ONCE-B"):
+			emp = _employee(who, shift=SHIFT).name
+			_punch(emp, "2026-11-18 08:25:00")
+			_close("2026-11-18 23:30:00")
+			_job()
+			late.append((emp, _punch(emp, "2026-11-18 17:35:00")))
+		_job()
+		for _emp, p in late:
+			self.assertEqual(frappe.db.get_value("Employee Checkin", p.name, "skip_auto_attendance"), 1)
+
+		calls = []
+		frappe.enqueue = lambda method, **kw: calls.append((method, kw.get("shifts"), kw.get("job_id")))
+		try:
+			latepunch_site.sweep()
+		finally:
+			frappe.enqueue = _inline
+		# Other shifts on this bench may have punches of their own to rebuild;
+		# what matters is one job per shift, and this shift's job once.
+		self.assertTrue(all(len(shifts) == 1 for _m, shifts, _j in calls), calls)
+		self.assertEqual([c for c in calls if c[1] == [SHIFT]],
+		                 [("manna_hr.reprocess_site.process_shifts", [SHIFT], "manna-process-shift-" + SHIFT)])
+
+		_job()
+		for emp, p in late:
+			self.assertEqual(str(_day(emp, "2026-11-18").out_time), "2026-11-18 17:35:00")
+
 	def test_a_bridge_cannot_close_a_shift_past_its_own_newest_punch(self):
 		_wire("Shift Type", "validate", HOOK_GUARD, True)
 		emp = _employee("_T-LATE-GUARD", shift=SHIFT).name
