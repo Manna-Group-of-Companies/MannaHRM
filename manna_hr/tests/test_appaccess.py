@@ -166,3 +166,36 @@ def test_on_means_a_phone_method_and_a_linked_login():
 	assert aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "a@b.in"},
 		{"name": "a@b.in", "enabled": 1, "username": "MRP-293"})["on"] is True
 	assert aa.phone_punch({**MACHINE, "custom_punch_method": "Both"})["on"] is False
+
+
+# ---------------------------------- every app user: Emp Code + date of birth ---
+
+
+def test_an_employee_only_login_is_set_to_the_emp_code_and_date_of_birth():
+	# 27 Nov 2026: EBIN JOY's login was "ebin" with a password nobody knew.
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@manna.in"},
+		{"name": "ebin@manna.in", "enabled": 1, "username": "ebin", "roles": ["Employee", "Desk User"]})
+	assert (p["reset_login"], p["sign_in_as"], p["password"]) == (True, "MRP-293", "date of birth, DDMMYYYY")
+	assert p["problems"] == []
+
+
+def test_a_login_with_any_other_role_keeps_its_name_and_password():
+	# An HR Manager's, a CMMS or a Fleet login is somebody's way into another system.
+	for extra in ("HR Manager", "Store Purchase Manager", "Fleet Manager", "Driver"):
+		p = aa.phone_punch({**MACHINE, "user_id": "x@manna.in"},
+			{"name": "x@manna.in", "enabled": 1, "username": "x", "roles": ["Employee", extra]})
+		assert (p["reset_login"], p["sign_in_as"], p["password"]) == (False, "x", "their own password"), extra
+		assert any(extra in w for w in p["warnings"])
+
+
+def test_resetting_refuses_an_emp_code_another_login_already_uses():
+	p = aa.phone_punch({**MACHINE, "user_id": "a@manna.in"},
+		{"name": "a@manna.in", "enabled": 1, "username": "a", "roles": ["Employee"]}, "other@manna.in")
+	assert p["problems"] == ["MRP-293 is already the user name of other@manna.in."]
+
+
+def test_unknown_roles_are_never_reset():
+	assert aa.app_only(None) is False
+	assert aa.app_only([]) is True
+	assert aa.app_only(["Employee", "Desk User", "All"]) is True
+	assert aa.app_only(["Employee", "HR User"]) is False

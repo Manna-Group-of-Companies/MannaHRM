@@ -56,10 +56,14 @@ def _phone(employee):
 	login_user = None
 	if login:
 		login_user = frappe.db.get_value("User", login, ["name", "enabled", "username"], as_dict=True)
+		if login_user:
+			# What decides whether this login may be set to the Emp Code and
+			# date of birth (aa.app_only).
+			login_user["roles"] = frappe.get_roles(login)
 	code = str(emp.get("employee_number") or "").strip()
 	holder = ""
-	if code and not login_user:
-		holder = frappe.db.get_value("User", {"username": code}, "name") or ""
+	if code:
+		holder = frappe.db.get_value("User", {"username": code, "name": ["!=", login or ""]}, "name") or ""
 	by_name = frappe.db.get_single_value("System Settings", "allow_login_using_user_name")
 	return aa.phone_punch(emp, login_user, holder, None if by_name is None else bool(by_name))
 
@@ -134,11 +138,14 @@ def _allow_phone_punch_writes(employee, plan):
 		user.flags.no_welcome_mail = True
 		user.insert(ignore_permissions=True)
 		said.append(_("made login {0} (user name {1}, first password the date of birth)").format(login, plan["sign_in_as"]))
-	elif "Employee" not in frappe.get_roles(login):
-		user = frappe.get_doc("User", login)
-		user.flags.ignore_permissions = True
-		user.add_roles("Employee")
-		said.append(_("added the Employee role to {0}").format(login))
+	else:
+		if plan.get("reset_login"):
+			said.append(_set_emp_code_login(login, plan["sign_in_as"], emp.date_of_birth))
+		if "Employee" not in frappe.get_roles(login):
+			user = frappe.get_doc("User", login)
+			user.flags.ignore_permissions = True
+			user.add_roles("Employee")
+			said.append(_("added the Employee role to {0}").format(login))
 
 	# The two User Permissions that keep the login to this one Employee and its
 	# Company, made before the save so on_update finds them and adds nothing.
@@ -157,6 +164,53 @@ def _allow_phone_punch_writes(employee, plan):
 		emp.custom_punch_method = method
 	emp.save()
 	return said
+
+
+def _set_emp_code_login(login, code, dob):
+	"""User name the Emp Code, password the date of birth, switched on — for a
+	login that holds nothing but the employee's own roles (aa.app_only, checked
+	by the caller's plan). The site's strength rule refuses a date as a
+	password over REST, so it is set here with that rule waived, as for a
+	login made by this button (27 November 2026)."""
+	user = frappe.get_doc("User", login)
+	user.username = code
+	user.new_password = aa.first_password(dob)
+	user.enabled = 1
+	user.flags.ignore_permissions = True
+	user.flags.ignore_password_policy = True
+	user.save(ignore_permissions=True)
+	return _("login {0} set to user name {1} and the date of birth").format(login, code)
+
+
+@frappe.whitelist(methods=["POST"])
+def reset_app_login(employee):
+	"""Set one employee's phone-app login back to the group's rule: user name
+	the Emp Code, password the date of birth (HR, 27 November 2026). For a
+	forgotten password, and for logins made before the rule. Only a login that
+	holds nothing but the employee's own roles; any other is somebody's way
+	into another system and is refused with the reason. Returns `get_access`."""
+	frappe.only_for(aa.MANAGERS)
+	caller = frappe.session.user
+	plan = _phone(employee)
+	login = plan["login"]
+	if not login or plan["make_login"]:
+		frappe.throw(_("This employee has no login yet. Use Allow phone punch too."))
+	if not plan.get("reset_login"):
+		frappe.throw("<br>".join(plan["warnings"]) or _("This login is not the phone app's alone, so it is left as it is."))
+	if plan["problems"]:
+		frappe.throw("<br>".join(plan["problems"]))
+	why = aa.why_not(caller, frappe.get_roles(), login, frappe.get_roles(login))
+	if why:
+		frappe.throw(why, frappe.PermissionError)
+	dob = frappe.db.get_value("Employee", employee, "date_of_birth")
+	try:
+		frappe.set_user("Administrator")
+		said = _set_emp_code_login(login, plan["sign_in_as"], dob)
+		frappe.get_doc("Employee", employee).add_comment(
+			"Info", _("Phone app login reset by {0}: {1}").format(caller, said))
+	finally:
+		frappe.set_user(caller)
+	return get_access(employee)
 
 
 @frappe.whitelist(methods=["POST"])

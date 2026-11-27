@@ -137,6 +137,29 @@ describe("phone punch (25 November 2026)", () => {
 	});
 });
 
+describe("reset to Emp Code + date of birth (27 November 2026)", () => {
+	const ON = { ...PHONE, on: true, method: "Both", make_login: false, login: "ebin@manna.in", sign_in_as: "MRP-103", reset_login: true };
+
+	it("offers the reset on an app-only login, asks first, then asks the site", async () => {
+		answer = (m) => Promise.resolve({ login: "ebin@manna.in", why: "", apps: APPS, phone: ON });
+		const view = await draw();
+		await act(async () => { view.getByRole("button", { name: /reset to emp code/i }).click(); });
+		expect(calls.some(([m]) => m.endsWith("reset_app_login"))).toBe(false);
+		expect(document.body.textContent).toContain("stops working");
+		await act(async () => { view.getByRole("button", { name: /^reset login$/i }).click(); });
+		expect(calls.at(-1)).toEqual(["manna_hr.appaccess_site.reset_app_login", { employee: "HR-EMP-1" }]);
+	});
+
+	it("offers no reset on a login used for other work, and says why", async () => {
+		answer = () => Promise.resolve({ login: "nikil@manna.in", why: "", apps: APPS,
+			phone: { ...ON, reset_login: false, sign_in_as: "nikhil",
+				warnings: ["This login is also used as HR Manager, so its user name and password are left as they are."] } });
+		const view = await draw();
+		expect(view.queryByRole("button", { name: /reset to emp code/i })).toBeNull();
+		expect(view.container.textContent).toContain("also used as HR Manager");
+	});
+});
+
 describe("the Who card's Apps row", () => {
 	it("names the apps the login opens, and not the login itself", async () => {
 		const { AppNames } = await import("@/features/employees/AppAccess");

@@ -148,9 +148,9 @@ export function punchGaps(f) {
 	if (punchesOnMachine(m) && !typed(f.attendance_device_id)) {
 		out.push({ on: "attendance_device_id", label: "Machine Code (needed for Fingerprint Machine)" });
 	}
-	if (punchesOnApp(m) && !typed(f.company_email) && !typed(f.personal_email)) {
-		out.push({ on: "company_email", label: "Company Email or Personal Email (needed for Mobile App)" });
-	}
+	/* No email needed for the phone (HR, 27 November 2026): the login is made
+	   by the site with the Emp Code as its user name and, with no email, a
+	   stand-in address that never receives mail (manna_hr/appaccess.py). */
 	return out;
 }
 
