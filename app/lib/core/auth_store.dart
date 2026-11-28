@@ -52,14 +52,42 @@ class AuthStore {
   static const _kEmployee = 'cachedEmployee';
   static const _kSkewMs = 'skewMs';
   static const _kDayPunches = 'cachedDayPunches';
+  static const _kAdmin = 'cachedAdmin';
 
-  static Future<void> saveEmployee(Map<String, dynamic> emp) async =>
-      (await _prefs).setString(_kEmployee, jsonEncode(emp));
+  /// Remembers [emp] for opening with no signal, with the [login] it belongs
+  /// to — so a shared phone never opens offline as the last person.
+  static Future<void> saveEmployee(Map<String, dynamic> emp, {String? login}) async =>
+      (await _prefs).setString(_kEmployee, jsonEncode({'login': login ?? '', 'emp': emp}));
 
-  static Future<Map<String, dynamic>?> loadEmployee() async {
+  /// The employee remembered for [forLogin], or null. A record kept by an older
+  /// version carries no login and is taken as it is.
+  static Future<Map<String, dynamic>?> loadEmployee({String? forLogin}) async {
     try {
       final j = jsonDecode((await _prefs).getString(_kEmployee) ?? '');
-      return j is Map ? j.cast<String, dynamic>() : null;
+      if (j is! Map) return null;
+      if (j['emp'] is Map) {
+        final kept = '${j['login'] ?? ''}'.trim().toLowerCase();
+        final asked = (forLogin ?? '').trim().toLowerCase();
+        if (kept.isNotEmpty && asked.isNotEmpty && kept != asked) return null;
+        return (j['emp'] as Map).cast<String, dynamic>();
+      }
+      return j.cast<String, dynamic>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Whether this login was HR the last time the site said, for a start where
+  /// the site cannot be asked — so HR does not land on the employee side for a
+  /// whole session over one slow read.
+  static Future<void> saveAdmin(String login, bool admin) async =>
+      (await _prefs).setString(_kAdmin, jsonEncode({'login': login.trim().toLowerCase(), 'admin': admin}));
+
+  static Future<bool?> loadAdmin(String login) async {
+    try {
+      final j = jsonDecode((await _prefs).getString(_kAdmin) ?? '');
+      if (j is! Map || '${j['login']}' != login.trim().toLowerCase()) return null;
+      return j['admin'] == true;
     } catch (_) {
       return null;
     }
@@ -73,14 +101,17 @@ class AuthStore {
     return ms == null ? null : Duration(milliseconds: ms);
   }
 
-  static Future<void> saveDayPunches(String iso, List<Map<String, dynamic>> rows) async =>
-      (await _prefs).setString(_kDayPunches, jsonEncode({'iso': iso, 'rows': rows}));
+  static Future<void> saveDayPunches(String iso, List<Map<String, dynamic>> rows, {String employee = ''}) async =>
+      (await _prefs).setString(_kDayPunches, jsonEncode({'iso': iso, 'emp': employee, 'rows': rows}));
 
-  /// The punches last read for [iso], or null when the cache is for another day.
-  static Future<List<Map<String, dynamic>>?> loadDayPunches(String iso) async {
+  /// The punches last read for [iso], or null when the cache is for another day
+  /// or for somebody else.
+  static Future<List<Map<String, dynamic>>?> loadDayPunches(String iso, {String employee = ''}) async {
     try {
       final j = jsonDecode((await _prefs).getString(_kDayPunches) ?? '');
       if (j is! Map || j['iso'] != iso || j['rows'] is! List) return null;
+      final kept = '${j['emp'] ?? ''}';
+      if (kept.isNotEmpty && employee.isNotEmpty && kept != employee) return null;
       return (j['rows'] as List).whereType<Map>().map((m) => m.cast<String, dynamic>()).toList();
     } catch (_) {
       return null;
@@ -92,10 +123,18 @@ class AuthStore {
 
   /// Full sign-out. Keeps the site URL and the email so the form is filled in
   /// next time — a bench address typed once should not have to be typed again.
+  ///
+  /// What was remembered about the person goes too — their record, their day,
+  /// whether they were HR: the next person on a shared phone must never open
+  /// as them. Punches they kept are not dropped here; they stay theirs and are
+  /// sent when they sign in again (services/punch_queue.dart).
   static Future<void> clear() async {
     final p = await _prefs;
     await p.remove(_kSid);
     await p.remove(_kPassword);
+    await p.remove(_kEmployee);
+    await p.remove(_kDayPunches);
+    await p.remove(_kAdmin);
   }
 }
 

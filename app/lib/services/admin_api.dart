@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:manna_hr_app/core/constants.dart';
 import 'package:manna_hr_app/core/day.dart';
 import 'package:manna_hr_app/core/errors.dart';
+import 'package:manna_hr_app/core/offline_punches.dart' show isNetworkFailure;
 import 'package:manna_hr_app/core/session.dart';
 
 /// HR's reads — and one write, a leave decision.
@@ -47,11 +48,16 @@ class AdminApi {
     }
   }
 
+  /// The long field list, then the short one — but the short one only when
+  /// the site *answered* that it lacks a field. After a dropped signal the
+  /// short list came back without the machines' direction, the set-aside
+  /// flag and the Emp Code, and the day was counted wrong and shown as real.
   static Future<List<Map<String, dynamic>>> _read(String doctype, List<String> long, List<String> short,
       {List<List<dynamic>>? filters, String orderBy = 'name asc', int? max}) async {
     try {
       return await _all(doctype, long, filters: filters, orderBy: orderBy, max: max);
-    } catch (_) {
+    } catch (e) {
+      if (isNetworkFailure(e)) rethrow;
       return _all(doctype, short, filters: filters, orderBy: orderBy, max: max);
     }
   }
@@ -87,11 +93,12 @@ class AdminApi {
     if (!fresh && _companyCalendar != null) return _companyCalendar!;
     try {
       final rows = await _all('Company', ['name', 'default_holiday_list']);
-      _companyCalendar = {for (final r in rows) '${r['name']}': '${r['default_holiday_list'] ?? ''}'};
+      return _companyCalendar = {for (final r in rows) '${r['name']}': '${r['default_holiday_list'] ?? ''}'};
     } catch (_) {
-      _companyCalendar = {};
+      // Not kept: the next day read asks again, rather than judging everybody
+      // without a calendar for the rest of the session.
+      return const {};
     }
-    return _companyCalendar!;
   }
 
   /// One Holiday List's rows, kept for the session — a calendar changes a few
@@ -102,10 +109,13 @@ class AdminApi {
     if (name.isEmpty || _calendars.containsKey(name)) return;
     try {
       final r = await Session.I.dio.get('${_res('Holiday List')}/${Uri.encodeComponent(name)}');
-      final rows = (r.data is Map) ? (r.data['data']?['holidays'] as List?) : null;
-      _calendars[name] = (rows ?? const []).cast<Map<String, dynamic>>().map(Holiday.fromJson).toList();
+      final data = (r.data is Map) ? r.data['data'] : null;
+      final rows = data is Map ? data['holidays'] : null;
+      if (rows is! List) return; // Not answered: asked again next time.
+      _calendars[name] = rows.whereType<Map>().map((h) => Holiday.fromJson(h.cast<String, dynamic>())).toList();
     } catch (_) {
-      _calendars[name] = const [];
+      // Not kept: on a holiday everybody would read "not in yet" for the rest
+      // of the session over one dropped read.
     }
   }
 
@@ -217,12 +227,21 @@ class AdminApi {
 
   /// A month's salary slips for everybody, drafts included — HR's question is
   /// what has been made, not only what has been paid.
+  /// The month's real last day, `YYYY-MM-30` for November. The site turns a
+  /// Date filter into a date, and 31 November is not one: the Payroll Report
+  /// for every month without a 31st was refused.
+  static String _monthEnd(String ym) {
+    final y = int.tryParse(ym.length >= 4 ? ym.substring(0, 4) : '') ?? 2000;
+    final m = int.tryParse(ym.length >= 7 ? ym.substring(5, 7) : '') ?? 1;
+    return '$ym-${DateTime(y, m + 1, 0).day.toString().padLeft(2, '0')}';
+  }
+
   static Future<List<Map<String, dynamic>>> slips(String ym) => _read(
         'Salary Slip',
         ['name', 'employee', 'employee_name', 'company', 'department', 'start_date', 'gross_pay', 'total_deduction',
           'net_pay', 'docstatus', 'status'],
         ['name', 'employee', 'net_pay', 'docstatus'],
-        filters: [['start_date', '>=', '$ym-01'], ['start_date', '<=', '$ym-31'], ['docstatus', '<', 2]],
+        filters: [['start_date', '>=', '$ym-01'], ['start_date', '<=', _monthEnd(ym)], ['docstatus', '<', 2]],
         orderBy: 'employee_name asc',
       );
 

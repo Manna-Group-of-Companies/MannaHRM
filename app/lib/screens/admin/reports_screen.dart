@@ -70,6 +70,9 @@ class _PayrollReportState extends State<PayrollReport> {
   bool _loading = true;
   String _error = '';
 
+  /// The month's slips could not be read: the figures are "—", never ₹ 0.
+  bool get _unread => _error.isNotEmpty && _rows.isEmpty;
+
   String get _ym => '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
 
   @override
@@ -91,9 +94,10 @@ class _PayrollReportState extends State<PayrollReport> {
       final rows = await AdminApi.slips(ym);
       if (mounted && ym == _ym) setState(() => _rows = rows);
     } catch (e) {
-      if (mounted) setState(() => _error = humanError(e));
+      // A month already left behind says nothing over the one on screen.
+      if (mounted && ym == _ym) setState(() => _error = humanError(e));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && ym == _ym) setState(() => _loading = false);
     }
   }
 
@@ -148,10 +152,10 @@ class _PayrollReportState extends State<PayrollReport> {
                   Icon(Icons.payments_rounded, color: Color(0xFF0B0F19)),
                 ]),
                 const SizedBox(height: 18),
-                Text(_loading ? '…' : rupees(_sum('net_pay')),
+                Text(_loading ? '…' : (_unread ? '—' : rupees(_sum('net_pay'))),
                     style: const TextStyle(color: Color(0xFF0B0F19), fontSize: 32, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text('${_rows.length} ${_rows.length == 1 ? 'slip' : 'slips'} this month',
+                Text(_unread ? 'Could not be read' : '${_rows.length} ${_rows.length == 1 ? 'slip' : 'slips'} this month',
                     style: const TextStyle(color: Color(0xFF4A5262), fontSize: 13)),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
@@ -184,7 +188,7 @@ class _PayrollReportState extends State<PayrollReport> {
             const SectionTitle('Salary slips'),
             if (_loading && _rows.isEmpty)
               const Padding(padding: EdgeInsets.all(30), child: Center(child: CircularProgressIndicator()))
-            else if (_rows.isEmpty)
+            else if (_rows.isEmpty && !_unread)
               const Panel(child: Text('No salary slips for this month.', style: TextStyle(color: kInk2)))
             else
               for (final r in _rows)
@@ -224,6 +228,7 @@ class _PayrollReportState extends State<PayrollReport> {
   Widget _figure(String label, double n, Color ink) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(color: kInk2, fontSize: 12.5, fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
-        Text(_loading ? '…' : rupees(n), style: TextStyle(color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
+        Text(_loading ? '…' : (_unread ? '—' : rupees(n)),
+            style: TextStyle(color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
       ]);
 }

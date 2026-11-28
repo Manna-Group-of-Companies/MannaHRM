@@ -33,12 +33,12 @@ lib/screens/admin/          HR shell · home · day · employees · leave reques
 
 ```bash
 flutter pub get
-flutter test          # 118 tests, no site and no phone needed
+flutter test          # 224 tests, no site and no phone needed
 flutter run           # a device or an emulator
 flutter build apk --release
 ```
 
-The APK is `com.mannagroup.manna_hr_app`, version 2.1.3, so it installs over
+The APK is `com.mannagroup.manna_hr_app`, version 2.1.5, so it installs over
 the employee app already on people's phones. **Uninstall Manna HR Admin**
 (`com.mannagroup.manna_hr_admin`) from HR's phones; nothing replaces it but
 this.

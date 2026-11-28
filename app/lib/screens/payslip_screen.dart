@@ -58,6 +58,9 @@ class _PayslipScreenState extends State<PayslipScreen> {
 
   Future<void> _open(String name) async {
     setState(() {
+      // Another month's pay must never sit under this month's name while it
+      // is read — or for good, when the read fails.
+      if (_pick != name) _slip = null;
       _pick = name;
       _reading = true;
       _error = '';

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:manna_hr_app/core/auth_store.dart';
+import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/offline_punches.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -20,6 +21,10 @@ class FakeSite implements HttpClientAdapter {
   bool up = false;
   int status = 201;
   String refusal = '';
+
+  /// Answers a punch with 200 and nothing in it — a network in between, not
+  /// the site's insert.
+  bool emptyAnswer = false;
 
   /// Checkins already on the pretend site: "time|type".
   final onSite = <String>{};
@@ -40,20 +45,31 @@ class FakeSite implements HttpClientAdapter {
       throw DioException(requestOptions: o, type: DioExceptionType.connectionError, message: 'no signal');
     }
     if (o.method == 'GET') {
+      // The duplicate check: an exact time, or a window of them (">=" and
+      // "<="), compared as strings the way Frappe compares a Datetime.
       final filters = jsonDecode('${o.queryParameters['filters'] ?? '[]'}') as List;
-      String? time, type;
+      String? exact, from, to, type;
       for (final f in filters) {
-        if (f[0] == 'time') time = '${f[2]}';
+        if (f[0] == 'time' && f[1] == '=') exact = '${f[2]}';
+        if (f[0] == 'time' && f[1] == '>=') from = '${f[2]}';
+        if (f[0] == 'time' && f[1] == '<=') to = '${f[2]}';
         if (f[0] == 'log_type') type = '${f[2]}';
       }
-      final found = time != null && onSite.contains('$time|$type');
+      final found = onSite.any((row) {
+        final parts = row.split('|');
+        if (parts[1] != type) return false;
+        if (exact != null) return parts[0] == exact;
+        return (from == null || parts[0].compareTo(from) >= 0) && (to == null || parts[0].compareTo(to) <= 0);
+      });
       return _json({'data': found ? [{'name': 'x'}] : []}, 200);
     }
     final data = Map<String, dynamic>.from(o.data as Map);
+    if (emptyAnswer) return _json({}, 200);
     if (status >= 400) return _json({'_server_messages': jsonEncode([jsonEncode({'message': refusal})])}, status);
     posted.add(data);
     onSite.add('${data['time']}|${data['log_type']}');
-    return _json({'data': data}, 201);
+    // The site's insert answers with the new checkin, name and all.
+    return _json({'data': {...data, 'name': 'EMP-CKIN-${posted.length}'}}, 201);
   }
 }
 
@@ -92,8 +108,10 @@ void main() {
       ..up = false
       ..status = 201
       ..refusal = ''
+      ..emptyAnswer = false
       ..onSite.clear()
       ..posted.clear();
+    PunchQueue.I.stop();
     await PunchQueue.I.load();
   });
 
@@ -121,6 +139,46 @@ void main() {
     expect(await PunchQueue.I.flush(), 1);
     expect(site.posted, isEmpty);
     expect(PunchQueue.I.count.value, 0);
+  });
+
+  test('a punch that landed live, and was kept when its answer was lost, is not sent again', () async {
+    // Pressed at 08:02:00; the site stamped its own clock when it arrived,
+    // twenty seconds later, after the photo upload.
+    await PunchQueue.I.add(punch('1', 'IN', at(8, 2)));
+    site.up = true;
+    site.onSite.add('${at(8, 2).substring(0, 17)}20|IN');
+    expect(await PunchQueue.I.flush(), 1);
+    expect(site.posted, isEmpty);
+    expect(PunchQueue.I.count.value, 0);
+  });
+
+  test('an OUT just after an IN, or an IN hours after one, is a punch of its own', () async {
+    site.onSite.add('${at(8, 2).substring(0, 17)}20|IN');
+    await PunchQueue.I.add(punch('1', 'OUT', at(8, 3)));
+    await PunchQueue.I.add(punch('2', 'IN', at(13, 0)));
+    site.up = true;
+    expect(await PunchQueue.I.flush(), 2);
+    expect(site.posted.map((p) => '${p['log_type']} ${p['time']}'), ['OUT ${at(8, 3)}', 'IN ${at(13, 0)}']);
+  });
+
+  test('an answer with no checkin in it is not taken as sent: the punch waits', () async {
+    await PunchQueue.I.add(punch('1', 'IN', at(8, 2)));
+    site
+      ..up = true
+      ..emptyAnswer = true;
+    expect(await PunchQueue.I.flush(), 0);
+    expect(PunchQueue.I.count.value, 1);
+    expect(PunchQueue.I.problems.value, isEmpty);
+  });
+
+  test('Send now pressed while a send is running gets that send\'s answer, and nothing goes twice', () async {
+    await PunchQueue.I.add(punch('1', 'IN', at(8, 2)));
+    site.up = true;
+    final first = PunchQueue.I.flush();
+    final again = PunchQueue.I.flush();
+    expect(await first, 1);
+    expect(await again, 1, reason: 'not a 0 that reads as "still no signal"');
+    expect(site.posted, hasLength(1));
   });
 
   test('a punch the site refuses is not kept for ever: it leaves with the site\'s own sentence', () async {
@@ -169,11 +227,22 @@ void main() {
       expect(Session.I.employeeId, 'HR-EMP-1');
     });
 
-    test('has nothing to open on if this phone never got far enough to remember anybody', () async {
+    test('has nothing to open on if this phone never got far enough to remember anybody — and says no signal, '
+        'never the sign-in form for a signed-in phone', () async {
       await AuthStore.saveLogin(siteUrl: 'https://site.invalid', email: 'a@x.in', password: 'pw-123456');
       Session.I.offlineStart = false;
-      final emp = await Api.restore();
-      expect(emp, isNull);
+      await expectLater(Api.restore(), throwsA(isA<NoSignalAtStart>()));
+      expect(Session.I.offlineStart, isFalse);
+      // The login is kept for when the signal comes back.
+      expect((await AuthStore.load()).canReauth, isTrue);
+    });
+
+    test('never opens offline as the last person on a shared phone', () async {
+      await AuthStore.saveEmployee({'name': 'HR-EMP-9', 'employee_name': 'Somebody Else'}, login: 'b@x.in');
+      await AuthStore.saveLogin(siteUrl: 'https://site.invalid', email: 'a@x.in', password: 'pw-123456');
+      Session.I.employee = null;
+      await expectLater(Api.restore(), throwsA(isA<NoSignalAtStart>()));
+      expect(Session.I.employee, isNull);
     });
   });
 }

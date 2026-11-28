@@ -10,6 +10,7 @@ import 'package:manna_hr_app/core/first_password.dart';
 import 'package:manna_hr_app/core/leave_rules.dart';
 import 'package:manna_hr_app/core/offline_punches.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
+import 'package:manna_hr_app/core/roster.dart' show kNightFromHour, kNightLongest;
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
 
@@ -54,7 +55,6 @@ class Api {
     Session.I.sid = creds.sid;
     _wireReauth();
     if (creds.sid.isEmpty && !creds.canReauth) return null;
-    ServerClock.I.onSkew = (d) => AuthStore.saveSkew(d);
     final kept = await AuthStore.loadSkew();
     if (kept != null) ServerClock.I.restore(kept);
 
@@ -65,10 +65,16 @@ class Api {
       try {
         ok = await _passwordLogin(creds.email, creds.password);
       } catch (e) {
-        // No signal. Somebody at a gate with no network is still somebody who
-        // has to punch: open on what this phone remembers about its owner, and
-        // keep the punch until the site can be reached (core/offline_punches).
-        if (isNetworkFailure(e)) return _startOffline(creds.email);
+        // No signal, or the site answering badly (a 429, a gateway page).
+        // Somebody at a gate is still somebody who has to punch: open on what
+        // this phone remembers about its owner, and keep the punch until the
+        // site can be reached (core/offline_punches). Only the site saying the
+        // password is wrong (`!ok` below) is a reason for the sign-in form.
+        if (isNetworkFailure(e) || e is DioException) {
+          final emp = await _startOffline(creds.email);
+          if (emp == null) throw const NoSignalAtStart();
+          return emp;
+        }
         rethrow;
       }
       if (!ok) return null;
@@ -79,7 +85,7 @@ class Api {
       // would come back "Invalid Request".
       await _fetchCsrf();
     }
-    return _resolveQuietly();
+    return _resolveQuietly(remembered: true);
   }
 
   /// Sign in. Everything the app reads and writes afterwards runs under this
@@ -89,48 +95,67 @@ class Api {
     required String password,
   }) async {
     Session.I.init(url: site);
+    // Somebody new may be signing in on this phone: nothing of the last person
+    // (their employee record, HR or not) may carry over to them.
+    Session.I.clearAuth();
     _wireReauth();
-    // The Emp Code and a date of birth however they were typed — `mrp293`,
-    // `2432005` — then in the form the site holds them (core/first_password.dart).
-    // What worked is what is kept, so the silent re-login and the first-password
-    // check both see the real password.
-    for (final (usr, pwd) in signInTries(email, password, today: ServerClock.I.now())) {
-      if (await _passwordLogin(usr, pwd)) {
-        await AuthStore.saveLogin(siteUrl: site, email: usr, password: pwd);
-        return _resolveQuietly();
-      }
+    // Exactly what was typed (HR, 28 November 2026): the email and password HR
+    // created with the employee. No Emp Code, no date-of-birth spellings tried.
+    final usr = email.trim();
+    if (await _passwordLogin(usr, password)) {
+      await AuthStore.saveLogin(siteUrl: site, email: usr, password: password);
+      Session.I.signInAgain.value = false;
+      return _resolveQuietly();
     }
-    throw const Refused('Wrong Emp Code or password.');
+    throw const Refused('Wrong email or password.');
   }
 
   /// Opens on the remembered employee, with no session. Null when this phone
   /// has never been signed in far enough to remember one: then the sign-in
   /// screen is the right answer.
   static Future<Map<String, dynamic>?> _startOffline(String email) async {
-    final emp = await AuthStore.loadEmployee();
+    final emp = await AuthStore.loadEmployee(forLogin: email);
     if (emp == null) return null;
     Session.I.employee = emp;
-    Session.I.user = email;
+    Session.I.email = email;
     Session.I.offlineStart = true;
     return emp;
+  }
+
+  /// Opens on the remembered employee now, while a slow start goes on behind
+  /// it (`_Gate`). False when this phone remembers nobody for the kept login.
+  static Future<bool> startOfflineNow() async {
+    final creds = await AuthStore.load();
+    if (!creds.canReauth) return false;
+    return await _startOffline(creds.email) != null;
   }
 
   /// Gets a live session back after an offline start (or any time the token is
   /// missing): signs in with the kept login. False while the site cannot be
   /// reached, which is not an error: the punches simply keep waiting.
   static Future<bool> goOnline() async {
+    if (Session.I.signInAgain.value) return false;
     try {
       final creds = await AuthStore.load();
       if (!creds.canReauth) return false;
       final ok = await _passwordLogin(creds.email, creds.password);
       if (ok) {
         Session.I.offlineStart = false;
-        await _resolveQuietly();
+        await _resolveQuietly(remembered: true);
+      } else {
+        _keptPasswordRefused();
       }
       return ok;
     } catch (_) {
       return false;
     }
+  }
+
+  /// The site said no to the password this phone keeps. Silent sign-ins stop
+  /// here — ten wrong ones in a row lock the login — and the app asks the
+  /// person to sign in again (app.dart).
+  static void _keptPasswordRefused() {
+    Session.I.signInAgain.value = true;
   }
 
   /// This person's date of birth, as the site holds it (`YYYY-MM-DD`), or null.
@@ -168,24 +193,48 @@ class Api {
   /// error about a password they typed correctly. So it returns null and the
   /// punch screen — which asks again on open — is where the real reason is
   /// shown.
-  static Future<Map<String, dynamic>?> _resolveQuietly() async {
+  ///
+  /// [remembered]: the kept login is signing back in (the app opening, or the
+  /// signal coming back), so when the lookup cannot be made the employee this
+  /// phone remembers for that same login stands in. Without it a flaky start
+  /// (the sign-in answered, the lookup timed out) read "No employee record
+  /// carries this login" and switched punching off. Never for a fresh sign-in
+  /// on the form, which may be somebody else.
+  static Future<Map<String, dynamic>?> _resolveQuietly({bool remembered = false}) async {
     try {
       return await resolveEmployee();
     } catch (_) {
-      return null;
+      if (!remembered) return null;
+      final kept = Session.I.employee ?? await AuthStore.loadEmployee(forLogin: Session.I.email);
+      if (kept != null) Session.I.employee = kept;
+      return kept;
     }
   }
 
   static void _wireReauth() {
     Session.I.reauthenticate = () async {
+      if (Session.I.signInAgain.value) return false;
       final creds = await AuthStore.load();
       if (!creds.canReauth) return false;
-      return _passwordLogin(creds.email, creds.password);
+      final ok = await _passwordLogin(creds.email, creds.password);
+      if (!ok) _keptPasswordRefused();
+      return ok;
     };
+    Session.I.refreshCsrf = _fetchCsrf;
+    // Every run keeps what it learns about the site's clock, a first sign-in
+    // included: the next start with no signal stamps kept punches with it.
+    ServerClock.I.onSkew = (d) => AuthStore.saveSkew(d);
   }
 
+  /// Signs in with [email] and [password], silently or from the form.
+  ///
+  /// **Clears the session, not the person.** A silent re-login (the site's
+  /// session expired while a kept punch was being sent) is the same login
+  /// coming back. Forgetting the employee here made the very next write say
+  /// "not linked to an employee record", and a kept punch was dropped as
+  /// refused. [login] forgets the person itself, before the form's sign-in.
   static Future<bool> _passwordLogin(String email, String password) async {
-    Session.I.clearAuth();
+    Session.I.clearSession();
     final r = await Session.I.dio.post(
       '/api/method/login',
       data: {'usr': email, 'pwd': password},
@@ -195,7 +244,16 @@ class Api {
         maxRedirects: 5,
       ),
     );
-    if (r.statusCode != 200) return false;
+    final code = r.statusCode ?? 0;
+    // 401 is the site saying the password is wrong (403: the login may not
+    // sign in). Anything else — 429 when the site is rationing requests, a
+    // proxy's 404 — is the site answering badly, not a wrong password: it must
+    // not send somebody signed in to the sign-in form, nor read "Wrong Emp
+    // Code or password" there.
+    if (code == 401 || code == 403) return false;
+    if (code != 200) {
+      throw DioException.badResponse(statusCode: code, requestOptions: r.requestOptions, response: r);
+    }
 
     var sid = '';
     for (final c in r.headers.map['set-cookie'] ?? const <String>[]) {
@@ -208,11 +266,17 @@ class Api {
     Session.I.email = email;
     await AuthStore.saveSid(sid);
     await _fetchCsrf();
-    // Falls back to the typed word when the site will not say, which rounds the
-    // safe way: looking somebody up by what they typed can still find them,
-    // and looking them up by nothing cannot.
+    // When the site will not say who this is (a dropped answer), the user it
+    // named before stands — the same person signing back in. The typed Emp
+    // Code is never put in its place: it is never what `Employee.user_id`
+    // holds, and looking somebody up by it says "not linked" to a person who
+    // is. An email login is its own user id, so it may stand in.
     final who = await whoami();
-    Session.I.user = (who.isEmpty || who == 'Guest') ? email : who;
+    if (who.isNotEmpty && who != 'Guest') {
+      Session.I.user = who;
+    } else if (Session.I.user.isEmpty && email.contains('@')) {
+      Session.I.user = email;
+    }
     return true;
   }
 
@@ -240,6 +304,9 @@ class Api {
     try {
       final r = await Session.I.dio
           .get('/api/method/frappe.auth.get_logged_user', options: Session.noRetry);
+      // Only a 200 says who this is. A 429 or a 403 can carry a "message" too,
+      // and "Too many requests" is nobody's user id.
+      if (r.statusCode != 200) return '';
       final u = (r.data is Map) ? r.data['message'] : null;
       return u is String ? u : '';
     } catch (_) {
@@ -253,14 +320,22 @@ class Api {
   /// not answer is "no": the employee's side is the one that cannot show
   /// anybody else's day.
   static Future<bool> isAdmin() async {
+    final login = Session.I.email;
     try {
       final r = await Session.I.dio.get('/api/method/frappe.client.has_permission',
           queryParameters: {'doctype': 'Employee', 'docname': '', 'perm_type': 'create'});
       final m = (r.data is Map) ? r.data['message'] : null;
-      Session.I.isAdmin = m is Map && m['has_permission'] == true;
+      if (m is Map) {
+        Session.I.isAdmin = m['has_permission'] == true;
+        if (login.isNotEmpty) await AuthStore.saveAdmin(login, Session.I.isAdmin);
+        return Session.I.isAdmin;
+      }
     } catch (_) {
-      Session.I.isAdmin = false;
+      // Fall through to what this login was last time.
     }
+    // The site could not be asked: what it said last time for this login, so
+    // HR does not land on the employee side over one slow read.
+    Session.I.isAdmin = login.isNotEmpty && (await AuthStore.loadAdmin(login) ?? false);
     return Session.I.isAdmin;
   }
 
@@ -303,28 +378,51 @@ class Api {
   /// what every silent re-login sends (`core/auth_store.dart`).
   static Future<void> changePassword({required String current, required String next}) async {
     if (current.isEmpty || next.isEmpty) throw const Refused('Type both passwords.');
-    final r = await Session.I.dio.post(
-      '/api/method/frappe.core.doctype.user.user.update_password',
-      data: {'old_password': current, 'new_password': next, 'logout_all_sessions': 0},
-      options: Options(contentType: Headers.formUrlEncodedContentType),
-    );
+    final email = Session.I.email;
+    final Response<dynamic> r;
+    try {
+      r = await Session.I.dio.post(
+        '/api/method/frappe.core.doctype.user.user.update_password',
+        data: {'old_password': current, 'new_password': next, 'logout_all_sessions': 0},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+    } catch (e) {
+      // The answer was lost — but the change may have been made. Signing in
+      // with the new password tells which: if it works, the change is done and
+      // kept; otherwise the old password still stands and nothing is changed.
+      if (!isNetworkFailure(e)) rethrow;
+      try {
+        if (await _passwordLogin(email, next)) {
+          await AuthStore.saveLogin(siteUrl: Session.I.siteUrl, email: email, password: next);
+          return;
+        }
+      } catch (_) {}
+      rethrow;
+    }
     if ((r.statusCode ?? 0) >= 300) {
       throw Refused(frappeMessage(r.data) ?? 'The site refused the new password.');
     }
-    final email = Session.I.email;
     await AuthStore.saveLogin(siteUrl: Session.I.siteUrl, email: email, password: next);
-    await _passwordLogin(email, next);
+    // The password has changed on the site and is kept here: that is done.
+    // Signing in again with it is only the session, and a lost signal now must
+    // not read as "the change failed"; the next request signs in by itself.
+    try {
+      await _passwordLogin(email, next);
+    } catch (_) {}
   }
 
   static Future<void> logout() async {
     Session.I.reauthenticate = null;
     try {
-      await Session.I.dio.get('/api/method/logout');
+      // A few seconds, not a time-out's worth: signing out is local first.
+      await Session.I.dio.get('/api/method/logout').timeout(const Duration(seconds: 5));
     } catch (_) {
       // Signing out locally is the part that matters. A site that cannot be
       // reached must not leave somebody stuck signed in on a shared handset.
     }
     Session.I.clearAuth();
+    Session.I.offlineStart = false;
+    Session.I.signInAgain.value = false;
     await AuthStore.clear();
   }
 
@@ -356,19 +454,30 @@ class Api {
   /// The long list, then the short one, then null — see the note at the top of
   /// this class. Null is "the site would not answer", which is a different
   /// finding from an empty list and must not be drawn as one.
+  ///
+  /// The short list is tried only when the site *answered* (a field it has
+  /// not got). With no signal it would only wait out the same time-out a second
+  /// time, which doubled every spinner on a dead network. [onNoSignal] says
+  /// which kind of null this is.
   static Future<List<Map<String, dynamic>>?> _read(
     String doctype,
     List<String> long,
     List<String> short, {
     List<List<dynamic>>? filters,
     String orderBy = 'modified desc',
+    void Function()? onNoSignal,
   }) async {
     try {
       return await _list(doctype, long, filters: filters, orderBy: orderBy);
-    } catch (_) {
+    } catch (e) {
+      if (isNetworkFailure(e)) {
+        onNoSignal?.call();
+        return null;
+      }
       try {
         return await _list(doctype, short, filters: filters, orderBy: orderBy);
-      } catch (_) {
+      } catch (e) {
+        if (isNetworkFailure(e)) onNoSignal?.call();
         return null;
       }
     }
@@ -388,8 +497,21 @@ class Api {
   /// so and names the fix rather than showing an empty month. HR sets `user_id`
   /// on the Employee record.
   static Future<Map<String, dynamic>?> resolveEmployee() async {
-    final who = Session.I.user.isNotEmpty ? Session.I.user : Session.I.email;
-    if (who.isEmpty) return null;
+    var who = Session.I.user;
+    if (who.isEmpty || !who.contains('@')) {
+      // Not known yet (an offline start keeps only the typed Emp Code): ask.
+      final asked = await whoami();
+      if (asked.isNotEmpty && asked != 'Guest') {
+        Session.I.user = asked;
+        who = asked;
+      } else if (who.isEmpty && Session.I.email.contains('@')) {
+        who = Session.I.email;
+      }
+    }
+    if (who.isEmpty || !who.contains('@')) {
+      throw const Refused('The site would not say which employee you are. Check your signal '
+          'and pull down to try again.');
+    }
     final rows = await _read(
       'Employee',
       _empFields,
@@ -416,7 +538,7 @@ class Api {
         (a['status'] == 'Active' ? 0 : 1).compareTo(b['status'] == 'Active' ? 0 : 1));
     Session.I.employee = rows.first;
     // Remembered, for opening with no signal. Not read back for anything else.
-    await AuthStore.saveEmployee(rows.first);
+    await AuthStore.saveEmployee(rows.first, login: Session.I.email);
     return rows.first;
   }
 
@@ -444,10 +566,10 @@ class Api {
       // The site did not answer. Show the day as last read rather than an empty
       // one: an empty day offers IN to somebody already in.
       punchesFromCache = true;
-      return await AuthStore.loadDayPunches(iso) ?? const [];
+      return await AuthStore.loadDayPunches(iso, employee: emp) ?? const [];
     }
     punchesFromCache = false;
-    await AuthStore.saveDayPunches(iso, rows);
+    await AuthStore.saveDayPunches(iso, rows, employee: emp);
     return rows;
   }
 
@@ -457,10 +579,23 @@ class Api {
   /// Whether a punch with this time and direction is already on the site, asked
   /// before a kept punch is sent again, so a send whose answer was lost on the
   /// way back is not made twice.
+  ///
+  /// **Within a few minutes, not to the second.** A punch tried live and kept
+  /// when its answer was lost was stamped by the *site's* clock on arrival,
+  /// after the photo upload and the send, while the kept copy carries the
+  /// moment of the press. Matched to the second they missed each other, and the
+  /// queue sent a second IN. Two real punches the same way inside this window
+  /// are one punch pressed twice.
   static Future<bool> punchExists(String employee, String time, String logType) async {
+    final at = DateTime.tryParse(time.replaceFirst(' ', 'T'));
     final rows = await _list(kCheckinDoctype, const ['name'], filters: [
       ['employee', '=', employee],
-      ['time', '=', time],
+      if (at == null)
+        ['time', '=', time]
+      else ...[
+        ['time', '>=', stampOf(at.subtract(kSamePunchWindow))],
+        ['time', '<=', stampOf(at.add(kSamePunchWindow))],
+      ],
       ['log_type', '=', logType],
     ], limit: 1);
     return rows.isNotEmpty;
@@ -479,25 +614,48 @@ class Api {
   static Future<MonthData> month(String ym, {Map<String, dynamic>? who}) async {
     final person = who ?? Session.I.employee;
     final emp = '${person?['name'] ?? ''}';
-    if (emp.isEmpty) return MonthData.empty();
+    if (emp.isEmpty) {
+      // Not a month nobody came in: there is nobody to read it for.
+      return MonthData(
+        punches: const [],
+        leave: const [],
+        corrections: const [],
+        holidays: const [],
+        punchesUnread: true,
+        error: 'No employee record is linked to this login, so there is no month to show. '
+            'Ask HR to set your user on your Employee record.',
+      );
+    }
 
-    // `-01` and `-31` rather than the real last day: a `<=` against `-31`
-    // catches every month, and no date that is not in the month can sort
-    // between them. Frappe compares these as strings too.
+    // The month's real last day. `-31` read well as a string, but the site
+    // turns a Date filter into a date first, and 31 November is not one: in
+    // every month without a 31st it refused the leave and correction reads,
+    // and approved leave was drawn as Absent.
     final from = '$ym-01';
-    final to = '$ym-31';
+    final to = '$ym-${_lastDay(ym)}';
 
+    var noSignal = false;
+    void off() => noSignal = true;
+    // The holidays beside the three reads rather than after them: one wait on a
+    // slow network, not two.
+    final holidays = who == null
+        ? _myHolidays(from, to, person, onNoSignal: off)
+        : _holidays(person, onNoSignal: off);
     final results = await Future.wait([
       _read(
         kCheckinDoctype,
         _punchFields,
         _punchFieldsMin,
+        // From the evening before the 1st to the morning after the last day:
+        // a night shift at either edge of the month is one day, read whole
+        // (core/roster.dart byWorkDay).
         filters: [
           ['employee', '=', emp],
-          ['time', '>=', '$from 00:00:00'],
-          ['time', '<=', '$to 23:59:59'],
+          ['time', '>=', '${_dayBefore(from)} ${kNightFromHour.toString().padLeft(2, '0')}:00:00'],
+          ['time', '<=', '${_dayAfter(to)} ${(kNextDayHours - 1).toString().padLeft(2, '0')}:59:59'],
         ],
         orderBy: 'time asc',
+        onNoSignal: off,
       ),
       // Overlapping, not contained. A leave that started in July and runs into
       // August covers days in this month, and asking for `from_date >= the
@@ -513,6 +671,7 @@ class Api {
           ['to_date', '>=', from],
         ],
         orderBy: 'from_date asc',
+        onNoSignal: off,
       ),
       _read(
         kRegularizationDoctype,
@@ -525,6 +684,7 @@ class Api {
           ['attendance_date', '<=', to],
         ],
         orderBy: 'attendance_date asc',
+        onNoSignal: off,
       ),
     ]);
 
@@ -534,14 +694,19 @@ class Api {
       if (results[2] == null) 'corrections',
     ];
 
+    final hols = await holidays;
     return MonthData(
       punches: results[0] ?? const [],
       leave: results[1] ?? const [],
       corrections: results[2] ?? const [],
-      holidays: who == null ? await _myHolidays(from, '$ym-${_lastDay(ym)}', person) : await _holidays(person),
+      holidays: hols,
+      punchesUnread: results[0] == null,
+      offline: noSignal,
       error: refused.isEmpty
           ? ''
-          : 'The site would not answer for ${refused.join(', ')}.',
+          : noSignal
+              ? 'No signal, so this month could not be read. Pull down to try again.'
+              : 'The site would not answer for ${refused.join(', ')}. Pull down to try again.',
     );
   }
 
@@ -556,18 +721,57 @@ class Api {
   /// with an error, and the old reads are tried instead; the calendar treats
   /// Sundays as week offs either way (core/roster.dart).
   static Future<List<Map<String, dynamic>>> _myHolidays(
-      String from, String to, Map<String, dynamic>? person) async {
+      String from, String to, Map<String, dynamic>? person, {void Function()? onNoSignal}) async {
     try {
       final r = await Session.I.dio.get('/api/method/manna_hr.api.my_holidays',
           queryParameters: {'from_date': from, 'to_date': to});
       final m = (r.data is Map) ? r.data['message'] : null;
       if (r.statusCode == 200 && m is Map && m['holidays'] is List) {
-        return (m['holidays'] as List).cast<Map<String, dynamic>>();
+        return (m['holidays'] as List).whereType<Map>().map((h) => h.cast<String, dynamic>()).toList();
       }
-    } catch (_) {
-      // Fall through to the old reads.
+    } catch (e) {
+      // No signal: the old reads would only wait out the same time-out again.
+      if (isNetworkFailure(e)) {
+        onNoSignal?.call();
+        return const [];
+      }
+      // Otherwise fall through to the old reads.
     }
-    return _holidays(person);
+    return _holidays(person, onNoSignal: onNoSignal);
+  }
+
+  static String _dayBefore(String iso) {
+    final d = DateTime.tryParse(iso);
+    return d == null ? iso : isoDay(DateTime(d.year, d.month, d.day - 1));
+  }
+
+  static String _dayAfter(String iso) {
+    final d = DateTime.tryParse(iso);
+    return d == null ? iso : isoDay(DateTime(d.year, d.month, d.day + 1));
+  }
+
+  /// Last night's punch-in, when its shift is still running: somebody in at
+  /// 20:30 yesterday is in at 02:00 today, and a card reading only today said
+  /// "You haven't punched in" and offered a second IN. Null when there is no
+  /// such punch, or it could not be read.
+  static Future<Map<String, dynamic>?> nightArrival(String iso) async {
+    final emp = Session.I.employeeId;
+    if (emp.isEmpty) return null;
+    try {
+      final rows = await _list(kCheckinDoctype, const ['name', 'time', 'log_type'], filters: [
+        ['employee', '=', emp],
+        ['time', '>=', '${_dayBefore(iso)} ${kNightFromHour.toString().padLeft(2, '0')}:00:00'],
+        ['time', '<', '$iso 00:00:00'],
+      ], orderBy: 'time desc', limit: 1);
+      if (rows.isEmpty) return null;
+      final last = rows.first;
+      if ('${last['log_type'] ?? ''}'.toUpperCase() == kLogOut) return null;
+      final at = DateTime.tryParse('${last['time'] ?? ''}'.replaceFirst(' ', 'T'));
+      if (at == null || ServerClock.I.now().difference(at) > kNightLongest) return null;
+      return last;
+    } catch (_) {
+      return null;
+    }
   }
 
   static String _lastDay(String ym) {
@@ -582,7 +786,8 @@ class Api {
   /// **A month read without it calls every Sunday an absence.** So a site that
   /// names neither is worth saying out loud rather than drawing, which is what
   /// the empty list lets the calendar do.
-  static Future<List<Map<String, dynamic>>> _holidays(Map<String, dynamic>? person) async {
+  static Future<List<Map<String, dynamic>>> _holidays(Map<String, dynamic>? person,
+      {void Function()? onNoSignal}) async {
     var listName = '${person?['holiday_list'] ?? ''}';
     if (listName.isEmpty) {
       final company = '${person?['company'] ?? ''}';
@@ -594,6 +799,7 @@ class Api {
         filters: [
           ['name', '=', company]
         ],
+        onNoSignal: onNoSignal,
       );
       listName = '${(rows?.isNotEmpty ?? false) ? rows!.first['default_holiday_list'] ?? '' : ''}';
     }
@@ -605,12 +811,14 @@ class Api {
       final r = await Session.I.dio
           .get('${_res('Holiday List')}/${Uri.encodeComponent(listName)}');
       final doc = (r.data is Map) ? r.data['data'] : null;
-      final rows = (doc is Map && doc['holidays'] is List)
-          ? (doc['holidays'] as List).cast<Map<String, dynamic>>()
-          : <Map<String, dynamic>>[];
+      if (doc is! Map || doc['holidays'] is! List) return const [];
+      final rows = (doc['holidays'] as List).whereType<Map>().map((h) => h.cast<String, dynamic>()).toList();
+      // Only a list the site actually sent is kept: a refusal or an empty
+      // answer must not stick for as long as the app is open.
       _holidayCache[listName] = rows;
       return rows;
-    } catch (_) {
+    } catch (e) {
+      if (isNetworkFailure(e)) onNoSignal?.call();
       return const [];
     }
   }
@@ -633,7 +841,12 @@ class Api {
       ],
       orderBy: 'attendance_date desc',
     );
-    return (rows ?? const []).take(limit).toList();
+    // "Could not read" is not "you have asked for none", and the screens draw
+    // an empty list as the second.
+    if (rows == null) {
+      throw const Refused('Your corrections could not be read. Check your signal and pull down to try again.');
+    }
+    return rows.take(limit).toList();
   }
 
   /// One whole Employee record — the profile. The list read behind
@@ -708,8 +921,11 @@ class Api {
     String? device,
     String? at,
     bool queued = false,
+    String? employee,
   }) async {
-    final emp = Session.I.employeeId;
+    // A kept punch is sent for the person who made it, whoever is signed in.
+    // The queue only sends it while that person is (punch_queue.dart).
+    final emp = employee ?? Session.I.employeeId;
     if (emp.isEmpty) {
       throw const Refused(
           'Your login is not linked to an employee record, so there is nobody '
@@ -734,6 +950,9 @@ class Api {
     if ((device ?? '').isNotEmpty) doc[kDeviceInfoField] = device;
     if ((photoUrl ?? '').isNotEmpty) doc[kPhotoField] = photoUrl;
 
+    // No token, no write: a start on a weak signal can lose the page it comes
+    // from. Asked for now, rather than learning it from an "Invalid Request".
+    if (Session.I.csrfToken.isEmpty) await _fetchCsrf();
     final r = await Session.I.dio.post(_res(kCheckinDoctype), data: doc);
     final ok = (r.statusCode ?? 0) >= 200 && (r.statusCode ?? 0) < 300;
     if ((r.statusCode ?? 0) >= 500) {
@@ -750,7 +969,19 @@ class Api {
           'The site refused the punch and said nothing about why.');
     }
     final made = (r.data is Map) ? r.data['data'] : null;
-    return made is Map ? made.cast<String, dynamic>() : <String, dynamic>{};
+    if (made is! Map || '${made['name'] ?? ''}'.isEmpty) {
+      // A 2xx with no checkin in it did not come from the site's insert: a
+      // network in between answered for it. Not recorded, so kept and tried
+      // again (the queue looks before it sends, so a punch that did land is
+      // not made twice).
+      throw DioException(
+        requestOptions: r.requestOptions,
+        response: r,
+        type: DioExceptionType.unknown,
+        message: 'The answer to the punch had no checkin in it.',
+      );
+    }
+    return made.cast<String, dynamic>();
   }
 
   /// Put the punch photo on the site, and say where it went.
@@ -763,7 +994,11 @@ class Api {
   /// Returns null rather than throwing on failure. A photo that did not upload
   /// must not cost the punch it was meant to go with; the dashboard draws that
   /// punch as having no photo, which is the flag a human reads.
-  static Future<String?> uploadPunchPhoto(String path) async {
+  ///
+  /// [onNoSignal] is called when the failure was "could not reach the site":
+  /// the punch screen then keeps the punch on the phone at once, photo and all,
+  /// instead of making somebody at a gate wait out a second time-out.
+  static Future<String?> uploadPunchPhoto(String path, {void Function()? onNoSignal}) async {
     try {
       final stamp = stampOf(ServerClock.I.now()).replaceAll(RegExp(r'[^0-9]'), '');
       final form = FormData.fromMap({
@@ -781,7 +1016,8 @@ class Api {
       final msg = (r.data is Map) ? r.data['message'] : null;
       final url = msg is Map ? '${msg['file_url'] ?? ''}' : '';
       return url.isEmpty ? null : url;
-    } catch (_) {
+    } catch (e) {
+      if (isNetworkFailure(e)) onNoSignal?.call();
       return null;
     }
   }
@@ -925,6 +1161,8 @@ class MonthData {
     required this.corrections,
     required this.holidays,
     required this.error,
+    this.punchesUnread = false,
+    this.offline = false,
   });
 
   factory MonthData.empty() => MonthData(
@@ -934,6 +1172,14 @@ class MonthData {
         holidays: const [],
         error: '',
       );
+
+  /// The punches could not be read. The month is then not drawn: every
+  /// workday with no punch in an empty list reads as Absent, which is a false
+  /// thing to show somebody about their pay.
+  final bool punchesUnread;
+
+  /// A read failed for want of signal, not because the site refused it.
+  final bool offline;
 
   final List<Map<String, dynamic>> punches;
   final List<Map<String, dynamic>> leave;
@@ -946,5 +1192,7 @@ class MonthData {
 
   /// True when nothing says which days are Sundays. Every Sunday then reads as
   /// a day nobody punched on, which reads as absent — worth saying on screen.
-  bool get noHolidayList => holidays.isEmpty;
+  /// Only when the site was reached: with no signal there is nothing to tell
+  /// HR about.
+  bool get noHolidayList => holidays.isEmpty && !offline;
 }

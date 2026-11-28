@@ -26,13 +26,49 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Manna HR'), findsOneWidget);
-    // Each box is named over it, not inside it (the FlutterFlow design).
-    expect(find.text('Emp Code'), findsOneWidget);
+    // Each box is named over it, not inside it (the FlutterFlow design). Email
+    // and password only (HR, 28 November 2026).
+    expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2));
     expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
-    // The first password, said where it is typed (10 November 2026).
-    expect(find.textContaining('your date of birth, DDMMYYYY'), findsOneWidget);
+    // HR sets the password now: nothing says it is the date of birth.
+    expect(find.textContaining('date of birth'), findsNothing);
+    expect(find.textContaining('Emp Code'), findsNothing);
+  });
+
+  testWidgets('the sign-in form takes only an email, and says so kindly before asking the site', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'MRP-103');
+    await tester.enterText(find.byType(TextField).last, '24032005');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in with the email HR gave you.'), findsOneWidget);
+    await tester.ensureVisible(find.text('Forgot password?'));
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ask HR to reset it.'), findsOneWidget);
+  });
+
+  test('only an email HR could have given is an email to sign in with', () {
+    expect(emailProblem('paul@mannarubber.com'), isNull);
+    expect(emailProblem('  paul.sunny@manna.co.in '), isNull);
+    for (final bad in [
+      '',
+      'MRP-103',
+      'paul',
+      'paul@',
+      '@mannarubber.com',
+      'paul@mannarubber',
+      'paul@@mannarubber.com',
+      'paul@mannarubber.com.',
+      'paul@.com',
+      'paul sunny@mannarubber.com',
+      'mrp-293@phone.manna.invalid',
+    ]) {
+      expect(emailProblem(bad), 'Sign in with the email HR gave you.', reason: '"$bad" is not one');
+    }
   });
 
   testWidgets('the new password screen refuses the date of birth before asking the site', (tester) async {
@@ -56,7 +92,7 @@ void main() {
     expect(find.text('Site address'), findsNothing);
     expect(find.widgetWithText(TextField, 'Site URL'), findsNothing);
     expect(find.textContaining('frappe.cloud'), findsNothing);
-    // Emp Code and password: the only two boxes.
+    // Email and password: the only two boxes.
     expect(find.byType(TextField), findsNWidgets(2));
   });
 

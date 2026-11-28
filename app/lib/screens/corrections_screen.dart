@@ -85,10 +85,11 @@ class _CorrectionsScreenState extends State<CorrectionsScreen> {
                     final outAt = clockOf(r['requested_out']);
                     return Card(
                       child: ListTile(
-                        title: Row(children: [
+                        // Wraps rather than overflowing: a 320 phone in large
+                        // text has no room for a date and "Pending Approval".
+                        title: Wrap(spacing: 10, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
                           Text(dmy('${r['attendance_date'] ?? ''}'),
                               style: const TextStyle(fontWeight: FontWeight.w700)),
-                          const SizedBox(width: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),

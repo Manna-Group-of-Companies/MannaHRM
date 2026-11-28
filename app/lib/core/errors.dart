@@ -17,20 +17,31 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'package:manna_hr_app/core/offline_punches.dart' show isNetworkFailure;
+
 /// True when the failure is the network rather than the request — the
 /// distinction that decides whether retrying the same thing is worth anything.
+/// A server fault (5xx) is the site answering, so it is not this.
 bool isOffline(Object? e) {
-  if (e is! DioException) return false;
-  switch (e.type) {
-    case DioExceptionType.connectionError:
-    case DioExceptionType.connectionTimeout:
-      return true;
-    case DioExceptionType.unknown:
-      return '${e.error}'.contains('SocketException') ||
-          '${e.error}'.contains('Failed host lookup');
-    default:
-      return false;
-  }
+  if (e == null) return false;
+  if (e is DioException && e.type == DioExceptionType.badResponse) return false;
+  return isNetworkFailure(e);
+}
+
+/// What every screen says when the phone cannot reach the site. Said the same
+/// on the sign-in form, a leave request and a correction — a punch is never
+/// shown this, because a punch with no signal is kept on the phone instead.
+const String kNoSignal = 'No signal. Check your connection and try again.';
+
+/// A kept login, no signal, and nothing remembered on this phone to open on —
+/// an HR login with no Employee record, or a phone that never got that far.
+/// Never the sign-in form for somebody who is signed in: the start-up screen
+/// says there is no signal and offers to try again (app.dart).
+class NoSignalAtStart implements Exception {
+  const NoSignalAtStart();
+
+  @override
+  String toString() => kNoSignal;
 }
 
 /// A refusal this app raised itself, already written for the person reading it.
@@ -49,12 +60,15 @@ class Refused implements Exception {
 
 /// One sentence, fit to show somebody at a gate.
 String humanError(Object? e) {
-  if (e == null) return 'Something went wrong.';
+  if (e == null) return 'Something went wrong. Try again.';
   if (e is Refused) return e.message;
 
   if (e is! DioException) {
-    final s = _clean('$e');
-    return s.isEmpty ? 'Something went wrong.' : s;
+    // Not the site's answer: either no signal under another name, or this
+    // app's own slip. Never its raw words — "type 'Null' is not a subtype of
+    // type 'String'" on a phone reads as the app being broken, and tells
+    // nobody what to do.
+    return isOffline(e) ? kNoSignal : 'Something went wrong. Try again.';
   }
 
   switch (e.type) {
@@ -64,20 +78,14 @@ String humanError(Object? e) {
     case DioExceptionType.transformTimeout:
       return 'The site took too long to answer. Check your signal and try again.';
     case DioExceptionType.connectionError:
-      return 'No connection. Try again once you have signal — nothing has been '
-          'recorded yet, so punch again rather than assuming it went through.';
+      return kNoSignal;
     case DioExceptionType.badCertificate:
-      return 'Could not verify the site. If you are on a public or hotel '
-          'network, try mobile data.';
+      return 'Could not reach the site safely. If you are on a public or office '
+          'Wi-Fi, sign in to it or use mobile data.';
     case DioExceptionType.cancel:
       return 'Cancelled.';
     case DioExceptionType.unknown:
-      if (isOffline(e)) {
-        return 'No connection. Try again once you have signal — nothing has '
-            'been recorded yet, so punch again rather than assuming it went '
-            'through.';
-      }
-      return 'Something went wrong. Try again.';
+      return isOffline(e) ? kNoSignal : 'Something went wrong. Try again.';
     case DioExceptionType.badResponse:
       return _fromResponse(e.response);
   }

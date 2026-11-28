@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'package:manna_hr_app/core/auth_store.dart';
 import 'package:manna_hr_app/core/errors.dart';
+import 'package:manna_hr_app/core/offline_punches.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
 import 'package:manna_hr_app/screens/punch_screen.dart';
 import 'package:manna_hr_app/services/api.dart';
+import 'package:manna_hr_app/services/punch_queue.dart';
 import 'package:manna_hr_app/ui/brand.dart';
 
 /// Today's punches for this login, with a Punch In and a Punch Out button.
@@ -31,25 +36,102 @@ class TodayCard extends StatefulWidget {
   State<TodayCard> createState() => _TodayCardState();
 }
 
-class _TodayCardState extends State<TodayCard> {
+class _TodayCardState extends State<TodayCard> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _today = const [];
   bool _loading = true;
   String _error = '';
 
+  /// The day [_today] is for, and when it was read: the app comes back to the
+  /// front the next morning with yesterday still on the card otherwise, and
+  /// the bright button pointing yesterday's way.
+  String _readFor = '';
+  DateTime _readAt = DateTime.now();
+
+  /// The day last seen on this phone is on the card while today is read, so
+  /// the buttons need not wait for a slow read to point the right way.
+  bool _haveDay = false;
+
+  int _seenCount = 0;
+
+  /// Last night's punch-in, while that shift is still running — the card then
+  /// says so, and Punch Out is the bright button.
+  Map<String, dynamic>? _night;
+
+  /// What the site holds for today plus the punches kept on this phone and not
+  /// sent yet. Somebody who punched IN with no signal is in, and the card must
+  /// say so — or the bright button offers IN again and a second one is kept.
+  List<Map<String, dynamic>> get _shown =>
+      withPending(_today, PunchQueue.I.items, isoDay(ServerClock.I.now()), Session.I.employeeId);
+
+  void _onQueue() {
+    if (!mounted) return;
+    final n = PunchQueue.I.count.value;
+    final fewer = n < _seenCount;
+    _seenCount = n;
+    setState(() {});
+    // A kept punch has gone to the site. The card's own copy of the day was
+    // read before it, so read again — or it says "You haven't punched in".
+    if (fewer && !_loading) unawaited(_load());
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _seenCount = PunchQueue.I.count.value;
+    PunchQueue.I.changed.addListener(_onQueue);
+    PunchQueue.I.load().then((_) => _onQueue(), onError: (_) {});
     _load();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    PunchQueue.I.changed.removeListener(_onQueue);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _loading) return;
+    final stale = _readFor != isoDay(ServerClock.I.now()) ||
+        DateTime.now().difference(_readAt) > const Duration(minutes: 5);
+    if (stale) unawaited(_load());
+  }
+
   Future<void> _load() async {
+    final day = isoDay(ServerClock.I.now());
     setState(() {
       _loading = true;
       _error = '';
+      // A new day starts empty, never with yesterday's punches.
+      if (_readFor != day) {
+        _today = const [];
+        _haveDay = false;
+      }
     });
+    if (!_haveDay && Session.I.employeeId.isNotEmpty) {
+      final seen = await AuthStore.loadDayPunches(day, employee: Session.I.employeeId);
+      if (mounted && seen != null && _loading) {
+        setState(() {
+          _today = seen;
+          _haveDay = true;
+          _readFor = day;
+        });
+      }
+    }
     try {
-      final rows = await Api.punchesOn(isoDay(ServerClock.I.now()));
-      if (mounted) setState(() => _today = rows);
+      final got = await Future.wait<Object?>([Api.punchesOn(day), Api.nightArrival(day)]);
+      final rows = got[0] as List<Map<String, dynamic>>;
+      if (mounted) {
+        setState(() {
+          _today = rows;
+          _night = got[1] as Map<String, dynamic>?;
+          _haveDay = true;
+          _readFor = day;
+          _readAt = DateTime.now();
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
     } finally {
@@ -68,26 +150,37 @@ class _TodayCardState extends State<TodayCard> {
   Widget build(BuildContext context) {
     final linked = Session.I.employee != null;
     // A login no Employee record carries has nobody to punch for; the home
-    // around this card says so and names the fix.
-    final canPunch = linked && !_loading;
-    final pair = dayPunches(_today);
-    final next = nextLogType(_today);
+    // around this card says so and names the fix. Each button says which way
+    // its punch goes, so a slow read never holds them once the day last seen
+    // is on the card.
+    final canPunch = linked && (!_loading || _haveDay);
+    final shown = _shown;
+    // Still on last night's shift: nothing yet today, and an evening IN
+    // yesterday not yet followed by its OUT.
+    final night = linked && shown.isEmpty ? _night : null;
+    final pair = night != null ? (inAt: '${night['time']}', outAt: '') : dayPunches(shown);
+    final next = night != null ? kLogOut : nextLogType(shown);
     final hours = spanHours(pair.inAt, pair.outAt);
-    final punched = linked && _today.isNotEmpty;
+    final punched = linked && (shown.isNotEmpty || night != null);
     // The big line is the latest thing that happened; the small one under it
     // carries the rest of the day.
     final headline = !linked
         ? 'Not linked'
         : !punched
             ? 'Not marked'
-            : pair.outAt.isEmpty
-                ? 'In at ${clockOf(pair.inAt)}'
-                : 'Out at ${clockOf(pair.outAt)}';
+            : night != null
+                ? 'In since ${clockOf(pair.inAt)} yesterday'
+                : pair.outAt.isEmpty
+                    ? 'In at ${clockOf(pair.inAt)}'
+                    : 'Out at ${clockOf(pair.outAt)}';
     final detail = !linked
         ? 'No employee record carries this login'
-        : punched && pair.outAt.isNotEmpty
-            ? 'In ${clockOf(pair.inAt)}${hours.isEmpty ? '' : '  ·  $hours h'}'
-            : '';
+        : night != null
+            ? 'On last night\'s shift, in at ${clockOf(pair.inAt)}'
+            // An OUT with no IN today (the end of a night) has no "In" to show.
+            : punched && pair.outAt.isNotEmpty && pair.inAt.isNotEmpty
+                ? 'In ${clockOf(pair.inAt)}${hours.isEmpty ? '' : '  ·  $hours h'}'
+                : '';
 
     Widget button(String direction) {
       final isIn = direction == kLogIn;

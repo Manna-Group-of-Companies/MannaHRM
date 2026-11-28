@@ -30,6 +30,9 @@ class LeaveScreen extends StatefulWidget {
 class _LeaveScreenState extends State<LeaveScreen> {
   List<Map<String, dynamic>> _rows = const [];
   List<LeaveKind> _kinds = const [];
+
+  /// The balance could not be read: said as that, never as "no leave".
+  bool _kindsUnread = false;
   bool _loading = true;
   String _error = '';
   String _said = '';
@@ -48,16 +51,21 @@ class _LeaveScreenState extends State<LeaveScreen> {
       _error = '';
     });
     try {
+      var unread = false;
       final got = await Future.wait<Object>([
         Api.myLeave(employee: widget.employee),
         // The balance is the second question; a site that will not answer it
         // must not hide the applications.
-        Api.leaveKinds(employee: widget.employee).catchError((_) => const <LeaveKind>[]),
+        Api.leaveKinds(employee: widget.employee).catchError((Object _) {
+          unread = true;
+          return const <LeaveKind>[];
+        }),
       ]);
       if (!mounted) return;
       setState(() {
         _rows = got[0] as List<Map<String, dynamic>>;
         _kinds = got[1] as List<LeaveKind>;
+        _kindsUnread = unread;
       });
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
@@ -110,7 +118,12 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 ] else if (!_loading) ...[
                   const SectionTitle('Leave balance'),
                   Panel(
-                    child: Text(_own ? 'You have no leave to ask for yet. Ask HR.' : 'No leave allocated yet.',
+                    child: Text(
+                        _kindsUnread || _error.isNotEmpty
+                            ? 'The leave balance could not be read just now. Pull down to try again.'
+                            : _own
+                                ? 'You have no leave to ask for yet. Ask HR.'
+                                : 'No leave allocated yet.',
                         style: const TextStyle(color: kInk2)),
                   ),
                 ],
@@ -189,7 +202,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
     final type = '${r['leave_type'] ?? ''}';
     final when = [
       from == to ? dmy(from) : '${dmy(from)} – ${dmy(to)}',
-      if (days != null) '$days ${'$days' == '1' || '$days' == '1.0' ? 'day' : 'days'}',
+      // The site sends a Float — 1.0, 3.0 — which read "1.0 day" on screen.
+      if (num.tryParse('$days') case final n?) '${fmtDays(n)} ${n == 1 ? 'day' : 'days'}',
       if (half) 'half day',
     ].join(' · ');
     final note = '${r['description'] ?? ''}';

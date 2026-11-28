@@ -15,6 +15,7 @@ import 'package:manna_hr_app/screens/payslip_screen.dart';
 import 'package:manna_hr_app/screens/profile_screen.dart';
 import 'package:manna_hr_app/screens/punch_screen.dart';
 import 'package:manna_hr_app/screens/settings_screen.dart';
+import 'package:manna_hr_app/services/punch_queue.dart';
 import 'package:manna_hr_app/ui/brand.dart';
 
 /// HR's side: Home, Employees, Leave, Reports — and More, which is the drawer.
@@ -37,6 +38,15 @@ class _AdminShellState extends State<AdminShell> {
   final _scaffold = GlobalKey<ScaffoldState>();
   int _tab = 0;
   final Set<int> _built = {0};
+
+  @override
+  void initState() {
+    super.initState();
+    // HR punch too, from their own side. A punch HR kept with no signal is
+    // sent from here as well, or it waited for a visit to the employee side
+    // and could pass the site's 48-hour limit.
+    PunchQueue.I.start();
+  }
 
   void _go(int i) {
     if (i == 4) {

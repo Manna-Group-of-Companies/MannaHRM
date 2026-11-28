@@ -244,7 +244,9 @@ class _CorrectionFormState extends State<_CorrectionForm> {
 
   Widget _timeField(String label, TimeOfDay? value, VoidCallback onTap) {
     return InkWell(
-      onTap: onTap,
+      // Not while sending: a picker opened then would take the sheet's closing
+      // pop, and the error it threw read as the request failing.
+      onTap: _busy ? null : onTap,
       borderRadius: BorderRadius.circular(8),
       child: InputDecorator(
         decoration: InputDecoration(
@@ -254,7 +256,9 @@ class _CorrectionFormState extends State<_CorrectionForm> {
               ? const Icon(Icons.schedule)
               : IconButton(
                   icon: const Icon(Icons.clear),
-                  onPressed: () => setState(() {
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() {
                     if (label == 'Punch in') {
                       _in = null;
                     } else {

@@ -287,8 +287,11 @@ class DayView {
 
   Iterable<PersonDay> where(Set<DayState> s) => people.where((p) => s.contains(p.state));
 
+  /// Everybody who punched — those who worked a Sunday too: their row says
+  /// Week off, and they are still people who came in (the Punches tab said
+  /// "Nobody punched" while forty were at work).
   List<PersonDay> get punched {
-    final l = people.where((p) => p.present).toList();
+    final l = people.where((p) => p.present || p.punches.isNotEmpty).toList();
     l.sort((a, b) => (a.firstIn.isEmpty ? '99' : a.firstIn).compareTo(b.firstIn.isEmpty ? '99' : b.firstIn));
     return l;
   }

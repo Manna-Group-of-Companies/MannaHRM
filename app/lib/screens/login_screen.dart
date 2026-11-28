@@ -5,8 +5,31 @@ import 'package:manna_hr_app/core/auth_store.dart';
 import 'package:manna_hr_app/core/constants.dart';
 import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/landing.dart';
+import 'package:manna_hr_app/core/session.dart' show isStandIn;
 import 'package:manna_hr_app/services/api.dart';
 import 'package:manna_hr_app/ui/brand.dart';
+
+/// What the sign-in form says to something typed in the Email box that is not
+/// an email HR could have given — or null when it is one.
+///
+/// **Email and password only** (HR, 28 November 2026): HR creates both when
+/// they create the employee, they are kept on the site, and only they sign in
+/// to the app. No Emp Code, no user name, no date of birth: exactly one `@`,
+/// something before it, and a domain with a dot after it. The made-up address
+/// the site names a login by when it has no email (`…@phone.manna.invalid`) is
+/// not one HR gives anybody.
+String? emailProblem(String typed) {
+  final t = typed.trim();
+  const ask = 'Sign in with the email HR gave you.';
+  if (t.isEmpty || t.contains(RegExp(r'\s'))) return ask;
+  final parts = t.split('@');
+  if (parts.length != 2) return ask;
+  final (name, domain) = (parts[0], parts[1]);
+  if (name.isEmpty || domain.isEmpty) return ask;
+  if (!domain.contains('.') || domain.startsWith('.') || domain.endsWith('.') || domain.contains('..')) return ask;
+  if (isStandIn(t) || domain.toLowerCase().endsWith('.invalid')) return ask;
+  return null;
+}
 
 /// Signing in — one form for everybody.
 ///
@@ -32,12 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // The Emp Code comes back filled in; it is not a secret. An email kept by an
-    // older version is not: only the Emp Code signs in now. The site is never
-    // asked for or shown (core/constants.dart kDefaultSiteUrl).
+    // The email comes back filled in; it is not a secret. An Emp Code kept by
+    // an older version is not put back: only an email signs in now. The site
+    // is never asked for or shown (core/constants.dart kDefaultSiteUrl).
     AuthStore.load().then((c) {
       if (!mounted) return;
-      if (c.email.isNotEmpty && !c.email.contains('@')) setState(() => _email.text = c.email);
+      if (emailProblem(c.email) == null) setState(() => _email.text = c.email.trim());
     });
   }
 
@@ -50,14 +73,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signIn() async {
     if (_email.text.trim().isEmpty || _password.text.isEmpty) {
-      setState(() => _error = 'Type your Emp Code and password.');
+      setState(() => _error = 'Type your email and password.');
       return;
     }
-    // Emp Code only, never an email (HR, 27 November 2026): every app user
-    // signs in with their Emp Code and date of birth. Refused here, before the
-    // site is asked, because the site itself takes an email for any login.
-    if (_email.text.contains('@')) {
-      setState(() => _error = 'Sign in with your Emp Code (for example MRP-103), not an email.');
+    // Refused here, before the site is asked: the site would take an Emp Code
+    // or a user name for a login too, and only the email HR gave signs in.
+    final problem = emailProblem(_email.text);
+    if (problem != null) {
+      setState(() => _error = problem);
       return;
     }
     setState(() {
@@ -77,13 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// No emailed reset link: most app logins have no mailbox behind them, and
-  /// HR sets a forgotten one back to the Emp Code and date of birth from the
-  /// employee's profile (Apps & access → Reset).
+  /// No emailed reset link: HR sets the password, and HR resets it.
   void _forgot() {
     setState(() {
       _error = '';
-      _said = 'Ask HR to reset it. Your password goes back to your date of birth, DDMMYYYY.';
+      _said = 'Ask HR to reset it.';
     });
   }
 
@@ -128,16 +149,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                         Text('Sign in to your account', textAlign: TextAlign.center, style: serif(20)),
                         const SizedBox(height: 20),
-                        const FieldLabel('Emp Code'),
+                        const FieldLabel('Email'),
                         TextField(
                           controller: _email,
-                          // Not an email keyboard: most people sign in with their
-                          // Emp Code, which is letters and digits.
-                          keyboardType: TextInputType.visiblePassword,
+                          keyboardType: TextInputType.emailAddress,
                           autocorrect: false,
-                          autofillHints: const [AutofillHints.username],
+                          enableSuggestions: false,
+                          autofillHints: const [AutofillHints.email],
                           textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(prefixIcon: Icon(Icons.person_rounded), hintText: 'MRP-103'),
+                          decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.alternate_email_rounded), hintText: 'name@company.com'),
                         ),
                         const SizedBox(height: 16),
                         const FieldLabel('Password'),
@@ -156,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text('Your password is your date of birth, DDMMYYYY — 24 March 2005 is 24032005.',
+                        const Text('The email and password HR gave you.',
                             style: TextStyle(fontSize: 12.5, color: kInk2)),
                         const SizedBox(height: 18),
                         if (_error.isNotEmpty) Note(_error),

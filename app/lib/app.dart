@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/landing.dart';
 import 'package:manna_hr_app/core/roster.dart';
 import 'package:manna_hr_app/core/session.dart';
@@ -191,14 +194,77 @@ class MannaHrApp extends StatelessWidget {
   /// For the tests: a screen to open on instead of the session check.
   final Widget? home;
 
+  /// The app's navigator, for the one message that can come from anywhere:
+  /// the kept password stopped working (see [_SignInAgain]).
+  static final navigator = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'Manna HR',
         debugShowCheckedModeBanner: false,
         theme: mannaTheme(),
-        builder: fitScreen,
+        navigatorKey: navigator,
+        builder: (context, child) => _SignInAgain(child: fitScreen(context, child)),
         home: home ?? const _Gate(),
       );
+}
+
+/// When the password this phone keeps stops working — HR reset it, or it was
+/// changed on the website — the app says so once and offers the sign-in form,
+/// with the email filled in. Before, every screen said "check your signal"
+/// while the app kept retrying a password the site locks the login over.
+class _SignInAgain extends StatefulWidget {
+  const _SignInAgain({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SignInAgain> createState() => _SignInAgainState();
+}
+
+class _SignInAgainState extends State<_SignInAgain> {
+  bool _showing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Session.I.signInAgain.addListener(_changed);
+  }
+
+  @override
+  void dispose() {
+    Session.I.signInAgain.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    if (!Session.I.signInAgain.value || _showing) return;
+    final ctx = MannaHrApp.navigator.currentContext;
+    if (ctx == null) return;
+    _showing = true;
+    unawaited(showDialog<void>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (d) => AlertDialog(
+        title: const Text('Sign in again'),
+        content: const Text('Your password has changed. Sign in with your email and your new password. '
+            'Punches saved on this phone stay, and are sent once you have signed in.'),
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.of(d).pop();
+              final nav = MannaHrApp.navigator.currentContext;
+              if (nav != null) unawaited(signOut(nav));
+            },
+            child: const Text('Sign in'),
+          ),
+        ],
+      ),
+    ).whenComplete(() => _showing = false));
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// The screen for a [Landing].
@@ -213,12 +279,22 @@ void goTo(BuildContext context, Landing l) {
   Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => screenFor(l)), (_) => false);
 }
 
-/// Signs out and opens the sign-in screen — from either side.
+bool _signingOut = false;
+
+/// Signs out and opens the sign-in screen — from either side. A second tap
+/// while the first is still running does nothing: two of them stacked a second
+/// sign-in form on the first, or wiped a sign-in made in between.
 Future<void> signOut(BuildContext context) async {
-  final nav = Navigator.of(context);
-  await Api.logout();
-  AdminApi.forget();
-  nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+  if (_signingOut) return;
+  _signingOut = true;
+  try {
+    final nav = Navigator.of(context);
+    await Api.logout();
+    AdminApi.forget();
+    nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+  } finally {
+    _signingOut = false;
+  }
 }
 
 /// What the app opens on: the splash, while a stored session is restored.
@@ -233,26 +309,61 @@ class _Gate extends StatefulWidget {
   State<_Gate> createState() => _GateState();
 }
 
+/// How long the splash waits on a slow network before opening on what the
+/// phone remembers. A phone connected to nothing otherwise waited out every
+/// time-out — twenty to forty seconds at a gate — before it could punch.
+const Duration kSlowStart = Duration(seconds: 8);
+
 class _GateState extends State<_Gate> {
+  /// A signed-in phone with no signal and nothing remembered to open on.
+  bool _noSignal = false;
+  bool _opened = false;
+  Timer? _slow;
+
   @override
   void initState() {
     super.initState();
     _restore();
   }
 
+  @override
+  void dispose() {
+    _slow?.cancel();
+    super.dispose();
+  }
+
+  void _open(Landing l) {
+    if (_opened || !mounted) return;
+    _opened = true;
+    _slow?.cancel();
+    Navigator.of(context).pushReplacement(PageRouteBuilder(
+      pageBuilder: (_, _, _) => screenFor(l),
+      transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+    ));
+  }
+
   Future<void> _restore() async {
+    setState(() => _noSignal = false);
+    // Too slow: open on the remembered employee and let the start finish
+    // behind it. The punch works offline; the site catches up by itself.
+    _slow = Timer(kSlowStart, () async {
+      if (_opened || !mounted) return;
+      if (await Api.startOfflineNow()) _open(Landing.employee);
+    });
     var landing = Landing.signIn;
     try {
       await Api.restore();
+      if (_opened) {
+        // The phone opened offline while this finished: the session it won
+        // is used from here on, and nothing waits for a sign-in to send.
+        if (Session.I.sid.isNotEmpty && Session.I.csrfToken.isNotEmpty) Session.I.offlineStart = false;
+        return;
+      }
       // No signal at start: open on the punch screen, with what this phone
       // remembers, rather than on a sign-in form for somebody who is signed in.
       // Only the employee's side — HR's reads need the site.
       if (Session.I.offlineStart) {
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(PageRouteBuilder(
-          pageBuilder: (_, _, _) => screenFor(Landing.employee),
-          transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
-        ));
+        _open(Landing.employee);
         return;
       }
       // Signed in is a live session, not a resolved employee: somebody whose
@@ -270,23 +381,37 @@ class _GateState extends State<_Gate> {
       // was taken away should stop seeing everybody's day.
       final admin = signedIn && await Api.isAdmin();
       landing = landingFor(signedIn: signedIn, isAdmin: admin);
+    } on NoSignalAtStart {
+      // Signed in, no signal, and nothing remembered here to open on: say so
+      // and offer to try again. Never the sign-in form for a signed-in phone.
+      _slow?.cancel();
+      if (mounted && !_opened) setState(() => _noSignal = true);
+      return;
     } catch (_) {
       landing = Landing.signIn;
     }
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(PageRouteBuilder(
-      pageBuilder: (_, _, _) => screenFor(landing),
-      transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
-    ));
+    _open(landing);
   }
 
   @override
-  Widget build(BuildContext context) => const SplashScreen();
+  Widget build(BuildContext context) => _noSignal
+      ? SplashScreen(
+          message: kNoSignal,
+          onRetry: () {
+            _slow?.cancel();
+            _restore();
+          },
+        )
+      : const SplashScreen();
 }
 
 /// The brand, while the session is restored.
 class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({super.key, this.message = '', this.onRetry});
+
+  /// Said in place of the spinner — no signal at start — with [onRetry].
+  final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -312,8 +437,24 @@ class SplashScreen extends StatelessWidget {
               const Text('People • Attendance • Payroll',
                   style: TextStyle(color: kLime, fontSize: 14, fontWeight: FontWeight.w700)),
               const Spacer(flex: 3),
-              const SizedBox(
-                  height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+              if (message.isEmpty)
+                const SizedBox(
+                    height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(children: [
+                    Text(message,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 14),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: kLime, foregroundColor: kOnLime),
+                      onPressed: onRetry,
+                      child: const Text('Try again'),
+                    ),
+                  ]),
+                ),
               const SizedBox(height: 28),
               const Text('Manna Group of Companies', style: TextStyle(color: Colors.white, fontSize: 13)),
               const SizedBox(height: 24),

@@ -103,8 +103,11 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
               separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, i) {
                 if (i == 0) {
-                  return Text('${_rows.length} ${_rows.length == 1 ? 'application' : 'applications'}',
+                  final count = Text('${_rows.length} ${_rows.length == 1 ? 'application' : 'applications'}',
                       style: const TextStyle(fontSize: 12.5, color: kInk2));
+                  // A refresh that failed: the list below is as last read.
+                  if (_error.isEmpty) return count;
+                  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Note(_error), count]);
                 }
                 return _row(_rows[i - 1]);
               },
@@ -152,7 +155,21 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
     );
   }
 
+  /// A decision is being sent. A second tap on Approve or Reject meanwhile
+  /// does nothing, rather than sending twice and closing the wrong screen.
+  bool _deciding = false;
+
   Future<void> _decide(BuildContext sheet, Map<String, dynamic> r, String status) async {
+    if (_deciding) return;
+    _deciding = true;
+    try {
+      await _decideNow(sheet, r, status);
+    } finally {
+      _deciding = false;
+    }
+  }
+
+  Future<void> _decideNow(BuildContext sheet, Map<String, dynamic> r, String status) async {
     final who = '${r['employee_name'] ?? r['employee']}';
     final sure = await showDialog<bool>(
       context: sheet,
@@ -170,13 +187,34 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
     );
     if (sure != true || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final route = sheet.mounted ? ModalRoute.of(sheet) : null;
     try {
       await (widget.decide ?? AdminApi.decideLeave)('${r['name']}', status);
-      if (sheet.mounted) Navigator.of(sheet).pop();
+      // The sheet this came from, wherever it is — never whatever is on top.
+      if (route != null && route.isActive) {
+        if (route.isCurrent) {
+          if (sheet.mounted) Navigator.of(sheet).pop();
+        } else {
+          route.navigator?.removeRoute(route);
+        }
+      }
       messenger.showSnackBar(SnackBar(content: Text('$who: ${status == 'Approved' ? 'approved' : 'rejected'}')));
-      _load();
+      if (mounted) _load();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(humanError(e))));
+      // Over the sheet, where HR is looking: a SnackBar here was drawn behind
+      // it and gone before anybody saw the site's reason.
+      if (sheet.mounted) {
+        await showDialog<void>(
+          context: sheet,
+          builder: (d) => AlertDialog(
+            title: Text(status == 'Approved' ? 'Not approved' : 'Not rejected'),
+            content: Text(humanError(e)),
+            actions: [TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('OK'))],
+          ),
+        );
+      } else {
+        messenger.showSnackBar(SnackBar(content: Text(humanError(e))));
+      }
     }
   }
 

@@ -21,7 +21,15 @@ class ServerClock {
 
   Duration _skew = Duration.zero;
   bool _synced = false;
-  DateTime _savedAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// What was last handed to [onSkew], and how long ago — on a stopwatch, not
+  /// the phone's clock: a phone set back two hours stopped saving for two
+  /// hours, and a start with no signal in that window used the old skew.
+  Duration? _savedSkew;
+  final Stopwatch _sinceSaved = Stopwatch();
+
+  /// The site's own time zone, Asia/Kolkata, which keeps no summer time.
+  static const Duration kSiteOffset = Duration(hours: 5, minutes: 30);
 
   /// Told the skew at most once a minute, to be kept — so a phone started with
   /// no signal still knows how far its clock is from the site's, and a punch
@@ -52,9 +60,13 @@ class ServerClock {
     try {
       _skew = HttpDate.parse(httpDate).difference(DateTime.now().toUtc());
       _synced = true;
-      final now = DateTime.now();
-      if (onSkew != null && now.difference(_savedAt) > const Duration(minutes: 1)) {
-        _savedAt = now;
+      final saved = _savedSkew;
+      final moved = saved == null || (_skew - saved).abs() > const Duration(seconds: 30);
+      if (onSkew != null && (moved || _sinceSaved.elapsed > const Duration(minutes: 1))) {
+        _savedSkew = _skew;
+        _sinceSaved
+          ..reset()
+          ..start();
         onSkew!(_skew);
       }
     } catch (_) {
@@ -63,10 +75,15 @@ class ServerClock {
     }
   }
 
-  /// Now, as the site sees it, in the phone's own timezone.
+  /// Now, as the site's own wall clock reads it — Asia/Kolkata — whatever time
+  /// zone the phone is set to.
   ///
-  /// The site runs on Asia/Kolkata and so do the phones, so this is the same
-  /// wall clock. It would not be for somebody travelling, and the server is
-  /// what stamps the punch either way.
-  DateTime now() => DateTime.now().add(_skew);
+  /// Built from UTC, not from the phone's local time: a phone left on GMT read
+  /// 03:00 at 08:30 in Kerala, refused every morning punch as "before 5:00",
+  /// and stamped a punch kept offline five and a half hours early. The fields
+  /// of the result are the site's; every day and hour check reads them.
+  DateTime now() {
+    final t = DateTime.now().toUtc().add(_skew).add(kSiteOffset);
+    return DateTime(t.year, t.month, t.day, t.hour, t.minute, t.second, t.millisecond);
+  }
 }

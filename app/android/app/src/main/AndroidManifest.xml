@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- The site is the server, so the app is useless without a connection and
          says so rather than pretending to hold anything. -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -13,6 +14,16 @@
          enough is the server's call, not the handset's. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- The punch photo: the front camera, live on the Punch screen (27 November
+         2026). Android asks the person the first time the screen opens. The
+         camera plugin also declares the microphone, for video this app never
+         records, so that one is taken out; and a phone with no camera can still
+         install the app and punch without a photo (services/photo.dart). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:node="replace"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
 
     <application
         android:label="Manna HR"

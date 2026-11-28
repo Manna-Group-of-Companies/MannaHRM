@@ -368,7 +368,13 @@ class StatBox extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
         decoration: BoxDecoration(color: kPage, borderRadius: BorderRadius.circular(14)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(value, style: serif(24, color: color)),
+          // One line, shrunk if it must: five boxes to a row on a 320-wide
+          // phone leave about 23 pixels for a figure, and "02" broke in two.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, maxLines: 1, style: serif(24, color: color)),
+          ),
           const SizedBox(height: 4),
           // One line, shrunk if it must: four boxes to a row on a 320-wide
           // phone is 50 pixels for "Holidays".

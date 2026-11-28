@@ -189,7 +189,11 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           child: RefreshIndicator(
             onRefresh: _load,
             child: rows.isEmpty && !_loading
-                ? const EmptyNote('Nobody here', 'Nobody matches the search and the filter.', icon: Icons.person_search)
+                ? (_error.isNotEmpty
+                    // The read failed: the note above says why. Not "nobody".
+                    ? ListView(children: const [SizedBox(height: 40)])
+                    : const EmptyNote('Nobody here', 'Nobody matches the search and the filter.',
+                        icon: Icons.person_search))
                 : ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),

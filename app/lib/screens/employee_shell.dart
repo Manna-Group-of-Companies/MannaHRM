@@ -93,6 +93,10 @@ class _HomeTab extends StatefulWidget {
 class _HomeTabState extends State<_HomeTab> {
   List<Activity> _recent = const [];
 
+  /// The leave or the corrections behind [_recent] could not be read, so an
+  /// empty list is not "nothing asked for".
+  bool _recentUnread = false;
+
   /// This month so far, by state — the three figures under Today. Null until
   /// read, and left null when the site will not say: the card is a courtesy.
   Map<DayStatus, int>? _month;
@@ -125,15 +129,27 @@ class _HomeTabState extends State<_HomeTab> {
       if (Session.I.employee == null) {
         final found = await Api.resolveEmployee();
         _linkMissing = found == null;
+        // The card above was made before anybody was known and read nothing:
+        // make it again now, so it reads this person's day.
+        if (found != null && mounted) setState(() => _round++);
       }
+      var unread = false;
+      List<Map<String, dynamic>> none(Object _) {
+        unread = true;
+        return <Map<String, dynamic>>[];
+      }
+
       final got = await Future.wait([
         // Recent activity is a courtesy; a site that will not show it must not
         // cost the card above it.
-        Api.myLeave(limit: 6).catchError((_) => <Map<String, dynamic>>[]),
-        Api.myCorrections(limit: 6).catchError((_) => <Map<String, dynamic>>[]),
+        Api.myLeave(limit: 6).catchError(none),
+        Api.myCorrections(limit: 6).catchError(none),
       ]);
       if (!mounted) return;
-      setState(() => _recent = recentActivity(got[0], got[1]));
+      setState(() {
+        _recent = recentActivity(got[0], got[1]);
+        _recentUnread = unread;
+      });
       _readMonth();
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
@@ -264,8 +280,12 @@ class _HomeTabState extends State<_HomeTab> {
                   trailing: TextButton(onPressed: () => widget.onTab(2), child: const Text('See all')),
                 ),
                 if (_recent.isEmpty && !_loading)
-                  const Panel(
-                    child: Text('Nothing asked for yet.', style: TextStyle(color: kInk2)),
+                  Panel(
+                    child: Text(
+                        _recentUnread
+                            ? 'Your requests could not be read just now. Pull down to try again.'
+                            : 'Nothing asked for yet.',
+                        style: const TextStyle(color: kInk2)),
                   )
                 else if (_recent.isNotEmpty)
                   Panel(

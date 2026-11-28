@@ -63,12 +63,15 @@ class _DayScreenState extends State<DayScreen> with SingleTickerProviderStateMix
       final v = await _load(date, ymd(_today()), fresh: fresh);
       // A slow read for a day somebody has already walked away from is dropped.
       if (!mounted || ymd(_date) != date) return;
-      setState(() => _view = v);
+      setState(() {
+        _view = v;
+        _error = '';
+      });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || ymd(_date) != date) return;
       setState(() => _error = humanError(e));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && ymd(_date) == date) setState(() => _loading = false);
     }
   }
 

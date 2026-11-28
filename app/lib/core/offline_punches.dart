@@ -12,8 +12,9 @@
 /// send what the site is going to stamp "now".
 library;
 
+import 'dart:async' show TimeoutException;
 import 'dart:convert';
-import 'dart:io' show SocketException;
+import 'dart:io' show HttpException, SocketException, TlsException;
 
 import 'package:dio/dio.dart';
 
@@ -30,6 +31,12 @@ const String kQueuedSuffix = '-Q';
 const int kQueuedMaxHours = 48;
 
 String queuedDeviceId(String employee) => '${deviceIdFor(employee)}$kQueuedSuffix';
+
+/// Two punches the same way this close together are one press, sent twice: a
+/// kept punch that finds one inside this window on the site is not sent again
+/// (Api.punchExists). Wide enough for a photo upload and a send on a slow
+/// network between the press and the site stamping its own clock.
+const Duration kSamePunchWindow = Duration(minutes: 3);
 
 /// One punch waiting to be sent.
 class PendingPunch {
@@ -116,26 +123,47 @@ List<PendingPunch> decodePending(String? text) {
 /// kept punch is for. **A refusal is not this**: the site answered, and its
 /// answer (too far from the gate, outside the working window) is what the
 /// person has to read. Keeping a refused punch would send it again and again.
+///
+/// Everything else on the way to the site is this, not only a dropped socket:
+/// a gate's Wi-Fi that answers with its own sign-in page breaks the secure
+/// handshake (`TlsException`, `badCertificate`), a connection cut half-way
+/// through an answer is an `HttpException`, and a page of HTML where JSON was
+/// expected is the same Wi-Fi again. Read as anything but "no signal", each of
+/// these lost a punch or sent a signed-in person to the sign-in form.
 bool isNetworkFailure(Object error) {
-  if (error is SocketException) return true;
+  if (error is SocketException ||
+      error is TlsException ||
+      error is HttpException ||
+      error is TimeoutException) {
+    return true;
+  }
   if (error is DioException) {
     switch (error.type) {
-      case DioExceptionType.connectionError:
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return true;
-      case DioExceptionType.unknown:
-        return error.error is SocketException;
       case DioExceptionType.badResponse:
         // The site answered with a server fault (502 while it restarts). Not a
         // refusal of the punch: nothing judged it, so it waits and is retried.
         return (error.response?.statusCode ?? 0) >= 500;
-      default:
+      case DioExceptionType.cancel:
         return false;
+      case DioExceptionType.connectionError:
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.transformTimeout:
+      case DioExceptionType.badCertificate:
+      case DioExceptionType.unknown:
+        return true;
     }
   }
   return false;
+}
+
+/// Whether a kept punch is close enough to [kQueuedMaxHours] that it should be
+/// sent without its photo rather than wait for a signal strong enough for one.
+bool nearAgeLimit(PendingPunch p, DateTime now) {
+  final made = DateTime.tryParse(p.time.replaceFirst(' ', 'T'));
+  if (made == null) return true;
+  return now.difference(made) > const Duration(hours: kQueuedMaxHours - 8);
 }
 
 /// Whether a kept punch is too old for the site to believe its time.

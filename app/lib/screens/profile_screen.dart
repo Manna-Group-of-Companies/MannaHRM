@@ -45,21 +45,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _load() async {
+    _error = '';
+    var lookup = '';
     if (_own && Session.I.employee == null) {
       try {
         await Api.resolveEmployee();
-      } catch (_) {
-        // Said below, as no record.
+      } catch (e) {
+        // Could not tell — not "no record". Said as that, with a way to retry.
+        lookup = humanError(e);
       }
       _doc = Session.I.employee;
     }
     if (_id.isEmpty) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = lookup;
+        });
+      }
       return;
     }
     try {
       final doc = await Api.employeeRecord(_id);
-      if (mounted) setState(() => _doc = doc);
+      if (mounted) {
+        setState(() {
+          _doc = doc;
+          _error = '';
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = humanError(e));
     } finally {
@@ -75,17 +88,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (d == null) {
       return Scaffold(
         appBar: brandBar(_own ? 'My Profile' : 'Employee Details'),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : Note(
-                  _error.isNotEmpty
-                      ? _error
-                      : 'No employee record is linked to this login. Ask HR to put your user on your Employee '
-                          'record — the field is User ID.',
-                  kind: _error.isNotEmpty ? NoteKind.error : NoteKind.warn),
-        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(padding: const EdgeInsets.all(16), children: [
+                  Note(
+                      _error.isNotEmpty
+                          ? _error
+                          : 'No employee record is linked to this login. Ask HR to put your user on your Employee '
+                              'record — the field is User ID.',
+                      kind: _error.isNotEmpty ? NoteKind.error : NoteKind.warn),
+                ]),
+              ),
       );
     }
     final tabs = _own

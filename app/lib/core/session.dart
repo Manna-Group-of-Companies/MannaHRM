@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show ValueNotifier;
 
 import 'package:manna_hr_app/core/constants.dart';
 import 'package:manna_hr_app/core/server_clock.dart';
@@ -82,6 +83,16 @@ class Session {
   /// null, the interceptor simply passes auth failures through to the caller.
   Future<bool> Function()? reauthenticate;
 
+  /// Fetches the session's CSRF token again. Wired up by `Api`. A start on a
+  /// weak signal can lose the page the token comes from; every write then
+  /// came back "Invalid Request" and a punch was refused instead of kept.
+  Future<void> Function()? refreshCsrf;
+
+  /// Set when the kept password no longer works — HR reset it, or it was
+  /// changed on the website. The app then asks the person to sign in again
+  /// rather than retrying a password the site will lock the login over.
+  final ValueNotifier<bool> signInAgain = ValueNotifier(false);
+
   // Marks a request that has already been replayed once, so a permanently
   // rejected credential cannot spin the retry loop.
   static const _kRetried = 'authRetried';
@@ -96,22 +107,37 @@ class Session {
   Map<String, String> get authHeaders =>
       sid.isEmpty ? const {} : {'Cookie': 'sid=$sid'};
 
+  /// Signs out of everything: the session and who it was. Signing out, and a
+  /// fresh sign-in on the form, which may be somebody else.
   void clearAuth() {
-    sid = '';
-    csrfToken = '';
-    user = '';
+    clearSession();
     employee = null;
     isAdmin = false;
+  }
+
+  /// Drops the site session only. A silent re-login is the same person
+  /// coming back, so who they are — the employee, the user the site named,
+  /// HR or not — stays until a sign-in says otherwise (Api._passwordLogin).
+  void clearSession() {
+    sid = '';
+    csrfToken = '';
   }
 
   static const _authPaths = ['/api/method/login', '/api/method/logout'];
   static bool _isAuthPath(String path) => _authPaths.any(path.contains);
 
+  /// For the tests: the network every connection this app makes goes
+  /// through — a pretend site, or one that is down. Never set in the app.
+  static HttpClientAdapter? testAdapter;
+
   void init({String? url}) {
     if (url != null && url.isNotEmpty) siteUrl = url;
     dio = Dio(BaseOptions(
       baseUrl: siteUrl,
-      connectTimeout: const Duration(seconds: 20),
+      // Ten seconds to reach the site: a phone with a bar of signal and no
+      // data behind it (connected, going nowhere) otherwise held every screen
+      // on a spinner for twenty, and a punch for forty.
+      connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 20),
       headers: {
         'Accept': 'application/json',
@@ -121,6 +147,8 @@ class Session {
       // 417 carrying the site's own refusal reaches the code that reads it.
       validateStatus: (s) => s != null && s < 500,
     ));
+    final fake = testAdapter;
+    if (fake != null) dio.httpClientAdapter = fake;
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         // Re-stamp auth on every attempt: a replayed request must not carry the
@@ -139,6 +167,10 @@ class Session {
         ServerClock.I.syncFromHeader(response.headers.value('date'));
         if (await _needsReauth(response)) {
           final replayed = await _reauthAndReplay(response.requestOptions);
+          if (replayed != null) return handler.resolve(replayed);
+        }
+        if (_csrfRefused(response)) {
+          final replayed = await _newTokenAndReplay(response.requestOptions);
           if (replayed != null) return handler.resolve(replayed);
         }
         handler.next(response);
@@ -173,10 +205,45 @@ class Session {
   }
 
   Future<Response?> _reauthAndReplay(RequestOptions o) async {
-    if (!await _refresh()) return null;
-    final extra = Map<String, dynamic>.from(o.extra)..[_kRetried] = true;
+    bool ok;
     try {
-      return await dio.fetch(o.copyWith(extra: extra));
+      ok = await _refresh();
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok) return null;
+    return _replay(o);
+  }
+
+  /// A write the site refused for its CSRF token — "Invalid Request". Asked
+  /// once with a fresh token, never twice.
+  bool _csrfRefused(Response response) {
+    final o = response.requestOptions;
+    if (refreshCsrf == null || o.extra[_kRetried] == true || _isAuthPath(o.path)) return false;
+    final m = o.method.toUpperCase();
+    if (m != 'POST' && m != 'PUT' && m != 'DELETE') return false;
+    if (response.statusCode != 400 && response.statusCode != 403) return false;
+    final body = response.data;
+    return body is Map && '${body['exc_type'] ?? ''}' == 'CSRFTokenError';
+  }
+
+  Future<Response?> _newTokenAndReplay(RequestOptions o) async {
+    try {
+      await refreshCsrf!();
+    } catch (_) {
+      return null;
+    }
+    if (csrfToken.isEmpty) return null;
+    return _replay(o);
+  }
+
+  Future<Response?> _replay(RequestOptions o) async {
+    final extra = Map<String, dynamic>.from(o.extra)..[_kRetried] = true;
+    // A multipart body can be sent once; the photo upload is replayed with a
+    // fresh copy of it, or it went with no photo after every re-login.
+    final data = o.data is FormData ? (o.data as FormData).clone() : o.data;
+    try {
+      return await dio.fetch(o.copyWith(extra: extra, data: data));
     } catch (_) {
       return null;
     }

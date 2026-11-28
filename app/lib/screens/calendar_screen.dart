@@ -71,7 +71,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (!mounted) return;
       setState(() {
         _data = data;
-        _rows = monthRoster(
+        // Punches that could not be read are not a month nobody came in:
+        // drawn, every past workday would read Absent.
+        _rows = data.punchesUnread ? const [] : monthRoster(
           ym: _ym,
           punches: data.punches,
           leave: data.leave,
@@ -132,7 +134,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           Panel(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), child: _monthBar()),
           const SizedBox(height: 16),
-          if (!_loading) ...[_counts(), const SizedBox(height: 16)],
+          if (!_loading && _rows.isNotEmpty) ...[_counts(), const SizedBox(height: 16)],
           Panel(
             padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
             child: Column(children: [
@@ -143,7 +145,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 _grid(),
             ]),
           ),
-          if (!_loading) ...[
+          if (!_loading && _rows.isNotEmpty) ...[
             if (_ym == _today.substring(0, 7)) ..._todayBlock(),
             const SizedBox(height: 16),
             _key(),
@@ -357,7 +359,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               const SizedBox(width: 8),
               Text(dmy(r.iso), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               const SizedBox(width: 8),
-              Text(r.label, style: const TextStyle(color: kInk2)),
+              // "Leave not granted" beside a date in large text is wider than a
+              // 320 phone: it wraps rather than running off the edge.
+              Flexible(child: Text(r.label, style: const TextStyle(color: kInk2))),
             ]),
             const SizedBox(height: 16),
             Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [

@@ -10,6 +10,7 @@
 /// Pure. No widgets, no network — see `test/roster_test.dart`.
 library;
 
+import 'package:manna_hr_app/core/constants.dart' show kNextDayHours;
 import 'package:manna_hr_app/core/punch_rules.dart';
 
 /// Where somebody stood on one day. The names are `rules.py`'s, so a value read
@@ -87,7 +88,12 @@ class RosterDay {
     required this.holiday,
     required this.leave,
     required this.correction,
+    this.past = false,
   });
+
+  /// A day before today. A day like that with a punch-in and no punch-out is
+  /// over: it reads "No punch-out", as HR's day view says, never "Still in".
+  final bool past;
 
   final String iso;
   final DayStatus status;
@@ -108,7 +114,7 @@ class RosterDay {
   /// as much of an answer to "what happened to my 19th" as a granted one.
   final Map<String, dynamic>? correction;
 
-  String get label => kDayLabels[status] ?? '';
+  String get label => status == DayStatus.onFloor && past ? 'No punch-out' : (kDayLabels[status] ?? '');
   bool get isAbsent => status == DayStatus.absent;
 }
 
@@ -172,12 +178,7 @@ List<RosterDay> monthRoster({
   required List<Map<String, dynamic>> corrections,
   required String today,
 }) {
-  final byDay = <String, List<Map<String, dynamic>>>{};
-  for (final c in punches) {
-    final t = '${c['time'] ?? ''}';
-    if (t.length < 10) continue;
-    byDay.putIfAbsent(t.substring(0, 10), () => []).add(c);
-  }
+  final byDay = byWorkDay(punches);
 
   final hol = <String, Map<String, dynamic>>{};
   for (final h in holidays) {
@@ -230,8 +231,67 @@ List<RosterDay> monthRoster({
       holiday: sunday ? 'Sunday' : '${h?['description'] ?? ''}',
       leave: lv,
       correction: ar[iso],
+      past: iso.compareTo(today) < 0,
     );
   }).toList();
+}
+
+/// An evening punch-in this late or later starts a night shift (the site's
+/// own rota rule), and its punch-out the next morning ends that same shift.
+const int kNightFromHour = 17;
+
+/// How long a night shift can run: a punch-out further from its evening
+/// punch-in than this is a day of its own.
+const Duration kNightLongest = Duration(hours: 16);
+
+/// The punches of a month, by the day each one's shift began.
+///
+/// **A night is one day, not two halves.** In at 20:30 on Monday and out at
+/// 08:30 on Tuesday is Monday's shift. Grouped by the calendar, Monday read
+/// "Still in" and was never counted as present, Tuesday paired that morning's
+/// 08:30 out with that evening's 20:30 in — two different nights — and no day
+/// had any hours (27 November 2026, from a week of real night punches). HR's
+/// day view places nights the same way (core/day.dart placeNights).
+///
+/// A punch-out before [kNextDayHours] that follows an evening punch-in
+/// ([kNightFromHour] or later) by no more than [kNightLongest] is moved back
+/// to the evening's day. Nothing else moves.
+Map<String, List<Map<String, dynamic>>> byWorkDay(List<Map<String, dynamic>> punches) {
+  final sorted = [
+    for (final p in punches)
+      if ('${p['time'] ?? ''}'.length >= 16) p,
+  ]..sort((a, b) => '${a['time']}'.compareTo('${b['time']}'));
+  final out = <String, List<Map<String, dynamic>>>{};
+  DateTime? nightIn;
+  String nightDay = '';
+  for (final p in sorted) {
+    final t = '${p['time']}';
+    final day = t.substring(0, 10);
+    final at = DateTime.tryParse(t.replaceFirst(' ', 'T'));
+    final isOut = '${p['log_type'] ?? ''}'.toUpperCase() == kLogOut;
+    var home = day;
+    if (isOut &&
+        at != null &&
+        nightIn != null &&
+        nightDay != day &&
+        at.hour < kNextDayHours &&
+        !at.isBefore(nightIn) &&
+        at.difference(nightIn) <= kNightLongest) {
+      home = nightDay;
+    }
+    out.putIfAbsent(home, () => []).add(p);
+    if (!isOut && at != null && at.hour >= kNightFromHour) {
+      nightIn = at;
+      nightDay = day;
+    } else if (isOut && home == nightDay) {
+      nightIn = null;
+      nightDay = '';
+    } else if (!isOut) {
+      nightIn = null;
+      nightDay = '';
+    }
+  }
+  return out;
 }
 
 /// How many days fell into each state — the strip above the calendar, and the

@@ -46,6 +46,10 @@ class _LeaveFormState extends State<_LeaveForm> {
   bool _busy = false;
   String _error = '';
 
+  /// The kinds of leave could not be read. Kept apart from [_error], which
+  /// typing clears: this stays until the kinds are read.
+  String _kindsError = '';
+
   @override
   void initState() {
     super.initState();
@@ -58,11 +62,17 @@ class _LeaveFormState extends State<_LeaveForm> {
   }
 
   Future<void> _loadKinds() async {
+    if (mounted) {
+      setState(() {
+        _loadingKinds = true;
+        _kindsError = '';
+      });
+    }
     try {
       final k = await Api.leaveKinds();
       if (mounted) setState(() => _kinds = k);
     } catch (e) {
-      if (mounted) setState(() => _error = humanError(e));
+      if (mounted) setState(() => _kindsError = humanError(e));
     } finally {
       if (mounted) setState(() => _loadingKinds = false);
     }
@@ -156,7 +166,18 @@ class _LeaveFormState extends State<_LeaveForm> {
                     .toList(),
                 onChanged: _busy ? null : (v) => setState(() => _type = v ?? ''),
               ),
-            if (!_loadingKinds && _kinds.isEmpty)
+            if (!_loadingKinds && _kindsError.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Note(_kindsError),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _busy ? null : _loadKinds,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Try again'),
+                ),
+              ),
+            ] else if (!_loadingKinds && _kinds.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text('You have no leave to ask for yet. Ask HR.',
