@@ -170,7 +170,8 @@ class _DayScreenState extends State<DayScreen> with SingleTickerProviderStateMix
               punched: punched.length,
               absent: absent.length,
               onLeave: onLeave.length,
-              off: off.length,
+              // Who came in on a Sunday is counted in Punched, not twice.
+              off: off.where((d) => d.punches.isEmpty).length,
               onTap: (i) => _tabs.animateTo(i),
             ),
           if (_loading) const LinearProgressIndicator(minHeight: 2),

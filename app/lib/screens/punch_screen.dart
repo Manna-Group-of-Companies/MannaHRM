@@ -35,6 +35,9 @@ const Duration kFixUsable = Duration(minutes: 5);
 /// the phone. The punch is already kept by then; the send goes on behind.
 const Duration kLiveLimit = Duration(seconds: 25);
 
+/// The longest a press or a pull waits for a GPS fix.
+const Duration kFixWait = Duration(seconds: 17);
+
 enum _LiveKind { sent, kept, slow, refused }
 
 /// How a live send went.
@@ -90,6 +93,10 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
 
   /// The app went to the background (not only a permission question over it).
   bool _hidden = false;
+
+  /// When a fix was last asked for, found or not: the refresh waits from
+  /// this, so a failing one is not retried every second.
+  DateTime? _triedAt;
 
   /// Punch History is open over this screen: the camera stays off.
   bool _historyOpen = false;
@@ -155,13 +162,14 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
       }
       // Keep the dot current — only while there is one: a phone refusing the
       // permission would otherwise be asked again every half minute.
-      final at = _fixAt;
+      final at = _triedAt;
       if (!_busy &&
+          !_hidden &&
           _finding == null &&
           (_fix?.has ?? false) &&
           at != null &&
           DateTime.now().difference(at) > kFixRefresh) {
-        unawaited(_locate());
+        unawaited(_locate(ask: false));
       }
     });
   }
@@ -200,9 +208,15 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
         // "resumes" the app, and asking again at once is asking twice.
         if (!_hidden) return;
         _hidden = false;
-        if (!_historyOpen) unawaited(_camera.start());
-        // Back from Android's settings, maybe with GPS or the permission on.
-        if (_finding == null) unawaited(_locate());
+        // One permission question at a time, as on open: two asked together
+        // and Android drops one — a dropped location request never answers.
+        final camera = _historyOpen ? Future<void>.value() : _camera.start();
+        unawaited(
+          camera.whenComplete(() {
+            // Back from Android's settings, maybe with GPS or the permission on.
+            if (mounted && _finding == null) unawaited(_locate());
+          }),
+        );
       default:
         break;
     }
@@ -233,20 +247,21 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _refresh() async {
-    await Future.wait([_load(), _locate()]);
+    await Future.wait([_load(), _locate().timeout(kFixWait, onTimeout: () => const Fix())]);
   }
 
   /// Where the phone is. Asked when the screen opens and again while it stays
   /// open, so the map shows it and the press does not wait on the GPS. One at a
   /// time: a press during a lookup waits for that one.
-  Future<Fix> _locate() => _finding ??= _findNow().whenComplete(() {
+  Future<Fix> _locate({bool ask = true}) => _finding ??= _findNow(ask: ask).whenComplete(() {
     _finding = null;
     if (mounted) setState(() {});
   });
 
-  Future<Fix> _findNow() async {
+  Future<Fix> _findNow({bool ask = true}) async {
+    _triedAt = DateTime.now();
     if (mounted) setState(() {});
-    final f = await currentFix(); // never throws
+    final f = await currentFix(ask: ask); // never throws
     if (!mounted) return f;
     final had = _fix;
     // A refresh that found nothing does not wipe a good fix off the map.
@@ -280,7 +295,12 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
     final at = _fixAt;
     final age = at == null ? null : DateTime.now().difference(at);
     if (had != null && had.has && had.problem.isEmpty && age != null && age < kFixFresh) return had;
-    final now = await _locate();
+    // Never longer than this: a location request Android dropped never
+    // answers, and a punch must not wait on it.
+    final now = await _locate().timeout(
+      kFixWait,
+      onTimeout: () => const Fix(problem: 'No GPS fix came in time, so the punch was sent without a place.'),
+    );
     if (now.has) return now;
     if (had != null && had.has && age != null && age < kFixUsable) {
       return Fix(
@@ -384,7 +404,7 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
               : snap.problem.isNotEmpty
               ? snap.problem
               : 'The photo did not upload, so HR will see this punch without one.';
-          Navigator.of(context).pushReplacement(
+          _replaceWith(
             MaterialPageRoute(
               builder: (_) => PunchDoneScreen(
                 direction: direction,
@@ -397,7 +417,7 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
           );
         case _LiveKind.kept:
         case _LiveKind.slow:
-          Navigator.of(context).pushReplacement(
+          _replaceWith(
             MaterialPageRoute(
               builder: (_) => PunchDoneScreen(
                 direction: direction,
@@ -451,6 +471,13 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
       await PunchQueue.I.finishLive(p.id, remove: false);
       return const _Live(_LiveKind.kept);
     }
+    // The screen already said "kept, sent with the time you pressed": so it
+    // is — the queue sends it with that time, not live, stamped on arrival.
+    if (gaveUp()) {
+      await PunchQueue.I.finishLive(p.id, remove: false);
+      unawaited(PunchQueue.I.flush());
+      return const _Live(_LiveKind.kept);
+    }
     try {
       await Api.punch(
         logType: p.logType,
@@ -463,21 +490,34 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
         employee: p.employee,
       );
     } catch (e) {
-      // Only "could not reach the site" is kept — or a password that stopped
-      // working, which is sent once the person has signed in again. A refusal
-      // is the site's answer, and its sentence is what the person has to read.
+      // Only the site judging the punch is a refusal (Api.punch keeps the rest
+      // as "could not reach it"), and its sentence is what the person reads.
       if (isNetworkFailure(e) || Session.I.signInAgain.value) {
         await PunchQueue.I.finishLive(p.id, remove: false);
         return const _Live(_LiveKind.kept);
       }
       final why = humanError(e);
-      await PunchQueue.I.finishLive(p.id, remove: true, problem: gaveUp() ? why : '');
+      await PunchQueue.I.finishLive(p.id, remove: true, problem: gaveUp() ? why : '', refused: true);
       return _Live(_LiveKind.refused, message: why);
     }
     await PunchQueue.I.finishLive(p.id, remove: true);
     // Online evidently: send anything that was waiting from before.
     unawaited(PunchQueue.I.flush());
     return _Live(_LiveKind.sent, photoUrl: photoUrl);
+  }
+
+  /// This screen, replaced by [route] — this screen's own route, wherever it
+  /// is: a correction sheet or a dialog opened over it while the punch was
+  /// sending is closed first, never replaced in its place.
+  void _replaceWith(Route<void> route) {
+    final mine = ModalRoute.of(context);
+    final nav = Navigator.of(context);
+    if (mine == null || mine.isCurrent) {
+      nav.pushReplacement(route);
+      return;
+    }
+    nav.popUntil((r) => r == mine);
+    nav.pushReplacement(route);
   }
 
   /// A punch that did not happen, and the one thing that can still be done
@@ -738,15 +778,17 @@ class _PunchScreenState extends State<PunchScreen> with WidgetsBindingObserver {
           TextButton.icon(
             icon: const Icon(Icons.edit_calendar_outlined, size: 18),
             label: const Text('Something missing? Ask for a correction'),
-            onPressed: () async {
-              final made = await showCorrectionSheet(
-                context,
-                iso: _iso,
-                seedIn: seedFrom(pair.inAt),
-                seedOut: seedFrom(pair.outAt),
-              );
-              if (made && mounted) _say('Sent for approval ✓');
-            },
+            onPressed: _busy
+                ? null
+                : () async {
+                    final made = await showCorrectionSheet(
+                      context,
+                      iso: _iso,
+                      seedIn: seedFrom(pair.inAt),
+                      seedOut: seedFrom(pair.outAt),
+                    );
+                    if (made && mounted) _say('Sent for approval ✓');
+                  },
           ),
         ],
       ),

@@ -94,9 +94,13 @@ class AdminApi {
     try {
       final rows = await _all('Company', ['name', 'default_holiday_list']);
       return _companyCalendar = {for (final r in rows) '${r['name']}': '${r['default_holiday_list'] ?? ''}'};
-    } catch (_) {
-      // Not kept: the next day read asks again, rather than judging everybody
-      // without a calendar for the rest of the session.
+    } catch (e) {
+      // No signal: the copy already held, or the day read fails and says so —
+      // never everybody judged without a calendar. A refusal (HR may not read
+      // Company) is an empty map, as before.
+      final held = _companyCalendar;
+      if (held != null) return held;
+      if (isNetworkFailure(e)) rethrow;
       return const {};
     }
   }
@@ -105,17 +109,19 @@ class AdminApi {
   /// times a year. A list that cannot be read is left out: those people are
   /// judged without one, which reads a Sunday as a working day rather than
   /// hiding an absence.
-  static Future<void> _calendar(String name) async {
-    if (name.isEmpty || _calendars.containsKey(name)) return;
+  static Future<void> _calendar(String name, {bool fresh = false}) async {
+    if (name.isEmpty || (!fresh && _calendars.containsKey(name))) return;
     try {
       final r = await Session.I.dio.get('${_res('Holiday List')}/${Uri.encodeComponent(name)}');
       final data = (r.data is Map) ? r.data['data'] : null;
       final rows = data is Map ? data['holidays'] : null;
       if (rows is! List) return; // Not answered: asked again next time.
       _calendars[name] = rows.whereType<Map>().map((h) => Holiday.fromJson(h.cast<String, dynamic>())).toList();
-    } catch (_) {
-      // Not kept: on a holiday everybody would read "not in yet" for the rest
-      // of the session over one dropped read.
+    } catch (e) {
+      // No signal: the copy already held stays. With none, the day read fails
+      // with the no-signal banner — on a holiday everybody would otherwise read
+      // "Not in yet". A refusal leaves that list out, as before.
+      if (isNetworkFailure(e) && !_calendars.containsKey(name)) rethrow;
     }
   }
 
@@ -157,11 +163,12 @@ class AdminApi {
     ]);
     final who = results[0] as List<Person>;
     final coCal = results[1] as Map<String, String>;
-    if (fresh) _calendars.clear();
     final lists = {
       for (final p in who) p.holidayList.isNotEmpty ? p.holidayList : (coCal[p.company] ?? ''),
     }..remove('');
-    await Future.wait(lists.map(_calendar));
+    // Read again on a refresh, but never thrown away first: a list that fails
+    // to come back keeps the copy it had.
+    await Future.wait(lists.map((l) => _calendar(l, fresh: fresh)));
     return DayView.build(
       date: date,
       today: today,

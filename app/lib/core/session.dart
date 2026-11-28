@@ -97,6 +97,10 @@ class Session {
   // rejected credential cannot spin the retry loop.
   static const _kRetried = 'authRetried';
 
+  // The same for a write replayed with a fresh CSRF token: one each, apart, so
+  // a write that needed a re-login and then a token still gets its token.
+  static const _kCsrfRetried = 'csrfRetried';
+
   Future<bool>? _reauthInFlight;
 
   /// Opts a request out of the auto-reauth machinery. Anything called from
@@ -111,9 +115,16 @@ class Session {
   /// fresh sign-in on the form, which may be somebody else.
   void clearAuth() {
     clearSession();
+    user = '';
     employee = null;
     isAdmin = false;
+    signOuts++;
   }
+
+  /// Bumped by every sign-out and fresh sign-in. A sign-in still running when
+  /// the person signed out must not write its session back afterwards — the
+  /// next start would open as the person who just left.
+  int signOuts = 0;
 
   /// Drops the site session only. A silent re-login is the same person
   /// coming back, so who they are — the employee, the user the site named,
@@ -157,6 +168,9 @@ class Session {
         options.headers.addAll(authHeaders);
         final m = options.method.toUpperCase();
         final isWrite = m == 'POST' || m == 'PUT' || m == 'DELETE';
+        // Re-stamped too: a replayed write must not carry the old session's
+        // token, which the site refuses as "Invalid Request".
+        options.headers.remove('X-Frappe-CSRF-Token');
         if (csrfToken.isNotEmpty && isWrite) {
           options.headers['X-Frappe-CSRF-Token'] = csrfToken;
         }
@@ -219,7 +233,7 @@ class Session {
   /// once with a fresh token, never twice.
   bool _csrfRefused(Response response) {
     final o = response.requestOptions;
-    if (refreshCsrf == null || o.extra[_kRetried] == true || _isAuthPath(o.path)) return false;
+    if (refreshCsrf == null || o.extra[_kCsrfRetried] == true || _isAuthPath(o.path)) return false;
     final m = o.method.toUpperCase();
     if (m != 'POST' && m != 'PUT' && m != 'DELETE') return false;
     if (response.statusCode != 400 && response.statusCode != 403) return false;
@@ -234,11 +248,11 @@ class Session {
       return null;
     }
     if (csrfToken.isEmpty) return null;
-    return _replay(o);
+    return _replay(o, flag: _kCsrfRetried);
   }
 
-  Future<Response?> _replay(RequestOptions o) async {
-    final extra = Map<String, dynamic>.from(o.extra)..[_kRetried] = true;
+  Future<Response?> _replay(RequestOptions o, {String flag = _kRetried}) async {
+    final extra = Map<String, dynamic>.from(o.extra)..[flag] = true;
     // A multipart body can be sent once; the photo upload is replayed with a
     // fresh copy of it, or it went with no photo after every re-login.
     final data = o.data is FormData ? (o.data as FormData).clone() : o.data;

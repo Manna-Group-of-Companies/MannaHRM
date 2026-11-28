@@ -71,9 +71,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (!mounted) return;
       setState(() {
         _data = data;
-        // Punches that could not be read are not a month nobody came in:
-        // drawn, every past workday would read Absent.
-        _rows = data.punchesUnread ? const [] : monthRoster(
+        // Punches, leave or holidays that could not be read are not a month
+        // of absences: drawn, a leave day or Christmas would read Absent.
+        _rows = !data.drawable ? const [] : monthRoster(
           ym: _ym,
           punches: data.punches,
           leave: data.leave,
@@ -82,6 +82,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // The site's today, not the phone's. A phone set forward by a day
           // would mark today absent.
           today: _today,
+          now: ServerClock.I.now(),
         );
       });
     } catch (e) {
@@ -274,8 +275,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   List<Widget> _todayBlock() {
-    final r = _rows.where((d) => d.iso == _today).firstOrNull;
-    if (r == null) return const [];
+    final row = _rows.where((d) => d.iso == _today).firstOrNull;
+    if (row == null) return const [];
+    // Today's own punches by the clock — a night's morning punch-out belongs
+    // to last night's shift in the grid, but it is still "punched out at
+    // 08:35" this morning.
+    final mine = _data.punches.where((p) => '${p['time'] ?? ''}'.startsWith(_today)).toList();
+    final pair = dayPunches(mine);
+    final r = (inAt: pair.inAt, outAt: pair.outAt, hours: spanHours(pair.inAt, pair.outAt));
     Widget line(IconData icon, Color colour, String label, String sub, String value) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(children: [

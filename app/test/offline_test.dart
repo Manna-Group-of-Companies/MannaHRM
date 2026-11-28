@@ -242,6 +242,36 @@ void main() {
     PunchQueue.I.stop();
   });
 
+  testWidgets('the latest punch decides: in again after this morning\'s punch-out reads "punched in"', (t) async {
+    final today = isoDay(ServerClock.I.now());
+    // This morning's 08:35 OUT as last read, and tonight's IN kept with no signal.
+    await AuthStore.saveDayPunches(today, [
+      {'employee': 'HR-EMP-00125', 'time': '$today 08:35:00', 'log_type': 'OUT'}
+    ], employee: 'HR-EMP-00125');
+    await PunchQueue.I.add(PendingPunch(id: '1', employee: 'HR-EMP-00125', logType: kLogIn, time: '$today 09:50:00'));
+    await t.pumpWidget(const MannaHrApp());
+    await t.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 30));
+    expect(find.text("You're punched in"), findsOneWidget, reason: 'not "punched out, 08:35"');
+    expect(find.text('09:50'), findsWidgets);
+    PunchQueue.I.stop();
+  });
+
+  testWidgets('a night worker the next morning with no signal is on last night\'s shift, not "haven\'t punched in"',
+      (t) async {
+    // The test clock reads 10:00: thirteen and a half hours after a 20:30 IN.
+    final today = isoDay(ServerClock.I.now());
+    final d = DateTime.parse(today);
+    final yesterday = isoDay(DateTime(d.year, d.month, d.day - 1));
+    // Last night's 20:30 IN, kept on the phone with no signal.
+    await PunchQueue.I.add(
+        PendingPunch(id: '1', employee: 'HR-EMP-00125', logType: kLogIn, time: '$yesterday 20:30:00'));
+    await t.pumpWidget(const MannaHrApp());
+    await t.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 30));
+    expect(find.text("You haven't punched in"), findsNothing);
+    expect(find.textContaining("last night's shift"), findsOneWidget);
+    PunchQueue.I.stop();
+  });
+
   testWidgets('the Punch screen: the time, the face in a circle, the map, the street and one wide button, '
       'calm on a phone whose camera and GPS cannot be used', (t) async {
     // The smallest phone the app is drawn for.

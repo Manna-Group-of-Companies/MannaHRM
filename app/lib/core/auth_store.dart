@@ -118,6 +118,37 @@ class AuthStore {
     }
   }
 
+  /// A punch the site has just taken, added to the day last read for it — so
+  /// a card that cannot read the day again (no signal) still shows it, rather
+  /// than "You haven't punched in". Only into that same day: a punch from
+  /// yesterday sent today never replaces today's day.
+  static Future<void> rememberSent(String employee, String time, String logType) async {
+    if (time.length < 10) return;
+    final iso = time.substring(0, 10);
+    try {
+      final p = await _prefs;
+      final j = jsonDecode(p.getString(_kDayPunches) ?? 'null');
+      List<Map<String, dynamic>> rows;
+      if (j is Map && j['iso'] == iso && j['rows'] is List) {
+        final kept = '${j['emp'] ?? ''}';
+        if (kept.isNotEmpty && kept != employee) return;
+        rows = (j['rows'] as List).whereType<Map>().map((m) => m.cast<String, dynamic>()).toList();
+      } else if (j == null) {
+        rows = [];
+      } else {
+        return;
+      }
+      if (rows.any((r) => '${r['time']}' == time && '${r['log_type']}'.toUpperCase() == logType.toUpperCase())) return;
+      rows = [
+        ...rows,
+        {'employee': employee, 'time': time, 'log_type': logType},
+      ]..sort((a, b) => '${a['time']}'.compareTo('${b['time']}'));
+      await saveDayPunches(iso, rows, employee: employee);
+    } catch (_) {
+      // Only a convenience for the next offline look at the day.
+    }
+  }
+
   static Future<void> saveSid(String sid) async =>
       (await _prefs).setString(_kSid, sid);
 

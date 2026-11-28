@@ -463,7 +463,56 @@ void main() {
       ];
       expect(await Api.nightArrival(today), isNull, reason: 'an OUT ends it');
       site.handler = _offline;
-      expect(await Api.nightArrival(today), isNull, reason: 'no signal: nothing claimed');
+      // No signal is not "no night": it says so, and the card keeps what it knew.
+      await expectLater(Api.nightArrival(today), throwsA(isA<DioException>()));
+    });
+
+    test('the one-direction machines say which way a punch goes: a 24-hour shift is one worked day', () {
+      // Manna Tyre Retreads: in on 692 at nine, out on 688 at nine next morning;
+      // 692 sometimes stores the arrival keyed OUT (real punches, day_test.dart).
+      Map<String, dynamic> m(String time, String key, String device) =>
+          {'employee': 'MTR-009', 'time': time, 'log_type': key, 'device_id': device};
+      final rows = monthRoster(
+        ym: '2026-09',
+        punches: [
+          m('2026-09-17 09:03:00', 'IN', 'BIO-6426150300692'),
+          m('2026-09-18 09:21:00', 'OUT', 'BIO-6426150300688'),
+          m('2026-09-19 09:18:00', 'OUT', 'BIO-6426150300692'),
+          m('2026-09-20 08:55:00', 'OUT', 'BIO-6426150300688'),
+        ],
+        leave: const [],
+        holidays: const [],
+        corrections: const [],
+        today: '2026-09-30',
+      );
+      RosterDay day(String iso) => rows.firstWhere((r) => r.iso == iso);
+      expect(day('2026-09-17').status, DayStatus.present);
+      expect(day('2026-09-19').status, DayStatus.present, reason: 'the arrival keyed OUT on the in machine is an IN');
+      expect(day('2026-09-18').punches, isEmpty, reason: 'its morning leaving belongs to the 17th');
+    });
+
+    test('holidays that could not be read are not a month to draw: Christmas is not an absence', () async {
+      Session.I.employee = {'name': 'HR-EMP-00125'};
+      site.handler = (o) {
+        if (o.path.contains('my_holidays')) _offline(o);
+        return _json({'data': []}, 200);
+      };
+      final d = await Api.month('2026-12');
+      expect(d.holidaysUnread, isTrue);
+      expect(d.drawable, isFalse);
+      expect(d.error, contains('No signal'));
+    });
+
+    test('a punch the site took is added to the day kept for offline, and never over another day', () async {
+      await AuthStore.saveDayPunches('2026-11-27', [
+        {'employee': 'HR-EMP-00125', 'time': '2026-11-27 08:02:00', 'log_type': 'IN'}
+      ], employee: 'HR-EMP-00125');
+      await AuthStore.rememberSent('HR-EMP-00125', '2026-11-27 17:31:00', 'OUT');
+      final day = await AuthStore.loadDayPunches('2026-11-27', employee: 'HR-EMP-00125');
+      expect(day!.map((r) => r['log_type']), ['IN', 'OUT']);
+      // A punch from the day before, sent today, does not replace today.
+      await AuthStore.rememberSent('HR-EMP-00125', '2026-11-26 20:30:00', 'IN');
+      expect(await AuthStore.loadDayPunches('2026-11-27', employee: 'HR-EMP-00125'), hasLength(2));
     });
   });
 

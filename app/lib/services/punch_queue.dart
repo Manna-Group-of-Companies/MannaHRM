@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:manna_hr_app/core/auth_store.dart';
 import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/offline_punches.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
@@ -143,7 +144,10 @@ class PunchQueue with WidgetsBindingObserver {
   /// — either way it is not to be sent again; [problem] is the site's refusal,
   /// listed when the person has already left the screen that would say it.
   /// Otherwise it stays, kept, for the queue to send.
-  Future<void> finishLive(String id, {required bool remove, String problem = ''}) async {
+  ///
+  /// [refused]: the site said no, so the punch is not added to the day kept
+  /// for offline use.
+  Future<void> finishLive(String id, {required bool remove, String problem = '', bool refused = false}) async {
     _live.remove(id);
     if (!remove) {
       changed.value++;
@@ -159,6 +163,11 @@ class PunchQueue with WidgetsBindingObserver {
         }
       }
       await _saveNow();
+      if (problem.isEmpty && !refused) {
+        for (final p in gone) {
+          await AuthStore.rememberSent(p.employee, p.time, p.logType);
+        }
+      }
     });
   }
 
@@ -233,6 +242,7 @@ class PunchQueue with WidgetsBindingObserver {
         _items = _items.where((x) => x.id != p.id).toList();
         _forgetPhoto(p);
         await _saveNow();
+        await AuthStore.rememberSent(p.employee, p.time, p.logType);
       });
 
   Future<void> _refused(PendingPunch p, String why) => _serial(() async {
@@ -254,6 +264,11 @@ class PunchQueue with WidgetsBindingObserver {
     if (_items.isEmpty) return 0;
     final me = Session.I.employeeId;
     if (me.isEmpty) return 0;
+    // Nothing of this person's waiting, beyond what the Punch screen is sending
+    // itself: no sign-in at all. And never a sign-in while a live punch is on
+    // its way — it drops the session that punch is being sent on.
+    if (!_items.any((p) => p.employee == me && !_live.contains(p.id))) return 0;
+    if (_live.isNotEmpty && (Session.I.offlineStart || Session.I.csrfToken.isEmpty)) return 0;
 
     // After an offline start there is no live session and no token, and a
     // write without one comes back "Invalid Request". Get one first; if the

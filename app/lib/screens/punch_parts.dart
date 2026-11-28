@@ -289,9 +289,10 @@ class _PunchMapState extends State<PunchMap> {
             _MapButton(icon: Icons.remove, tip: 'Zoom out', onTap: () => _zoomBy(-1)),
           ]),
         ),
+        // Bottom left, clear of the zoom buttons on a 150-high map.
         Positioned(
-          right: 8,
-          bottom: 30,
+          left: 8,
+          bottom: 8,
           child: _MapButton(
             icon: Icons.my_location,
             tip: 'Where I am',

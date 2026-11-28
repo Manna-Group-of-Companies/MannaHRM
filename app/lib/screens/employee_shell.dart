@@ -163,7 +163,7 @@ class _HomeTabState extends State<_HomeTab> {
       final today = isoDay(ServerClock.I.now());
       final ym = today.substring(0, 7);
       final d = await Api.month(ym);
-      if (!mounted || d.error.isNotEmpty) return;
+      if (!mounted || d.error.isNotEmpty || !d.drawable) return;
       final rows = monthRoster(
         ym: ym,
         punches: d.punches,
@@ -206,7 +206,7 @@ class _HomeTabState extends State<_HomeTab> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-            child: TodayCard(key: ValueKey(_round)),
+            child: TodayCard(key: ValueKey(_round), notLinked: _linkMissing),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 28),

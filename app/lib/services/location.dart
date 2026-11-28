@@ -51,7 +51,10 @@ class Fix {
   bool get isCoarse => (accuracy ?? 0) > 100;
 }
 
-Future<Fix> currentFix() async {
+/// [ask]: whether a permission not given yet is asked for. The screen's own
+/// refresh passes false — asking every half minute after "Don't allow" is
+/// asking again and again.
+Future<Fix> currentFix({bool ask = true}) async {
   try {
     if (!await Geolocator.isLocationServiceEnabled()) {
       return const Fix(
@@ -59,8 +62,11 @@ Future<Fix> currentFix() async {
               'punch can say where it was made.');
     }
     var perm = await Geolocator.checkPermission();
-    if (perm == LocationPermission.denied) {
-      perm = await Geolocator.requestPermission();
+    if (perm == LocationPermission.denied && ask) {
+      // A request Android drops (two asked at once) never answers: a limit, so
+      // it can never hold a punch.
+      perm = await Geolocator.requestPermission()
+          .timeout(const Duration(seconds: 30), onTimeout: () => LocationPermission.denied);
     }
     if (perm == LocationPermission.denied) {
       return const Fix(

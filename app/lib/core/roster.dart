@@ -10,7 +10,7 @@
 /// Pure. No widgets, no network — see `test/roster_test.dart`.
 library;
 
-import 'package:manna_hr_app/core/constants.dart' show kNextDayHours;
+import 'package:manna_hr_app/core/day.dart' show Punch, placeByMachine, placeNights;
 import 'package:manna_hr_app/core/punch_rules.dart';
 
 /// Where somebody stood on one day. The names are `rules.py`'s, so a value read
@@ -177,6 +177,7 @@ List<RosterDay> monthRoster({
   required List<Map<String, dynamic>> holidays,
   required List<Map<String, dynamic>> corrections,
   required String today,
+  DateTime? now,
 }) {
   final byDay = byWorkDay(punches);
 
@@ -231,7 +232,8 @@ List<RosterDay> monthRoster({
       holiday: sunday ? 'Sunday' : '${h?['description'] ?? ''}',
       leave: lv,
       correction: ar[iso],
-      past: iso.compareTo(today) < 0,
+      // Last night's shift, still running after midnight, is not over.
+      past: iso.compareTo(today) < 0 && !stillOnNight(mine, now),
     );
   }).toList();
 }
@@ -244,54 +246,48 @@ const int kNightFromHour = 17;
 /// punch-in than this is a day of its own.
 const Duration kNightLongest = Duration(hours: 16);
 
-/// The punches of a month, by the day each one's shift began.
+/// The punches of a month, by the day each one's shift began — placed the way
+/// HR's day view places them (core/day.dart), so the two screens agree.
 ///
 /// **A night is one day, not two halves.** In at 20:30 on Monday and out at
 /// 08:30 on Tuesday is Monday's shift. Grouped by the calendar, Monday read
-/// "Still in" and was never counted as present, Tuesday paired that morning's
-/// 08:30 out with that evening's 20:30 in — two different nights — and no day
-/// had any hours (27 November 2026, from a week of real night punches). HR's
-/// day view places nights the same way (core/day.dart placeNights).
+/// "Still in" and was never counted as present, and Tuesday paired that
+/// morning's out with that evening's in — two different nights.
 ///
-/// A punch-out before [kNextDayHours] that follows an evening punch-in
-/// ([kNightFromHour] or later) by no more than [kNightLongest] is moved back
-/// to the evening's day. Nothing else moves.
+/// **The one-direction machines say which way a punch goes**, not the key
+/// pressed ([kByMachine]): Manna Tyre Retreads' 24-hour shift is in on 692 at
+/// nine and out on 688 at nine the next morning, and 692 sometimes stores an
+/// arrival keyed OUT. Read by the key, worked days showed "No punch-out" or
+/// Absent. Each row comes back with the direction the machine gives it.
 Map<String, List<Map<String, dynamic>>> byWorkDay(List<Map<String, dynamic>> punches) {
-  final sorted = [
+  final rows = [
     for (final p in punches)
       if ('${p['time'] ?? ''}'.length >= 16) p,
-  ]..sort((a, b) => '${a['time']}'.compareTo('${b['time']}'));
+  ];
+  final placed = placeNights(placeByMachine([for (final r in rows) Punch.fromJson(r)]));
   final out = <String, List<Map<String, dynamic>>>{};
-  DateTime? nightIn;
-  String nightDay = '';
-  for (final p in sorted) {
-    final t = '${p['time']}';
-    final day = t.substring(0, 10);
-    final at = DateTime.tryParse(t.replaceFirst(' ', 'T'));
-    final isOut = '${p['log_type'] ?? ''}'.toUpperCase() == kLogOut;
-    var home = day;
-    if (isOut &&
-        at != null &&
-        nightIn != null &&
-        nightDay != day &&
-        at.hour < kNextDayHours &&
-        !at.isBefore(nightIn) &&
-        at.difference(nightIn) <= kNightLongest) {
-      home = nightDay;
-    }
-    out.putIfAbsent(home, () => []).add(p);
-    if (!isOut && at != null && at.hour >= kNightFromHour) {
-      nightIn = at;
-      nightDay = day;
-    } else if (isOut && home == nightDay) {
-      nightIn = null;
-      nightDay = '';
-    } else if (!isOut) {
-      nightIn = null;
-      nightDay = '';
-    }
+  for (var i = 0; i < rows.length; i++) {
+    final p = placed[i];
+    final keyed = '${rows[i]['log_type'] ?? ''}'.toUpperCase();
+    final row = p.logType.isNotEmpty && p.logType != keyed ? {...rows[i], 'log_type': p.logType} : rows[i];
+    out.putIfAbsent(p.workDay, () => []).add(row);
+  }
+  for (final l in out.values) {
+    l.sort((a, b) => '${a['time']}'.compareTo('${b['time']}'));
   }
   return out;
+}
+
+/// Whether [day] (its punches, oldest first) is a night shift still running
+/// at [now]: its last punch an evening IN no more than [kNightLongest] ago.
+/// Such a day is not over, and reads "Still in", not "No punch-out".
+bool stillOnNight(List<Map<String, dynamic>> day, DateTime? now) {
+  if (now == null || day.isEmpty) return false;
+  final last = day.last;
+  if ('${last['log_type'] ?? ''}'.toUpperCase() == kLogOut) return false;
+  final at = DateTime.tryParse('${last['time'] ?? ''}'.replaceFirst(' ', 'T'));
+  if (at == null || at.hour < kNightFromHour) return false;
+  return !now.isBefore(at) && now.difference(at) <= kNightLongest;
 }
 
 /// How many days fell into each state — the strip above the calendar, and the

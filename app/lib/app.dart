@@ -119,7 +119,10 @@ ThemeData mannaTheme() {
     cardTheme: CardThemeData(
       elevation: 0,
       color: kCard,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: kCardLine)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: kCardLine),
+      ),
       margin: const EdgeInsets.symmetric(vertical: 6),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -172,7 +175,10 @@ Widget fitScreen(BuildContext context, Widget? child) {
   final text = mq.textScaler.clamp(minScaleFactor: .85, maxScaleFactor: 1.3);
   final app = child ?? const SizedBox();
   if (mq.size.width <= kMaxContentWidth) {
-    return MediaQuery(data: mq.copyWith(textScaler: text), child: app);
+    return MediaQuery(
+      data: mq.copyWith(textScaler: text),
+      child: app,
+    );
   }
   return ColoredBox(
     color: kPage,
@@ -200,13 +206,13 @@ class MannaHrApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Manna HR',
-        debugShowCheckedModeBanner: false,
-        theme: mannaTheme(),
-        navigatorKey: navigator,
-        builder: (context, child) => _SignInAgain(child: fitScreen(context, child)),
-        home: home ?? const _Gate(),
-      );
+    title: 'Manna HR',
+    debugShowCheckedModeBanner: false,
+    theme: mannaTheme(),
+    navigatorKey: navigator,
+    builder: (context, child) => _SignInAgain(child: fitScreen(context, child)),
+    home: home ?? const _Gate(),
+  );
 }
 
 /// When the password this phone keeps stops working — HR reset it, or it was
@@ -242,25 +248,33 @@ class _SignInAgainState extends State<_SignInAgain> {
     final ctx = MannaHrApp.navigator.currentContext;
     if (ctx == null) return;
     _showing = true;
-    unawaited(showDialog<void>(
-      context: ctx,
-      barrierDismissible: false,
-      builder: (d) => AlertDialog(
-        title: const Text('Sign in again'),
-        content: const Text('Your password has changed. Sign in with your email and your new password. '
-            'Punches saved on this phone stay, and are sent once you have signed in.'),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.of(d).pop();
-              final nav = MannaHrApp.navigator.currentContext;
-              if (nav != null) unawaited(signOut(nav));
-            },
-            child: const Text('Sign in'),
+    unawaited(
+      showDialog<void>(
+        context: ctx,
+        barrierDismissible: false,
+        builder: (d) => PopScope(
+          // Back must not put it away: nothing is sent until the person signs in.
+          canPop: false,
+          child: AlertDialog(
+            title: const Text('Sign in again'),
+            content: const Text(
+              'Your password has changed. Sign in with your email and your new password. '
+              'Punches saved on this phone stay, and are sent once you have signed in.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(d).pop();
+                  final nav = MannaHrApp.navigator.currentContext;
+                  if (nav != null) unawaited(signOut(nav));
+                },
+                child: const Text('Sign in'),
+              ),
+            ],
           ),
-        ],
-      ),
-    ).whenComplete(() => _showing = false));
+        ),
+      ).whenComplete(() => _showing = false),
+    );
   }
 
   @override
@@ -269,10 +283,10 @@ class _SignInAgainState extends State<_SignInAgain> {
 
 /// The screen for a [Landing].
 Widget screenFor(Landing l) => switch (l) {
-      Landing.signIn => const LoginScreen(),
-      Landing.employee => const EmployeeShell(),
-      Landing.admin => const AdminShell(),
-    };
+  Landing.signIn => const LoginScreen(),
+  Landing.employee => const EmployeeShell(),
+  Landing.admin => const AdminShell(),
+};
 
 /// Opens [l] in place of everything behind it.
 void goTo(BuildContext context, Landing l) {
@@ -336,10 +350,12 @@ class _GateState extends State<_Gate> {
     if (_opened || !mounted) return;
     _opened = true;
     _slow?.cancel();
-    Navigator.of(context).pushReplacement(PageRouteBuilder(
-      pageBuilder: (_, _, _) => screenFor(l),
-      transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
-    ));
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) => screenFor(l),
+        transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+      ),
+    );
   }
 
   Future<void> _restore() async {
@@ -348,11 +364,17 @@ class _GateState extends State<_Gate> {
     // behind it. The punch works offline; the site catches up by itself.
     _slow = Timer(kSlowStart, () async {
       if (_opened || !mounted) return;
+      // HR's side needs the site: HR waits for the start rather than landing
+      // on the employee side for the whole run.
+      if (await Api.rememberedAdmin()) return;
+      if (_opened || !mounted) return;
       if (await Api.startOfflineNow()) _open(Landing.employee);
     });
     var landing = Landing.signIn;
     try {
-      await Api.restore();
+      final restored = await Api.restore();
+      // The start has answered: the early open has nothing left to cover.
+      if (!_opened) _slow?.cancel();
       if (_opened) {
         // The phone opened offline while this finished: the session it won
         // is used from here on, and nothing waits for a sign-in to send.
@@ -374,9 +396,16 @@ class _GateState extends State<_Gate> {
       // `restore` has just answered this, signing in again by itself with the
       // kept login when the site's session had run out, so a second question
       // that a weak signal fails must not send somebody to the sign-in form.
-      final restored = Session.I.user;
-      final who = restored.isNotEmpty && restored != 'Guest' ? restored : await Api.whoami();
-      final signedIn = who.isNotEmpty && who != 'Guest';
+      // Signed in is what the start said, not one more question a weak
+      // signal can lose: a live session, or the employee it opened on.
+      final user = Session.I.user;
+      final live = Session.I.sid.isNotEmpty;
+      final who = user.isNotEmpty && user != 'Guest'
+          ? user
+          : (live || restored != null)
+          ? ''
+          : await Api.whoami();
+      final signedIn = live || restored != null || (who.isNotEmpty && who != 'Guest');
       // Asked again on every start, not only at sign-in: a login whose HR role
       // was taken away should stop seeing everybody's day.
       final admin = signedIn && await Api.isAdmin();
@@ -415,51 +444,62 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(gradient: kBrandGradient),
-          child: SafeArea(
-            child: Column(children: [
-              const Spacer(flex: 3),
-              // The lockup is dark-on-white artwork — half of it is grey — so
-              // it sits on a white plate, never straight on the green.
-              Container(
-                width: 96,
-                height: 96,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-                child: Image.asset('assets/manna_logo.png', fit: BoxFit.contain),
-              ),
-              const SizedBox(height: 26),
-              Text('Manna HR', style: serif(34, color: Colors.white)),
-              const SizedBox(height: 8),
-              const Text('People • Attendance • Payroll',
-                  style: TextStyle(color: kLime, fontSize: 14, fontWeight: FontWeight.w700)),
-              const Spacer(flex: 3),
-              if (message.isEmpty)
-                const SizedBox(
-                    height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(children: [
-                    Text(message,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+    body: Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(gradient: kBrandGradient),
+      child: SafeArea(
+        child: Column(
+          children: [
+            const Spacer(flex: 3),
+            // The lockup is dark-on-white artwork — half of it is grey — so
+            // it sits on a white plate, never straight on the green.
+            Container(
+              width: 96,
+              height: 96,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+              child: Image.asset('assets/manna_logo.png', fit: BoxFit.contain),
+            ),
+            const SizedBox(height: 26),
+            Text('Manna HR', style: serif(34, color: Colors.white)),
+            const SizedBox(height: 8),
+            const Text(
+              'People • Attendance • Payroll',
+              style: TextStyle(color: kLime, fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+            const Spacer(flex: 3),
+            if (message.isEmpty)
+              const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  children: [
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(height: 14),
                     FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: kLime, foregroundColor: kOnLime),
                       onPressed: onRetry,
                       child: const Text('Try again'),
                     ),
-                  ]),
+                  ],
                 ),
-              const SizedBox(height: 28),
-              const Text('Manna Group of Companies', style: TextStyle(color: Colors.white, fontSize: 13)),
-              const SizedBox(height: 24),
-            ]),
-          ),
+              ),
+            const SizedBox(height: 28),
+            const Text('Manna Group of Companies', style: TextStyle(color: Colors.white, fontSize: 13)),
+            const SizedBox(height: 24),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

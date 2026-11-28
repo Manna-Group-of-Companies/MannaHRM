@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -122,6 +123,12 @@ class Api {
     return emp;
   }
 
+  /// Whether the kept login was HR the last time the site said.
+  static Future<bool> rememberedAdmin() async {
+    final creds = await AuthStore.load();
+    return creds.email.isNotEmpty && (await AuthStore.loadAdmin(creds.email) ?? false);
+  }
+
   /// Opens on the remembered employee now, while a slow start goes on behind
   /// it (`_Gate`). False when this phone remembers nobody for the kept login.
   static Future<bool> startOfflineNow() async {
@@ -136,13 +143,14 @@ class Api {
   static Future<bool> goOnline() async {
     if (Session.I.signInAgain.value) return false;
     try {
+      final run = Session.I.signOuts;
       final creds = await AuthStore.load();
       if (!creds.canReauth) return false;
       final ok = await _passwordLogin(creds.email, creds.password);
       if (ok) {
         Session.I.offlineStart = false;
         await _resolveQuietly(remembered: true);
-      } else {
+      } else if (run == Session.I.signOuts) {
         _keptPasswordRefused();
       }
       return ok;
@@ -214,10 +222,11 @@ class Api {
   static void _wireReauth() {
     Session.I.reauthenticate = () async {
       if (Session.I.signInAgain.value) return false;
+      final run = Session.I.signOuts;
       final creds = await AuthStore.load();
       if (!creds.canReauth) return false;
       final ok = await _passwordLogin(creds.email, creds.password);
-      if (!ok) _keptPasswordRefused();
+      if (!ok && run == Session.I.signOuts) _keptPasswordRefused();
       return ok;
     };
     Session.I.refreshCsrf = _fetchCsrf;
@@ -234,6 +243,7 @@ class Api {
   /// "not linked to an employee record", and a kept punch was dropped as
   /// refused. [login] forgets the person itself, before the form's sign-in.
   static Future<bool> _passwordLogin(String email, String password) async {
+    final run = Session.I.signOuts;
     Session.I.clearSession();
     final r = await Session.I.dio.post(
       '/api/method/login',
@@ -261,6 +271,14 @@ class Api {
       if (m != null) sid = m.group(1) ?? '';
     }
     if (sid.isEmpty || sid == 'Guest') return false;
+    // Signed out (or somebody else signed in) while this was on its way: the
+    // session it won is not theirs to keep. Ended on the site, not saved.
+    if (run != Session.I.signOuts) {
+      unawaited(Session.I.dio
+          .get('/api/method/logout', options: Options(headers: {'Cookie': 'sid=$sid'}, extra: {'authRetried': true}))
+          .then((_) {}, onError: (_) {}));
+      return false;
+    }
 
     Session.I.sid = sid;
     Session.I.email = email;
@@ -497,6 +515,7 @@ class Api {
   /// so and names the fix rather than showing an empty month. HR sets `user_id`
   /// on the Employee record.
   static Future<Map<String, dynamic>?> resolveEmployee() async {
+    final run = Session.I.signOuts;
     var who = Session.I.user;
     if (who.isEmpty || !who.contains('@')) {
       // Not known yet (an offline start keeps only the typed Emp Code): ask.
@@ -532,6 +551,8 @@ class Api {
           'and pull down to try again.');
     }
     if (rows.isEmpty) return null;
+    // Signed out while this was read: not theirs any more.
+    if (run != Session.I.signOuts) return null;
     // Active first: somebody who left and came back has two records, and the
     // live one is the one their punches belong to.
     rows.sort((a, b) =>
@@ -635,12 +656,18 @@ class Api {
     final to = '$ym-${_lastDay(ym)}';
 
     var noSignal = false;
+    var holidaysOff = false;
     void off() => noSignal = true;
+    void holidaysGone() {
+      noSignal = true;
+      holidaysOff = true;
+    }
+
     // The holidays beside the three reads rather than after them: one wait on a
     // slow network, not two.
     final holidays = who == null
-        ? _myHolidays(from, to, person, onNoSignal: off)
-        : _holidays(person, onNoSignal: off);
+        ? _myHolidays(from, to, person, onNoSignal: holidaysGone)
+        : _holidays(person, onNoSignal: holidaysGone);
     final results = await Future.wait([
       _read(
         kCheckinDoctype,
@@ -688,19 +715,22 @@ class Api {
       ),
     ]);
 
+    final hols = await holidays;
     final refused = <String>[
       if (results[0] == null) 'punches',
       if (results[1] == null) 'leave',
       if (results[2] == null) 'corrections',
+      if (holidaysOff) 'holidays',
     ];
 
-    final hols = await holidays;
     return MonthData(
       punches: results[0] ?? const [],
       leave: results[1] ?? const [],
       corrections: results[2] ?? const [],
       holidays: hols,
       punchesUnread: results[0] == null,
+      leaveUnread: results[1] == null,
+      holidaysUnread: holidaysOff,
       offline: noSignal,
       error: refused.isEmpty
           ? ''
@@ -769,7 +799,9 @@ class Api {
       final at = DateTime.tryParse('${last['time'] ?? ''}'.replaceFirst(' ', 'T'));
       if (at == null || ServerClock.I.now().difference(at) > kNightLongest) return null;
       return last;
-    } catch (_) {
+    } catch (e) {
+      // No signal is not "no night": the card keeps what it knew.
+      if (isNetworkFailure(e)) rethrow;
       return null;
     }
   }
@@ -955,6 +987,17 @@ class Api {
     if (Session.I.csrfToken.isEmpty) await _fetchCsrf();
     final r = await Session.I.dio.post(_res(kCheckinDoctype), data: doc);
     final ok = (r.statusCode ?? 0) >= 200 && (r.statusCode ?? 0) < 300;
+    if (!ok && !_judged(r)) {
+      // Not the site judging the punch: a session that ran out (401/403), a
+      // token the site no longer takes, the site rationing requests (429), a
+      // time-out on the way (408). Kept and sent again — never "not recorded".
+      throw DioException(
+        requestOptions: r.requestOptions,
+        response: r,
+        type: DioExceptionType.unknown,
+        message: 'The site could not take the punch just now (${r.statusCode}).',
+      );
+    }
     if ((r.statusCode ?? 0) >= 500) {
       // The site is up and failing (a restart, a gateway). For a punch that is
       // "could not reach it", not a refusal: kept and tried again, never
@@ -982,6 +1025,17 @@ class Api {
       );
     }
     return made.cast<String, dynamic>();
+  }
+
+  /// Whether a refused punch was refused by the site *judging it* — its rules
+  /// (too far, outside the window, a duplicate) — rather than by the session
+  /// or the network around it.
+  static bool _judged(Response r) {
+    final code = r.statusCode ?? 0;
+    if (code == 401 || code == 403 || code == 408 || code == 429) return false;
+    final body = r.data;
+    if (body is Map && '${body['exc_type'] ?? ''}' == 'CSRFTokenError') return false;
+    return true;
   }
 
   /// Put the punch photo on the site, and say where it went.
@@ -1162,8 +1216,20 @@ class MonthData {
     required this.holidays,
     required this.error,
     this.punchesUnread = false,
+    this.leaveUnread = false,
+    this.holidaysUnread = false,
     this.offline = false,
   });
+
+  /// The leave, or the holidays, could not be read for want of signal. The
+  /// month is then not drawn either: an approved leave day or Christmas would
+  /// read Absent.
+  final bool leaveUnread;
+  final bool holidaysUnread;
+
+  /// Whether the month can be drawn day by day without calling a day absent
+  /// that is not.
+  bool get drawable => !punchesUnread && !leaveUnread && !holidaysUnread;
 
   factory MonthData.empty() => MonthData(
         punches: const [],

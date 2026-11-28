@@ -128,7 +128,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   const Text('Employees', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: kInk)),
                   Text(
                     [
-                      '${rows.length} ${rows.length == 1 ? 'person' : 'people'}',
+                      (rows.isEmpty && (_loading || _error.isNotEmpty))
+                          ? '…'
+                          : '${rows.length} ${rows.length == 1 ? 'person' : 'people'}',
                       if (_status.isNotEmpty) _status,
                     ].join(' · '),
                     style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: kInk2),

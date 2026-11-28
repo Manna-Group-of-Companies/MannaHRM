@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:manna_hr_app/core/errors.dart';
@@ -157,15 +159,15 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
 
   /// A decision is being sent. A second tap on Approve or Reject meanwhile
   /// does nothing, rather than sending twice and closing the wrong screen.
-  bool _deciding = false;
+  final Set<String> _deciding = {};
 
   Future<void> _decide(BuildContext sheet, Map<String, dynamic> r, String status) async {
-    if (_deciding) return;
-    _deciding = true;
+    final id = '${r['name']}';
+    if (!_deciding.add(id)) return;
     try {
       await _decideNow(sheet, r, status);
     } finally {
-      _deciding = false;
+      _deciding.remove(id);
     }
   }
 
@@ -207,7 +209,9 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
         await showDialog<void>(
           context: sheet,
           builder: (d) => AlertDialog(
-            title: Text(status == 'Approved' ? 'Not approved' : 'Not rejected'),
+            // Not "Not approved": it may already be — decided on the website,
+            // or sent and its answer lost. The list is read again below.
+            title: const Text('Could not send the decision'),
             content: Text(humanError(e)),
             actions: [TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('OK'))],
           ),
@@ -215,6 +219,7 @@ class _StatusListState extends State<_StatusList> with AutomaticKeepAliveClientM
       } else {
         messenger.showSnackBar(SnackBar(content: Text(humanError(e))));
       }
+      if (mounted) unawaited(_load());
     }
   }
 

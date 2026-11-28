@@ -155,7 +155,12 @@ class _PayrollReportState extends State<PayrollReport> {
                 Text(_loading ? '…' : (_unread ? '—' : rupees(_sum('net_pay'))),
                     style: const TextStyle(color: Color(0xFF0B0F19), fontSize: 32, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text(_unread ? 'Could not be read' : '${_rows.length} ${_rows.length == 1 ? 'slip' : 'slips'} this month',
+                Text(
+                    _loading && _rows.isEmpty
+                        ? '…'
+                        : _unread
+                            ? 'Could not be read'
+                            : '${_rows.length} ${_rows.length == 1 ? 'slip' : 'slips'} this month',
                     style: const TextStyle(color: Color(0xFF4A5262), fontSize: 13)),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),

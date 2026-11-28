@@ -6,6 +6,7 @@ import 'package:manna_hr_app/core/auth_store.dart';
 import 'package:manna_hr_app/core/errors.dart';
 import 'package:manna_hr_app/core/offline_punches.dart';
 import 'package:manna_hr_app/core/punch_rules.dart';
+import 'package:manna_hr_app/core/roster.dart' show stillOnNight;
 import 'package:manna_hr_app/core/server_clock.dart';
 import 'package:manna_hr_app/core/session.dart';
 import 'package:manna_hr_app/screens/punch_screen.dart';
@@ -23,7 +24,12 @@ import 'package:manna_hr_app/ui/brand.dart';
 /// Reads its own punches. A parent that wants it read again gives it a new
 /// key.
 class TodayCard extends StatefulWidget {
-  const TodayCard({super.key, this.onPunched, this.compact = false});
+  const TodayCard({super.key, this.onPunched, this.compact = false, this.notLinked = true});
+
+  /// The site answered that no Employee record carries this login. False
+  /// when it could not be asked — then the card says who you are could not be
+  /// read, never "Not linked", which sends somebody to HR over a bad signal.
+  final bool notLinked;
 
   /// After the punch screen closes, so the page around it can read again.
   final VoidCallback? onPunched;
@@ -63,6 +69,10 @@ class _TodayCardState extends State<TodayCard> with WidgetsBindingObserver {
   List<Map<String, dynamic>> get _shown =>
       withPending(_today, PunchQueue.I.items, isoDay(ServerClock.I.now()), Session.I.employeeId);
 
+  /// A kept punch left the queue while the day was being read: read again
+  /// once that read is done, rather than drop the change.
+  bool _again = false;
+
   void _onQueue() {
     if (!mounted) return;
     final n = PunchQueue.I.count.value;
@@ -71,7 +81,45 @@ class _TodayCardState extends State<TodayCard> with WidgetsBindingObserver {
     setState(() {});
     // A kept punch has gone to the site. The card's own copy of the day was
     // read before it, so read again — or it says "You haven't punched in".
-    if (fewer && !_loading) unawaited(_load());
+    if (fewer) {
+      if (_loading) {
+        _again = true;
+      } else {
+        unawaited(_load());
+      }
+    }
+  }
+
+  /// Last night's punch-in as this phone knows it, for a card with no signal:
+  /// one kept here and not sent yet, or the last punch of yesterday as last
+  /// read. A night worker at 06:00 with no signal is still in.
+  Future<Map<String, dynamic>?> _nightFromPhone(String day) async {
+    final me = Session.I.employeeId;
+    final d = DateTime.tryParse(day);
+    if (me.isEmpty || d == null) return null;
+    final yesterday = isoDay(DateTime(d.year, d.month, d.day - 1));
+    final seen = await AuthStore.loadDayPunches(yesterday, employee: me) ?? const <Map<String, dynamic>>[];
+    final rows = <Map<String, dynamic>>[
+      ...seen,
+      for (final p in PunchQueue.I.items)
+        if (p.employee == me && p.time.startsWith(yesterday))
+          {'employee': me, 'time': p.time, 'log_type': p.logType, 'pending': true},
+    ]..sort((a, b) => '${a['time']}'.compareTo('${b['time']}'));
+    return stillOnNight(rows, ServerClock.I.now()) ? rows.last : null;
+  }
+
+  /// The latest punch decides, the rule the bright button goes by
+  /// ([nextLogType]): in after an IN, out after an OUT. Earliest-in and
+  /// latest-out told a night worker who came in again at 20:24 "You're punched
+  /// out, 08:35".
+  static ({String inAt, String outAt}) _latest(List<Map<String, dynamic>> rows) {
+    if (rows.isEmpty) return (inAt: '', outAt: '');
+    final sorted = [...rows]..sort((a, b) => '${a['time']}'.compareTo('${b['time']}'));
+    final last = sorted.last;
+    bool out(Map<String, dynamic> p) => '${p['log_type'] ?? ''}'.toUpperCase() == kLogOut;
+    if (!out(last)) return (inAt: '${last['time']}', outAt: '');
+    final ins = sorted.where((p) => !out(p) && '${p['time']}'.compareTo('${last['time']}') < 0).toList();
+    return (inAt: ins.isEmpty ? '' : '${ins.last['time']}', outAt: '${last['time']}');
   }
 
   @override
@@ -112,30 +160,45 @@ class _TodayCardState extends State<TodayCard> with WidgetsBindingObserver {
     });
     if (!_haveDay && Session.I.employeeId.isNotEmpty) {
       final seen = await AuthStore.loadDayPunches(day, employee: Session.I.employeeId);
-      if (mounted && seen != null && _loading) {
+      final night = _night ?? await _nightFromPhone(day);
+      if (mounted && _loading) {
         setState(() {
-          _today = seen;
-          _haveDay = true;
-          _readFor = day;
+          if (seen != null) {
+            _today = seen;
+            _haveDay = true;
+            _readFor = day;
+          }
+          _night = night;
         });
       }
     }
+    // Last night's punch-in, from the site; with no signal, what was known
+    // stays, or what this phone knows — never "no night" for want of a read.
+    final nightRead = Api.nightArrival(day).then<Map<String, dynamic>?>(
+      (n) => n,
+      onError: (Object _) async => _night ?? await _nightFromPhone(day),
+    );
     try {
-      final got = await Future.wait<Object?>([Api.punchesOn(day), Api.nightArrival(day)]);
-      final rows = got[0] as List<Map<String, dynamic>>;
+      final rows = await Api.punchesOn(day);
+      final night = await nightRead;
       if (mounted) {
         setState(() {
           _today = rows;
-          _night = got[1] as Map<String, dynamic>?;
+          _night = night;
           _haveDay = true;
           _readFor = day;
           _readAt = DateTime.now();
         });
       }
     } catch (e) {
+      await nightRead;
       if (mounted) setState(() => _error = humanError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
+      if (_again && mounted) {
+        _again = false;
+        unawaited(_load());
+      }
     }
   }
 
@@ -158,14 +221,14 @@ class _TodayCardState extends State<TodayCard> with WidgetsBindingObserver {
     // Still on last night's shift: nothing yet today, and an evening IN
     // yesterday not yet followed by its OUT.
     final night = linked && shown.isEmpty ? _night : null;
-    final pair = night != null ? (inAt: '${night['time']}', outAt: '') : dayPunches(shown);
+    final pair = night != null ? (inAt: '${night['time']}', outAt: '') : _latest(shown);
     final next = night != null ? kLogOut : nextLogType(shown);
     final hours = spanHours(pair.inAt, pair.outAt);
     final punched = linked && (shown.isNotEmpty || night != null);
     // The big line is the latest thing that happened; the small one under it
     // carries the rest of the day.
     final headline = !linked
-        ? 'Not linked'
+        ? (widget.notLinked ? 'Not linked' : 'Not read')
         : !punched
             ? 'Not marked'
             : night != null
@@ -174,7 +237,7 @@ class _TodayCardState extends State<TodayCard> with WidgetsBindingObserver {
                     ? 'In at ${clockOf(pair.inAt)}'
                     : 'Out at ${clockOf(pair.outAt)}';
     final detail = !linked
-        ? 'No employee record carries this login'
+        ? (widget.notLinked ? 'No employee record carries this login' : 'Pull down to try again.')
         : night != null
             ? 'On last night\'s shift, in at ${clockOf(pair.inAt)}'
             // An OUT with no IN today (the end of a night) has no "In" to show.
@@ -269,7 +332,7 @@ class _TodayCardState extends State<TodayCard> with WidgetsBindingObserver {
     // The dark green card: what happened last, large, and the button for
     // what comes next in lime.
     final title = !linked
-        ? 'Not linked yet'
+        ? (widget.notLinked ? 'Not linked yet' : 'Who you are could not be read')
         : _loading
             ? 'Reading today…'
             : !punched
