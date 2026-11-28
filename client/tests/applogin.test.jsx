@@ -127,32 +127,39 @@ describe("Create Employee asks for the login beside Punch Method", () => {
 		await act(async () => { render(<Provider store={store}><CreateEmployee /></Provider>); });
 	};
 
-	it("shows the Emp Code as the app login and the date of birth as DDMMYYYY as the password, neither typed", async () => {
+	it("offers the Emp Code and the date of birth until HR types its own user name, email or password", async () => {
 		await draw({ custom_punch_method: "Mobile App", employee_number: "MRP861", date_of_birth: "2005-03-24" });
-		expect(screen.getByLabelText("App login").value).toBe("MRP861");
-		expect(screen.getByLabelText("App login").readOnly).toBe(true);
-		expect(screen.getByLabelText("App password").value).toBe("24032005");
-		expect(screen.getByLabelText("App password").readOnly).toBe(true);
-		// No email is asked for (27 Nov 2026).
-		expect(screen.queryByLabelText("Login email")).toBeNull();
+		expect(screen.getByLabelText("App user name").placeholder).toBe("MRP861");
+		expect(screen.getByLabelText("App password").placeholder).toBe("24032005");
+		expect(screen.getByLabelText("App email").value).toBe("");
+		// Typable since 28 Nov 2026: HR may name the login.
+		expect(screen.getByLabelText("App user name").readOnly).toBe(false);
+		expect(screen.getByLabelText("App password").readOnly).toBe(false);
 	});
 
 	it("follows the Emp Code and Date Of Birth as they are typed", async () => {
 		await draw({ custom_punch_method: "Mobile App" });
 		expect(screen.getByLabelText("App password").placeholder).toBe("Date of birth, DDMMYYYY");
 		act(() => set({ newemp: { ...getState().newemp, f: { ...getState().newemp.f, employee_number: "MRP900", date_of_birth: "1996-06-03" } } }));
-		expect(screen.getByLabelText("App login").value).toBe("MRP900");
-		expect(screen.getByLabelText("App password").value).toBe("03061996");
+		expect(screen.getByLabelText("App user name").placeholder).toBe("MRP900");
+		expect(screen.getByLabelText("App password").placeholder).toBe("03061996");
 	});
 
-	it("says the date of birth is needed for somebody on the phone", async () => {
+	it("wants a password typed, or a date of birth, for somebody on the phone", async () => {
 		await draw({ custom_punch_method: "Both", employee_number: "MRP900" });
-		expect(screen.getByText(/Date Of Birth is needed for somebody who punches on the phone/)).toBeTruthy();
+		expect(screen.getByText(/Type an app password, or fill Date Of Birth/)).toBeTruthy();
+	});
+
+	it("refuses a short password and a user name with an @", async () => {
+		await draw({ custom_punch_method: "Both", employee_number: "MRP900", app_password: "123" });
+		expect(screen.getByText(/at least 6 characters/)).toBeTruthy();
+		await draw({ custom_punch_method: "Both", employee_number: "MRP900", app_password: "secret12", app_username: "a@b" });
+		expect(screen.getAllByText(/cannot have an @ or a space/).length).toBeGreaterThan(0);
 	});
 
 	it("draws neither for somebody on the fingerprint machine", async () => {
 		await draw({ custom_punch_method: "Fingerprint Machine" });
-		expect(screen.queryByLabelText("App login")).toBeNull();
+		expect(screen.queryByLabelText("App user name")).toBeNull();
 		expect(screen.queryByLabelText("App password")).toBeNull();
 	});
 });

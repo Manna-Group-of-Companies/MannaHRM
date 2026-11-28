@@ -332,6 +332,11 @@ def keep_auto_attendance(enabled, process_after, today):
 	fix = {}
 	if not int(enabled or 0):
 		fix["enable_auto_attendance"] = 1
+		# Turned on here, an old start date would have hrms mark Absent every
+		# day since it that has no attendance, the factoHR months included
+		# (review, 28 Nov 2026). So it starts no earlier than today.
+		if process_after and str(process_after)[:10] < str(today)[:10]:
+			fix["process_attendance_after"] = str(today)
 	if not process_after:
 		fix["process_attendance_after"] = str(today)
 	return fix

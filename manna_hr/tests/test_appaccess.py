@@ -221,3 +221,14 @@ def test_hr_reads_who_cannot_punch_and_what_to_do_in_one_line():
 	assert "Allow phone punch" in one
 	many = aa.cannot_punch_subject([{"name": "E%d" % i, "employee_name": "N%d" % i, "employee_number": "C%d" % i} for i in range(10)], shown=3)
 	assert many.startswith("10 people cannot punch: N0 (C0), N1 (C1), N2 (C2) and 7 more.")
+
+
+def test_hr_may_name_a_new_phone_login_or_leave_it_to_the_rule():
+	assert aa.chosen_login() == {"username": "", "email": "", "password": "", "problems": []}
+	c = aa.chosen_login(" ebin ", " Ebin.Joy@MannaRubber.com ", "secret12")
+	assert (c["username"], c["email"], c["password"], c["problems"]) == ("ebin", "ebin.joy@mannarubber.com", "secret12", [])
+
+
+def test_a_user_name_with_an_at_a_bad_email_or_a_short_password_is_refused():
+	c = aa.chosen_login("ebin@x", "not-an-email", "123")
+	assert len(c["problems"]) == 3

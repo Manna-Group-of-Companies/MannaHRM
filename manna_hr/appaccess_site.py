@@ -69,7 +69,7 @@ def _phone(employee):
 
 
 @frappe.whitelist(methods=["POST"])
-def allow_phone_punch(employee):
+def allow_phone_punch(employee, username=None, email=None, password=None):
 	"""Let one employee punch on the phone as well as on the machine.
 
 	Punch Method becomes Both (Mobile App stays), and `user_id` names a login
@@ -84,6 +84,25 @@ def allow_phone_punch(employee):
 	frappe.only_for(aa.MANAGERS)
 	caller = frappe.session.user
 	plan = _phone(employee)
+	# HR may name the new login itself on Create Employee (28 Nov 2026): a user
+	# name, an email and a password. Only for a login being made here; one
+	# already there keeps its own, as above.
+	if plan["make_login"]:
+		chosen = aa.chosen_login(username, email, password)
+		if chosen["problems"]:
+			frappe.throw("<br>".join(chosen["problems"]))
+		if chosen["username"] and chosen["username"] != plan["sign_in_as"]:
+			if frappe.db.exists("User", {"username": chosen["username"]}):
+				frappe.throw(_("User name {0} is already somebody's login.").format(chosen["username"]))
+			plan["sign_in_as"] = chosen["username"]
+			plan["problems"] = [p for p in plan["problems"] if "user name" not in p.lower()]
+		if chosen["email"]:
+			if frappe.db.exists("User", chosen["email"]):
+				frappe.throw(_("{0} is already somebody's login.").format(chosen["email"]))
+			plan["login"] = chosen["email"]
+		plan["password"] = chosen["password"]
+		if chosen["password"]:
+			plan["problems"] = [p for p in plan["problems"] if "date of birth" not in p.lower()]
 	if plan["problems"]:
 		frappe.throw("<br>".join(plan["problems"]))
 	login = plan["login"]
@@ -128,7 +147,7 @@ def _allow_phone_punch_writes(employee, plan):
 			"enabled": 1,
 			"user_type": "System User",
 			"send_welcome_email": 0,
-			"new_password": aa.first_password(emp.date_of_birth),
+			"new_password": plan.get("password") or aa.first_password(emp.date_of_birth),
 			"roles": [{"role": "Employee"}],
 		})
 		# The date of birth is a first password the app makes them replace, so
@@ -137,7 +156,8 @@ def _allow_phone_punch_writes(employee, plan):
 		user.flags.ignore_password_policy = True
 		user.flags.no_welcome_mail = True
 		user.insert(ignore_permissions=True)
-		said.append(_("made login {0} (user name {1}, first password the date of birth)").format(login, plan["sign_in_as"]))
+		said.append(_("made login {0} (user name {1}, password {2})").format(
+			login, plan["sign_in_as"], _("set by HR") if plan.get("password") else _("the date of birth")))
 	else:
 		if plan.get("reset_login"):
 			said.append(_set_emp_code_login(login, plan["sign_in_as"], emp.date_of_birth))

@@ -177,6 +177,27 @@ def granted(changes):
 PHONE_METHODS = ("Mobile App", "Both")
 
 
+def chosen_login(username=None, email=None, password=None):
+	"""What HR typed for a new phone login on Create Employee, checked.
+
+	All three may be left empty: the user name is then the Emp Code, the login
+	is named by the record's email or a stand-in, and the password is the date
+	of birth (27 November 2026). Asked for 28 November 2026: HR may name each.
+	The app signs in with the user name, so it may not hold an "@" or a space.
+	"""
+	u = str(username or "").strip()
+	e = str(email or "").strip().lower()
+	p = str(password or "")
+	problems = []
+	if u and ("@" in u or " " in u):
+		problems.append("The app user name cannot have an @ or a space in it.")
+	if e and (e.count("@") != 1 or "." not in e.split("@")[1] or " " in e):
+		problems.append("{0} is not an email address.".format(e))
+	if p and len(p) < 6:
+		problems.append("The app password needs at least 6 characters.")
+	return {"username": u, "email": e, "password": p, "problems": problems}
+
+
 def cannot_punch(employees):
 	"""Active people with no way to punch at all: no machine number and no login.
 

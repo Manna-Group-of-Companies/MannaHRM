@@ -151,7 +151,9 @@ def test_a_shift_saved_with_auto_attendance_off_is_saved_with_it_on():
 
 def test_a_shift_already_on_keeps_its_own_start_date():
 	assert adms.keep_auto_attendance(1, "2026-07-31", "2026-11-27") == {}
-	assert adms.keep_auto_attendance(0, "2026-10-01", "2026-11-27") == {"enable_auto_attendance": 1}
+	# Turned on by the guard, an old start would mark the factoHR months Absent.
+	assert adms.keep_auto_attendance(0, "2026-10-01", "2026-11-27") == {"enable_auto_attendance": 1, "process_attendance_after": "2026-11-27"}
+	assert adms.keep_auto_attendance(0, "2026-12-05", "2026-11-27") == {"enable_auto_attendance": 1}
 
 
 def test_a_pin_whose_only_employee_is_inactive_names_that_employee_for_hr():

@@ -329,9 +329,13 @@ export default function CreateEmployee() {
 	   Emp Code as its user name and the date of birth as its password, and with
 	   no email needed. The date of birth is what it cannot do without. */
 	const appPassword = dobPassword(f.date_of_birth);
-	const loginProblem = punchesOnApp(f.custom_punch_method) && !appPassword
-		? "Date Of Birth is needed for somebody who punches on the phone: it is their app password."
-		: "";
+	const typedPassword = String(f.app_password || "");
+	const loginProblem = !punchesOnApp(f.custom_punch_method) ? ""
+		: !appPassword && !typedPassword
+			? "Type an app password, or fill Date Of Birth: it is their app password otherwise."
+			: typedPassword && typedPassword.length < 6 ? "The app password needs at least 6 characters."
+				: /[@\s]/.test(String(f.app_username || "")) ? "The app user name cannot have an @ or a space in it."
+					: "";
 	const all = scoped(s);
 	const opts = optionsFor(s, all, f);
 	const { gaps, bad } = problemsOf(f, s.employees, s.leaveTypes);
@@ -378,8 +382,13 @@ export default function CreateEmployee() {
 			let appLogin = null;
 			if (doc?.name && punchesOnApp(f.custom_punch_method)) {
 				patch("newemp", { busy: "making the app login" });
-				appLogin = await apiCall("manna_hr.appaccess_site.allow_phone_punch", { employee: doc.name })
-					.then((d) => ({ ok: true, as: d?.phone?.sign_in_as || doc.employee_number, login: d?.login || "" }))
+				appLogin = await apiCall("manna_hr.appaccess_site.allow_phone_punch", {
+					employee: doc.name,
+					username: String(f.app_username || "").trim(),
+					email: String(f.app_email || "").trim(),
+					password: String(f.app_password || ""),
+				})
+					.then((d) => ({ ok: true, as: d?.phone?.sign_in_as || f.app_username || doc.employee_number, login: d?.login || "", own: Boolean(f.app_password) }))
 					.catch((e) => ({ ok: false, error: String(e?.message || e).replace(/<br>/g, " ") }));
 			}
 			patch("newemp", {
@@ -448,7 +457,7 @@ export default function CreateEmployee() {
 								? <> Enrol finger number <b>{done.attendance_device_id}</b> on the machine.</> : null}
 							{done.custom_punch_method !== "Fingerprint Machine" ? (
 								app?.ok
-									? <> App login made — they sign in to the Manna HR app with <b>{app.as || done.employee_number || "—"}</b> and their date of birth (DDMMYYYY).</>
+									? <> App login made — they sign in to the Manna HR app with <b>{app.as || done.employee_number || "—"}</b> and {app.own ? "the password typed above" : "their date of birth (DDMMYYYY)"}.</>
 									: app
 										? <> The app login was not made: {app.error} Use Allow phone punch too on their Apps &amp; access.</>
 										: null
@@ -572,24 +581,35 @@ export default function CreateEmployee() {
 								<div className="wizform wizlogin">
 									{/* The Emp Code is the user name the app signs in with
 									    (appUserDoc), so it is shown here and changed there. */}
+									{/* HR may name the login (28 Nov 2026). Left empty: user name
+									    the Emp Code, password the date of birth, no email. */}
 									<div className="lvf wizf" style={{ "--w": 8 }}>
-										<label className="lab" htmlFor="ne-app-login">App login</label>
+										<label className="lab" htmlFor="ne-app-login">App user name</label>
 										<span className="ctl">
-											<input id="ne-app-login" type="text" readOnly value={f.employee_number || ""}
-												placeholder="Emp Code" />
+											<input id="ne-app-login" type="text" value={f.app_username || ""}
+												onChange={(e) => setF("app_username", e.target.value)}
+												placeholder={f.employee_number || "Emp Code"} />
 										</span>
 									</div>
-									{/* Always the date of birth (HR, 27 Nov 2026): shown, not typed. */}
+									<div className="lvf wizf" style={{ "--w": 10 }}>
+										<label className="lab" htmlFor="ne-app-email">App email</label>
+										<span className="ctl">
+											<input id="ne-app-email" type="email" value={f.app_email || ""}
+												onChange={(e) => setF("app_email", e.target.value)}
+												placeholder="Optional" />
+										</span>
+									</div>
 									<div className="lvf wizf" style={{ "--w": 8 }}>
 										<label className="lab" htmlFor="ne-app-password">App password</label>
 										<span className="ctl">
-											<input id="ne-app-password" type="text" readOnly value={appPassword}
-												placeholder="Date of birth, DDMMYYYY" />
+											<input id="ne-app-password" type="text" value={f.app_password || ""}
+												onChange={(e) => setF("app_password", e.target.value)}
+												placeholder={appPassword || "Date of birth, DDMMYYYY"} />
 										</span>
 									</div>
 									<p className="wizmgr muted wizlognote">
-										Made when Create is pressed: they sign in with their Emp Code and date of birth.
-										No email is needed.
+										Made when Create is pressed. Left empty, they sign in with their Emp Code and
+										date of birth, and no email is needed.
 									</p>
 								</div>
 							) : null}
