@@ -254,6 +254,39 @@ def is_stand_in(email):
 	return str(email or "").lower().endswith("@" + STAND_IN_DOMAIN)
 
 
+def existing_login(user_id="", driver_logins=(), email_login=""):
+	"""The login an employee already has, which phone punch links rather than
+	making a second; "" when there is none. `(login, problem)`.
+
+	In order: the one their record names (`user_id`); else the Fleet driver
+	app login linked to them on the fleet dashboard (Fleet Driver Employee) -
+	the Manna HR app signs in with it just as well, and a second login splits
+	their punches and puts them on the drivers list twice (HPT-114, 28 November
+	2026); else the one named by their email or Emp Code stand-in. Two driver
+	logins linked to one employee is for HR to settle first, so neither is
+	picked.
+	"""
+	if user_id:
+		return user_id, ""
+	drivers = sorted({d for d in driver_logins or () if d})
+	if len(drivers) == 1:
+		return drivers[0], ""
+	if len(drivers) > 1:
+		return "", ("Linked to more than one Fleet driver app login ({0}). Keep the one they use and unlink the "
+			"other on the fleet dashboard (Drivers → HRMS employee) first.".format(", ".join(drivers)))
+	return email_login or "", ""
+
+
+def second_driver_login(login, driver_logins=()):
+	"""Why the Fleet driver app switch may not be turned on for `login`: the
+	employee already drives with another login. "" when it may."""
+	others = sorted({d for d in driver_logins or () if d and d != login})
+	if not others:
+		return ""
+	return ("{0} already uses the Fleet driver app as {1}. A second driver login would put them on the drivers "
+		"list twice; they can sign in to the Manna HR app with {1} too.".format(login or "This employee", ", ".join(others)))
+
+
 def email_of(emp):
 	"""The address a new login is named by: the work email, else the personal."""
 	for key in ("company_email", "personal_email", "prefered_email"):

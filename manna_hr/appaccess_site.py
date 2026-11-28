@@ -46,13 +46,15 @@ _PHONE_FIELDS = (
 def _phone(employee):
 	"""`aa.phone_punch` for one employee, with what it needs read off the site."""
 	emp = frappe.db.get_value("Employee", employee, list(_PHONE_FIELDS), as_dict=True) or {}
-	login = emp.get("user_id") or ""
-	if not login:
-		# A login already named by their email, or by the stand-in a first press
-		# of the button made, is the one to link rather than a second.
-		email = aa.email_of(emp) or aa.stand_in_email(emp.get("employee_number"))
-		if email and frappe.db.exists("User", email):
-			login = email
+	# The login they already have - their record's, else their Fleet driver app
+	# login, else one named by their email or by the stand-in a first press of
+	# the button made - is the one to link rather than a second.
+	email = aa.email_of(emp) or aa.stand_in_email(emp.get("employee_number"))
+	login, linked_problem = aa.existing_login(
+		emp.get("user_id") or "",
+		[] if emp.get("user_id") else _driver_logins(employee),
+		email if email and frappe.db.exists("User", email) else "",
+	)
 	login_user = None
 	if login:
 		login_user = frappe.db.get_value("User", login, ["name", "enabled", "username"], as_dict=True)
@@ -65,7 +67,20 @@ def _phone(employee):
 	if code:
 		holder = frappe.db.get_value("User", {"username": code, "name": ["!=", login or ""]}, "name") or ""
 	by_name = frappe.db.get_single_value("System Settings", "allow_login_using_user_name")
-	return aa.phone_punch(emp, login_user, holder, None if by_name is None else bool(by_name))
+	out = aa.phone_punch(emp, login_user, holder, None if by_name is None else bool(by_name))
+	if linked_problem:
+		out["problems"].append(linked_problem)
+	return out
+
+
+def _driver_logins(employee):
+	"""The enabled Fleet driver app logins linked to this employee on the fleet
+	dashboard (Fleet Driver Employee: driver -> employee). [] on a site without
+	the fleet DocTypes."""
+	if not frappe.db.exists("DocType", "Fleet Driver Employee"):
+		return []
+	drivers = frappe.get_all("Fleet Driver Employee", filters={"employee": employee}, pluck="driver")
+	return [d for d in drivers if d and frappe.db.get_value("User", d, "enabled")]
 
 
 @frappe.whitelist(methods=["POST"])
@@ -231,6 +246,10 @@ def set_access(employee, key, value=None):
 		changes = aa.plan(key, value, roles)
 	except ValueError as e:
 		frappe.throw(str(e))
+	if key == "fleet_driver" and "Driver" in (changes.get("add_roles") or []):
+		twice = aa.second_driver_login(login, _driver_logins(employee))
+		if twice:
+			frappe.throw(twice)
 	if set(aa.granted(changes)) & set(aa.UNTOUCHABLE):
 		frappe.throw(_("That would grant {0}.").format(", ".join(aa.granted(changes))), frappe.PermissionError)
 

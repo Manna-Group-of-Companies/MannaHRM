@@ -221,3 +221,32 @@ def test_hr_reads_who_cannot_punch_and_what_to_do_in_one_line():
 	assert "Allow phone punch" in one
 	many = aa.cannot_punch_subject([{"name": "E%d" % i, "employee_name": "N%d" % i, "employee_number": "C%d" % i} for i in range(10)], shown=3)
 	assert many.startswith("10 people cannot punch: N0 (C0), N1 (C1), N2 (C2) and 7 more.")
+
+
+# --- the login an employee already has (28 November 2026: HPT-114 was made beside a linked driver login)
+
+def test_the_record_s_own_login_wins():
+	assert aa.existing_login("a@x.com", ["driver@x.com"], "e@x.com") == ("a@x.com", "")
+
+
+def test_a_linked_driver_login_is_reused_rather_than_a_second_made():
+	assert aa.existing_login("", ["abhishek.dreiver@gmail.com"], "") == ("abhishek.dreiver@gmail.com", "")
+	# even over a stand-in the email lookup found
+	assert aa.existing_login("", ["d@x.com"], "hpt-114@phone.manna.invalid") == ("d@x.com", "")
+
+
+def test_without_a_driver_login_the_email_or_stand_in_is_used():
+	assert aa.existing_login("", [], "e@x.com") == ("e@x.com", "")
+	assert aa.existing_login("", [None, ""], "") == ("", "")
+
+
+def test_two_driver_logins_for_one_employee_are_for_hr_to_settle():
+	login, problem = aa.existing_login("", ["b@x.com", "a@x.com"], "e@x.com")
+	assert login == "" and "a@x.com, b@x.com" in problem
+
+
+def test_the_fleet_driver_switch_refuses_a_second_driver_login():
+	assert aa.second_driver_login("abhilash@x.com", ["abhilash.m.g.driver@x.com"]).startswith(
+		"abhilash@x.com already uses the Fleet driver app as abhilash.m.g.driver@x.com")
+	assert aa.second_driver_login("d@x.com", ["d@x.com"]) == ""
+	assert aa.second_driver_login("d@x.com", []) == ""
