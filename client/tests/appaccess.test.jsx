@@ -127,36 +127,46 @@ describe("phone punch (25 November 2026)", () => {
 		expect(document.body.textContent).toContain("sign in to the Manna HR app with MRP-293");
 	});
 
-	it("an existing login is linked with its own user name and password", async () => {
+	it("somebody with their own login gets a separate app login, and their own is not changed", async () => {
 		answer = () => Promise.resolve({ login: "pareeth@manna.in", why: "", apps: APPS,
-			phone: { ...PHONE, login: "pareeth@manna.in", make_login: false, sign_in_as: "pareeth_k_b" } });
+			phone: { ...PHONE, login: "mrp-293@phone.manna.invalid", stand_in: true, make_login: false,
+				make_app_login: true, own_login: "pareeth@manna.in" } });
 		const view = await draw();
 		await act(async () => { view.getByRole("button", { name: /allow phone punch too/i }).click(); });
-		expect(document.body.textContent).toContain("user name and password are not changed");
-		expect(document.body.textContent).toContain("pareeth_k_b");
+		expect(document.body.textContent).toContain("pareeth@manna.in is not changed");
+		expect(document.body.textContent).toContain("its own password");
+		expect(document.body.textContent).toContain("MRP-293 and their date of birth");
 	});
 });
 
-describe("reset to Emp Code + date of birth (27 November 2026)", () => {
-	const ON = { ...PHONE, on: true, method: "Both", make_login: false, login: "ebin@manna.in", sign_in_as: "MRP-103", reset_login: true };
+describe("an existing password is never changed (28 November 2026)", () => {
+	const OWN = { ...PHONE, method: "Both", login: "mrp-103@phone.manna.invalid", stand_in: true, make_login: false,
+		make_app_login: true, own_login: "ebin@gmail.com", sign_in_as: "MRP-103" };
 
-	it("offers the reset on an app-only login, asks first, then asks the site", async () => {
-		answer = (m) => Promise.resolve({ login: "ebin@manna.in", why: "", apps: APPS, phone: ON });
+	it("offers no reset to the date of birth, on or off", async () => {
+		answer = () => Promise.resolve({ login: "ebin@gmail.com", why: "", apps: APPS, phone: { ...OWN, on: true, make_app_login: false } });
 		const view = await draw();
-		await act(async () => { view.getByRole("button", { name: /reset to emp code/i }).click(); });
-		expect(calls.some(([m]) => m.endsWith("reset_app_login"))).toBe(false);
-		expect(document.body.textContent).toContain("stops working");
-		await act(async () => { view.getByRole("button", { name: /^reset login$/i }).click(); });
-		expect(calls.at(-1)).toEqual(["manna_hr.appaccess_site.reset_app_login", { employee: "HR-EMP-1" }]);
+		expect(view.queryByRole("button", { name: /reset/i })).toBeNull();
 	});
 
-	it("offers no reset on a login used for other work, and says why", async () => {
-		answer = () => Promise.resolve({ login: "nikil@manna.in", why: "", apps: APPS,
-			phone: { ...ON, reset_login: false, sign_in_as: "nikhil",
-				warnings: ["This login is also used as HR Manager, so its user name and password are left as they are."] } });
+	it("an app user on their own login is offered an app login of its own, asked first", async () => {
+		answer = (m) => Promise.resolve(m.endsWith("allow_phone_punch")
+			? { login: "ebin@gmail.com", why: "", apps: APPS, phone: { ...OWN, on: true, make_app_login: false } }
+			: { login: "ebin@gmail.com", why: "", apps: APPS, phone: OWN });
 		const view = await draw();
-		expect(view.queryByRole("button", { name: /reset to emp code/i })).toBeNull();
-		expect(view.container.textContent).toContain("also used as HR Manager");
+		await act(async () => { view.getByRole("button", { name: /^make app login$/i }).click(); });
+		expect(calls.some(([m]) => m.endsWith("allow_phone_punch"))).toBe(false);
+		expect(document.body.textContent).toContain("ebin@gmail.com is not changed");
+		expect(document.body.textContent).not.toContain("Punch Method");
+		await act(async () => { view.getAllByRole("button", { name: /^make app login$/i }).at(-1).click(); });
+		expect(calls.at(-1)).toEqual(["manna_hr.appaccess_site.allow_phone_punch", { employee: "HR-EMP-1" }]);
+		expect(view.container.textContent).toContain("Signs in to the Manna HR app as MRP-103");
+	});
+
+	it("a login HR may not change still gets its app login, since nothing is written to it", async () => {
+		answer = () => Promise.resolve({ login: "ebin@gmail.com", why: "Only a System Manager may change this login.", apps: APPS, phone: OWN });
+		const view = await draw();
+		expect(view.getByRole("button", { name: /^make app login$/i })).not.toBeDisabled();
 	});
 });
 

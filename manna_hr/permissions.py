@@ -137,7 +137,9 @@ def _context(user):
 
 	user = user or frappe.session.user
 	roles = frappe.get_roles(user)
-	employee = frappe.db.get_value("Employee", {"user_id": user}, "name") or ""
+	from manna_hr import applogin_site
+
+	employee = applogin_site.employee_of(user)
 	reports = (
 		frappe.get_all("Employee", filters={"reports_to": employee}, pluck="name")
 		if employee

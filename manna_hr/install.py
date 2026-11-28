@@ -45,11 +45,26 @@ CUSTOM_FIELDS = {
 			"description": "How this person punches in: the fingerprint machine, the phone app, or both.",
 		},
 		{
+			# The Manna HR app's own login, for somebody whose `user_id` is their
+			# own login into other systems (HR, 28 Nov 2026). That login keeps its
+			# email and password; this one signs in with the Emp Code and the date
+			# of birth, and holds the Employee role alone, so a birthday opens the
+			# person's punches and nothing else. appaccess.phone_punch.
+			"fieldname": "custom_app_login",
+			"label": "App Login",
+			"fieldtype": "Link",
+			"options": "User",
+			"insert_after": "custom_punch_method",
+			"read_only": 1,
+			"unique": 1,
+			"description": "The Manna HR app's own login: Emp Code and date of birth. Their User ID login is not changed.",
+		},
+		{
 			"fieldname": "custom_work_location",
 			"label": "Work Location",
 			"fieldtype": "Link",
 			"options": "Work Location",
-			"insert_after": "custom_punch_method",
+			"insert_after": "custom_app_login",
 			"description": "Where this person is expected to punch from. Blank means their punches are never measured.",
 		},
 		{

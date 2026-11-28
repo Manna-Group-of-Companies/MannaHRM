@@ -265,12 +265,24 @@ export function createSite(seed, { now = () => new Date() } = {}) {
 		const standIn = code ? `${code.toLowerCase().replace(/[^a-z0-9._-]+/g, "-")}@phone.manna.invalid` : "";
 		const email = own || standIn;
 		const dob = /^\d{4}-\d{2}-\d{2}/.test(norm(emp.date_of_birth));
-		const out = { method, on: ["Mobile App", "Both"].includes(method) && !!login, login: "", make_login: false, sign_in_as: "", password: "", problems: [], warnings: [], stand_in: !own && !login };
+		const appLogin = norm(emp.custom_app_login);
+		const phoneMethod = ["Mobile App", "Both"].includes(method);
+		const out = { method, on: false, login: "", own_login: "", make_login: false, make_app_login: false, free_username: "",
+			sign_in_as: "", password: "", problems: [], warnings: [], stand_in: !own && !login };
 		if ((emp.status || "Active") !== "Active") out.problems.push("This employee is not Active.");
-		if (login) {
-			Object.assign(out, { login, sign_in_as: held?.username || login, password: "their own password" });
+		/* As manna_hr/appaccess.py phone_punch: an existing login is never
+		   changed; somebody with their own gets a second login for the app. */
+		if (appLogin) {
+			Object.assign(out, { login: appLogin, on: phoneMethod, stand_in: true, own_login: login,
+				sign_in_as: table("User").get(appLogin)?.username || appLogin, password: "date of birth, DDMMYYYY" });
+		} else if (login && login.endsWith("@phone.manna.invalid")) {
+			Object.assign(out, { login, on: phoneMethod, stand_in: true, sign_in_as: held?.username || login, password: "date of birth, DDMMYYYY" });
+		} else if (login) {
+			if (!code) out.problems.push("No Emp Code on the record. It is the user name they sign in with.");
+			if (!dob) out.problems.push("No date of birth on the record. It is the app login's password.");
+			Object.assign(out, { login: standIn, own_login: login, stand_in: true, make_app_login: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });
 		} else {
-			if (!own && standIn) out.warnings.push(`No email on the record, so the login is named ${standIn}. They sign in with their Emp Code; Forgot password cannot email them, so HR resets it.`);
+			if (!own && standIn) out.warnings.push(`No email on the record, so the login is named ${standIn}. They sign in with their Emp Code; Forgot password cannot email them.`);
 			if (!code) out.problems.push("No Emp Code on the record. It is the user name they sign in with.");
 			if (!dob) out.problems.push("No date of birth on the record. It is their first password.");
 			Object.assign(out, { login: email, make_login: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });
@@ -354,10 +366,11 @@ export function createSite(seed, { now = () => new Date() } = {}) {
 			if (!emp) return fail(404, "DoesNotExistError", `Employee ${q.employee} not found`);
 			const phone = practicePhone(emp);
 			if (phone.problems.length) return fail(417, "ValidationError", phone.problems.join("<br>"));
-			if (phone.make_login) {
+			if (phone.make_login || phone.make_app_login) {
 				table("User").set(phone.login, { name: phone.login, email: phone.login, username: phone.sign_in_as, enabled: 1, roles: ["Employee"] });
 			}
-			emp.user_id = phone.login;
+			if (phone.make_app_login) emp.custom_app_login = phone.login;
+			else emp.user_id = phone.login;
 			if (emp.custom_punch_method !== "Mobile App") emp.custom_punch_method = "Both";
 			emp.modified = stamp();
 			return json(200, { message: practiceAccess(emp.name) });

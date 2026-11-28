@@ -201,6 +201,7 @@ fixtures = [
 					"Employee-custom_needs_details",
 					"Employee-custom_hr_section",
 					"Employee-custom_punch_method",
+					"Employee-custom_app_login",
 					"Employee-custom_work_location",
 					"Employee-custom_allow_remote_punch",
 					"Employee-custom_is_manager",

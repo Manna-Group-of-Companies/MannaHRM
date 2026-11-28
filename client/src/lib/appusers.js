@@ -9,7 +9,13 @@
    site's: a client-side "no app for you" is a suggestion (CLAUDE.md §1), while
    a disabled User is refused at sign-in and Frappe ends its open sessions.
 
-   **One login is the app and the website.** Disabling an HR login therefore
+   **The app's own login, when there is one** (28 November 2026). Somebody
+   whose `user_id` is their login into everything else — the sales app, the
+   desk, their own email and password — signs in to the app with a second
+   login on `custom_app_login`: Emp Code and date of birth. That one is the
+   row's login, and stopping it leaves their own login exactly as it is.
+
+   **Otherwise one login is the app and the website.** Disabling an HR login therefore
    takes the website away from them too, so the row says so; and the login
    doing the disabling is never offered the switch, since it would lock itself
    out with nobody left to undo it.
@@ -20,6 +26,9 @@
 /** Roles that open the website's HR side. A login holding one is more than an
     app user, and switching it off is more than stopping the app. */
 export const WEBSITE_ROLES = ["System Manager", "HR Manager", "HR User", "Administrator"];
+
+/** The login the app signs in with: the app's own when there is one, else `user_id`. */
+export const appLoginOf = (e) => String(e?.custom_app_login || e?.user_id || "").trim();
 
 const later = (a, b) => (String(a || "") > String(b || "") ? a : b);
 
@@ -55,9 +64,10 @@ export function appUserRows({ employees = [], users = [], roles = null, punches 
 	}
 
 	return employees
-		.filter((e) => String(e.user_id || "").trim())
+		.filter((e) => appLoginOf(e))
 		.map((e) => {
-			const login = String(e.user_id).trim();
+			const login = appLoginOf(e);
+			const own = String(e.custom_app_login || "").trim() ? String(e.user_id || "").trim() : "";
 			const key = login.toLowerCase();
 			const u = byLogin.get(key);
 			const r = rolesOf.get(key) || [];
@@ -69,6 +79,8 @@ export function appUserRows({ employees = [], users = [], roles = null, punches 
 				company: e.company || "",
 				employeeStatus: e.status || "",
 				login,
+				/* Their own login, beside the app's: never touched from here. */
+				ownLogin: own,
 				/* A login the site would not show is not known to be on or off. */
 				known: Boolean(u),
 				enabled: u ? Number(u.enabled) === 1 : null,
@@ -76,9 +88,9 @@ export function appUserRows({ employees = [], users = [], roles = null, punches 
 				lastAppPunch: lastPunch.get(e.name) || "",
 				/* Which app, from what it wrote (APPS): in the order they are
 				   named, each with when it was last used. null: not known. */
-				apps: appsUsed(lastPunch.get(e.name) || "", salesLogs === null ? null : lastSales.get(key) || ""),
+				apps: appsUsed(lastPunch.get(e.name) || "", salesLogs === null ? null : lastSales.get((own || login).toLowerCase()) || ""),
 				/* null: the site would not say what the login can do. */
-				website: roles === null ? null : r.some((x) => WEBSITE_ROLES.includes(x)),
+				website: own ? false : roles === null ? null : r.some((x) => WEBSITE_ROLES.includes(x)),
 				self,
 			};
 		})
@@ -106,6 +118,9 @@ export function toggleWhy(row) {
 /** The question asked before a login is switched off or back on. */
 export function toggleQuestion(row, on) {
 	if (on) return `Let ${row.name} use the app again? ${row.login} will be able to sign in.`;
+	if (row.ownLogin) {
+		return `Stop ${row.name} using the app? ${row.login} is switched off on the site: the app refuses it at sign-in and its open sessions end. ${row.ownLogin} is not changed.`;
+	}
 	const site = row.website === true
 		? " This login is also HR's on the website, and loses that too."
 		: row.website === null ? " If this login is also used on the website, it loses that too." : "";
