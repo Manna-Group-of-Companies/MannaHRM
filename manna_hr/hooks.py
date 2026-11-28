@@ -60,7 +60,16 @@ doc_events = {
 			# and the Absents hrms marked under them are rebuilt (19 Nov 2026:
 			# ~650 of them, from one afternoon of default shifts). reprocess.py.
 			"manna_hr.reprocess_site.on_employee_update",
+			# Somebody who leaves: their Manna HR app login goes off with the
+			# User ID one ERPNext turns off. applogin_site.py.
+			"manna_hr.applogin_site.on_employee_update",
 		],
+	},
+	# ERPNext takes the Employee role off any login no Employee names in
+	# user_id, which is every App Login (28 Nov 2026); this puts it back, and
+	# runs after ERPNext's because manna_hr is installed after it.
+	"User": {
+		"validate": "manna_hr.applogin_site.keep_app_login_role",
 	},
 	# A Shift Assignment names dates: the days in them are rebuilt on the shift
 	# it now says. hrms gives a punch its shift once, when it is saved, and

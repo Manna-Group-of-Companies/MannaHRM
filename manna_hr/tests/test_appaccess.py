@@ -206,17 +206,48 @@ def test_an_emp_code_held_by_somebody_elses_login_is_refused_and_nothing_moves()
 	assert p["free_username"] == ""
 
 
+APP = {"name": "mrp-293@phone.manna.invalid", "enabled": 1, "username": "MRP-293"}
+
+
 def test_an_app_login_already_linked_is_on_and_nothing_is_made():
-	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com"}, OWN,
-		"mrp-293@phone.manna.invalid",
-		app_user={"name": "mrp-293@phone.manna.invalid", "enabled": 1, "username": "MRP-293"})
-	assert (p["on"], p["make_app_login"], p["make_login"], p["free_username"]) == (True, False, False, "")
-	assert (p["login"], p["sign_in_as"]) == ("mrp-293@phone.manna.invalid", "MRP-293")
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com",
+		"custom_app_login": APP["name"]}, OWN, APP["name"], app_user=APP)
+	assert (p["on"], p["make_app_login"], p["make_login"], p["link"], p["free_username"]) == (True, False, False, False, "")
+	assert (p["login"], p["sign_in_as"], p["link_field"]) == (APP["name"], "MRP-293", "custom_app_login")
 
 
-def test_somebody_with_their_own_login_is_not_on_until_the_app_login_exists():
+def test_pressing_again_never_moves_the_app_login_onto_user_id():
+	# Review, 28 Nov 2026: with Punch Method set back to the machine, a second press
+	# wrote the app login over user_id and unlinked their own login from the record.
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com", "custom_app_login": APP["name"]}, OWN, APP["name"], app_user=APP)
+	assert (p["link_field"], p["link"], p["on"]) == ("custom_app_login", False, False)
+
+
+def test_an_unlinked_app_login_from_an_earlier_press_is_linked_beside_their_own_never_over_it():
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com"}, OWN, APP["name"], app_user=APP)
+	assert (p["link_field"], p["link"], p["on"]) == ("custom_app_login", True, False)
+	assert aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com"}, OWN, APP["name"], app_user=APP,
+		app_field=False)["problems"] == ["The site has no App Login field on Employee yet."]
+
+
+def test_with_no_login_on_the_record_the_app_login_goes_on_user_id():
+	# Their own login found by their email or Fleet driver link was never on the record,
+	# and ERPNext keeps the Employee role only on a login some Employee names in user_id.
+	p = aa.phone_punch(MACHINE, OWN)
+	assert (p["make_app_login"], p["link_field"], p["link"], p["own_login"]) == (True, "user_id", True, "ebin@gmail.com")
+
+
+def test_already_punching_with_their_own_login_reads_as_on_and_the_app_login_is_offered_beside_it():
+	# A login Create Employee made with the date of birth cannot be told from somebody's own.
 	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com"}, OWN)
+	assert (p["on"], p["make_app_login"], p["own_sign_in_as"]) == (True, True, "ebin")
+
+
+def test_a_turned_off_app_login_is_not_on_and_says_so():
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com",
+		"custom_app_login": APP["name"]}, OWN, APP["name"], app_user={**APP, "enabled": 0})
 	assert p["on"] is False
+	assert p["problems"] == ["Their app login mrp-293@phone.manna.invalid is turned off."]
 
 
 def test_a_login_this_button_made_for_somebody_with_none_is_the_apps_own():

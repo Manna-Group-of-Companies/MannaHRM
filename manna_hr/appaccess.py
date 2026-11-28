@@ -299,9 +299,18 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None, app
 	other app — the sales dashboard, CMMS, Fleet, the desk — with the person's
 	own email and password. One Frappe login holds one password, so for
 	somebody who already has a login the app gets a second one of its own,
-	named after the Emp Code at STAND_IN_DOMAIN, with the Employee role alone,
-	on `custom_app_login`. Their own login keeps its password; a birthday
-	opens their punches and nothing else.
+	named after the Emp Code at STAND_IN_DOMAIN, with the Employee role alone.
+	Their own login keeps its password; a birthday opens their punches and
+	nothing else.
+
+	Where the app login is linked (`link_field`): on `user_id` when the record
+	has none — somebody with no login, or whose own login was found by their
+	email or Fleet driver link and was never on the record — so ERPNext treats
+	it as the employee's login as it always has. When `user_id` is their own
+	login, the app login goes on `custom_app_login`, and `user_id` is never
+	overwritten: it is what every other part of the group's systems knows them
+	by. ERPNext strips the Employee role from any login that is nobody's
+	`user_id`; `applogin_site.keep_app_login_role` gives it back.
 
 	The rule this replaces (27 November) set an employee-only login's user
 	name and password to the Emp Code and the date of birth. Roles were what
@@ -311,16 +320,25 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None, app
 	The one thing taken off an existing login is the Emp Code as its user
 	name, when it is this person's own login that holds it (that rule put it
 	there): the app login needs it, and the login it leaves still signs in
-	with its email. Its password is not touched (`free_username`).
+	with its email. Its password is not touched (`free_username`). A login
+	whose password HR gave as the date of birth (Create Employee's, 10 Nov)
+	cannot be told from somebody's own, so it reads as their own: it already
+	punches, and Make app login is offered beside it, never forced.
 	"""
 	method = str(emp.get("custom_punch_method") or "")
+	phone = method in PHONE_METHODS
 	code = str(emp.get("employee_number") or "").strip()
 	dob = first_password(emp.get("date_of_birth"))
+	user_id = str(emp.get("user_id") or "")
+	app_link = str(emp.get("custom_app_login") or "")
 	out = {
 		"method": method,
 		"on": False,
 		"login": "",
+		"link_field": "",
+		"link": False,
 		"own_login": "",
+		"own_sign_in_as": "",
 		"make_login": False,
 		"make_app_login": False,
 		"free_username": "",
@@ -343,7 +361,7 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None, app
 		holder = str(username_holder or "")
 		if not code or not holder or holder == out["login"]:
 			return
-		if login_user and holder == login_user["name"]:
+		if out["own_login"] and holder == out["own_login"]:
 			out["free_username"] = holder
 			out["warnings"].append(
 				"{0} is the user name of their own login {1} now. It moves to the app login; {1} signs in "
@@ -351,40 +369,53 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None, app
 		else:
 			out["problems"].append("{0} is already the user name of {1}.".format(code, holder))
 
-	if login_user and not is_stand_in(login_user["name"]):
+	def link_to(field, login):
+		out["link_field"] = field
+		out["link"] = (user_id if field == "user_id" else app_link) != login
+		if field == "custom_app_login" and out["link"] and not app_field:
+			out["problems"].append("The site has no App Login field on Employee yet.")
+
+	def turned_off(user):
+		if not user.get("enabled"):
+			out["problems"].append("Their app login {0} is turned off.".format(user["name"]))
+			return True
+		return False
+
+	if login_user and not is_stand_in(login_user["name"]) and not (app_user and login_user["name"] == app_user["name"]):
 		out["own_login"] = login_user["name"]
+		out["own_sign_in_as"] = login_user.get("username") or login_user["name"]
 
 	if app_user:
-		# The app's own login, made by this button before.
-		out["login"] = app_user["name"]
-		out["stand_in"] = is_stand_in(app_user["name"])
-		out["sign_in_as"] = app_user.get("username") or app_user["name"]
-		out["password"] = "date of birth, DDMMYYYY"
-		out["on"] = method in PHONE_METHODS
-		if not app_user.get("enabled"):
-			out["problems"].append("Their app login {0} is turned off.".format(app_user["name"]))
+		# The app's own login: linked on the record, or made by this button
+		# before and left unlinked — linked now, never in place of `user_id`.
+		name = app_user["name"]
+		out.update(login=name, stand_in=is_stand_in(name), password="date of birth, DDMMYYYY",
+			sign_in_as=app_user.get("username") or name)
+		if user_id == name:
+			link_to("user_id", name)
+		elif app_link == name or user_id:
+			link_to("custom_app_login", name)
+		else:
+			link_to("user_id", name)
+		off = turned_off(app_user)
+		out["on"] = phone and not out["link"] and not off
 	elif login_user and is_stand_in(login_user["name"]):
-		# A login this button made for somebody with none: the app's own, on
-		# `user_id` because it is the only login they have.
-		out["login"] = login_user["name"]
-		out["stand_in"] = True
-		out["sign_in_as"] = login_user.get("username") or login_user["name"]
-		out["password"] = "date of birth, DDMMYYYY"
-		out["on"] = method in PHONE_METHODS and bool(emp.get("user_id"))
-		if not login_user.get("enabled"):
-			out["problems"].append(
-				"Their login {0} is turned off. Turn on the login above first.".format(login_user["name"]))
+		# A login this button made for somebody with none: the app's own.
+		name = login_user["name"]
+		out.update(login=name, stand_in=True, password="date of birth, DDMMYYYY",
+			sign_in_as=login_user.get("username") or name)
+		link_to("user_id", name)
+		off = turned_off(login_user)
+		out["on"] = phone and not out["link"] and not off
 	elif login_user:
 		# Their own login: left exactly as it is. The app gets one of its own.
-		out["login"] = stand_in_email(code)
-		out["stand_in"] = True
-		out["make_app_login"] = True
-		out["sign_in_as"] = code
-		out["password"] = "date of birth, DDMMYYYY"
+		out.update(login=stand_in_email(code), stand_in=True, make_app_login=True, sign_in_as=code,
+			password="date of birth, DDMMYYYY")
+		link_to("custom_app_login" if user_id else "user_id", out["login"])
+		# Punching already, with their own login on the record.
+		out["on"] = phone and user_id == login_user["name"] and bool(login_user.get("enabled"))
 		needs_code_and_birth("the app login's password")
 		code_is_free()
-		if not app_field:
-			out["problems"].append("The site has no App Login field on Employee yet.")
 	else:
 		email = email_of(emp) or stand_in_email(code)
 		out["stand_in"] = is_stand_in(email)
@@ -392,10 +423,8 @@ def phone_punch(emp, login_user=None, username_holder="", by_user_name=None, app
 			out["warnings"].append(
 				"No email on the record, so the login is named {0}. They sign in with their Emp Code; "
 				"Forgot password cannot email them.".format(email))
-		out["login"] = email
-		out["make_login"] = True
-		out["sign_in_as"] = code
-		out["password"] = "date of birth, DDMMYYYY"
+		out.update(login=email, make_login=True, sign_in_as=code, password="date of birth, DDMMYYYY")
+		link_to("user_id", email)
 		needs_code_and_birth("their first password")
 		code_is_free()
 

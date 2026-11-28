@@ -21,7 +21,13 @@ export async function loadAppUsers() {
 	   field yet is read without it. */
 	const FIELDS = ["name", "employee_name", "employee_number", "company", "status", "user_id"];
 	const employees = await listAll("Employee", [...FIELDS, "custom_app_login"], [["user_id", "is", "set"]], 1000)
-		.catch(() => listAll("Employee", FIELDS, [["user_id", "is", "set"]], 1000));
+		.catch((e) => {
+			/* Only a site without the field reads again without it. Any other
+			   refusal is thrown: read without it, every app-login holder's row
+			   would name their own login, and Stop would switch that off. */
+			if (!/custom_app_login/.test(String(e?.message || e))) throw e;
+			return listAll("Employee", FIELDS, [["user_id", "is", "set"]], 1000);
+		});
 	const logins = [...new Set(employees.map(appLoginOf).filter(Boolean))];
 	if (!logins.length) return { employees, users: [], roles: [], punches: [], salesLogs: [] };
 

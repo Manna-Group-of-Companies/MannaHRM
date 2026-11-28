@@ -267,25 +267,26 @@ export function createSite(seed, { now = () => new Date() } = {}) {
 		const dob = /^\d{4}-\d{2}-\d{2}/.test(norm(emp.date_of_birth));
 		const appLogin = norm(emp.custom_app_login);
 		const phoneMethod = ["Mobile App", "Both"].includes(method);
-		const out = { method, on: false, login: "", own_login: "", make_login: false, make_app_login: false, free_username: "",
-			sign_in_as: "", password: "", problems: [], warnings: [], stand_in: !own && !login };
+		const out = { method, on: false, login: "", link_field: "", link: false, own_login: "", own_sign_in_as: "", make_login: false,
+			make_app_login: false, free_username: "", sign_in_as: "", password: "", problems: [], warnings: [], stand_in: !own && !login };
 		if ((emp.status || "Active") !== "Active") out.problems.push("This employee is not Active.");
 		/* As manna_hr/appaccess.py phone_punch: an existing login is never
 		   changed; somebody with their own gets a second login for the app. */
 		if (appLogin) {
-			Object.assign(out, { login: appLogin, on: phoneMethod, stand_in: true, own_login: login,
+			Object.assign(out, { login: appLogin, on: phoneMethod, stand_in: true, own_login: login, link_field: "custom_app_login",
 				sign_in_as: table("User").get(appLogin)?.username || appLogin, password: "date of birth, DDMMYYYY" });
 		} else if (login && login.endsWith("@phone.manna.invalid")) {
-			Object.assign(out, { login, on: phoneMethod, stand_in: true, sign_in_as: held?.username || login, password: "date of birth, DDMMYYYY" });
+			Object.assign(out, { login, on: phoneMethod, stand_in: true, link_field: "user_id", sign_in_as: held?.username || login, password: "date of birth, DDMMYYYY" });
 		} else if (login) {
 			if (!code) out.problems.push("No Emp Code on the record. It is the user name they sign in with.");
 			if (!dob) out.problems.push("No date of birth on the record. It is the app login's password.");
-			Object.assign(out, { login: standIn, own_login: login, stand_in: true, make_app_login: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });
+			Object.assign(out, { login: standIn, own_login: login, own_sign_in_as: held?.username || login, on: phoneMethod,
+				stand_in: true, make_app_login: true, link_field: "custom_app_login", link: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });
 		} else {
 			if (!own && standIn) out.warnings.push(`No email on the record, so the login is named ${standIn}. They sign in with their Emp Code; Forgot password cannot email them.`);
 			if (!code) out.problems.push("No Emp Code on the record. It is the user name they sign in with.");
 			if (!dob) out.problems.push("No date of birth on the record. It is their first password.");
-			Object.assign(out, { login: email, make_login: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });
+			Object.assign(out, { login: email, make_login: true, link_field: "user_id", link: true, sign_in_as: code, password: "date of birth, DDMMYYYY" });
 		}
 		if (!emp.default_shift) out.warnings.push("No default shift: the punches will land, but will not become attendance until a shift is set.");
 		return out;

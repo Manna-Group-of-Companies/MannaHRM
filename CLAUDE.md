@@ -469,20 +469,29 @@ existing `Attendance Log` history should be migrated is still open.
   **A login that already exists is never changed** (HR, 28 November 2026). The
   app is Emp Code + date of birth; every other app — sales, CMMS, Fleet, the
   desk — is the person's own email and password. One Frappe login holds one
-  password, so Apps & access → Allow phone punch too gives somebody who
-  already has a login a **second one for the app**: `<code>@phone.manna.invalid`,
-  user name the Emp Code, password the date of birth, the Employee role alone,
-  named on `Employee.custom_app_login` (`install.py`; patch
-  `install_app_login`). `manna_hr/applogin_site.py` is how the punch check,
-  the permission rule and `api.py` accept it as the person; the app tries
-  `user_id` and then that field. The one thing taken off the person's own
-  login is the Emp Code as its user name, by a column write that cannot reach
-  the password. **The rule this replaced** (27 November, `2a4f959`) set the
-  user name and password of any login holding only employee roles to the Emp
-  Code and the date of birth, judged by roles — and the sales app is opened by
-  flags on the User, not a role, so 22 people's own passwords became their
-  birthdays. There is no Reset button any more. Settings → App users' Stop
-  switches off the app login where there is one, never the person's own.
+  password, so Apps & access → Allow phone punch too (or **Make app login**,
+  for somebody already punching with their own login) gives the app **a login
+  of its own**: `<code>@phone.manna.invalid`, user name the Emp Code, password
+  the date of birth, the Employee role alone. It goes on `user_id` when the
+  record has none, and on `Employee.custom_app_login` (`install.py`; patch
+  `install_app_login`) when `user_id` is their own login — `user_id` is never
+  overwritten. **ERPNext strips the Employee role from any login that is
+  nobody's `user_id`** (`validate_employee_role`, a User `validate` hook), so
+  `applogin_site.keep_app_login_role` puts it back on an App Login, running
+  after ERPNext's because manna_hr is installed after it. `applogin_site.py`
+  is also how the punch check, the permission rule and `api.py` accept the App
+  Login as the person, how it goes off when they leave, and Login (every app)
+  turns it off and on with their own; the phone app tries `user_id` and then
+  that field. Its Employee User Permission has `hide_descendants`, or a
+  manager's birthday login would read everybody under them. The one thing
+  taken off the person's own login is the Emp Code as its user name, by a
+  column write that cannot reach the password, and only past `why_not`. **The
+  rule this replaced** (27 November, `2a4f959`) set the user name and password
+  of any login holding only employee roles to the Emp Code and the date of
+  birth, judged by roles — and the sales app is opened by flags on the User,
+  not a role, so 22 people's own passwords became their birthdays. There is no
+  Reset button any more. Settings → App users' Stop switches off the App Login
+  where there is one, never the person's own.
 - **Managers are tagged** (asked for by HR, 9 November 2026): a **Manager**
   tick on Create Employee's Role and reporting group, and on Employee Profile,
   stored as `Employee.custom_is_manager` (`install.py`, **not on the site until

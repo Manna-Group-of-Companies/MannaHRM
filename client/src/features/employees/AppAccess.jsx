@@ -17,6 +17,8 @@ const setAccess = (employee, key, value) => apiCall("manna_hr.appaccess_site.set
 const allowPhone = (employee) => apiCall("manna_hr.appaccess_site.allow_phone_punch", { employee });
 
 const isPhone = (method) => method === "Mobile App" || method === "Both";
+/** Already on a phone method, so the button only makes the app its own login. */
+const appLoginOnly = (phone) => Boolean(phone.make_app_login) && isPhone(phone.method);
 
 const optLabel = (o) => (typeof o === "string" ? o : o.label);
 const optValue = (o) => (typeof o === "string" ? o : o.value);
@@ -69,7 +71,7 @@ export default function AppAccess({ emp }) {
 			onAsk={() => setAsk({ key: "phone" })} />
 	) : null;
 	const phoneAsk = ask?.key === "phone" ? (
-		<KitModal title={phone.make_app_login && isPhone(phone.method) ? "Make app login?" : "Allow phone punch?"} onClose={() => setAsk(null)}>
+		<KitModal title={appLoginOnly(phone) ? "Make app login?" : "Allow phone punch?"} onClose={() => setAsk(null)}>
 			<form noValidate onSubmit={(e) => { e.preventDefault(); void phoneOn(); }}>
 				<ul style={{ margin: "0 0 12px", paddingLeft: 18, lineHeight: 1.6 }}>
 					{isPhone(phone.method) ? null : (
@@ -85,13 +87,17 @@ export default function AppAccess({ emp }) {
 					) : phone.make_app_login ? (
 						<>
 							<li>A new login is made for the Manna HR app, with the Employee role. They sign in to it with <b>{phone.sign_in_as}</b> and their date of birth (DDMMYYYY).</li>
-							<li>Their own login <b>{phone.own_login}</b> is not changed: every other app still signs in with its email and its own password.</li>
+							{phone.free_username ? (
+								<li>Their own login <b>{phone.own_login}</b> keeps its password. Its user name <b>{phone.sign_in_as}</b> moves to the app login, and every other app still signs in with its email.</li>
+							) : (
+								<li>Their own login <b>{phone.own_login}</b> is not changed: every other app still signs in with its email and its own password.</li>
+							)}
 						</>
 					) : (
 						<li>Their login <b>{phone.login}</b> is linked. They sign in as <b>{phone.sign_in_as}</b>.</li>
 					)}
 				</ul>
-				<ModalFoot ok={phone.make_app_login && isPhone(phone.method) ? "Make app login" : "Allow phone punch"} onCancel={() => setAsk(null)} busy={busy === "phone"} />
+				<ModalFoot ok={appLoginOnly(phone) ? "Make app login" : "Allow phone punch"} onCancel={() => setAsk(null)} busy={busy === "phone"} />
 			</form>
 		</KitModal>
 	) : null;
@@ -160,9 +166,11 @@ export default function AppAccess({ emp }) {
     and offers the one button. */
 function PhonePunch({ phone, locked, busy, onAsk }) {
 	const { on, method, sign_in_as: as, problems = [], warnings = [], make_app_login: second } = phone;
-	/* A separate app login needs no say from the own login's holder: nothing
-	   is written to that login. */
-	const blocked = locked && !second;
+	/* The button writes the app's own login, never the person's — except when
+	   their user name moves off it (`free_username`), which the site judges
+	   like any change to that login. `locked` is the site's word on it. */
+	const blocked = Boolean(locked) && Boolean(phone.free_username);
+	const offer = !blocked && (!on || second);
 	return (
 		<section aria-label="Phone punch" style={{ border: "1px solid rgb(var(--line))", borderRadius: 14, padding: "14px 16px", margin: "0 0 16px" }}>
 			<div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -170,18 +178,20 @@ function PhonePunch({ phone, locked, busy, onAsk }) {
 					<b>Phone punch</b>{" "}
 					{on ? <Pill status="Active">On · {method}</Pill> : <Pill status="Suspended">Off</Pill>}
 					<small style={{ display: "block", color: "rgb(var(--ink-3))", marginTop: 4 }}>
-						{on
-							? <>Signs in to the Manna HR app as <b>{as}</b>.</>
-							: <>Punches on <b>{method || "nothing set"}</b>.</>}
+						{on && second
+							? <>Signs in to the Manna HR app with their own login, <b>{phone.own_sign_in_as}</b>.</>
+							: on
+								? <>Signs in to the Manna HR app as <b>{as}</b>.</>
+								: <>Punches on <b>{method || "nothing set"}</b>.</>}
 					</small>
 				</div>
-				{on || blocked ? null : (
-					<button type="button" className="k-btn k-btn-sm k-btn-ink" disabled={busy || problems.length > 0} onClick={onAsk}>
-						{busy ? "Allowing…" : second && isPhone(method) ? "Make app login" : "Allow phone punch too"}
+				{offer ? (
+					<button type="button" className={`k-btn k-btn-sm ${on ? "k-btn-line" : "k-btn-ink"}`} disabled={busy || problems.length > 0} onClick={onAsk}>
+						{busy ? "Allowing…" : appLoginOnly(phone) ? "Make app login" : "Allow phone punch too"}
 					</button>
-				)}
+				) : null}
 			</div>
-			{!on && problems.length ? (
+			{(!on || second) && problems.length ? (
 				<ul style={{ margin: "10px 0 0", paddingLeft: 18, color: "rgb(var(--bad))" }}>
 					{problems.map((p) => <li key={p}>{p}</li>)}
 				</ul>

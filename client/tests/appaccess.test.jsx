@@ -163,6 +163,31 @@ describe("an existing password is never changed (28 November 2026)", () => {
 		expect(view.container.textContent).toContain("Signs in to the Manna HR app as MRP-103");
 	});
 
+	it("already punching with their own login reads On, and Make app login is offered beside it", async () => {
+		answer = () => Promise.resolve({ login: "ebin@gmail.com", why: "", apps: APPS,
+			phone: { ...OWN, on: true, own_sign_in_as: "ebin", problems: ["No date of birth on the record. It is the app login's password."] } });
+		const view = await draw();
+		expect(view.container.textContent).toContain("On · Both");
+		expect(view.container.textContent).toContain("with their own login, ebin");
+		expect(view.getByRole("button", { name: /^make app login$/i })).toBeDisabled();
+		expect(view.container.textContent).toContain("No date of birth");
+	});
+
+	it("moving the Emp Code off a login the site will not let this person change is not offered", async () => {
+		answer = () => Promise.resolve({ login: "ebin@gmail.com", why: "Only a System Manager may change this login.", apps: APPS,
+			phone: { ...OWN, free_username: "ebin@gmail.com" } });
+		const view = await draw();
+		expect(view.queryByRole("button", { name: /make app login/i })).toBeNull();
+	});
+
+	it("says the user name moves and the password stays, when it does", async () => {
+		answer = () => Promise.resolve({ login: "ebin@gmail.com", why: "", apps: APPS, phone: { ...OWN, free_username: "ebin@gmail.com" } });
+		const view = await draw();
+		await act(async () => { view.getByRole("button", { name: /^make app login$/i }).click(); });
+		expect(document.body.textContent).toContain("ebin@gmail.com keeps its password");
+		expect(document.body.textContent).toContain("user name MRP-103 moves to the app login");
+	});
+
 	it("a login HR may not change still gets its app login, since nothing is written to it", async () => {
 		answer = () => Promise.resolve({ login: "ebin@gmail.com", why: "Only a System Manager may change this login.", apps: APPS, phone: OWN });
 		const view = await draw();

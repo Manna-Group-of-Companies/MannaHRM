@@ -388,9 +388,11 @@ class Api {
           orderBy: 'modified desc',
         );
     var rows = await by('user_id');
-    // A site without the field refuses the second read; that is "no app
-    // login", not "no signal", so it leaves the first answer standing.
-    if (rows != null && rows.isEmpty) rows = await by('custom_app_login') ?? rows;
+    // For an app login the second read is the only one that can find the
+    // person, so its failure is "no signal" like the first one's, never "HR
+    // has not linked you". The field is on every site this app version is
+    // for (patch install_app_login).
+    if (rows != null && rows.isEmpty) rows = await by('custom_app_login');
     // Null and empty are opposite findings and must not share a screen. Empty
     // is "HR has not set your User ID", which is HR's to fix. Null is "the site
     // did not answer" — a dropped signal, a permission — and telling somebody
