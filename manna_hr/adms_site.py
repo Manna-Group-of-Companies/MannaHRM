@@ -589,12 +589,12 @@ def keep_auto_attendance(doc, method=None):
 
 def warn_cannot_punch():
 	"""Daily. HR is told who has no way to punch at all — `appaccess.cannot_punch`."""
-	rows = frappe.get_all(
-		"Employee",
-		filters={"status": "Active"},
-		fields=["name", "employee_name", "employee_number", "status", "attendance_device_id", "user_id"],
-		limit_page_length=0,
-	)
+	from manna_hr import applogin_site
+
+	fields = ["name", "employee_name", "employee_number", "status", "attendance_device_id", "user_id"]
+	if applogin_site.has_field():
+		fields.append(applogin_site.FIELD)
+	rows = frappe.get_all("Employee", filters={"status": "Active"}, fields=fields, limit_page_length=0)
 	who = sorted(appaccess.cannot_punch(rows), key=lambda p: str(p.get("employee_number") or p["name"]))
 	if not who:
 		return

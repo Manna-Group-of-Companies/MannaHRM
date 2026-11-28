@@ -109,7 +109,9 @@ def test_an_existing_login_keeps_its_own_user_name_and_password():
 	# A driver's Fleet app signs in as pareeth_k_b; changing it would lock them out there.
 	p = aa.phone_punch({**MACHINE, "user_id": "pareeth@manna.in"},
 		{"name": "pareeth@manna.in", "enabled": 1, "username": "pareeth_k_b"})
-	assert (p["make_login"], p["sign_in_as"], p["password"]) == (False, "pareeth_k_b", "their own password")
+	assert p["own_login"] == "pareeth@manna.in"
+	assert p["login"] != "pareeth@manna.in"
+	assert p["free_username"] == ""
 	assert p["problems"] == []
 
 
@@ -144,8 +146,10 @@ def test_an_emp_code_already_somebodys_user_name_is_refused():
 	assert p["problems"] == ["MRP-293 is already the user name of other@manna.in."]
 
 
-def test_a_turned_off_login_or_a_left_employee_is_refused():
-	assert aa.phone_punch({**MACHINE, "user_id": "a@b.in"}, {"name": "a@b.in", "enabled": 0})["problems"]
+def test_a_turned_off_app_login_or_a_left_employee_is_refused():
+	stand_in = {"name": "mrp-293@phone.manna.invalid", "enabled": 0}
+	assert aa.phone_punch({**MACHINE, "user_id": stand_in["name"]}, stand_in)["problems"]
+	assert aa.phone_punch(MACHINE, app_user=stand_in)["problems"]
 	assert aa.phone_punch({**MACHINE, "status": "Left"})["problems"]
 
 
@@ -162,43 +166,111 @@ def test_the_machine_is_kept():
 	assert aa.phone_method_after("Both") == "Both"
 
 
-def test_on_means_a_phone_method_and_a_linked_login():
-	assert aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "a@b.in"},
-		{"name": "a@b.in", "enabled": 1, "username": "MRP-293"})["on"] is True
-	assert aa.phone_punch({**MACHINE, "custom_punch_method": "Both"})["on"] is False
+# ------------------ the app signs in with Emp Code + date of birth, nothing else changes ---
 
 
-# ---------------------------------- every app user: Emp Code + date of birth ---
+OWN = {"name": "ebin@gmail.com", "enabled": 1, "username": "ebin"}
 
 
-def test_an_employee_only_login_is_set_to_the_emp_code_and_date_of_birth():
-	# 27 Nov 2026: EBIN JOY's login was "ebin" with a password nobody knew.
-	p = aa.phone_punch({**MACHINE, "user_id": "ebin@manna.in"},
-		{"name": "ebin@manna.in", "enabled": 1, "username": "ebin", "roles": ["Employee", "Desk User"]})
-	assert (p["reset_login"], p["sign_in_as"], p["password"]) == (True, "MRP-293", "date of birth, DDMMYYYY")
+def test_somebody_with_their_own_login_gets_a_second_login_for_the_app():
+	# 28 Nov 2026: the app is Emp Code + date of birth, every other app their own
+	# Gmail and password. One Frappe login holds one password, so the app gets its own.
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com"}, OWN)
+	assert (p["make_app_login"], p["make_login"]) == (True, False)
+	assert (p["login"], p["sign_in_as"], p["password"]) == (
+		"mrp-293@phone.manna.invalid", "MRP-293", "date of birth, DDMMYYYY")
+	assert p["own_login"] == "ebin@gmail.com"
 	assert p["problems"] == []
 
 
-def test_a_login_with_any_other_role_keeps_its_name_and_password():
-	# An HR Manager's, a CMMS or a Fleet login is somebody's way into another system.
-	for extra in ("HR Manager", "Store Purchase Manager", "Fleet Manager", "Driver"):
-		p = aa.phone_punch({**MACHINE, "user_id": "x@manna.in"},
-			{"name": "x@manna.in", "enabled": 1, "username": "x", "roles": ["Employee", extra]})
-		assert (p["reset_login"], p["sign_in_as"], p["password"]) == (False, "x", "their own password"), extra
-		assert any(extra in w for w in p["warnings"])
+def test_no_role_or_flag_makes_an_existing_login_take_the_date_of_birth():
+	# 27 Nov 2026: roles alone decided "app only", the sales app is a flag, and 22
+	# people's own passwords became their birthdays. Nothing about the login matters now.
+	for roles in ([], ["Employee"], ["Employee", "Desk User"], ["Employee", "HR Manager"], None):
+		p = aa.phone_punch({**MACHINE, "user_id": "x@manna.in"}, {**OWN, "name": "x@manna.in", "roles": roles})
+		assert p["login"] != "x@manna.in", roles
+		assert p["make_app_login"] is True, roles
 
 
-def test_resetting_refuses_an_emp_code_another_login_already_uses():
-	p = aa.phone_punch({**MACHINE, "user_id": "a@manna.in"},
-		{"name": "a@manna.in", "enabled": 1, "username": "a", "roles": ["Employee"]}, "other@manna.in")
+def test_the_emp_code_moves_off_their_own_login_and_its_password_stays():
+	# What the 27 Nov rule left behind: their own login carries the Emp Code as its user name.
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com"}, {**OWN, "username": "MRP-293"}, "ebin@gmail.com")
+	assert p["free_username"] == "ebin@gmail.com"
+	assert p["problems"] == []
+	assert any("keeps its password" in w for w in p["warnings"])
+
+
+def test_an_emp_code_held_by_somebody_elses_login_is_refused_and_nothing_moves():
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com"}, OWN, "other@manna.in")
 	assert p["problems"] == ["MRP-293 is already the user name of other@manna.in."]
+	assert p["free_username"] == ""
 
 
-def test_unknown_roles_are_never_reset():
-	assert aa.app_only(None) is False
-	assert aa.app_only([]) is True
-	assert aa.app_only(["Employee", "Desk User", "All"]) is True
-	assert aa.app_only(["Employee", "HR User"]) is False
+APP = {"name": "mrp-293@phone.manna.invalid", "enabled": 1, "username": "MRP-293"}
+
+
+def test_an_app_login_already_linked_is_on_and_nothing_is_made():
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com",
+		"custom_app_login": APP["name"]}, OWN, APP["name"], app_user=APP)
+	assert (p["on"], p["make_app_login"], p["make_login"], p["link"], p["free_username"]) == (True, False, False, False, "")
+	assert (p["login"], p["sign_in_as"], p["link_field"]) == (APP["name"], "MRP-293", "custom_app_login")
+
+
+def test_pressing_again_never_moves_the_app_login_onto_user_id():
+	# Review, 28 Nov 2026: with Punch Method set back to the machine, a second press
+	# wrote the app login over user_id and unlinked their own login from the record.
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com", "custom_app_login": APP["name"]}, OWN, APP["name"], app_user=APP)
+	assert (p["link_field"], p["link"], p["on"]) == ("custom_app_login", False, False)
+
+
+def test_an_unlinked_app_login_from_an_earlier_press_is_linked_beside_their_own_never_over_it():
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com"}, OWN, APP["name"], app_user=APP)
+	assert (p["link_field"], p["link"], p["on"]) == ("custom_app_login", True, False)
+	assert aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com"}, OWN, APP["name"], app_user=APP,
+		app_field=False)["problems"] == ["The site has no App Login field on Employee yet."]
+
+
+def test_with_no_login_on_the_record_the_app_login_goes_on_user_id():
+	# Their own login found by their email or Fleet driver link was never on the record,
+	# and ERPNext keeps the Employee role only on a login some Employee names in user_id.
+	p = aa.phone_punch(MACHINE, OWN)
+	assert (p["make_app_login"], p["link_field"], p["link"], p["own_login"]) == (True, "user_id", True, "ebin@gmail.com")
+
+
+def test_already_punching_with_their_own_login_reads_as_on_and_the_app_login_is_offered_beside_it():
+	# A login Create Employee made with the date of birth cannot be told from somebody's own.
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com"}, OWN)
+	assert (p["on"], p["make_app_login"], p["own_sign_in_as"]) == (True, True, "ebin")
+
+
+def test_a_turned_off_app_login_is_not_on_and_says_so():
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": "ebin@gmail.com",
+		"custom_app_login": APP["name"]}, OWN, APP["name"], app_user={**APP, "enabled": 0})
+	assert p["on"] is False
+	assert p["problems"] == ["Their app login mrp-293@phone.manna.invalid is turned off."]
+
+
+def test_a_login_this_button_made_for_somebody_with_none_is_the_apps_own():
+	stand_in = {"name": "mrp-293@phone.manna.invalid", "enabled": 1, "username": "MRP-293"}
+	p = aa.phone_punch({**MACHINE, "custom_punch_method": "Both", "user_id": stand_in["name"]}, stand_in,
+		stand_in["name"])
+	assert (p["on"], p["make_app_login"], p["make_login"], p["own_login"]) == (True, False, False, "")
+
+
+def test_a_site_without_the_app_login_field_is_refused_before_anything_is_written():
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com"}, OWN, app_field=False)
+	assert p["problems"] == ["The site has no App Login field on Employee yet."]
+
+
+def test_the_app_login_needs_an_emp_code_and_a_date_of_birth():
+	p = aa.phone_punch({**MACHINE, "user_id": "ebin@gmail.com", "employee_number": "", "date_of_birth": None}, OWN)
+	assert any("Emp Code" in s for s in p["problems"])
+	assert any("date of birth" in s for s in p["problems"])
+
+
+def test_nothing_in_the_rule_can_reset_a_password_any_more():
+	assert not hasattr(aa, "app_only")
+	assert "reset_login" not in aa.phone_punch(MACHINE)
 
 
 # ------------------------------------------------ nobody without a way to punch --
@@ -211,6 +283,7 @@ def test_somebody_active_with_no_machine_number_and_no_login_cannot_punch():
 		{"name": "E3", "status": "Active", "attendance_device_id": None, "user_id": "mrp-103@phone.manna.invalid"},
 		{"name": "E4", "status": "Inactive", "attendance_device_id": None, "user_id": None},
 		{"name": "E5", "status": "Active", "attendance_device_id": "  ", "user_id": ""},
+		{"name": "E6", "status": "Active", "attendance_device_id": "", "user_id": "", "custom_app_login": "mrp-6@phone.manna.invalid"},
 	]
 	assert [p["name"] for p in aa.cannot_punch(people)] == ["E1", "E5"]
 
@@ -250,3 +323,15 @@ def test_the_fleet_driver_switch_refuses_a_second_driver_login():
 		"abhilash@x.com already uses the Fleet driver app as abhilash.m.g.driver@x.com")
 	assert aa.second_driver_login("d@x.com", ["d@x.com"]) == ""
 	assert aa.second_driver_login("d@x.com", []) == ""
+
+
+def test_a_linked_driver_login_is_found_kept_as_it_is_and_the_app_gets_its_own():
+	# HPT-114: the driver login is theirs, so no second email login is made beside it,
+	# and the Fleet app's password is not changed: the app login (Employee role alone)
+	# is not a driver, so the drivers list does not show them twice.
+	login, problem = aa.existing_login("", ["abhishek.dreiver@gmail.com"], "")
+	assert (login, problem) == ("abhishek.dreiver@gmail.com", "")
+	p = aa.phone_punch({**MACHINE, "employee_number": "HPT-114", "company_email": ""},
+		{"name": login, "enabled": 1, "username": "abhishek"})
+	assert (p["own_login"], p["login"], p["make_app_login"], p["make_login"]) == (
+		"abhishek.dreiver@gmail.com", "hpt-114@phone.manna.invalid", True, False)

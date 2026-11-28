@@ -8,6 +8,7 @@ import frappe
 import frappe.permissions
 from frappe import _
 
+from manna_hr import applogin_site
 from manna_hr import appaccess as aa
 
 
@@ -34,40 +35,51 @@ def get_access(employee):
 	}
 
 
-#: The Employee fields phone punch reads. `custom_punch_method` is manna_hr's
-#: own (install.py).
+#: The Employee fields phone punch reads. `custom_punch_method` and
+#: `custom_app_login` are manna_hr's own (install.py); the second is read only
+#: once the site has it.
 _PHONE_FIELDS = (
 	"name", "employee_name", "first_name", "last_name", "employee_number", "status",
 	"date_of_birth", "company_email", "personal_email", "prefered_email",
 	"user_id", "custom_punch_method", "default_shift",
 )
 
+_USER_FIELDS = ["name", "enabled", "username"]
+
 
 def _phone(employee):
 	"""`aa.phone_punch` for one employee, with what it needs read off the site."""
-	emp = frappe.db.get_value("Employee", employee, list(_PHONE_FIELDS), as_dict=True) or {}
+	app_field = applogin_site.has_field()
+	fields = list(_PHONE_FIELDS) + ([applogin_site.FIELD] if app_field else [])
+	emp = frappe.db.get_value("Employee", employee, fields, as_dict=True) or {}
+	code = str(emp.get("employee_number") or "").strip()
 	# The login they already have - their record's, else their Fleet driver app
 	# login, else one named by their email or by the stand-in a first press of
-	# the button made - is the one to link rather than a second.
-	email = aa.email_of(emp) or aa.stand_in_email(emp.get("employee_number"))
+	# the button made. It is never changed: phone_punch gives the app its own
+	# login beside it, unless it is the app's own already.
+	email = aa.email_of(emp) or aa.stand_in_email(code)
 	login, linked_problem = aa.existing_login(
 		emp.get("user_id") or "",
 		[] if emp.get("user_id") else _driver_logins(employee),
 		email if email and frappe.db.exists("User", email) else "",
 	)
-	login_user = None
-	if login:
-		login_user = frappe.db.get_value("User", login, ["name", "enabled", "username"], as_dict=True)
-		if login_user:
-			# What decides whether this login may be set to the Emp Code and
-			# date of birth (aa.app_only).
-			login_user["roles"] = frappe.get_roles(login)
-	code = str(emp.get("employee_number") or "").strip()
-	holder = ""
-	if code:
-		holder = frappe.db.get_value("User", {"username": code, "name": ["!=", login or ""]}, "name") or ""
+	login_user = frappe.db.get_value("User", login, _USER_FIELDS, as_dict=True) if login else None
+
+	app_login = emp.get(applogin_site.FIELD) or ""
+	if not app_login and login_user and not aa.is_stand_in(login_user.name):
+		# An app login a first press made, whose link to the record did not
+		# land: link it rather than make a second.
+		stand_in = aa.stand_in_email(code)
+		if stand_in and frappe.db.exists("User", stand_in):
+			app_login = stand_in
+	app_user = frappe.db.get_value("User", app_login, _USER_FIELDS, as_dict=True) if app_login else None
+
+	holder = frappe.db.get_value("User", {"username": code}, "name") if code else ""
 	by_name = frappe.db.get_single_value("System Settings", "allow_login_using_user_name")
-	out = aa.phone_punch(emp, login_user, holder, None if by_name is None else bool(by_name))
+	out = aa.phone_punch(
+		emp, login_user, holder or "", None if by_name is None else bool(by_name),
+		app_user=app_user, app_field=app_field,
+	)
 	if linked_problem:
 		out["problems"].append(linked_problem)
 	return out
@@ -87,12 +99,12 @@ def _driver_logins(employee):
 def allow_phone_punch(employee):
 	"""Let one employee punch on the phone as well as on the machine.
 
-	Punch Method becomes Both (Mobile App stays), and `user_id` names a login
-	the Manna HR app signs in with: the one already linked, or the one already
-	named by their email, or — when there is none — a new one with the Emp
-	Code as its user name, the date of birth as its first password and the
-	Employee role. An existing login's user name and password are left alone
-	(`aa.phone_punch` says why). Returns `get_access` as it now is.
+	Punch Method becomes Both (Mobile App stays), and the Manna HR app gets a
+	login of its own that signs in with the Emp Code and the date of birth, on
+	`user_id` when the record has none and on `custom_app_login` when `user_id`
+	is the person's own login. **No existing login's password is changed**
+	(HR, 28 November 2026; `aa.phone_punch` says why and where it links).
+	Returns `get_access` as it now is.
 	"""
 	# Everything this login is judged on is judged here, as this login: the
 	# role, the record, and — for a login already there — `why_not`.
@@ -102,8 +114,16 @@ def allow_phone_punch(employee):
 	if plan["problems"]:
 		frappe.throw("<br>".join(plan["problems"]))
 	login = plan["login"]
-	if not plan["make_login"]:
+	if not plan["make_login"] and not plan["make_app_login"]:
 		why = aa.why_not(caller, frappe.get_roles(), login, frappe.get_roles(login))
+		if why:
+			frappe.throw(why, frappe.PermissionError)
+	if plan["free_username"]:
+		# Taking the Emp Code off somebody's own login is a write to that
+		# login, judged like any other: not a System Manager's for an HR
+		# Manager, and not the caller's own.
+		own = plan["free_username"]
+		why = aa.why_not(caller, frappe.get_roles(), own, frappe.get_roles(own))
 		if why:
 			frappe.throw(why, frappe.PermissionError)
 
@@ -127,105 +147,83 @@ def allow_phone_punch(employee):
 	return get_access(employee)
 
 
+def _make_app_user(emp, login, code):
+	"""A login with the Employee role alone, user name the Emp Code and password
+	the date of birth. Only ever a new User: nothing in this file sets a
+	password on a login that already exists."""
+	first, _sp, rest = str(emp.employee_name or emp.first_name or login).strip().partition(" ")
+	user = frappe.get_doc({
+		"doctype": "User",
+		"email": login,
+		"username": code,
+		"first_name": first,
+		"last_name": rest.strip() or None,
+		"enabled": 1,
+		"user_type": "System User",
+		"send_welcome_email": 0,
+		"new_password": aa.first_password(emp.date_of_birth),
+		"roles": [{"role": "Employee"}],
+	})
+	# The site's strength rule refuses a date over REST. It is the group's rule
+	# for this login, which opens one person's punches and nothing else.
+	user.flags.ignore_permissions = True
+	user.flags.ignore_password_policy = True
+	user.flags.no_welcome_mail = True
+	user.insert(ignore_permissions=True)
+
+
 def _allow_phone_punch_writes(employee, plan):
-	"""The writes behind Allow phone punch too. Returns what was done, in words."""
+	"""The writes behind Allow phone punch too. Returns what was done, in words.
+
+	`plan["login"]` is always the app's own login here — one made now, or a
+	stand-in this button made before. The person's own login is never written,
+	apart from `free_username`: its user name, not its password."""
 	emp = frappe.get_doc("Employee", employee)
 	login = plan["login"]
+	code = plan["sign_in_as"]
 	said = []
-	if plan["make_login"]:
-		first, _sp, rest = str(emp.employee_name or emp.first_name or login).strip().partition(" ")
-		user = frappe.get_doc({
-			"doctype": "User",
-			"email": login,
-			"username": plan["sign_in_as"],
-			"first_name": first,
-			"last_name": rest.strip() or None,
-			"enabled": 1,
-			"user_type": "System User",
-			"send_welcome_email": 0,
-			"new_password": aa.first_password(emp.date_of_birth),
-			"roles": [{"role": "Employee"}],
-		})
-		# The date of birth is a first password the app makes them replace, so
-		# the site's strength rule is not asked of it.
-		user.flags.ignore_permissions = True
-		user.flags.ignore_password_policy = True
-		user.flags.no_welcome_mail = True
-		user.insert(ignore_permissions=True)
-		said.append(_("made login {0} (user name {1}, first password the date of birth)").format(login, plan["sign_in_as"]))
-	else:
-		if plan.get("reset_login"):
-			said.append(_set_emp_code_login(login, plan["sign_in_as"], emp.date_of_birth))
-		if "Employee" not in frappe.get_roles(login):
-			user = frappe.get_doc("User", login)
-			user.flags.ignore_permissions = True
-			user.add_roles("Employee")
-			said.append(_("added the Employee role to {0}").format(login))
+	if plan["free_username"]:
+		# The user name alone, by a column write that cannot reach the
+		# password: that login keeps signing in with its email and its own
+		# password everywhere it did.
+		frappe.db.set_value("User", plan["free_username"], "username", None, update_modified=False)
+		said.append(_("user name {0} moved off {1}, whose password is unchanged").format(code, plan["free_username"]))
 
-	# The two User Permissions that keep the login to this one Employee and its
-	# Company, made before the save so on_update finds them and adds nothing.
-	# The Employee's own Create User Permission tick decides, as for ERPNext.
-	if emp.get("create_user_permission"):
-		frappe.permissions.add_user_permission("Employee", emp.name, login, ignore_permissions=True)
-		if emp.company:
-			frappe.permissions.add_user_permission("Company", emp.company, login, ignore_permissions=True)
+	if plan["make_login"] or (plan["make_app_login"] and not frappe.db.exists("User", login)):
+		_make_app_user(emp, login, code)
+		said.append(_("made login {0} (user name {1}, password the date of birth)").format(login, code))
 
+	# The User Permissions that keep this login to this one Employee and its
+	# Company, made before the save so ERPNext's on_update finds them and adds
+	# nothing. `hide_descendants`: Employee is a tree on reports_to, and without
+	# it a manager's date-of-birth login would read everybody under them.
+	frappe.permissions.add_user_permission("Employee", emp.name, login, ignore_permissions=True, hide_descendants=1)
+	if emp.company:
+		frappe.permissions.add_user_permission("Company", emp.company, login, ignore_permissions=True)
+
+	field = plan["link_field"]
+	if plan["link"]:
+		# Never `user_id` over the person's own login: phone_punch chooses
+		# `user_id` only when the record has none.
+		emp.set(field, login)
+		said.append(_("linked {0} as {1}").format(login, _("User ID") if field == "user_id" else _("App Login")))
 	method = aa.phone_method_after(emp.get("custom_punch_method"))
-	if emp.user_id != login:
-		emp.user_id = login
-		said.append(_("linked login {0}").format(login))
 	if emp.get("custom_punch_method") != method:
 		said.append(_("Punch Method {0} → {1}").format(emp.get("custom_punch_method") or _("blank"), method))
 		emp.custom_punch_method = method
 	emp.save()
+
+	# The role last, once the record names the login: ERPNext strips Employee
+	# from a login that is nobody's `user_id`, and keep_app_login_role gives it
+	# back only to one an Employee names as its App Login.
+	if "Employee" not in frappe.get_roles(login):
+		user = frappe.get_doc("User", login)
+		user.flags.ignore_permissions = True
+		user.add_roles("Employee")
+		said.append(_("added the Employee role to {0}").format(login))
+	if plan["own_login"]:
+		said.append(_("{0} is not changed").format(plan["own_login"]))
 	return said
-
-
-def _set_emp_code_login(login, code, dob):
-	"""User name the Emp Code, password the date of birth, switched on — for a
-	login that holds nothing but the employee's own roles (aa.app_only, checked
-	by the caller's plan). The site's strength rule refuses a date as a
-	password over REST, so it is set here with that rule waived, as for a
-	login made by this button (27 November 2026)."""
-	user = frappe.get_doc("User", login)
-	user.username = code
-	user.new_password = aa.first_password(dob)
-	user.enabled = 1
-	user.flags.ignore_permissions = True
-	user.flags.ignore_password_policy = True
-	user.save(ignore_permissions=True)
-	return _("login {0} set to user name {1} and the date of birth").format(login, code)
-
-
-@frappe.whitelist(methods=["POST"])
-def reset_app_login(employee):
-	"""Set one employee's phone-app login back to the group's rule: user name
-	the Emp Code, password the date of birth (HR, 27 November 2026). For a
-	forgotten password, and for logins made before the rule. Only a login that
-	holds nothing but the employee's own roles; any other is somebody's way
-	into another system and is refused with the reason. Returns `get_access`."""
-	frappe.only_for(aa.MANAGERS)
-	caller = frappe.session.user
-	plan = _phone(employee)
-	login = plan["login"]
-	if not login or plan["make_login"]:
-		frappe.throw(_("This employee has no login yet. Use Allow phone punch too."))
-	if not plan.get("reset_login"):
-		frappe.throw("<br>".join(plan["warnings"]) or _("This login is not the phone app's alone, so it is left as it is."))
-	if plan["problems"]:
-		frappe.throw("<br>".join(plan["problems"]))
-	why = aa.why_not(caller, frappe.get_roles(), login, frappe.get_roles(login))
-	if why:
-		frappe.throw(why, frappe.PermissionError)
-	dob = frappe.db.get_value("Employee", employee, "date_of_birth")
-	try:
-		frappe.set_user("Administrator")
-		said = _set_emp_code_login(login, plan["sign_in_as"], dob)
-		frappe.get_doc("Employee", employee).add_comment(
-			"Info", _("Phone app login reset by {0}: {1}").format(caller, said))
-	finally:
-		frappe.set_user(caller)
-	return get_access(employee)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -275,6 +273,16 @@ def set_access(employee, key, value=None):
 		said.append(_("added {0}").format(", ".join(changes["add_roles"])))
 	if "enabled" in changes or changes.get("flags"):
 		user.save(ignore_permissions=True)
+	if "enabled" in changes:
+		# "Login (every app)" means every app: the Manna HR app's own login,
+		# whose password is a birthday, goes off and on with it.
+		app = applogin_site.app_login_of(employee)
+		if app and app != login and frappe.db.exists("User", app):
+			app_user = frappe.get_doc("User", app)
+			app_user.flags.ignore_permissions = True
+			app_user.enabled = changes["enabled"]
+			app_user.save(ignore_permissions=True)
+			said.append(_("app login {0} {1}").format(app, _("enabled") if changes["enabled"] else _("disabled")))
 
 	if "sales_person" in changes:
 		_set_sales_person(login, changes["sales_person"])
