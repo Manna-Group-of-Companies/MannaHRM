@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_datetime, now_datetime
 
-from manna_hr import rules
+from manna_hr import applogin_site, rules
 from manna_hr.geo import format_distance, is_real_coordinate, metres_between
 from manna_hr.settings import hr_settings
 
@@ -164,7 +164,7 @@ def _classify_source(doc, settings):
 		return SOURCE_REGULARIZATION
 
 	if not _writer_is_trusted():
-		if doc.employee and frappe.db.get_value("Employee", doc.employee, "user_id") != frappe.session.user:
+		if doc.employee and frappe.session.user not in applogin_site.logins_of(doc.employee):
 			frappe.throw(_("You can punch only for yourself."), title=_("Not your punch"))
 		return SOURCE_MOBILE
 
@@ -204,8 +204,7 @@ def _is_self_service(doc):
 	"""
 	if not doc.employee:
 		return False
-	user = frappe.db.get_value("Employee", doc.employee, "user_id")
-	return bool(user) and user == frappe.session.user
+	return frappe.session.user in applogin_site.logins_of(doc.employee)
 
 
 # ------------------------------------------------------------------- clock ---

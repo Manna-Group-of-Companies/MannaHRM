@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime, today
 
-from manna_hr import rules
+from manna_hr import applogin_site, rules
 from manna_hr.regularization import approver_type_for
 
 
@@ -146,9 +146,7 @@ def my_holidays(from_date, to_date):
 
 
 def _my_employee():
-	employee = frappe.db.get_value(
-		"Employee", {"user_id": frappe.session.user, "status": "Active"}, "name"
-	)
+	employee = applogin_site.employee_of(frappe.session.user, status="Active")
 	if not employee:
 		frappe.throw(
 			_("Your login is not linked to an employee record. Ask HR to set it."),

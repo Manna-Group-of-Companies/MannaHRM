@@ -368,23 +368,31 @@ class Api {
 
   /// The `Employee` this login is.
   ///
-  /// Matched on `user_id`, which is the only link between a Frappe user and an
-  /// employee record. **A login with no such record is a real state**: the
+  /// Matched on `user_id`, and then on `custom_app_login`: the app's own
+  /// login (Emp Code + date of birth) for somebody whose `user_id` is their
+  /// login into everything else, which keeps its own password (HR, 28
+  /// November 2026). **A login with no such record is a real state**: the
   /// person can sign in and has nothing to punch against, and the screen says
   /// so and names the fix rather than showing an empty month. HR sets `user_id`
   /// on the Employee record.
   static Future<Map<String, dynamic>?> resolveEmployee() async {
     final who = Session.I.user.isNotEmpty ? Session.I.user : Session.I.email;
     if (who.isEmpty) return null;
-    final rows = await _read(
-      'Employee',
-      _empFields,
-      _empFieldsMin,
-      filters: [
-        ['user_id', '=', who]
-      ],
-      orderBy: 'modified desc',
-    );
+    Future<List<Map<String, dynamic>>?> by(String field) => _read(
+          'Employee',
+          _empFields,
+          _empFieldsMin,
+          filters: [
+            [field, '=', who]
+          ],
+          orderBy: 'modified desc',
+        );
+    var rows = await by('user_id');
+    // For an app login the second read is the only one that can find the
+    // person, so its failure is "no signal" like the first one's, never "HR
+    // has not linked you". The field is on every site this app version is
+    // for (patch install_app_login).
+    if (rows != null && rows.isEmpty) rows = await by('custom_app_login');
     // Null and empty are opposite findings and must not share a screen. Empty
     // is "HR has not set your User ID", which is HR's to fix. Null is "the site
     // did not answer" — a dropped signal, a permission — and telling somebody

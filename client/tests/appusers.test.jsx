@@ -70,6 +70,23 @@ describe("stopping a login", () => {
 	});
 });
 
+describe("the app's own login beside a person's own (28 November 2026)", () => {
+	const EBIN = { name: "E5", employee_name: "Ebin Joy", employee_number: "MRP-103", company: "Manna Rubber", status: "Active",
+		user_id: "ebin@gmail.com", custom_app_login: "mrp-103@phone.manna.invalid" };
+	const users = [{ name: "mrp-103@phone.manna.invalid", enabled: 1 }, { name: "ebin@gmail.com", enabled: 1 }];
+	const row = () => appUserRows({ employees: [EBIN], users, roles: [{ parent: "ebin@gmail.com", role: "HR Manager" }],
+		punches: [], salesLogs: [{ owner: "ebin@gmail.com", punch_in_time: "2026-11-20 09:00:00" }], me: "" })[0];
+
+	it("stopping the app stops the app login, and their own Gmail login is never the one switched off", () => {
+		expect(row()).toMatchObject({ login: "mrp-103@phone.manna.invalid", ownLogin: "ebin@gmail.com", website: false });
+		expect(toggleQuestion(row(), false)).toMatch(/ebin@gmail\.com is not changed/);
+	});
+
+	it("the sales app is still read off their own login", () => {
+		expect(row().apps.map((a) => a.app)).toEqual(["Sales app"]);
+	});
+});
+
 /* ---- the page ---- */
 
 const writes = [];
